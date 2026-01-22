@@ -23,14 +23,8 @@ const App: React.FC = () => {
           <Route path="/customerAdd" element={<CustomerForm />} />
           <Route path="/admin/customers/:id" element={<CustomerForm />} />
           <Route path="/employee" element={<EmployeePage />} />
-          <Route
-            path="/employeeAdd"
-            element={<EmployeeForm key="add-employee" />}
-          />
-          <Route
-            path="/admin/employees/:id"
-            element={<EmployeeForm key="edit-employee" />}
-          />
+          <Route path="/employeeAdd" element={<EmployeeForm />} />
+          <Route path="/admin/employees/:id" element={<EmployeeForm />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

@@ -361,41 +361,44 @@ const EmployeeForm: React.FC = () => {
   };
 
   const duplicateValidator = useCallback(
-    (
-      field: keyof Pick<
-        EmployeeFormValues,
-        "identityCard" | "email" | "phoneNumber"
-      >,
-    ) => {
+    (field: "identityCard" | "email" | "phoneNumber" | "username") => {
       return async (_: RuleObject, value: string): Promise<void> => {
-        if (!value || value.trim() === "") {
-          return Promise.resolve();
+        if (!value || value.trim() === "") return Promise.resolve();
+
+        if (isEdit && currentEmployee) {
+          const oldValue =
+            field === "username"
+              ? currentEmployee.account?.username
+              : currentEmployee[field as keyof typeof currentEmployee];
+
+          if (value === oldValue) return Promise.resolve();
         }
 
         try {
           const response = await employeeApi.checkDuplicate({
             [field]: value,
-            id,
+            id: id || "",
           });
 
-          if (response.data) {
-            const fieldLabel =
-              field === "identityCard"
-                ? "Số CCCD"
-                : field === "email"
-                  ? "Email"
-                  : "Số điện thoại";
-
-            return Promise.reject(new Error(`${fieldLabel} này đã tồn tại!`));
+          if (response.data === true) {
+            const labels = {
+              identityCard: "Số CCCD",
+              email: "Email",
+              phoneNumber: "Số điện thoại",
+              username: "Tên đăng nhập",
+            };
+            return Promise.reject(
+              new Error(`${labels[field]} này đã tồn tại!`),
+            );
           }
           return Promise.resolve();
-        } catch (error: unknown) {
-          console.error("Duplicate check error:", error);
+        } catch (error) {
+          console.error("Lỗi kiểm tra trùng lặp:", error);
           return Promise.resolve();
         }
       };
     },
-    [id],
+    [id, isEdit, currentEmployee],
   );
 
   return (

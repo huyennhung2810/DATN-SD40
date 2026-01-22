@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.Employee.repository;
 
-import com.example.datn.entity.Customer;
 import com.example.datn.entity.Employee;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.RoleConstant;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ADEmployeeRepository extends EmployeeRepository {
 
-    // Tại file ADEmployeeRepository.java
     @Query("""
     SELECT e FROM Employee e 
     LEFT JOIN e.account a
@@ -36,16 +34,15 @@ public interface ADEmployeeRepository extends EmployeeRepository {
             @Param("role") RoleConstant role
     );
 
+    @Query("SELECT COUNT(e) > 0 FROM Employee e WHERE e.identityCard = :cccd AND (:id IS NULL OR :id = '' OR e.id <> :id)")
+    boolean existsByIdentityCardCustom(@Param("cccd") String cccd, @Param("id") String id);
 
-    // Kiểm tra trùng CCCD
-    boolean existsByIdentityCardAndIdNot(String identityCard, String id);
-    boolean existsByIdentityCard(String identityCard);
+    @Query("SELECT COUNT(e) > 0 FROM Employee e WHERE e.phoneNumber = :phone AND (:id IS NULL OR :id = '' OR e.id <> :id)")
+    boolean existsByPhoneNumberCustom(@Param("phone") String phone, @Param("id") String id);
 
-    // Kiểm tra trùng Số điện thoại
-    boolean existsByPhoneNumberAndIdNot(String phoneNumber, String id);
-    boolean existsByPhoneNumber(String phoneNumber);
+    @Query("SELECT COUNT(e) > 0 FROM Employee e WHERE e.email = :email AND (:id IS NULL OR :id = '' OR e.id <> :id)")
+    boolean existsByEmailCustom(@Param("email") String email, @Param("id") String id);
 
-    // Kiểm tra trùng Email
-    boolean existsByEmailAndIdNot(String email, String id);
-    boolean existsByEmail(String email);
+    @Query("SELECT COUNT(a) > 0 FROM Account a WHERE a.username = :username AND (:id IS NULL OR :id = '' OR a.id <> (SELECT e.account.id FROM Employee e WHERE e.id = :id))")
+    boolean existsByUsernameCustom(@Param("username") String username, @Param("id") String id);
 }
