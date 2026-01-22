@@ -34,7 +34,6 @@ public class ADCustomerController {
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String id) {
-        // Gọi Service xử lý logic kiểm tra trùng
         return ResponseEntity.ok(adCustomerService.checkDuplicate(identityCard, phoneNumber, email, id));
     }
 

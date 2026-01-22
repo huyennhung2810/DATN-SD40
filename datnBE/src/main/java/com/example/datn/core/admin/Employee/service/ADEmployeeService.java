@@ -19,6 +19,6 @@ public interface ADEmployeeService {
     ResponseObject<?> changeEmployeeRole(String id);
 
     byte[] exportAllEmployees();
-    ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id);
+    ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id, String username);
 
 }

@@ -67,7 +67,8 @@ public class ADEmployeeController {
             @RequestParam(required = false) String identityCard,
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String email,
+            @RequestParam(required = false) String username,
             @RequestParam(required = false) String id) {
-        return ResponseEntity.ok(ademployeeService.checkDuplicate(identityCard, phoneNumber, email, id));
+        return ResponseEntity.ok(ademployeeService.checkDuplicate(identityCard, phoneNumber, email, id, username));
     }
 }
