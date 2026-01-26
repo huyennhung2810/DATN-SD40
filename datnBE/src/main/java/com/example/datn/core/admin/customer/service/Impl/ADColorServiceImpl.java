@@ -7,12 +7,11 @@ import com.example.datn.core.admin.customer.service.ADColorService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Color;
 import com.example.datn.utils.Helper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ADColorServiceImpl implements ADColorService {

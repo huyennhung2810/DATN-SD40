@@ -13,6 +13,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @ToString
 @Table(name = "storage_capacity")
 public class StorageCapacity extends NameEntity implements Serializable {

@@ -8,15 +8,17 @@ import com.example.datn.core.admin.customer.service.ADStorageCapacityService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.StorageCapacity;
 import com.example.datn.utils.Helper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
 
-    private ADStorageCapacityRepository adStorageCapacityRepository;
+    private final ADStorageCapacityRepository adStorageCapacityRepository;
 
     @Override
     public ResponseObject<?> getAllStorageCapacity() {
@@ -31,7 +33,8 @@ public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
                         .createdTime(Helper.formatDate(entity.getLastModifiedDate()))
                         .build()
         ).toList();
-        return ResponseObject.success(dtoList, "Hiển thị danh sách dung lượng thành công");}
+        return ResponseObject.success(dtoList, "Hiển thị danh sách dung lượng thành công");
+    }
 
     @Override
     public ResponseObject<?> getStorageCapacityByCode(String code) {
