@@ -14,4 +14,6 @@ public interface ADSerialRepository extends SerialRepository {
     Page<Serial> findByStatusAndProductDetailId(String status, String productId, Pageable pageable);
 
     Page<Serial> findByStatus(String status, Pageable pageable);
+
+    Page<Serial> findByProductDetailId(String productId, Pageable pageable);
 }

@@ -4,8 +4,13 @@ import com.example.datn.core.admin.customer.model.request.ADSerialRequest;
 import com.example.datn.core.admin.customer.repository.ADSerialRepository;
 import com.example.datn.core.admin.customer.service.ADSerialService;
 import com.example.datn.core.common.base.ResponseObject;
+import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.Serial;
+import com.example.datn.repository.ProductDetailRepository;
+import com.example.datn.repository.ProductRepository;
 import com.example.datn.repository.SerialRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +20,13 @@ import java.util.List;
 public class ADSerialServiceImpl implements ADSerialService {
 
     private final ADSerialRepository adSerialRepository;
+    private final ProductRepository productRepository;
+    private final ProductDetailRepository productDetailRepository;
 
-    public ADSerialServiceImpl(ADSerialRepository adSerialRepository) {
+    public ADSerialServiceImpl(ADSerialRepository adSerialRepository, ProductRepository productRepository, ProductDetailRepository productDetailRepository) {
         this.adSerialRepository = adSerialRepository;
+        this.productRepository = productRepository;
+        this.productDetailRepository = productDetailRepository;
     }
 
 
@@ -32,7 +41,11 @@ public class ADSerialServiceImpl implements ADSerialService {
         if(productDetailId == null) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã sản phầm chi tiết không được để trống");
         }
-        return ResponseObject.success("Hiển thị danh sách Serial theo mã" + productDetailId);
+        Page<Serial> list = adSerialRepository.findByProductDetailId(productDetailId, PageRequest.of(0, 10));
+        if (list.isEmpty()) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Không tìm thấy Serial cho dòng sản phẩm này");
+        }
+        return ResponseObject.success(list, "Hiển thị danh sách Serial theo mã " + productDetailId);
     }
 
     @Override
@@ -48,9 +61,11 @@ public class ADSerialServiceImpl implements ADSerialService {
         /*
         Nhớ phải thêm ProductDetail Vào dây
          */
-        //serial.setProductDetail();
-
+        ProductDetail productDetail = productDetailRepository.findById("1").orElse(null);
+        serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
+
+
         return ResponseObject.success("Thêm thành công Serial");
     }
 
@@ -67,9 +82,11 @@ public class ADSerialServiceImpl implements ADSerialService {
         /*
         Nhớ phải thêm ProductDetail Vào dây
          */
-        //serial.setProductDetail();
 
+        ProductDetail productDetail = productDetailRepository.findById("1").orElse(null);
+        serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
+
         return ResponseObject.success("Sửa thông tin thành công");
     }
 }
