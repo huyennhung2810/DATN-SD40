@@ -7,7 +7,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div
       style={{
         display: "flex",
-        height: "100vh",
+        height: "97vh",
         overflow: "hidden",
       }}
     >

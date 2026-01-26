@@ -644,7 +644,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="identityCard"
                   label={<Text strong>Số CCCD</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   hasFeedback
                   rules={[
                     {
@@ -732,7 +732,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="email"
                   label={<Text strong>Email</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   hasFeedback
                   rules={[
                     {
@@ -748,7 +748,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="phoneNumber"
                   label={<Text strong>SĐT</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   rules={[
                     {
                       required: true,

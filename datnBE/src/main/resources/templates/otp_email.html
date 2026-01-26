@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác nhận OTP</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; padding: 20px;">
+<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+    <h2 style="color: #1890ff; text-align: center;">Xác thực quên mật khẩu</h2>
+    <p>Xin chào, <span th:text="${fullName}" style="font-weight: bold;">User</span>!</p>
+    <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản tại <strong>Hikari Camera</strong>. Dưới đây là mã OTP của bạn:</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <span th:text="${otpCode}" style="font-size: 32px; font-weight: bold; color: #ff4d4f; letter-spacing: 5px; border: 2px dashed #ff4d4f; padding: 10px 20px; border-radius: 4px;">123456</span>
+    </div>
+
+    <p style="color: #666; font-size: 14px;">Mã này có hiệu lực trong vòng <strong>5 phút</strong>. Tuyệt đối không chia sẻ mã này cho bất kỳ ai khác.</p>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+    <p style="font-size: 12px; color: #999; text-align: center;">Đây là email tự động, vui lòng không trả lời email này.</p>
+</div>
+</body>
+</html>
