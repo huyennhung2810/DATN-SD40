@@ -10,12 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ADSerialResponse {
+public class ADColorResponse {
 
     private String id;
-    private String serialNumber;
     private String code;
+    private String name;
     private EntityStatus status;
-    private String productName;
-    private String createdDate;
+    private String createdTime;
 }

@@ -28,11 +28,10 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX = API_VERSION_PREFIX + ADMIN;
 
     public static final String API_ADMIN_PREFIX_PRODUCTS = API_ADMIN_PREFIX + "/products";
-    public static final String API_ADMIN_PREFIX_PRODUCTS_COLOR = API_ADMIN_PREFIX_PRODUCTS + "/color";
 
     public static final String API_ADMIN_PREFIX_DISCOUNT = API_ADMIN_PREFIX + "/discounts";
     public static final String API_ADMIN_PREFIX_DISCOUNT_DISCOUNT = API_ADMIN_PREFIX_DISCOUNT + "/discount";
-    public static final String API_ADMIN_PREFIX_DISCOUNT_DETAIL = API_ADMIN_PREFIX_DISCOUNT + "/detail";
+    public static final String API_ADMIN_PREFIX_DISCOUNT_DETAIL = API_ADMIN_PREFIX_DISCOUNT + "/discount-detail";
 
     public static final String API_ADMIN_PREFIX_STATISTICS= API_ADMIN_PREFIX + "/statistics";
 
@@ -46,5 +45,7 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_CUSTOMER_ADDRESSES = API_ADMIN_PREFIX_CUSTOMERS + "/{customerId}/addresses";
 
     public static final String API_ADMIN_PREFIX_SERIALS = API_ADMIN_PREFIX + "/serials";
+    public static final String API_ADMIN_PREFIX_PRODUCTS_COLOR = API_ADMIN_PREFIX_PRODUCTS + "/color";
+    public static final String API_ADMIN_PREFIX_PRODUCTS_STORAGE = API_ADMIN_PREFIX_PRODUCTS + "/storage-capacity";
 
 }

@@ -2,9 +2,11 @@ package com.example.datn.core.admin.customer.controller;
 
 import com.example.datn.core.admin.customer.model.request.ADSerialRequest;
 import com.example.datn.core.admin.customer.service.ADSerialService;
+import com.example.datn.core.admin.customer.service.Impl.ADSerialServiceImpl;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Serial;
 import com.example.datn.infrastructure.constant.MappingConstants;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -30,12 +32,12 @@ public class ADSerialController {
     }
 
     @PostMapping
-    public ResponseObject<?> addSerial(@RequestBody ADSerialRequest serial) {
+    public ResponseObject<?> addSerial(@Valid @RequestBody ADSerialRequest serial) {
         return adSerialService.createSerial(serial);
     }
 
     @PostMapping("/{serialId}")
-    public ResponseObject<?> updateSerial(@PathVariable String serialId, @RequestBody ADSerialRequest serial) {
+    public ResponseObject<?> updateSerial(@Valid @PathVariable String serialId, @RequestBody ADSerialRequest serial) {
         return adSerialService.updateSerial(serialId, serial);
     }
 }

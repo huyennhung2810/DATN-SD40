@@ -1,14 +1,14 @@
 package com.example.datn.core.admin.customer.service.Impl;
 
 import com.example.datn.core.admin.customer.model.request.ADSerialRequest;
+import com.example.datn.core.admin.customer.model.response.ADSerialResponse;
 import com.example.datn.core.admin.customer.repository.ADSerialRepository;
 import com.example.datn.core.admin.customer.service.ADSerialService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.Serial;
 import com.example.datn.repository.ProductDetailRepository;
-import com.example.datn.repository.ProductRepository;
-import com.example.datn.repository.SerialRepository;
+import com.example.datn.utils.Helper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -20,12 +20,10 @@ import java.util.List;
 public class ADSerialServiceImpl implements ADSerialService {
 
     private final ADSerialRepository adSerialRepository;
-    private final ProductRepository productRepository;
     private final ProductDetailRepository productDetailRepository;
 
-    public ADSerialServiceImpl(ADSerialRepository adSerialRepository, ProductRepository productRepository, ProductDetailRepository productDetailRepository) {
+    public ADSerialServiceImpl(ADSerialRepository adSerialRepository, ProductDetailRepository productDetailRepository) {
         this.adSerialRepository = adSerialRepository;
-        this.productRepository = productRepository;
         this.productDetailRepository = productDetailRepository;
     }
 
@@ -33,7 +31,17 @@ public class ADSerialServiceImpl implements ADSerialService {
     @Override
     public ResponseObject<?> getAllSerials() {
         List<Serial> list = adSerialRepository.findAll();
-        return ResponseObject.success(list,"Hiển thị danh sách Serial thành công");
+
+        List<ADSerialResponse> dtoList = list.stream().map(entity ->
+            ADSerialResponse.builder()
+                    .id(entity.getId())
+                    .serialNumber(entity.getSerialNumber())
+                    .code(entity.getCode())
+                    .productName(entity.getProductDetail().getProduct().getName())
+                    .createdDate(Helper.formatDate(entity.getCreatedDate()))
+                    .status(entity.getStatus()).build()
+        ).toList();
+        return ResponseObject.success(dtoList,"Hiển thị danh sách Serial thành công");
     }
 
     @Override
@@ -45,7 +53,16 @@ public class ADSerialServiceImpl implements ADSerialService {
         if (list.isEmpty()) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Không tìm thấy Serial cho dòng sản phẩm này");
         }
-        return ResponseObject.success(list, "Hiển thị danh sách Serial theo mã " + productDetailId);
+        List<ADSerialResponse> dtoList = list.stream().map(entity ->
+                ADSerialResponse.builder()
+                        .id(entity.getId())
+                        .serialNumber(entity.getSerialNumber())
+                        .code(entity.getCode())
+                        .productName(entity.getProductDetail().getProduct().getName())
+                        .createdDate(Helper.formatDate(entity.getCreatedDate()))
+                        .status(entity.getStatus()).build()
+        ).toList();
+        return ResponseObject.success(dtoList, "Hiển thị danh sách Serial theo mã " + productDetailId);
     }
 
     @Override
@@ -57,7 +74,6 @@ public class ADSerialServiceImpl implements ADSerialService {
         serial.setSerialNumber(request.getSerialNumber());
         serial.setCode(request.getCode());
 
-
         /*
         Nhớ phải thêm ProductDetail Vào dây
          */
@@ -66,7 +82,7 @@ public class ADSerialServiceImpl implements ADSerialService {
         adSerialRepository.save(serial);
 
 
-        return ResponseObject.success("Thêm thành công Serial");
+        return ResponseObject.success(serial, "Thêm thành công Serial");
     }
 
     @Override
@@ -87,6 +103,6 @@ public class ADSerialServiceImpl implements ADSerialService {
         serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
 
-        return ResponseObject.success("Sửa thông tin thành công");
+        return ResponseObject.success(serial, "Sửa thông tin thành công");
     }
 }
