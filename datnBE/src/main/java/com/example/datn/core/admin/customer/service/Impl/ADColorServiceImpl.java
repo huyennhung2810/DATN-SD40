@@ -14,13 +14,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ADColorServiceImpl implements ADColorService {
 
     private final ADColorRepository adColorRepository;
-
-    public ADColorServiceImpl(ADColorRepository adColorRepository) {
-        this.adColorRepository = adColorRepository;
-    }
 
     @Override
     public ResponseObject<?> getAllColors() {
@@ -32,7 +29,7 @@ public class ADColorServiceImpl implements ADColorService {
                         .code(entity.getCode())
                         .name(entity.getName())
                         .status(entity.getStatus())
-                        .createdTime(Helper.formatDate(entity.getLastModifiedDate()))
+                        .createdTime(Helper.formatDate(entity.getCreatedDate()))
                         .build()
         ).toList();
 
@@ -47,7 +44,7 @@ public class ADColorServiceImpl implements ADColorService {
                     .code(color.getCode())
                     .name(color.getName())
                     .status(color.getStatus())
-                    .createdTime(Helper.formatDate(color.getLastModifiedDate()))
+                    .createdTime(Helper.formatDate(color.getCreatedDate()))
                     .build();
 
             return ResponseObject.success(response, "Tìm thành công");

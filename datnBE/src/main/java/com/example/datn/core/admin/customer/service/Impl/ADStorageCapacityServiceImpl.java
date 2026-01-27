@@ -30,7 +30,7 @@ public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
                         .code(entity.getCode())
                         .name(entity.getName())
                         .status(entity.getStatus())
-                        .createdTime(Helper.formatDate(entity.getLastModifiedDate()))
+                        .createdTime(Helper.formatDate(entity.getCreatedDate()))
                         .build()
         ).toList();
         return ResponseObject.success(dtoList, "Hiển thị danh sách dung lượng thành công");
@@ -44,7 +44,7 @@ public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
                     .code(entity.getCode())
                     .name(entity.getName())
                     .status(entity.getStatus())
-                    .createdTime(Helper.formatDate(entity.getLastModifiedDate()))
+                    .createdTime(Helper.formatDate(entity.getCreatedDate()))
                     .build();
 
             return ResponseObject.success(response, "Tìm thành công");

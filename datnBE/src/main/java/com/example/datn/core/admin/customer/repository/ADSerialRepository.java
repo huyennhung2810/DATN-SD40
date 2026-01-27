@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ADSerialRepository extends SerialRepository {
-    Page<Serial> getAllSerialsByProductDetailId(String productId, Pageable pageable);
+    Page<Serial> getAllSerialsByProductDetailId(String productDetailId, Pageable pageable);
 
     Page<Serial> findByStatusAndProductDetailId(String status, String productId, Pageable pageable);
 
