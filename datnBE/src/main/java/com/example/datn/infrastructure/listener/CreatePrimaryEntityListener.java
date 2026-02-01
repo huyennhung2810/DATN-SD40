@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public class CreatePrimaryEntityListener {
     @PrePersist
-    private void onCreate(PrimaryEntity entity) {
+    public void onCreate(PrimaryEntity entity) {
         //Tự động tạo UUID
         entity.setId(UUID.randomUUID().toString());
 
