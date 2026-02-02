@@ -69,4 +69,8 @@ public class Order extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_voucher", referencedColumnName = "id")
     private Voucher voucher;
+
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
 }

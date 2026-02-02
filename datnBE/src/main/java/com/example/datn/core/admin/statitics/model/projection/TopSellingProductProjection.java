@@ -7,10 +7,8 @@ public interface TopSellingProductProjection {
     String getProductName();
     String getProductVersion();
     String getCategoryName();
-
     Long getQuantitySold();
-    BigDecimal getRevenue();
-    BigDecimal getSellingPrice();
-
+    Double getRevenue();
+    Double getSellingPrice();
     String getImageUrl();
 }

@@ -14,22 +14,20 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
 
     //Chỉ số cho 4 thẻ màu dashboard
     @Query("""
-SELECT
-    COALESCE(SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED 
-        THEN o.totalAfterDiscount ELSE 0 END), 0) AS totalRevenue,
-    COUNT(o.id) AS totalOrders,
-    (SELECT COALESCE(SUM(od.quantity), 0) FROM OrderDetail od JOIN od.order o2 
-     WHERE o2.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED 
-     AND o2.createdDate BETWEEN :start AND :end) AS totalItemsSold,
-    SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED THEN 1 ELSE 0 END) AS successCount,
-    SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.CANCELED THEN 1 ELSE 0 END) AS canceledCount,
-    SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.RETURNED THEN 1 ELSE 0 END) AS returnedCount
-FROM Order o
-WHERE o.createdDate BETWEEN :start AND :end
-""")
+    SELECT
+        COALESCE(SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED 
+            THEN o.totalAfterDiscount ELSE 0 END), 0) AS totalRevenue,
+        COUNT(o.id) AS totalOrders,
+        (SELECT COALESCE(SUM(od.quantity), 0) FROM OrderDetail od JOIN od.order o2 
+         WHERE o2.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED 
+         AND o2.createdDate BETWEEN :start AND :end) AS totalItemsSold,
+        SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED THEN 1 ELSE 0 END) AS successCount,
+        SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.CANCELED THEN 1 ELSE 0 END) AS canceledCount,
+        SUM(CASE WHEN o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.RETURNED THEN 1 ELSE 0 END) AS returnedCount
+    FROM Order o
+    WHERE o.createdDate BETWEEN :start AND :end
+    """)
     DashboardSummaryProjection getDashboardSummary(@Param("start") Long start, @Param("end") Long end);
-
-
 
     //Dữ liệu cho biểu đồ tròn (Pie Chart)
     @Query("""
@@ -38,10 +36,7 @@ WHERE o.createdDate BETWEEN :start AND :end
         WHERE o.createdDate BETWEEN :start AND :end
         GROUP BY o.orderStatus
     """)
-    List<OrderStatusCountProjection> countOrderByStatus(
-            @Param("start") Long start,
-            @Param("end") Long end
-    );
+    List<OrderStatusCountProjection> countOrderByStatus(@Param("start") Long start, @Param("end") Long end);
 
     //Thống kê đơn hàng hằng ngày
     @Query(value = """
@@ -81,37 +76,21 @@ WHERE o.createdDate BETWEEN :start AND :end
         GROUP BY pd.id, p.name, pd.version, pc.name, pd.salePrice, pi.url
         ORDER BY quantitySold DESC
     """)
-    List<TopSellingProductProjection> findTopSellingProducts(
-            @Param("start") Long start,
-            @Param("end") Long end
-    );
+    List<TopSellingProductProjection> findTopSellingProducts(@Param("start") Long start, @Param("end") Long end);
 
+    // Đếm tổng số lượng biến thể sản phẩm
+    @Query("SELECT COUNT(pd) FROM ProductDetail pd")
+    Long countTotalProductDetails();
 
-    @Query(value = """
-    SELECT 
-        DATE_FORMAT(FROM_UNIXTIME(o.created_date / 1000), '%d/%m/%Y') AS date,
-        COUNT(o.id) AS total
-    FROM `order` o
-    WHERE o.created_date BETWEEN :start AND :end
-    GROUP BY date
-    ORDER BY MIN(o.created_date) ASC
-""", nativeQuery = true)
-    List<OrderDailyProjection> getOrderCountByDate(@Param("start") Long start, @Param("end") Long end);
+    // Đếm sản phẩm sắp hết hàng (Dựa trên field quantity của ProductDetail)
+    @Query("SELECT COUNT(pd) FROM ProductDetail pd WHERE pd.quantity < 10")
+    Long countLowStockProducts();
 
+    // Đếm tổng khách hàng (Dựa trên entity Customer)
+    @Query("SELECT COUNT(c) FROM Customer c")
+    Long countTotalCustomers();
 
-    @Query("""
-    SELECT
-        e.id AS employeeId,
-        e.code AS employeeCode,
-        e.name AS employeeName,
-        COUNT(o.id) AS totalOrders,
-        SUM(o.totalAfterDiscount) AS totalRevenue
-    FROM Order o
-    JOIN o.employee e
-    WHERE o.orderStatus = com.example.datn.infrastructure.constant.OrderStatus.COMPLETED
-      AND o.createdDate BETWEEN :start AND :end
-    GROUP BY e.id, e.code, e.name
-    ORDER BY totalRevenue DESC
-""")
-    List<EmployeeSalesProjection> getEmployeeSalesStats(@Param("start") Long start, @Param("end") Long end);
+    //Đếm khách hàng mới trong khoảng thời gian
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdDate BETWEEN :start AND :end")
+    Long countNewCustomers(@Param("start") Long start, @Param("end") Long end);
 }

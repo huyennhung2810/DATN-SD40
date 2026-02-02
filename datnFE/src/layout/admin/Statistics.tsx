@@ -2,11 +2,8 @@ import React, { useEffect } from "react";
 import { statisticsActions } from "../../redux/statistics/statisticsSlice";
 import { Row, Col } from "antd";
 import { useAppDispatch } from "../../app/hook";
-import EmployeeSalesTable from "../../Pages/admin/statistics/EmployeeSale";
 import StatisticFilter from "../../Pages/admin/statistics/StatisticsFilter";
-import OrderStatusPieChart from "../../Pages/admin/statistics/OrderStatusPieChart";
 import DashboardSummaryCards from "../../Pages/admin/statistics/DashboardSummaryCards";
-import TopSellingProductsTable from "../../Pages/admin/statistics/TopSellingProduct";
 
 const StatisticsPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -23,15 +20,6 @@ const StatisticsPage: React.FC = () => {
         </Col>
         <Col span={24}>
           <StatisticFilter />
-        </Col>
-        <Col span={16}>
-          <TopSellingProductsTable />
-        </Col>
-        <Col span={8}>
-          <OrderStatusPieChart />
-        </Col>
-        <Col span={24}>
-          <EmployeeSalesTable />
         </Col>
       </Row>
     </div>

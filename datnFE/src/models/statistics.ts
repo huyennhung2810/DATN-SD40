@@ -1,44 +1,40 @@
+export interface TopProduct {
+  name: string;
+  soldCount: number;
+  revenue: number;
+  imageUrl: string | null;
+}
+
 export interface DashboardSummary {
-    period: string;
-    totalRevenue: number;
+    // Doanh thu
+    revenueToday: number;
+    revenueThisWeek: number;
+    revenueThisMonth: number;
+    revenueThisYear: number;
+    growthPercentage: number;
+
+    // Đơn hàng
     totalOrders: number;
-    totalItemsSold: number;
-    revenueGrowthPercentage: number;
-    orderGrowthPercentage: number;
-    productGrowthPercentage: number;
-    successCount: number;
-    canceledCount: number;
-    returnedCount: number;
+    completionRate: number;
+    pendingCount: number;
+    processingCount: number;
+    completedCount: number;
+    cancelledCount: number;
+
+    // Sản phẩm
+    totalProducts: number;
+    lowStockCount: number;
+    topSellingProducts: TopSellingProduct[];
+
+    // Khách hàng
+    totalCustomers: number;
+    newCustomersThisMonth: number;
 }
 
-export interface OrderStatusStatistics {
-    key: string;
-    label: string;
-    color: string;
-    orderCount: number;
-    percentage: number;
-}
-
-export interface EmployeeSales {
-    employeeId: string;
-    employeeName: string;
-    employeeCode: string;
-    totalOrders: number;
-    totalRevenue: number;
-}
-
-export interface OrderDaily {
-    date: string;
-    orderCount: number;
-}
 
 export interface TopSellingProduct {
-    rank: number;
-  id: string;
-  productCode: string;
-  productName: string;
-  productImage: string;
-  quantitySold: number;
-  revenue: number;
-  sellingPrice: number;
+    name: string;
+    soldCount: number;
+    revenue: number;
+    imageUrl: string | null;
 }
