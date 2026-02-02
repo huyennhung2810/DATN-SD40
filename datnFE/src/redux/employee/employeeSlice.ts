@@ -10,6 +10,7 @@ interface EmployeeState {
     totalElements: number;
     totalPages: number;
     currentEmployee: EmployeeResponse | null;
+    filter: EmployeePageParams;
 }
 
 const initialState: EmployeeState = {
@@ -19,15 +20,22 @@ const initialState: EmployeeState = {
     totalElements: 0,
     totalPages: 0,
     currentEmployee: null,
+    filter: {
+        page: 0,
+        size: 10,
+        keyword: "",
+        status: undefined,
+    }
 };
 
 const employeeSlice = createSlice ({
     name: "employee",
     initialState,
     reducers: {
-        getAll: (state, _action: PayloadAction<EmployeePageParams>) => {
+        getAll: (state, action: PayloadAction<EmployeePageParams>) => {
             state.loading = true;
             state.error = null;
+            state.filter = action.payload;
         },
 
         getEmployeeById: (state, _action: PayloadAction<string>) => {

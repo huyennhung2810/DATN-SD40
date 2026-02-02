@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
 import {
   Card,
   Form,
@@ -15,12 +14,11 @@ import {
   Tooltip,
   Typography,
   Tag,
-  Dropdown,
-  type MenuProps,
   notification,
   Avatar,
   Switch,
   Popconfirm,
+  Modal,
 } from "antd";
 import {
   UserOutlined,
@@ -42,7 +40,7 @@ import { customerActions } from "../../../redux/customer/customerSlice";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const CustomerPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -92,94 +90,41 @@ const CustomerPage: React.FC = () => {
     });
   };
 
-  const handleExport = (type: "current" | "all") => {
-    //Nếu xuất tất cả: Gọi API từ Backend thông qua Redux-Saga
-    if (type === "current" && list.length === 0) {
-      notification.info({
-        message: "Thông báo",
-        description: "Không có dữ liệu để xuất file Excel",
-      });
-      return;
-    }
-
-    //Nếu xuất trang hiện tại (Local Export)
-    if (!list || list.length === 0) {
+  const handleExport = () => {
+    if (totalElements === 0) {
       notification.warning({
-        message: "Không có dữ liệu khách hàng để xuất file!",
+        message: "Thông báo",
+        description: "Hệ thống không có dữ liệu khách hàng để xuất file!",
       });
       return;
     }
 
-    try {
-      const dataToExport = list.map((item, index) => {
-        const defaultAddr =
-          item.addresses?.find((a) => a.isDefault) || item.addresses?.[0];
-        const addressStr = defaultAddr
-          ? `${defaultAddr.addressDetail}, ${defaultAddr.wardCommune}, ${defaultAddr.provinceCity}`
-          : "Chưa có địa chỉ";
-
-        return {
-          STT: filter.page * filter.size + index + 1,
-          "Mã khách": item.code || "---",
-          "Họ tên": item.name,
-          Email: item.email,
-          SĐT: item.phoneNumber || "---",
-          "Ngày sinh": item.dateOfBirth
-            ? dayjs(item.dateOfBirth).format("DD/MM/YYYY")
-            : "---",
-          "Giới tính": item.gender ? "Nam" : "Nữ",
-          "Địa chỉ": addressStr,
-          "Trạng thái":
-            item.status === "ACTIVE" ? "Hoạt động" : "Ngưng hoạt động",
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách khách hàng");
-
-      const wscols = [
-        { wch: 6 },
-        { wch: 15 },
-        { wch: 25 },
-        { wch: 30 },
-        { wch: 15 },
-        { wch: 15 },
-        { wch: 10 },
-        { wch: 50 },
-        { wch: 15 },
-      ];
-      worksheet["!cols"] = wscols;
-
-      XLSX.writeFile(workbook, `DS_KhachHang_Trang_${filter.page + 1}.xlsx`);
-
-      notification.success({
-        message: "Xuất Excel thành công",
-        description: `Đã tải xuống dữ liệu trang ${filter.page + 1}`,
-      });
-    } catch (error: unknown) {
-      console.error("Export Error:", error);
-      notification.error({ message: "Lỗi hệ thống khi xuất file local" });
-    }
+    Modal.confirm({
+      title: "Xác nhận xuất file",
+      content: `Bạn có chắc chắn muốn xuất danh sách ${totalElements} nhân viên ra file Excel không?`,
+      okText: "Đồng ý",
+      cancelText: "Hủy",
+      onOk: () => {
+        dispatch(customerActions.exportExcel());
+        notification.info({
+          message: "Đang xử lý ",
+          description:
+            "Hệ thống đang khởi tạo tệp Excel cho toàn bộ danh sách nhân viên...",
+        });
+      },
+      onCancel: () => {
+        notification.info({
+          message: "Hủy xuất file",
+          description: "Bạn đã hủy yêu cầu xuất file Excel.",
+        });
+      },
+    });
   };
-
-  const exportItems: MenuProps["items"] = [
-    {
-      key: "current",
-      label: "Xuất trang hiện tại",
-      onClick: () => handleExport("current"),
-    },
-    {
-      key: "all",
-      label: "Xuất toàn bộ hệ thống",
-      onClick: () => handleExport("all"),
-    },
-  ];
 
   const handlePageChange = (page: number, pageSize: number) => {
     setFilter((prev) => ({ ...prev, page: page - 1, size: pageSize }));
   };
-  // Handlers
+
   const handleReset = () => {
     form.resetFields();
     setKeyword("");
@@ -340,28 +285,6 @@ const CustomerPage: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <Card className="mb-3" style={{ borderRadius: "12px" }}>
-        <Space align="center" size={16}>
-          <div
-            style={{
-              backgroundColor: "#e6f7ff",
-              padding: "12px",
-              borderRadius: "10px",
-            }}
-          >
-            <UserOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
-          </div>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              Quản lý Khách hàng
-            </Title>
-            <Text type="secondary" style={{ fontSize: "14px" }}>
-              Xem và quản lý thông tin khách hàng
-            </Text>
-          </div>
-        </Space>
-      </Card>
-
       <Card
         title={
           <span>
@@ -446,18 +369,18 @@ const CustomerPage: React.FC = () => {
             >
               Thêm mới
             </Button>
-            <Dropdown menu={{ items: exportItems }}>
-              <Button
-                icon={<FileExcelOutlined />}
-                style={{
-                  borderRadius: "20px",
-                  color: "#1d7444",
-                  borderColor: "#1d7444",
-                }}
-              >
-                Xuất Excel
-              </Button>
-            </Dropdown>
+            <Button
+              icon={<FileExcelOutlined />}
+              onClick={handleExport}
+              loading={loading}
+              style={{
+                borderRadius: "20px",
+                color: "#1d7444",
+                borderColor: "#1d7444",
+              }}
+            >
+              Xuất Excel
+            </Button>
             <Button
               icon={<SyncOutlined spin={loading} />}
               onClick={handleRefresh}

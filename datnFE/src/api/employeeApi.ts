@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import type { EmployeePageParams, EmployeeRequest, EmployeeResponse } from "../models/employee"
+import type { EmployeePageParams, EmployeeRequest, EmployeeResponse, ResetPasswordPayload } from "../models/employee"
 import axiosClient from "./axiosClient";
 import type { PageResponse, ResponseObject } from "../models/base";
 
@@ -79,6 +79,33 @@ export const changeStatusEmployee = async (id: string): Promise<ResponseObject<v
 
 export const exportExcel = async (): Promise<Blob> => {
   const res = await axiosClient.get(`${BASE_URL}/export`, { responseType: 'blob' });
+  return res.data;
+};
+
+export const requestOtp = async (email: string) => {
+  return await axiosClient.post(`${BASE_URL}/forgot-password/request-otp`, null, { params: { email } });
+};
+
+export const resetPassword = async (payload: ResetPasswordPayload): Promise<ResponseObject<void>> => {
+  const res = await axiosClient.post<ResponseObject<void>>(
+    `${BASE_URL}/forgot-password/reset`, 
+    null, 
+    { params: payload }
+  );
+  return res.data;
+};
+
+export interface ChangePasswordPayload {
+  oldPassword?: string;
+  newPassword?: string;
+}
+
+export const changePassword = async (username: string, payload: ChangePasswordPayload): Promise<ResponseObject<void>> => {
+  // Gửi request PUT với body là thông tin mật khẩu
+  const res = await axiosClient.put<ResponseObject<void>>(
+    `${BASE_URL}/change-password/${username}`, 
+    payload
+  );
   return res.data;
 };
 

@@ -25,6 +25,15 @@ public class Account extends PrimaryEntity implements Serializable {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @Column(name = "salt")
+    private String salt;
+
+    @Column(name = "otp_code")
+    private String otpCode;
+
+    @Column(name = "otp_expiry_time")
+    private Long otpExpiryTime;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private RoleConstant role;

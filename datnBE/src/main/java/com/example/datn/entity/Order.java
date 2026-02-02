@@ -2,6 +2,7 @@ package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
+import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,6 +53,10 @@ public class Order extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_customer", referencedColumnName = "id")
     private Customer customer;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_status")
+    private OrderStatus orderStatus;
 
     @ManyToOne
     @JoinColumn(name = "id_employee", referencedColumnName = "id")

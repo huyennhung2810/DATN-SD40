@@ -19,9 +19,9 @@ public class ADEmployeeResponse {
     private String status;
     private Long createdDate;
     private String provinceCity;
-    private String district;
     private String wardCommune;
     private Integer provinceCode;
     private Integer wardCode;
+    private String salt;
     private String role;
 }

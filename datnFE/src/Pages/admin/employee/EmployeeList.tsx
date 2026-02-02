@@ -9,15 +9,14 @@ import {
   Typography,
   Pagination,
   Tooltip,
-  Dropdown,
   Form,
   notification,
   Avatar,
   Radio,
-  type MenuProps,
   Select,
   Switch,
   Popconfirm,
+  Modal,
 } from "antd";
 import {
   PlusOutlined,
@@ -33,7 +32,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";
 import type { ColumnsType } from "antd/es/table";
 import type {
   EmployeePageParams,
@@ -42,7 +40,7 @@ import type {
 import type { RootState } from "../../../redux/store";
 import { employeeActions } from "../../../redux/employee/employeeSlice";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const EmployeePage: React.FC = () => {
   const dispatch = useDispatch();
@@ -55,7 +53,7 @@ const EmployeePage: React.FC = () => {
     (state: RootState) => state.employee,
   );
 
-  // 1. Sửa Local State: Đồng bộ chuẩn keyword và bổ sung role
+  //Sửa Local State: Đồng bộ chuẩn keyword và bổ sung role
   const [filter, setFilter] = useState<EmployeePageParams>({
     page: 0,
     size: 10,
@@ -116,57 +114,36 @@ const EmployeePage: React.FC = () => {
     [dispatch],
   );
 
-  // --- LOGIC XUẤT EXCEL ---
-  const handleExport = (type: "current" | "all") => {
-    if (type === "current" && list.length === 0) {
-      notification.info({
-        message: "Thông báo",
-        description: "Không có dữ liệu để xuất file Excel",
-      });
-      return;
-    }
-
-    if (!list || list.length === 0) {
+  const handleExport = () => {
+    if (totalElements === 0) {
       notification.warning({
-        message: "Không có dữ liệu khách hàng để xuất file!",
+        message: "Thông báo",
+        description: "Hệ thống không có dữ liệu khách hàng để xuất file!",
       });
       return;
     }
 
-    const dataToExport = list.map((item: EmployeeResponse, index: number) => ({
-      STT: filter.page * filter.size + index + 1,
-      "Mã nhân viên": item.code,
-      "Họ và tên": item.name,
-      Email: item.email,
-      "Số điện thoại": item.phoneNumber,
-      "Chức vụ":
-        item.account?.role?.toUpperCase() === "ADMIN"
-          ? "Quản trị viên"
-          : "Nhân viên",
-      "Trạng thái": item.status === "ACTIVE" ? "Đang làm việc" : "Đã nghỉ việc",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
-    XLSX.writeFile(
-      workbook,
-      `DS_NhanVien_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`,
-    );
+    Modal.confirm({
+      title: "Xác nhận xuất file",
+      content: `Bạn có chắc chắn muốn xuất danh sách ${totalElements} nhân viên ra file Excel không?`,
+      okText: "Đồng ý",
+      cancelText: "Hủy",
+      onOk: () => {
+        dispatch(employeeActions.exportExcel());
+        notification.info({
+          message: "Đang xử lý ",
+          description:
+            "Hệ thống đang khởi tạo tệp Excel cho toàn bộ danh sách nhân viên...",
+        });
+      },
+      onCancel: () => {
+        notification.info({
+          message: "Hủy xuất file",
+          description: "Bạn đã hủy yêu cầu xuất file Excel.",
+        });
+      },
+    });
   };
-
-  const exportItems: MenuProps["items"] = [
-    {
-      key: "current",
-      label: "Xuất trang hiện tại",
-      onClick: () => handleExport("current"),
-    },
-    {
-      key: "all",
-      label: "Xuất tất cả (Server)",
-      onClick: () => handleExport("all"),
-    },
-  ];
 
   const columns: ColumnsType<EmployeeResponse> = [
     {
@@ -335,28 +312,6 @@ const EmployeePage: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <Card className="mb-3" style={{ borderRadius: "12px" }}>
-        <Space align="center" size={16}>
-          <div
-            style={{
-              backgroundColor: "#e6f7ff",
-              padding: "12px",
-              borderRadius: "10px",
-            }}
-          >
-            <UserOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
-          </div>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              Quản lý nhân viên
-            </Title>
-            <Text type="secondary" style={{ fontSize: "14px" }}>
-              Xem và quản lý hồ sơ nhân sự hệ thống
-            </Text>
-          </div>
-        </Space>
-      </Card>
-
       <Card
         title={
           <span>
@@ -443,18 +398,20 @@ const EmployeePage: React.FC = () => {
             >
               Thêm mới
             </Button>
-            <Dropdown menu={{ items: exportItems }}>
-              <Button
-                icon={<FileExcelOutlined />}
-                style={{
-                  borderRadius: "20px",
-                  color: "#1d7444",
-                  borderColor: "#1d7444",
-                }}
-              >
-                Xuất Excel
-              </Button>
-            </Dropdown>
+
+            <Button
+              icon={<FileExcelOutlined />}
+              onClick={handleExport}
+              loading={loading}
+              style={{
+                borderRadius: "20px",
+                color: "#1d7444",
+                borderColor: "#1d7444",
+              }}
+            >
+              Xuất Excel
+            </Button>
+
             <Button
               icon={<SyncOutlined spin={loading} />}
               onClick={handleRefresh}

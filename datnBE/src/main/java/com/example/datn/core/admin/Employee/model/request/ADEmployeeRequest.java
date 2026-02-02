@@ -39,7 +39,6 @@ public class ADEmployeeRequest {
     private String identityCard;
 
     //account info
-    @NotBlank(message = "Username không được để trống")
     private String username;
 
     private String password;
