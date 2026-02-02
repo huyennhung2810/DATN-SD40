@@ -7,8 +7,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
@@ -29,8 +27,4 @@ public class Product extends NameEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_product_category", referencedColumnName = "id")
     private ProductCategory productCategory;
-
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductImage> images = new ArrayList<>();
-
 }

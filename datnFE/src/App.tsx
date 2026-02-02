@@ -5,8 +5,6 @@ import CustomerPage from "./Pages/admin/customer/CustomerList";
 import CustomerForm from "./Pages/admin/customer/CustomerForm";
 import EmployeePage from "./Pages/admin/employee/EmployeeList";
 import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
-import ProductCategoryPage from "./Pages/admin/product-category/ProductCategoryList";
-import ProductPage from "./Pages/admin/product/ProductList";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -27,8 +25,6 @@ const App: React.FC = () => {
           <Route path="/employee" element={<EmployeePage />} />
           <Route path="/employeeAdd" element={<EmployeeForm />} />
           <Route path="/admin/employees/:id" element={<EmployeeForm />} />
-          <Route path="/admin/product-categories" element={<ProductCategoryPage />} />
-          <Route path="/admin/products" element={<ProductPage />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>
