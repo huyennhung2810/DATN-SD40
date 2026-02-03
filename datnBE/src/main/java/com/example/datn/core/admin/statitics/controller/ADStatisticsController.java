@@ -28,4 +28,35 @@ public class ADStatisticsController {
     }
 
 
+    @GetMapping("/order-status")
+    public ResponseEntity<List<ADOrderStatusStatResponse>> getOrderStatusStats(
+            @RequestParam(name = "type", defaultValue = "THIS_MONTH") TimeRangeType type
+    ) {
+        return ResponseEntity.ok(adStatisticsService.getOrderStatusStats(type));
+    }
+
+
+    @GetMapping("/revenue")
+    public ResponseEntity<List<ADRevenueStatResponse>> getRevenueStats(
+            @RequestParam(name = "type", defaultValue = "THIS_MONTH") TimeRangeType type
+    ) {
+        return ResponseEntity.ok(adStatisticsService.getRevenueStats(type));
+    }
+
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<ADLowstockProductResponse>> getLowStockProducts() {
+        return ResponseEntity.ok(adStatisticsService.getLowStockProducts());
+    }
+    @GetMapping("/growth")
+    public ResponseEntity<List<GrowthStatResponse>> getStoreGrowth() {
+        return ResponseEntity.ok(adStatisticsService.getStoreGrowth());
+    }
+
+    @GetMapping("/top-selling")
+    public ResponseEntity<List<ADDashboardResponse.TopProductDto>> getTopSelling(
+            @RequestParam(defaultValue = "THIS_MONTH") TimeRangeType type
+    ) {
+        return ResponseEntity.ok(adStatisticsService.getTopSellingProducts(type));
+    }
+
 }

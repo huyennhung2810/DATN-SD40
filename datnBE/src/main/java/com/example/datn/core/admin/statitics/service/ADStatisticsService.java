@@ -16,6 +16,7 @@ import java.math.RoundingMode;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,9 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ADStatisticsService {
 
-    @Autowired
-    private ADStatisticsRepository adStatisticsRepository;
-
+    private final ADStatisticsRepository adStatisticsRepository;
 
     //Tính % tăng trưởng: ((Mới - Cũ) / Cũ) * 100
     private Double calculateGrowth(double current, double previous) {
@@ -125,13 +124,16 @@ public class ADStatisticsService {
         List<ADDashboardResponse.TopProductDto> topProducts = topSellingProjections.stream()
                 .limit(5)
                 .map(p -> ADDashboardResponse.TopProductDto.builder()
+                        .id(p.getProductId())
                         .name(p.getProductName())
+                        .version(p.getProductVersion())
+                        .category(p.getCategoryName())
                         .soldCount(p.getQuantitySold())
                         .revenue(p.getRevenue())
+                        .price(p.getSellingPrice())
                         .imageUrl(p.getImageUrl())
                         .build())
                 .collect(Collectors.toList());
-
         // 4. BUILD RESPONSE
         return ADDashboardResponse.builder()
                 // Doanh thu
@@ -151,7 +153,6 @@ public class ADStatisticsService {
 
                 // Sản phẩm
                 .totalProducts(adStatisticsRepository.countTotalProductDetails())
-                .lowStockCount(adStatisticsRepository.countLowStockProducts())
                 .topSellingProducts(topProducts)
 
                 // Khách hàng
@@ -160,4 +161,92 @@ public class ADStatisticsService {
                 .build();
     }
 
+    // 1. Hàm helper map dữ liệu (Để dùng chung cho cả Overview và API riêng)
+    private List<ADDashboardResponse.TopProductDto> mapToTopProductDtos(List<TopSellingProductProjection> projections) {
+        return projections.stream()
+                .map(p -> ADDashboardResponse.TopProductDto.builder()
+                        .id(p.getProductId())
+                        .name(p.getProductName())
+                        .version(p.getProductVersion())
+                        .category(p.getCategoryName())
+                        .soldCount(p.getQuantitySold())
+                        .revenue(p.getRevenue())
+                        .price(p.getSellingPrice())
+                        .imageUrl(p.getImageUrl())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public List<ADDashboardResponse.TopProductDto> getTopSellingProducts(TimeRangeType type) {
+        TimeRange range = TimeRangeUtils.getRange(type);
+        List<TopSellingProductProjection> projections = adStatisticsRepository.findTopSellingProducts(range.getStart(), range.getEnd());
+        return mapToTopProductDtos(projections);
+    }
+
+
+    public List<ADOrderStatusStatResponse> getOrderStatusStats(TimeRangeType type) {
+        TimeRange range = TimeRangeUtils.getRange(type);
+        return adStatisticsRepository.getOrderStatusStats(range.getStart(), range.getEnd());
+    }
+
+
+    public List<ADRevenueStatResponse> getRevenueStats(TimeRangeType type) {
+        TimeRange range = TimeRangeUtils.getRange(type);
+        return adStatisticsRepository.getRevenueStats(range.getStart(), range.getEnd());
+    }
+
+    public List<ADLowstockProductResponse> getLowStockProducts() {
+        return adStatisticsRepository.getLowStockProducts();
+    }
+
+
+    // Hàm helper tính % tăng trưởng
+    private Double calculateGrowth(BigDecimal current, BigDecimal previous) {
+        if (previous.compareTo(BigDecimal.ZERO) == 0) {
+            return current.compareTo(BigDecimal.ZERO) > 0 ? 100.0 : 0.0;
+        }
+        return current.subtract(previous)
+                .divide(previous, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue();
+    }
+
+    public List<GrowthStatResponse> getStoreGrowth() {
+        List<GrowthStatResponse> list = new ArrayList<>();
+
+        TimeRangeType[] types = {TimeRangeType.TODAY, TimeRangeType.THIS_WEEK, TimeRangeType.THIS_MONTH, TimeRangeType.THIS_YEAR};
+        String[] labels = {"ngày", "Tuần", "Tháng", "năm"};
+
+        for (int i = 0; i < types.length; i++) {
+            TimeRange currentRange = TimeRangeUtils.getRange(types[i]);
+            TimeRange prevRange = TimeRangeUtils.getPreviousRange(types[i]);
+
+            BigDecimal currRev = adStatisticsRepository.sumRevenue(currentRange.getStart(), currentRange.getEnd());
+            BigDecimal prevRev = adStatisticsRepository.sumRevenue(prevRange.getStart(), prevRange.getEnd());
+
+            list.add(new GrowthStatResponse("Doanh thu " + labels[i], currRev, calculateGrowth(currRev, prevRev), true));
+        }
+
+        for (int i = 0; i < types.length; i++) {
+            TimeRange currentRange = TimeRangeUtils.getRange(types[i]);
+            TimeRange prevRange = TimeRangeUtils.getPreviousRange(types[i]);
+
+            BigDecimal currOrd = BigDecimal.valueOf(adStatisticsRepository.countOrders(currentRange.getStart(), currentRange.getEnd()));
+            BigDecimal prevOrd = BigDecimal.valueOf(adStatisticsRepository.countOrders(prevRange.getStart(), prevRange.getEnd()));
+
+            list.add(new GrowthStatResponse("Đơn hàng " + labels[i], currOrd, calculateGrowth(currOrd, prevOrd), false));
+        }
+
+        for (int i = 0; i < types.length; i++) {
+            TimeRange currentRange = TimeRangeUtils.getRange(types[i]);
+            TimeRange prevRange = TimeRangeUtils.getPreviousRange(types[i]);
+
+            BigDecimal currProd = BigDecimal.valueOf(adStatisticsRepository.sumSoldProducts(currentRange.getStart(), currentRange.getEnd()));
+            BigDecimal prevProd = BigDecimal.valueOf(adStatisticsRepository.sumSoldProducts(prevRange.getStart(), prevRange.getEnd()));
+
+            list.add(new GrowthStatResponse("Sản phẩm " + labels[i], currProd, calculateGrowth(currProd, prevProd), false));
+        }
+
+        return list;
+    }
 }

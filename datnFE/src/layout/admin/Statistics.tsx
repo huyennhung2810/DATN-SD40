@@ -1,25 +1,50 @@
-import React, { useEffect } from "react";
-import { statisticsActions } from "../../redux/statistics/statisticsSlice";
+import React from "react";
 import { Row, Col } from "antd";
-import { useAppDispatch } from "../../app/hook";
+import { useAppSelector } from "../../app/hook";
+
+// Components
 import StatisticFilter from "../../Pages/admin/statistics/StatisticsFilter";
 import DashboardSummaryCards from "../../Pages/admin/statistics/DashboardSummaryCards";
+import OrderStatusChart from "../../Pages/admin/statistics/OrderStatusStat";
+import RevenueChart from "../../Pages/admin/statistics/RevenueChart";
+import LowStockTable from "../../Pages/admin/statistics/LowStockProduct";
+import GrowthChart from "../../Pages/admin/statistics/GrowthStat";
+import TopProductTable from "../../Pages/admin/statistics/TopSelling";
 
 const StatisticsPage: React.FC = () => {
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(statisticsActions.fetchData("MONTH"));
-  }, [dispatch]);
+  const { summary, loading } = useAppSelector((state) => state.statistics);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <Row gutter={[16, 16]} className="mt-6">
+      <Row gutter={[24, 24]}>
         <Col span={24}>
           <DashboardSummaryCards />
         </Col>
+
         <Col span={24}>
           <StatisticFilter />
+        </Col>
+
+        <Col xs={24} lg={16}>
+          <RevenueChart />
+        </Col>
+        <Col xs={24} lg={8}>
+          <OrderStatusChart />
+        </Col>
+
+        <Col xs={24} lg={16}>
+          <TopProductTable
+            data={summary?.topSellingProducts || []}
+            loading={loading}
+          />
+
+          <div style={{ marginTop: 24 }}>
+            <LowStockTable />
+          </div>
+        </Col>
+
+        <Col xs={24} lg={8}>
+          <GrowthChart />
         </Col>
       </Row>
     </div>

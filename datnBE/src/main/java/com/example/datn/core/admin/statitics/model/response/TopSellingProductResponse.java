@@ -18,6 +18,5 @@ public class TopSellingProductResponse {
     private String productImage;
     private Long quantitySold;
     private BigDecimal revenue;
-    private String brand;
-    private BigDecimal sellingPrice;
+    private BigDecimal price;
 }

@@ -3,6 +3,7 @@ package com.example.datn.core.admin.statitics.model.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -35,9 +36,13 @@ public class ADDashboardResponse {
     @Data
     @Builder
     public static class TopProductDto {
+        private String id;
         private String name;
         private Long soldCount;
-        private Double revenue;
+        private String version;
+        private BigDecimal revenue;
         private String imageUrl;
+        private String category;
+        private BigDecimal price;
     }
 }

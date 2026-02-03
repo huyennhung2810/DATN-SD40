@@ -1,8 +1,13 @@
-export interface TopProduct {
-  name: string;
-  soldCount: number;
-  revenue: number;
-  imageUrl: string | null;
+
+export interface TopSellingProduct {
+    id: string;
+    name: string;
+    version: string;
+    category: string;
+    soldCount: number;
+    revenue: number;
+    price: number;
+    imageUrl: string | null;
 }
 
 export interface DashboardSummary {
@@ -31,10 +36,27 @@ export interface DashboardSummary {
     newCustomersThisMonth: number;
 }
 
+export interface OrderStatusStat {
+  status: string;
+  count: number;
+}
 
-export interface TopSellingProduct {
+export interface RevenueStat {
+  date: string;
+  revenue: number;
+}
+
+export interface LowStockProduct {
+    id: string;
     name: string;
-    soldCount: number;
-    revenue: number;
-    imageUrl: string | null;
+    price: number;
+    quantity: number;
+    imageUrl: string
+}
+
+export interface GrowthStat {
+  label: string;
+  value: number;
+  growth: number;
+  isCurrency: boolean;
 }

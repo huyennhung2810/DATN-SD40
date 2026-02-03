@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderStatisticsResponse {
+public class GrowthStatResponse {
+    private String label;
+    private BigDecimal value;
+    private Double growth;
+    private Boolean isCurrency;
 
-    private String date;
-
-    private Long orderCount;
-
-    private Long timestamp;
 }

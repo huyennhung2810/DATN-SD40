@@ -27,7 +27,6 @@ import { statisticsActions } from "../../../redux/statistics/statisticsSlice";
 
 const { Text } = Typography;
 
-// Helper 1: Format tiền tệ an toàn
 const formatCurrency = (value: number | undefined | null) => {
   if (value === undefined || value === null || isNaN(value)) return "0 ₫";
   return new Intl.NumberFormat("vi-VN", {
@@ -36,13 +35,11 @@ const formatCurrency = (value: number | undefined | null) => {
   }).format(value);
 };
 
-// Helper 2: Tính toán an toàn, tránh NaN
 const safeNum = (value: number | undefined | null) => {
   if (value === undefined || value === null || isNaN(value)) return 0;
   return value;
 };
 
-// Helper 3: Tính % an toàn
 const safePercent = (value: number | undefined | null) => {
   const val = safeNum(value);
   return Number(val.toFixed(1));
@@ -51,8 +48,6 @@ const safePercent = (value: number | undefined | null) => {
 const DashboardSummary: React.FC = () => {
   const dispatch = useAppDispatch();
   const { summary, loading } = useAppSelector((state) => state.statistics);
-
-  console.log("Dữ liệu Summary trong Component:", summary);
 
   useEffect(() => {
     dispatch(statisticsActions.fetchData("THIS_MONTH"));
