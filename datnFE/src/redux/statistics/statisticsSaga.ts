@@ -26,7 +26,6 @@ function* handleFetchDashboardData(action: PayloadAction<FilterParams>) {
             call(statisticsApi.getTopSellingProduct, params)         
         ]);
 
-        console.log("Dữ liệu Top Selling từ Server:", topSellingRes.data);
         yield put(statisticsActions.fetchDashboardDataSuccess({
             filteredStat: filteredRes.data,
             revenueData: revenueRes.data,
