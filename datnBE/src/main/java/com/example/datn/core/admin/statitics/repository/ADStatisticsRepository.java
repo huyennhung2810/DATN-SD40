@@ -36,7 +36,7 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
 
         FROM `order` o
         LEFT JOIN order_detail od ON o.id = od.id_order
-        WHERE o.order_status != 'CANCELLED' 
+        WHERE o.order_status != 'CANCELED' 
     """, nativeQuery = true)
     ADDashboardResponse getStatOverview();
 
@@ -48,7 +48,7 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
            COALESCE(SUM(od.quantity), 0) AS totalProductsSold
         FROM `order` o
         LEFT JOIN order_detail od ON o.id = od.id_order
-        WHERE o.order_status != 'CANCELLED' 
+        WHERE o.order_status != 'CANCELED' 
         AND o.created_date BETWEEN :startDate AND :endDate
     """, nativeQuery = true)
     ADFilterResponse getFilteredStats(@Param("startDate") Long startDate, @Param("endDate") Long endDate);
@@ -92,28 +92,21 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
         SELECT
             pd.id AS id,
             CONCAT(p.name, ' ', COALESCE(pd.version, '')) AS name,
-            
-            (SELECT pi.url 
-             FROM product_image pi 
-             WHERE pi.id_product = p.id 
-             ORDER BY pi.display_order ASC 
-             LIMIT 1) AS imageUrl,
-            
+            (SELECT pi.url FROM product_image pi WHERE pi.id_product = p.id ORDER BY pi.display_order ASC LIMIT 1) AS imageUrl,
             pd.sale_price AS price,
-            
             CAST(COALESCE(SUM(od.quantity), 0) AS SIGNED) AS soldCount
-
         FROM order_detail od
         JOIN `order` o ON od.id_order = o.id
         JOIN product_detail pd ON od.id_product_detail = pd.id
         JOIN product p ON pd.id_product = p.id
-        WHERE o.order_status = 'COMPLETED' 
+        WHERE o.order_status != 'CANCELED' 
           AND o.created_date BETWEEN :startDate AND :endDate
         GROUP BY pd.id, p.name, pd.version, pd.sale_price, p.id
         ORDER BY soldCount DESC
         LIMIT 5
     """, nativeQuery = true)
     List<ADTopSellingProductsResponse> getTopSellingProducts(@Param("startDate") Long startDate, @Param("endDate") Long endDate);
+
 
     //Sản phẩm sắp hết haàng
     @Query(value = """

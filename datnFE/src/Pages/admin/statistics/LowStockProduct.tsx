@@ -11,7 +11,6 @@ const LowStockTable: React.FC = () => {
 
   const dataSource = useMemo(() => lowStock || [], [lowStock]);
 
-  // --- CẤU HÌNH CỘT (COLUMNS) ---
   const columns: ColumnsType<LowStockProduct> = [
     {
       title: "STT",
@@ -28,12 +27,12 @@ const LowStockTable: React.FC = () => {
       align: "center",
       render: (url: string) => (
         <Image
-          src={url || "https://via.placeholder.com/50"} // Ảnh mặc định nếu null
+          src={url || "https://via.placeholder.com/50"}
           alt="product"
           width={40}
           height={40}
           style={{ borderRadius: "6px", objectFit: "cover" }}
-          preview={false} // Tắt preview nếu muốn giống dashboard tĩnh
+          preview={false}
         />
       ),
     },
@@ -63,7 +62,6 @@ const LowStockTable: React.FC = () => {
       align: "center",
       width: 120,
       render: (quantity: number) => {
-        // Logic màu sắc: Hết hàng (0) -> Đỏ, Sắp hết (<5) -> Cam
         const color = quantity === 0 ? "red" : "orange";
         return (
           <Tag color={color} style={{ fontWeight: "bold", padding: "0 10px" }}>

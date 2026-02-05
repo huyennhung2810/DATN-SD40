@@ -10,7 +10,6 @@ import type {
     GrowthStat
 } from "../../models/statistics";
 
-// Worker: Dashboard Data (Filter)
 function* handleFetchDashboardData(action: PayloadAction<FilterParams>) {
     try {
         const params = action.payload;
@@ -27,6 +26,7 @@ function* handleFetchDashboardData(action: PayloadAction<FilterParams>) {
             call(statisticsApi.getTopSellingProduct, params)         
         ]);
 
+        console.log("Dữ liệu Top Selling từ Server:", topSellingRes.data);
         yield put(statisticsActions.fetchDashboardDataSuccess({
             filteredStat: filteredRes.data,
             revenueData: revenueRes.data,
@@ -48,11 +48,11 @@ function* handleFetchDashboardData(action: PayloadAction<FilterParams>) {
             errorMessage = error.message;
         }
 
+        
         yield put(statisticsActions.fetchDashboardDataFailure(errorMessage));
     }
 }
 
-// Worker: Initial Data (Static)
 function* handleFetchInitialData() {
     try {
         const [summaryRes, lowStockRes, growthStatRes]: [
@@ -72,9 +72,7 @@ function* handleFetchInitialData() {
         }));
     } catch (error) {
         console.error("Lỗi tải overview/initial:", error);
-        // SỬA: Dispatch action failure để tắt loading trong slice
         yield put(statisticsActions.fetchInitialDataFailure());
-        // Hoặc có thể dùng chung fetchDashboardDataFailure nếu muốn hiện thông báo lỗi
     }
 }
 

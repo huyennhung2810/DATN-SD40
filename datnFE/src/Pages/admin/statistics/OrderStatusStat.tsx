@@ -12,29 +12,18 @@ import { useAppSelector } from "../../../app/hook";
 
 const { Text } = Typography;
 
-// --- 1. ĐỊNH NGHĨA TYPE ---
-
-// Interface cho dữ liệu gốc của chúng ta (Strict)
 interface ChartDataItem {
   name: string;
   value: number;
   color: string;
 }
 
-// Interface cho 1 mục Legend (Tương thích với Recharts)
 interface LegendEntry {
-  value?: string; // Tên Label (VD: "Chờ xác nhận")
-  color?: string; // Màu sắc
-
-  // 🔥 QUAN TRỌNG: Dùng 'unknown' thay vì 'ChartDataItem'.
-  // Lý do: Recharts trả về một object chung chung, không khớp hoàn toàn với ChartDataItem.
-  // 'unknown' an toàn hơn 'any' vì nó bắt buộc ta phải kiểm tra/ép kiểu trước khi dùng.
+  value?: string;
+  color?: string;
   payload?: unknown;
 }
-
-// Interface cho Props của Legend Component
 interface CustomLegendProps {
-  // 'readonly' để khớp với Recharts (Immutable array)
   payload?: readonly LegendEntry[];
 }
 
@@ -69,7 +58,6 @@ const OrderStatusChart: React.FC = () => {
     return { chartData: data, totalOrders: total };
   }, [orderStatus]);
 
-  // --- 2. HÀM RENDER LEGEND (Ép kiểu an toàn) ---
   const renderCustomLegend = (props: CustomLegendProps) => {
     const { payload } = props;
 
@@ -78,9 +66,6 @@ const OrderStatusChart: React.FC = () => {
     return (
       <Row gutter={[8, 8]} style={{ paddingTop: 16, fontSize: 12 }}>
         {payload.map((entry, index) => {
-          // 🔥 ÉP KIỂU Ở ĐÂY:
-          // Chúng ta biết chắc chắn payload là ChartDataItem, nên dùng 'as'
-          // Nếu entry.payload là undefined, ta fallback về object rỗng để tránh crash
           const dataItem = (entry.payload as ChartDataItem) || {};
 
           const countValue = dataItem.value ?? 0;
@@ -121,7 +106,6 @@ const OrderStatusChart: React.FC = () => {
     );
   };
 
-  // --- 3. TOOLTIP FORMATTER ---
   const tooltipFormatter = (
     value: number | string | Array<number | string> | undefined,
   ) => {

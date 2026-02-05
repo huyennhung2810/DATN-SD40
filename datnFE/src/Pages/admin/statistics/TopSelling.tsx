@@ -44,7 +44,7 @@ const TopSelling: React.FC = () => {
             backgroundColor: "#fafafa",
             objectFit: "cover",
           }}
-          onError={() => true} // Tự động hiện icon nếu ảnh lỗi
+          onError={() => true}
         />
       ),
     },
@@ -120,12 +120,12 @@ const TopSelling: React.FC = () => {
       <Table
         columns={columns}
         dataSource={topSelling}
-        rowKey="id" // Sử dụng ID làm key duy nhất
+        rowKey="id"
         loading={loading}
-        pagination={false} // Tắt phân trang vì đây là Top 5/Top 10 cố định
+        pagination={false}
         size="middle"
         locale={{ emptyText: "Chưa có dữ liệu bán hàng" }}
-        scroll={{ x: 600 }} // Cho phép cuộn ngang trên mobile
+        scroll={{ x: 600 }}
       />
     </Card>
   );

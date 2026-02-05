@@ -26,7 +26,6 @@ const safeNum = (value: number | undefined | null) => {
   return value === undefined || value === null || isNaN(value) ? 0 : value;
 };
 
-// --- Component Card Riêng Biệt ---
 interface StatCardProps {
   title: string;
   subTitle: string;
@@ -58,7 +57,6 @@ const StatCard: React.FC<StatCardProps> = ({
       style={{ borderRadius: "16px", height: "100%" }}
       styles={{ body: { padding: "20px" } }}
     >
-      {/* 1. Header: Icon & Title */}
       <div
         style={{
           display: "flex",
