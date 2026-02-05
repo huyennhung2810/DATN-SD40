@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import { Table, Card, Typography, Image, Tag, Empty } from "antd";
+import { Table, Card, Typography, Tag, Empty, Avatar } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useAppSelector } from "../../../app/hook";
 import type { LowStockProduct } from "../../../models/statistics";
+import { PictureOutlined, WarningOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
@@ -23,16 +24,21 @@ const LowStockTable: React.FC = () => {
       title: "Ảnh",
       dataIndex: "imageUrl",
       key: "imageUrl",
-      width: 80,
+      width: 100,
       align: "center",
-      render: (url: string) => (
-        <Image
-          src={url || "https://via.placeholder.com/50"}
-          alt="product"
-          width={40}
-          height={40}
-          style={{ borderRadius: "6px", objectFit: "cover" }}
-          preview={false}
+      render: (url) => (
+        <Avatar
+          shape="square"
+          size={35}
+          src={url}
+          icon={<PictureOutlined style={{ fontSize: 18, color: "#bfbfbf" }} />}
+          style={{
+            borderRadius: 8,
+            border: "1px solid #f0f0f0",
+            backgroundColor: "#fafafa",
+            objectFit: "cover",
+          }}
+          onError={() => true}
         />
       ),
     },
@@ -82,15 +88,26 @@ const LowStockTable: React.FC = () => {
         body: { padding: "10px 24px 24px 24px" },
       }}
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Icon cảnh báo */}
-          <span style={{ fontSize: 20 }}>⚠️</span>
-          <Title
-            level={5}
-            style={{ margin: 0, fontWeight: 700, fontSize: "18px" }}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 8,
+              background: "#fff1f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ff4d4f",
+            }}
           >
-            Sản phẩm sắp hết hàng
-          </Title>
+            <WarningOutlined style={{ fontSize: 20 }} />
+          </div>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              Sản phẩm sắp hết hàng
+            </Title>
+          </div>
         </div>
       }
     >
@@ -103,9 +120,9 @@ const LowStockTable: React.FC = () => {
           columns={columns}
           dataSource={dataSource}
           rowKey="id"
-          pagination={{ pageSize: 5, hideOnSinglePage: true }} // Phân trang nhỏ gọn
-          size="middle" // Kích thước dòng vừa phải
-          bordered={false} // Bỏ viền dọc table cho hiện đại
+          pagination={{ pageSize: 5, hideOnSinglePage: true }}
+          size="middle"
+          bordered={false}
         />
       )}
     </Card>

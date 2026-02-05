@@ -12,6 +12,7 @@ import {
 import { useAppSelector } from "../../../app/hook";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
+import { BarChartOutlined } from "@ant-design/icons";
 
 dayjs.locale("vi");
 
@@ -193,9 +194,25 @@ const RevenueChart: React.FC = () => {
       }}
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Title level={5} style={{ margin: 0, fontSize: 18 }}>
-            Biểu Đồ Doanh Thu
-          </Title>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 8,
+              background: "#fff1f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ff4d4f",
+            }}
+          >
+            <BarChartOutlined style={{ fontSize: 20 }} />
+          </div>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              Biểu Đồ Doanh Thu
+            </Title>
+          </div>
         </div>
       }
     >

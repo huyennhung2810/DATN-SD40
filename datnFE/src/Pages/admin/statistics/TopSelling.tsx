@@ -35,9 +35,9 @@ const TopSelling: React.FC = () => {
       render: (url) => (
         <Avatar
           shape="square"
-          size={60}
+          size={35}
           src={url}
-          icon={<PictureOutlined style={{ fontSize: 24, color: "#bfbfbf" }} />}
+          icon={<PictureOutlined style={{ fontSize: 18, color: "#bfbfbf" }} />}
           style={{
             borderRadius: 8,
             border: "1px solid #f0f0f0",
@@ -90,7 +90,7 @@ const TopSelling: React.FC = () => {
     <Card
       variant="borderless"
       className="shadow-sm"
-      style={{ borderRadius: "16px", height: "400px", overflow: "hidden" }}
+      style={{ borderRadius: "16px", height: "420px", overflow: "hidden" }}
       styles={{
         header: { borderBottom: "none", padding: "24px 24px 0 24px" },
         body: { padding: "12px 24px 24px 24px" },
@@ -99,21 +99,23 @@ const TopSelling: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div
             style={{
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               borderRadius: 8,
-              background: "#fff2e8",
-              color: "#fa541c",
+              background: "#fff1f0",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              color: "#ff4d4f",
             }}
           >
-            <FireOutlined style={{ fontSize: 18 }} />
+            <FireOutlined style={{ fontSize: 20 }} />
           </div>
-          <Title level={5} style={{ margin: 0, fontSize: 18 }}>
-            TOP Sản Phẩm Bán Chạy
-          </Title>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              TOP Sản Phẩm Bán Chạy
+            </Title>
+          </div>
         </div>
       }
     >

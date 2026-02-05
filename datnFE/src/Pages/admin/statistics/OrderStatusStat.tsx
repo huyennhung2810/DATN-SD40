@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useAppSelector } from "../../../app/hook";
+import { ShoppingOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -29,14 +30,14 @@ interface CustomLegendProps {
 
 // Cấu hình màu sắc
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Chờ xác nhận", color: "#FFC107" },
-  CONFIRMED: { label: "Đã xác nhận", color: "#0D6EFD" },
-  PACKAGING: { label: "Đang đóng gói", color: "#17A2B8" },
-  SHIPPING: { label: "Đang vận chuyển", color: "#6F42C1" },
-  DELIVERY_FAILED: { label: "Giao hàng thất bại", color: "#E74C3C" },
-  COMPLETED: { label: "Đã hoàn thành", color: "#198754" },
-  CANCELED: { label: "Đã huỷ", color: "#DC3545" },
-  RETURNED: { label: "Đã trả hàng", color: "#FD7E14" },
+  PENDING: { label: "Chờ xác nhận", color: "#ffcb2f" },
+  CONFIRMED: { label: "Đã xác nhận", color: "#297eff" },
+  PACKAGING: { label: "Đang đóng gói", color: "#2de3ff" },
+  SHIPPING: { label: "Đang vận chuyển", color: "#7f3bff" },
+  DELIVERY_FAILED: { label: "Giao hàng thất bại", color: "#ff4834" },
+  COMPLETED: { label: "Đã hoàn thành", color: "#01af5e" },
+  CANCELED: { label: "Đã huỷ", color: "#ff243a" },
+  RETURNED: { label: "Đã trả hàng", color: "#ff9137" },
 };
 
 const OrderStatusChart: React.FC = () => {
@@ -117,7 +118,12 @@ const OrderStatusChart: React.FC = () => {
 
   return (
     <Card
-      title={<Text strong>Trạng thái đơn hàng</Text>}
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ShoppingOutlined style={{ color: "#ff4d4f" }} />
+          <Text strong>Trạng thái đơn hàng</Text>
+        </div>
+      }
       className="shadow-sm"
       style={{ borderRadius: "10px", height: "100%" }}
       styles={{ body: { padding: "10px" } }}
