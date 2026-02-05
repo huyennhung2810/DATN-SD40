@@ -68,7 +68,6 @@ const GrowthChart: React.FC = () => {
                   boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                 }}
               >
-                {/* Cột 1: Label & Icon */}
                 <div
                   style={{
                     display: "flex",
@@ -83,7 +82,6 @@ const GrowthChart: React.FC = () => {
                   </Text>
                 </div>
 
-                {/* Cột 2: Giá trị */}
                 <div style={{ flex: 1, textAlign: "center" }}>
                   <Text strong style={{ color: "#fff", fontSize: 14 }}>
                     {item.isCurrency
@@ -92,7 +90,6 @@ const GrowthChart: React.FC = () => {
                   </Text>
                 </div>
 
-                {/* Cột 3: % Tăng trưởng */}
                 <div
                   style={{
                     width: 80,

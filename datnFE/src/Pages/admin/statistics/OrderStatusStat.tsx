@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Card, Empty, Typography } from "antd";
+import { Card, Empty, Typography, Row, Col } from "antd";
 import {
   PieChart,
   Pie,
@@ -11,6 +11,32 @@ import {
 import { useAppSelector } from "../../../app/hook";
 
 const { Text } = Typography;
+
+// --- 1. ĐỊNH NGHĨA TYPE ---
+
+// Interface cho dữ liệu gốc của chúng ta (Strict)
+interface ChartDataItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+// Interface cho 1 mục Legend (Tương thích với Recharts)
+interface LegendEntry {
+  value?: string; // Tên Label (VD: "Chờ xác nhận")
+  color?: string; // Màu sắc
+
+  // 🔥 QUAN TRỌNG: Dùng 'unknown' thay vì 'ChartDataItem'.
+  // Lý do: Recharts trả về một object chung chung, không khớp hoàn toàn với ChartDataItem.
+  // 'unknown' an toàn hơn 'any' vì nó bắt buộc ta phải kiểm tra/ép kiểu trước khi dùng.
+  payload?: unknown;
+}
+
+// Interface cho Props của Legend Component
+interface CustomLegendProps {
+  // 'readonly' để khớp với Recharts (Immutable array)
+  payload?: readonly LegendEntry[];
+}
 
 // Cấu hình màu sắc
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -31,7 +57,7 @@ const OrderStatusChart: React.FC = () => {
     if (!orderStatus || orderStatus.length === 0)
       return { chartData: [], totalOrders: 0 };
 
-    const data = orderStatus.map((item) => {
+    const data: ChartDataItem[] = orderStatus.map((item) => {
       const config = ORDER_STATUS_CONFIG[item.status] || {
         label: item.status,
         color: "#6c757d",
@@ -39,10 +65,71 @@ const OrderStatusChart: React.FC = () => {
       return { name: config.label, value: item.count, color: config.color };
     });
 
-    const filteredData = data.filter((item) => item.value > 0);
-    const total = filteredData.reduce((sum, item) => sum + item.value, 0);
-    return { chartData: filteredData, totalOrders: total };
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    return { chartData: data, totalOrders: total };
   }, [orderStatus]);
+
+  // --- 2. HÀM RENDER LEGEND (Ép kiểu an toàn) ---
+  const renderCustomLegend = (props: CustomLegendProps) => {
+    const { payload } = props;
+
+    if (!payload) return null;
+
+    return (
+      <Row gutter={[8, 8]} style={{ paddingTop: 16, fontSize: 12 }}>
+        {payload.map((entry, index) => {
+          // 🔥 ÉP KIỂU Ở ĐÂY:
+          // Chúng ta biết chắc chắn payload là ChartDataItem, nên dùng 'as'
+          // Nếu entry.payload là undefined, ta fallback về object rỗng để tránh crash
+          const dataItem = (entry.payload as ChartDataItem) || {};
+
+          const countValue = dataItem.value ?? 0;
+          const label = entry.value ?? "";
+
+          const percent =
+            totalOrders > 0
+              ? ((countValue / totalOrders) * 100).toFixed(2)
+              : "0.00";
+
+          const formattedPercent = Number(percent).toLocaleString("vi-VN", {
+            maximumFractionDigits: 2,
+          });
+
+          return (
+            <Col
+              span={12}
+              key={`item-${index}`}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  backgroundColor: entry.color,
+                  marginRight: 8,
+                  flexShrink: 0,
+                }}
+              />
+              <Text ellipsis title={`${label} - ${formattedPercent}%`}>
+                {label} - {formattedPercent}%
+              </Text>
+            </Col>
+          );
+        })}
+      </Row>
+    );
+  };
+
+  // --- 3. TOOLTIP FORMATTER ---
+  const tooltipFormatter = (
+    value: number | string | Array<number | string> | undefined,
+  ) => {
+    const valNum = Number(value || 0);
+    const percent =
+      totalOrders > 0 ? ((valNum / totalOrders) * 100).toFixed(1) : "0";
+    return [`${valNum} đơn (${percent}%)`, "Số lượng"] as [string, string];
+  };
 
   return (
     <Card
@@ -51,8 +138,8 @@ const OrderStatusChart: React.FC = () => {
       style={{ borderRadius: "10px", height: "100%" }}
       styles={{ body: { padding: "10px" } }}
     >
-      <div style={{ width: "100%", height: 350, minHeight: 350, minWidth: 0 }}>
-        {loading || chartData.length === 0 ? (
+      <div style={{ width: "100%", height: 400, minHeight: 400, minWidth: 0 }}>
+        {loading ? (
           <div
             style={{
               display: "flex",
@@ -61,19 +148,28 @@ const OrderStatusChart: React.FC = () => {
               height: "100%",
             }}
           >
-            <Empty description={loading ? "Đang tải..." : "Chưa có dữ liệu"} />
+            <Empty description="Đang tải..." />
+          </div>
+        ) : chartData.length === 0 || totalOrders === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            <Empty description="Chưa có dữ liệu" />
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
-                cy="50%"
-                // innerRadius={60}
-                // outerRadius={100}
-                // paddingAngle={2}
+                cy="45%"
                 dataKey="value"
+                outerRadius={110}
               >
                 {chartData.map((entry, index) => (
                   <Cell
@@ -83,15 +179,9 @@ const OrderStatusChart: React.FC = () => {
                   />
                 ))}
               </Pie>
+
               <Tooltip
-                formatter={(value: number | undefined) => {
-                  const val = value ?? 0;
-                  const percent =
-                    totalOrders > 0
-                      ? ((val / totalOrders) * 100).toFixed(1)
-                      : "0";
-                  return [`${val} đơn (${percent}%)`, "Số lượng"];
-                }}
+                formatter={tooltipFormatter}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "none",
@@ -99,11 +189,11 @@ const OrderStatusChart: React.FC = () => {
                 }}
                 itemStyle={{ fontWeight: 600, color: "#555" }}
               />
+
               <Legend
+                content={renderCustomLegend}
                 verticalAlign="bottom"
-                height={36}
-                iconType="circle"
-                wrapperStyle={{ paddingTop: "10px", fontSize: "12px" }}
+                wrapperStyle={{ width: "100%" }}
               />
             </PieChart>
           </ResponsiveContainer>

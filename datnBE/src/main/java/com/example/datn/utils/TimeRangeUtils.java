@@ -5,67 +5,79 @@ import com.example.datn.infrastructure.constant.TimeRangeType;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 
 public class TimeRangeUtils {
 
     private static final ZoneId ZONE_ID = ZoneId.of("Asia/Ho_Chi_Minh");
 
     public static TimeRange getRange(TimeRangeType type) {
+        LocalDate today = LocalDate.now(ZONE_ID);
         LocalDateTime start;
-        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime end = LocalDateTime.now(ZONE_ID); // Thời điểm hiện tại
 
         switch (type) {
-            case TODAY -> start = LocalDate.now().atStartOfDay();
+            case TODAY -> start = today.atStartOfDay();
 
-            // Gộp case: Dù là WEEK hay THIS_WEEK đều chạy logic này
-            case WEEK, THIS_WEEK -> start = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+            case WEEK, THIS_WEEK -> start = today.with(DayOfWeek.MONDAY).atStartOfDay();
 
-            // Gộp case: Dù là MONTH hay THIS_MONTH đều chạy logic này
-            case MONTH, THIS_MONTH -> start = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            case MONTH, THIS_MONTH -> start = today.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
 
-            // Gộp case: Fix lỗi YEAR mà bạn đang gặp
-            case YEAR, THIS_YEAR -> start = LocalDate.now().withDayOfYear(1).atStartOfDay();
+            case YEAR, THIS_YEAR -> start = today.with(TemporalAdjusters.firstDayOfYear()).atStartOfDay();
 
-            default -> throw new IllegalArgumentException("Invalid TimeRangeType");
+            default -> throw new IllegalArgumentException("Unsupported TimeRangeType: " + type);
         }
 
         return new TimeRange(
-                start.atZone(ZONE_ID).toInstant().toEpochMilli(),
-                end.atZone(ZONE_ID).toInstant().toEpochMilli()
+                toMillis(start),
+                toMillis(end)
         );
     }
 
     public static TimeRange getPreviousRange(TimeRangeType type) {
+        LocalDate today = LocalDate.now(ZONE_ID);
         LocalDateTime start;
         LocalDateTime end;
-        LocalDate today = LocalDate.now();
 
         switch (type) {
             case TODAY -> {
-                start = today.minusDays(1).atStartOfDay();
-                end = today.atStartOfDay().minusNanos(1);
+                // Hôm qua: Bắt đầu 00:00 hôm qua -> Kết thúc 23:59:59.999 hôm qua
+                LocalDate yesterday = today.minusDays(1);
+                start = yesterday.atStartOfDay();
+                end = yesterday.atTime(LocalTime.MAX);
             }
-            // Gộp logic cho tuần trước
             case WEEK, THIS_WEEK -> {
-                start = today.minusWeeks(1).with(DayOfWeek.MONDAY).atStartOfDay();
-                end = today.with(DayOfWeek.MONDAY).atStartOfDay().minusNanos(1);
+                // Tuần trước: T2 tuần trước -> CN tuần trước (cuối ngày)
+                LocalDate lastWeekMonday = today.minusWeeks(1).with(DayOfWeek.MONDAY);
+                LocalDate lastWeekSunday = lastWeekMonday.plusDays(6);
+
+                start = lastWeekMonday.atStartOfDay();
+                end = lastWeekSunday.atTime(LocalTime.MAX);
             }
-            // Gộp logic cho tháng trước
             case MONTH, THIS_MONTH -> {
-                start = today.minusMonths(1).withDayOfMonth(1).atStartOfDay();
-                end = today.withDayOfMonth(1).atStartOfDay().minusNanos(1);
+                // Tháng trước: Ngày 1 tháng trước -> Ngày cuối tháng trước
+                LocalDate lastMonth = today.minusMonths(1);
+                start = lastMonth.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+                end = lastMonth.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
             }
-            // Gộp logic cho năm trước
             case YEAR, THIS_YEAR -> {
-                start = today.minusYears(1).withDayOfYear(1).atStartOfDay();
-                end = today.withDayOfYear(1).atStartOfDay().minusNanos(1);
+                // Năm trước: 1/1 năm trước -> 31/12 năm trước
+                LocalDate lastYear = today.minusYears(1);
+                start = lastYear.with(TemporalAdjusters.firstDayOfYear()).atStartOfDay();
+                end = lastYear.with(TemporalAdjusters.lastDayOfYear()).atTime(LocalTime.MAX);
             }
-            default -> throw new IllegalArgumentException("Invalid Type");
+            default -> throw new IllegalArgumentException("Unsupported TimeRangeType: " + type);
         }
+
         return new TimeRange(
-                start.atZone(ZONE_ID).toInstant().toEpochMilli(),
-                end.atZone(ZONE_ID).toInstant().toEpochMilli()
+                toMillis(start),
+                toMillis(end)
         );
+    }
+
+    private static Long toMillis(LocalDateTime localDateTime) {
+        return localDateTime.atZone(ZONE_ID).toInstant().toEpochMilli();
     }
 }

@@ -30,12 +30,12 @@ const pageInfoMap: Record<
 > = {
   "/statistics": {
     title: "Thống kê",
-    desc: "Xem và quản lý các số liệu thống kê về doanh thu, đơn hàng và hiệu suất nhân viên",
+    desc: "Xem và quản lý các số liệu thống kê",
     icon: <LineChartOutlined />,
   },
   "/product": {
     title: "Quản lý Sản phẩm",
-    desc: "Quản lý danh mục máy ảnh, ống kính và phụ kiện Canon",
+    desc: "Quản lý danh mục máy ảnh",
     icon: <CameraOutlined />,
   },
   "/orders": {
@@ -45,7 +45,7 @@ const pageInfoMap: Record<
   },
   "/customer": {
     title: "Quản lý Khách hàng",
-    desc: "Xem và quản lý thông tin khách hàng thân thiết",
+    desc: "Xem và quản lý thông tin khách hàng",
     icon: <TeamOutlined />,
   },
   "/employee": {

@@ -7,5 +7,6 @@ public enum TimeRangeType {
     MONTH,
     THIS_MONTH,
     YEAR,
-    THIS_YEAR
+    THIS_YEAR,
+    CUSTOM
 }

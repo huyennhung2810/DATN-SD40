@@ -1,48 +1,49 @@
 package com.example.datn.core.admin.statitics.model.response;
 
-import lombok.Builder;
-import lombok.Data;
-
 import java.math.BigDecimal;
-import java.util.List;
+import java.math.RoundingMode;
 
-@Data
-@Builder
-public class ADDashboardResponse {
-    //Doanh thu
-    private Double revenueToday;
-    private Double revenueThisWeek;
-    private Double revenueThisMonth;
-    private Double revenueThisYear;
-    private Double growthPercentage; // % Tăng trưởng so với tháng trước
+public interface ADDashboardResponse {
 
-    //Đơn hàng
-    private Long totalOrders;     // Tổng đơn (lấy theo tháng hoặc tổng toàn bộ tùy logic)
-    private Double completionRate; // Tỷ lệ hoàn thành
-    private Long pendingCount;    // Chờ xác nhận
-    private Long processingCount; // Đang xử lý
-    private Long completedCount;  // Hoàn thành
-    private Long cancelledCount;  // Đã hủy
+    //Hôm nay
+    BigDecimal getRevenueToday();
+    Long getOrdersToday();
+    Long getProductsSoldToday();
 
-    //Sản phẩm
-    private Long totalProducts;
-    private Long lowStockCount;
-    private List<TopProductDto> topSellingProducts;
+    //Tuần này
+    BigDecimal getRevenueThisWeek();
+    Long getOrdersThisWeek();
+    Long getProductsSoldThisWeek();
 
-    //Khách hàng
-    private Long totalCustomers;
-    private Long newCustomersThisMonth;
+    //Tháng này
+    BigDecimal getRevenueThisMonth();
+    Long getOrdersThisMonth();
+    Long getProductsSoldThisMonth();
 
-    @Data
-    @Builder
-    public static class TopProductDto {
-        private String id;
-        private String name;
-        private Long soldCount;
-        private String version;
-        private BigDecimal revenue;
-        private String imageUrl;
-        private String category;
-        private BigDecimal price;
+    //Năm nay
+    BigDecimal getRevenueThisYear();
+    Long getOrdersThisYear();
+    Long getProductsSoldThisYear();
+
+
+    // Danh thu tháng trước
+    BigDecimal getRevenueLastMonth();
+
+    //Tính %L
+    default Double getGrowthPercentage() {
+        BigDecimal thisMonth = getRevenueThisMonth() != null ? getRevenueThisMonth() : BigDecimal.ZERO;
+        BigDecimal lastMonth = getRevenueLastMonth() != null ? getRevenueLastMonth() : BigDecimal.ZERO;
+
+        // Nếu tháng trước = 0
+        if (lastMonth.compareTo(BigDecimal.ZERO) == 0) {
+            // Tháng này có doanh thu -> Tăng trưởng 100%, ngược lại 0%
+            return thisMonth.compareTo(BigDecimal.ZERO) > 0 ? 100.0 : 0.0;
+        }
+
+        // Công thức: ((Tháng này - Tháng trước) / Tháng trước) * 100
+        return thisMonth.subtract(lastMonth)
+                .divide(lastMonth, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue();
     }
 }

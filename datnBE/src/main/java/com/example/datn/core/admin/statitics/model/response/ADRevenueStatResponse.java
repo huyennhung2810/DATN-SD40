@@ -6,4 +6,5 @@ public interface ADRevenueStatResponse {
 
     String getDate();
     BigDecimal getRevenue();
+
 }

@@ -7,11 +7,9 @@ import type { LowStockProduct } from "../../../models/statistics";
 const { Title, Text } = Typography;
 
 const LowStockTable: React.FC = () => {
-  const { lowStockProducts, loading } = useAppSelector(
-    (state) => state.statistics,
-  );
+  const { lowStock, loading } = useAppSelector((state) => state.statistics);
 
-  const dataSource = useMemo(() => lowStockProducts || [], [lowStockProducts]);
+  const dataSource = useMemo(() => lowStock || [], [lowStock]);
 
   // --- CẤU HÌNH CỘT (COLUMNS) ---
   const columns: ColumnsType<LowStockProduct> = [
@@ -78,7 +76,7 @@ const LowStockTable: React.FC = () => {
 
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       className="shadow-sm"
       style={{ borderRadius: "16px", height: "100%", overflow: "hidden" }}
       styles={{

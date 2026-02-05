@@ -1,19 +1,15 @@
 import React from "react";
 import { Row, Col } from "antd";
-import { useAppSelector } from "../../app/hook";
 
-// Components
 import StatisticFilter from "../../Pages/admin/statistics/StatisticsFilter";
 import DashboardSummaryCards from "../../Pages/admin/statistics/DashboardSummaryCards";
 import OrderStatusChart from "../../Pages/admin/statistics/OrderStatusStat";
 import RevenueChart from "../../Pages/admin/statistics/RevenueChart";
 import LowStockTable from "../../Pages/admin/statistics/LowStockProduct";
+import TopSelling from "../../Pages/admin/statistics/TopSelling";
 import GrowthChart from "../../Pages/admin/statistics/GrowthStat";
-import TopProductTable from "../../Pages/admin/statistics/TopSelling";
 
 const StatisticsPage: React.FC = () => {
-  const { summary, loading } = useAppSelector((state) => state.statistics);
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Row gutter={[24, 24]}>
@@ -33,10 +29,7 @@ const StatisticsPage: React.FC = () => {
         </Col>
 
         <Col xs={24} lg={16}>
-          <TopProductTable
-            data={summary?.topSellingProducts || []}
-            loading={loading}
-          />
+          <TopSelling />
 
           <div style={{ marginTop: 24 }}>
             <LowStockTable />

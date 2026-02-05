@@ -1,157 +1,134 @@
 import React from "react";
-import { Table, Typography, Image, Tag, Card } from "antd";
+import { Card, Table, Avatar, Typography, Tag } from "antd";
+import { FireOutlined, PictureOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import { useAppSelector } from "../../../app/hook";
 import type { TopSellingProduct } from "../../../models/statistics";
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
-interface Props {
-  data: TopSellingProduct[];
-  loading: boolean;
-}
+const TopSelling: React.FC = () => {
+  const { topSelling, loading } = useAppSelector((state) => state.statistics);
 
-const TopProductTable: React.FC<Props> = ({ data, loading }) => {
-  // Helper render STT đẹp hơn
-  const renderIndex = (index: number) => {
-    const rank = index + 1;
-    let bgColor = "#f0f0f0";
-    let color = "#595959";
+  // Helper: Format tiền tệ
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
 
-    if (rank === 1) {
-      bgColor = "#FFD700";
-      color = "#fff";
-    } // Vàng
-    else if (rank === 2) {
-      bgColor = "#C0C0C0";
-      color = "#fff";
-    } // Bạc
-    else if (rank === 3) {
-      bgColor = "#CD7F32";
-      color = "#fff";
-    } // Đồng
-
-    return (
-      <div
-        style={{
-          backgroundColor: bgColor,
-          color: color,
-          width: 24,
-          height: 24,
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: "bold",
-          fontSize: 12,
-          margin: "0 auto",
-          boxShadow: rank <= 3 ? "0 2px 4px rgba(0,0,0,0.2)" : "none",
-        }}
-      >
-        {rank}
-      </div>
-    );
-  };
-
+  // Cấu hình các cột cho bảng
   const columns: ColumnsType<TopSellingProduct> = [
     {
-      title: "#",
+      title: "STT",
       key: "index",
       width: 60,
       align: "center",
-      render: (_, __, index) => renderIndex(index),
+      render: (_, __, index) => <Text strong>{index + 1}</Text>,
     },
     {
-      title: "Sản phẩm",
-      key: "product",
-      width: 300,
-      render: (_, record) => (
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Image
-            src={record.imageUrl || "error"}
-            fallback="https://via.placeholder.com/40x40?text=No+Img" // Ảnh thế thân khi lỗi
-            width={40}
-            height={40}
-            style={{
-              borderRadius: 6,
-              objectFit: "cover",
-              border: "1px solid #f0f0f0",
-            }}
-          />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <Text strong style={{ fontSize: 14 }}>
-              {record.name}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.category || "Chưa phân loại"}
-            </Text>
-          </div>
-        </div>
+      title: "Ảnh",
+      dataIndex: "imageUrl",
+      key: "imageUrl",
+      width: 100,
+      align: "center",
+      render: (url) => (
+        <Avatar
+          shape="square"
+          size={60}
+          src={url}
+          icon={<PictureOutlined style={{ fontSize: 24, color: "#bfbfbf" }} />}
+          style={{
+            borderRadius: 8,
+            border: "1px solid #f0f0f0",
+            backgroundColor: "#fafafa",
+            objectFit: "cover",
+          }}
+          onError={() => true} // Tự động hiện icon nếu ảnh lỗi
+        />
       ),
     },
     {
-      title: "Phân loại",
-      dataIndex: "version",
-      key: "version",
-      render: (ver) =>
-        ver ? <Tag color="blue">{ver}</Tag> : <Text disabled>--</Text>,
+      title: "Tên Sản Phẩm",
+      dataIndex: "name",
+      key: "name",
+      render: (name) => (
+        <Text strong style={{ color: "#262626", fontSize: 14 }}>
+          {name}
+        </Text>
+      ),
     },
     {
-      title: "Giá bán",
+      title: "Giá Bán",
       dataIndex: "price",
       key: "price",
       align: "right",
-      sorter: (a, b) => a.price - b.price,
-      render: (price) => <Text>{price?.toLocaleString("vi-VN")} đ</Text>,
-    },
-    {
-      title: "Đã bán",
-      dataIndex: "soldCount",
-      key: "soldCount",
-      align: "center",
-      sorter: (a, b) => a.soldCount - b.soldCount,
-      render: (count) => (
-        <Tag color="green" style={{ fontWeight: "bold", fontSize: 13 }}>
-          {count}
-        </Tag>
+      render: (price) => (
+        <Text style={{ fontWeight: 500, color: "#595959" }}>
+          {formatCurrency(price)}
+        </Text>
       ),
     },
     {
-      title: "Doanh thu",
-      dataIndex: "revenue",
-      key: "revenue",
-      align: "right",
-      width: 150,
-      sorter: (a, b) => a.revenue - b.revenue,
-      render: (rev) => (
-        <Text style={{ color: "#13c2c2", fontWeight: 700 }}>
-          {rev?.toLocaleString("vi-VN")} đ
-        </Text>
+      title: "Doanh Số",
+      dataIndex: "soldCount",
+      key: "soldCount",
+      align: "center",
+      width: 120,
+      render: (count) => (
+        <Tag
+          color="volcano"
+          style={{ fontSize: 14, padding: "4px 10px", fontWeight: 700 }}
+        >
+          {count}
+        </Tag>
       ),
     },
   ];
 
   return (
     <Card
+      variant="borderless"
+      className="shadow-sm"
+      style={{ borderRadius: "16px", height: "400px", overflow: "hidden" }}
+      styles={{
+        header: { borderBottom: "none", padding: "24px 24px 0 24px" },
+        body: { padding: "12px 24px 24px 24px" },
+      }}
       title={
-        <span style={{ fontWeight: 700 }}>Chi tiết Top Sản Phẩm Bán Chạy</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: "#fff2e8",
+              color: "#fa541c",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <FireOutlined style={{ fontSize: 18 }} />
+          </div>
+          <Title level={5} style={{ margin: 0, fontSize: 18 }}>
+            TOP Sản Phẩm Bán Chạy
+          </Title>
+        </div>
       }
-      bordered={false} // Thay cho variant="borderless" để an toàn hơn
-      style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-      styles={{ header: { borderBottom: "1px solid #f0f0f0" } }}
     >
       <Table
         columns={columns}
-        dataSource={data}
+        dataSource={topSelling}
+        rowKey="id" // Sử dụng ID làm key duy nhất
         loading={loading}
-        rowKey="id"
-        pagination={{
-          pageSize: 10,
-          showTotal: (total) => `Tổng ${total} sản phẩm`, // Hiển thị tổng số
-          showSizeChanger: false, // Ẩn nút chọn số lượng/trang cho gọn
-        }}
+        pagination={false} // Tắt phân trang vì đây là Top 5/Top 10 cố định
+        size="middle"
+        locale={{ emptyText: "Chưa có dữ liệu bán hàng" }}
+        scroll={{ x: 600 }} // Cho phép cuộn ngang trên mobile
       />
     </Card>
   );
 };
 
-export default TopProductTable;
+export default TopSelling;

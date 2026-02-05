@@ -2,38 +2,32 @@
 export interface TopSellingProduct {
     id: string;
     name: string;
-    version: string;
-    category: string;
-    soldCount: number;
-    revenue: number;
     price: number;
     imageUrl: string | null;
+    soldCount: number;
 }
 
 export interface DashboardSummary {
-    // Doanh thu
-    revenueToday: number;
-    revenueThisWeek: number;
-    revenueThisMonth: number;
-    revenueThisYear: number;
-    growthPercentage: number;
+  // 1. Hôm nay
+  revenueToday: number;
+  ordersToday: number;
+  productsSoldToday: number;
 
-    // Đơn hàng
-    totalOrders: number;
-    completionRate: number;
-    pendingCount: number;
-    processingCount: number;
-    completedCount: number;
-    cancelledCount: number;
+  // 2. Tuần này
+  revenueThisWeek: number;
+  ordersThisWeek: number;
+  productsSoldThisWeek: number;
 
-    // Sản phẩm
-    totalProducts: number;
-    lowStockCount: number;
-    topSellingProducts: TopSellingProduct[];
+  // 3. Tháng này
+  revenueThisMonth: number;
+  ordersThisMonth: number;
+  productsSoldThisMonth: number;
+  growthPercentage: number; // % Tăng trưởng
 
-    // Khách hàng
-    totalCustomers: number;
-    newCustomersThisMonth: number;
+  // 4. Năm nay
+  revenueThisYear: number;
+  ordersThisYear: number;
+  productsSoldThisYear: number;
 }
 
 export interface OrderStatusStat {
@@ -60,3 +54,19 @@ export interface GrowthStat {
   growth: number;
   isCurrency: boolean;
 }
+
+export interface FilteredStat {
+  totalRevenue: number;
+  totalOrders: number;
+  totalProductsSold: number;
+}
+
+export const TimeRangeType = {
+  TODAY: "TODAY",
+  THIS_WEEK: "THIS_WEEK",
+  THIS_MONTH: "THIS_MONTH",
+  THIS_YEAR: "THIS_YEAR",
+  CUSTOM: "CUSTOM"
+} as const;
+
+export type TimeRangeType = typeof TimeRangeType[keyof typeof TimeRangeType];

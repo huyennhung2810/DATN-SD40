@@ -1,54 +1,79 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { DashboardSummary, GrowthStat, LowStockProduct, OrderStatusStat, RevenueStat, TopSellingProduct } from "../../models/statistics";
+import type { 
+    DashboardSummary, FilteredStat, GrowthStat, LowStockProduct, OrderStatusStat, 
+    RevenueStat, TopSellingProduct
+} from "../../models/statistics";
+import type { FilterParams } from "../../api/statisticsApi";
 
 interface StatisticsState {
     loading: boolean;
-    summary: DashboardSummary | null; 
-    orderStatus: OrderStatusStat[];
+    summary: DashboardSummary | null;
+    filteredStat: FilteredStat | null;
     revenueData: RevenueStat[];
-    lowStockProducts: LowStockProduct[];
-    growthStat: GrowthStat[];
+    orderStatus: OrderStatusStat[];
     topSelling: TopSellingProduct[];
+    lowStock: LowStockProduct[];
+    growthStat: GrowthStat[];
+    error: string | null;
 }
 
 const initialState: StatisticsState = {
     loading: false,
     summary: null,
-    orderStatus: [],
+    filteredStat: null,
     revenueData: [],
-    lowStockProducts: [],
-    growthStat: [],
+    orderStatus: [],
     topSelling: [],
+    lowStock: [],
+    growthStat: [],
+    error: null,
+
 };
 
 const statisticsSlice = createSlice({
     name: "statistics",
     initialState,
     reducers: {
-        fetchData(state, _action: PayloadAction<string>) {
+        fetchDashboardData(state, _action: PayloadAction<FilterParams>) {
             state.loading = true;
+            state.error = null;
         },
-        
-        fetchDataSuccess(state, action: PayloadAction<{ 
-            summary: DashboardSummary; 
-            orderStatus: OrderStatusStat[];
+
+        fetchDashboardDataSuccess(state, action: PayloadAction<{
+            filteredStat: FilteredStat;
             revenueData: RevenueStat[];
-            lowStockProducts: LowStockProduct[];
-            growthStat: GrowthStat[];
+            orderStatus: OrderStatusStat[];
             topSelling: TopSellingProduct[];
         }>) {
             state.loading = false;
-            state.summary = action.payload.summary;
-            state.orderStatus = action.payload.orderStatus;
+            state.filteredStat = action.payload.filteredStat;
             state.revenueData = action.payload.revenueData;
-            state.lowStockProducts = action.payload.lowStockProducts;
-            state.growthStat = action.payload.growthStat;
+            state.orderStatus = action.payload.orderStatus;
             state.topSelling = action.payload.topSelling;
         },
-        
-        fetchDataError(state) {
+
+        fetchDashboardDataFailure(state, action: PayloadAction<string>) {
             state.loading = false;
+            state.error = action.payload;
         },
+        
+        fetchInitialData(state) {
+            state.loading = true; 
+        },
+        
+        fetchInitialDataSuccess(state, action: PayloadAction<{
+            summary: DashboardSummary;
+            lowStock: LowStockProduct[];
+            growthStat: GrowthStat[];
+        }>) {
+            state.loading = false;
+            state.summary = action.payload.summary;
+            state.lowStock = action.payload.lowStock;
+            state.growthStat = action.payload.growthStat;
+        },
+        fetchInitialDataFailure(state) {
+            state.loading = false;
+        }
     }
 });
 

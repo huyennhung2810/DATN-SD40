@@ -228,29 +228,18 @@ const EmployeePage: React.FC = () => {
       key: "hometown",
       width: 150,
       render: (record: EmployeeResponse) => (
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <Text strong style={{ fontSize: "13px", display: "block" }}>
-            {record.hometown || "---"}
-          </Text>
-
-          <Text type="secondary" style={{ fontSize: "12px", display: "block" }}>
-            {record.wardCommune || "---"}
-          </Text>
-
-          <Tag
-            color="blue"
-            style={{
-              margin: 0,
-              width: "fit-content",
-              fontSize: "11px",
-              borderRadius: "4px",
-            }}
-          >
-            {record.provinceCity || "---"}
-          </Tag>
-        </div>
+        <Text
+          ellipsis={{
+            tooltip: `${record.hometown || "---"}, ${record.wardCommune || "---"}, ${record.provinceCity || "---"}`,
+          }}
+          style={{ fontSize: "13px" }}
+        >
+          {record.hometown || "---"}, {record.wardCommune || "---"},{" "}
+          {record.provinceCity || "---"}
+        </Text>
       ),
     },
+
     {
       title: "Chức vụ",
       key: "role",
