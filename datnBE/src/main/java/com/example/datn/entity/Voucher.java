@@ -39,4 +39,7 @@ public class Voucher extends NameEntity implements Serializable {
 
     @Column(name = "note")
     private String note;
+
+    @Column(name = "quantity")
+    private Integer quantity;
 }

@@ -9,7 +9,7 @@ public class PaginationConstant {
     public static final int DEFAULT_SIZE = 5;
 
     //Trang bắt đầu từ 1
-    public static final int DEFAULT_PAGE = 1;
+    public static final int DEFAULT_PAGE = 0;
 
     //Mặc định sắp xếp theo giảm dần
     public static final String DEFAULT_ORDER_BY = "desc";
