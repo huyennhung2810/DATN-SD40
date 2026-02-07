@@ -3,6 +3,7 @@ import {
     Card,
     Button,
     Input,
+    InputNumber,
     Tag,
     Space,
     Typography,
@@ -22,7 +23,7 @@ import {
     Descriptions,
     Divider,
     Steps,
-    Tabs, // Thêm Tabs vào import
+    Tabs, // tabs are life
 } from "antd";
 import {
     PlusOutlined,
@@ -45,6 +46,12 @@ import type { RootState } from "../../../redux/store";
 import { productActions } from "../../../redux/product/productSlice";
 import { productCategoryActions } from "../../../redux/productCategory/productCategorySlice";
 import { productImageActions } from "../../../redux/productImage/productImageSlice";
+import { sensorTypeActions } from "../../../redux/techSpec/sensorTypeSlice";
+import { lensMountActions } from "../../../redux/techSpec/lensMountSlice";
+import { resolutionActions } from "../../../redux/techSpec/resolutionSlice";
+import { processorActions } from "../../../redux/techSpec/processorSlice";
+import { imageFormatActions } from "../../../redux/techSpec/imageFormatSlice";
+import { videoFormatActions } from "../../../redux/techSpec/videoFormatSlice";
 import type { RcFile, UploadProps } from "antd/es/upload/interface";
 import { App } from "antd";
 import { initialTechSpec } from "../../../models/techSpec";
@@ -65,6 +72,12 @@ const ProductPage: React.FC = () => {
     const { list: productImages, loading: imageLoading } = useSelector(
         (state: RootState) => state.productImage,
     );
+    const sensorTypeState = useSelector((state: RootState) => state.sensorType);
+    const lensMountState = useSelector((state: RootState) => state.lensMount);
+    const resolutionState = useSelector((state: RootState) => state.resolution);
+    const processorState = useSelector((state: RootState) => state.processor);
+    const imageFormatState = useSelector((state: RootState) => state.imageFormat);
+    const videoFormatState = useSelector((state: RootState) => state.videoFormat);
 
     const [form] = Form.useForm();
     const [modalForm] = Form.useForm();
@@ -75,6 +88,13 @@ const ProductPage: React.FC = () => {
     const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
     const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
+    const [selectedSensorType, setSelectedSensorType] = useState<string | undefined>();
+    const [selectedLensMount, setSelectedLensMount] = useState<string | undefined>();
+    const [selectedResolution, setSelectedResolution] = useState<string | undefined>();
+    const [selectedProcessor, setSelectedProcessor] = useState<string | undefined>();
+    const [selectedImageFormat, setSelectedImageFormat] = useState<string | undefined>();
+    const [selectedVideoFormat, setSelectedVideoFormat] = useState<string | undefined>();
+    const [selectedIso, setSelectedIso] = useState<string | undefined>();
     const [uploadLoading, setUploadLoading] = useState(false);
     const { notification, message } = App.useApp();
 
@@ -102,12 +122,41 @@ const ProductPage: React.FC = () => {
         idProductCategory: undefined,
         idTechSpec: undefined,
         status: undefined,
+        sensorType: undefined,
+        lensMount: undefined,
+        resolution: undefined,
+        processor: undefined,
+        imageFormat: undefined,
+        videoFormat: undefined,
+        iso: undefined,
     });
 
     // category
     useEffect(() => {
         dispatch(productCategoryActions.getAll({ page: 0, size: 1000 }));
     }, [dispatch]);
+
+    // Load techspec data for filters on mount - data go brrr
+    useEffect(() => {
+        dispatch(sensorTypeActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(lensMountActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(resolutionActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(processorActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(imageFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(videoFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+    }, [dispatch]);
+
+    // Load techspec data for modal - modal entering
+    useEffect(() => {
+        if (isModalOpen) {
+            dispatch(sensorTypeActions.getAll({ page: 0, size: 1000, keyword: "" }));
+            dispatch(lensMountActions.getAll({ page: 0, size: 1000, keyword: "" }));
+            dispatch(resolutionActions.getAll({ page: 0, size: 1000, keyword: "" }));
+            dispatch(processorActions.getAll({ page: 0, size: 1000, keyword: "" }));
+            dispatch(imageFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+            dispatch(videoFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        }
+    }, [dispatch, isModalOpen]);
 
     const fetchProducts = useCallback(() => {
         dispatch(productActions.getAll(filter));
@@ -117,7 +166,7 @@ const ProductPage: React.FC = () => {
         fetchProducts();
     }, [fetchProducts]);
 
-    // Debounce search
+    // Debounce search - cho zui thôi
     useEffect(() => {
         const timeout = setTimeout(() => {
             setFilter((prev) => ({
@@ -125,11 +174,18 @@ const ProductPage: React.FC = () => {
                 name: keyword.trim(),
                 idProductCategory: selectedCategory,
                 status: selectedStatus as "ACTIVE" | "INACTIVE" | undefined,
+                sensorType: selectedSensorType,
+                lensMount: selectedLensMount,
+                resolution: selectedResolution,
+                processor: selectedProcessor,
+                imageFormat: selectedImageFormat,
+                videoFormat: selectedVideoFormat,
+                iso: selectedIso?.trim() || undefined,
                 page: 0,
             }));
         }, 300);
         return () => clearTimeout(timeout);
-    }, [keyword, selectedCategory, selectedStatus]);
+    }, [keyword, selectedCategory, selectedStatus, selectedSensorType, selectedLensMount, selectedResolution, selectedProcessor, selectedImageFormat, selectedVideoFormat, selectedIso]);
 
     const handleRefresh = () => {
         fetchProducts();
@@ -144,6 +200,13 @@ const ProductPage: React.FC = () => {
         setKeyword("");
         setSelectedCategory(undefined);
         setSelectedStatus(undefined);
+        setSelectedSensorType(undefined);
+        setSelectedLensMount(undefined);
+        setSelectedResolution(undefined);
+        setSelectedProcessor(undefined);
+        setSelectedImageFormat(undefined);
+        setSelectedVideoFormat(undefined);
+        setSelectedIso(undefined);
         setFilter({
             page: 0,
             size: 12,
@@ -151,6 +214,13 @@ const ProductPage: React.FC = () => {
             idProductCategory: undefined,
             idTechSpec: undefined,
             status: undefined,
+            sensorType: undefined,
+            lensMount: undefined,
+            resolution: undefined,
+            processor: undefined,
+            imageFormat: undefined,
+            videoFormat: undefined,
+            iso: undefined,
         });
     };
 
@@ -160,7 +230,7 @@ const ProductPage: React.FC = () => {
 
     const openModal = (product?: ProductResponse) => {
         if (product) {
-            // Chỉnh sửa sản phẩm có sẵn
+            // edit mode on
             setEditingProduct(product);
             setCurrentStep(0);
             setTempProductId(product.id);
@@ -168,6 +238,8 @@ const ProductPage: React.FC = () => {
                 name: product.name,
                 description: product.description,
                 idProductCategory: product.idProductCategory,
+                idTechSpec: product.idTechSpec || null,
+                price: product.price || null,
                 status: product.status,
             });
             setTempTechSpecId(product.idTechSpec || null);
@@ -176,19 +248,28 @@ const ProductPage: React.FC = () => {
                 name: product.name,
                 description: product.description,
                 idProductCategory: product.idProductCategory,
+                price: product.price,
                 status: product.status,
-                techSpec: product.techSpec || {
-                    sensorType: "",
-                    lensMount: "",
-                    resolution: "",
+                techSpec: product.techSpec ? {
+                    sensorType: product.techSpec.sensorType || undefined,
+                    lensMount: product.techSpec.lensMount || undefined,
+                    resolution: product.techSpec.resolution || undefined,
+                    iso: product.techSpec.iso || "",
+                    processor: product.techSpec.processor || undefined,
+                    imageFormat: product.techSpec.imageFormat || undefined,
+                    videoFormat: product.techSpec.videoFormat || undefined,
+                } : {
+                    sensorType: undefined,
+                    lensMount: undefined,
+                    resolution: undefined,
                     iso: "",
-                    processor: "",
-                    imageFormat: "",
-                    videoFormat: "",
+                    processor: undefined,
+                    imageFormat: undefined,
+                    videoFormat: undefined,
                 },
             });
         } else {
-            // Thêm mới sản phẩm - bắt đầu từ bước 1
+            // new who dis
             setEditingProduct(null);
             setCurrentStep(0);
             setTempProductId(null);
@@ -209,18 +290,18 @@ const ProductPage: React.FC = () => {
         setTempProductData(null);
         setTempTechSpecId(null);
         setSelectedThumbnail(null);
-        // Cleanup pending images to prevent memory leaks
+        // dọn dẹp ram thôi
         pendingImages.forEach((img) => URL.revokeObjectURL(img.preview));
         setPendingImages([]);
         modalForm.resetFields();
     };
 
-    // ========== MULTI-STEP FORM HANDLERS ==========
+    // form wizard vibes ✨
 
-  // Bước 1: Tạo sản phẩm cơ bản
+  // step 1: let's gooo
   const handleStep1Submit = async () => {
     try {
-      // Chỉ validate trường name vì các trường khác không bắt buộc
+      // just name plz
       await modalForm.validateFields(["name"]);
       setStepLoading(true);
 
@@ -229,25 +310,26 @@ const ProductPage: React.FC = () => {
         name: values.name,
         description: values.description || undefined,
         idProductCategory: values.idProductCategory || undefined,
+        price: values.price || undefined,
         status: values.status || "ACTIVE",
       };
 
       if (editingProduct) {
-        // Cập nhật sản phẩm hiện có
+        // updating existing stuff
         await productApi.update(editingProduct.id, productData);
         setTempProductId(editingProduct.id);
         setTempProductData(productData);
         setCurrentStep(1);
         notification.success({ message: "Đã cập nhật thông tin sản phẩm" });
       } else {
-        // Tạo sản phẩm mới - backend trả về thông báo, không có ID
+        // creating new stuff
         const response = await productApi.create(productData);
         console.log("Create response:", response);
 
-        // Fetch lại danh sách sản phẩm để lấy sản phẩm vừa tạo (sản phẩm mới nhất)
+        // Fetch lại danh sách sản phẩm để lấy sản phẩm vừa tạo
         const result = await productApi.search({ page: 0, size: 1, name: values.name });
         if (result.data && result.data.length > 0) {
-          // Lấy sản phẩm đầu tiên (sản phẩm mới nhất có tên matching)
+          // taking the first one (newest with matching name)
           const newProduct = result.data.find((p: any) => p.name === values.name) || result.data[0];
           setTempProductId(newProduct.id);
           setTempProductData(productData);
@@ -257,12 +339,12 @@ const ProductPage: React.FC = () => {
         notification.success({ message: "Đã tạo sản phẩm thành công" });
       }
     } catch (error: any) {
-      // Kiểm tra nếu là lỗi validation từ Ant Design
+      // validation error check
       if (error.errorFields) {
-        // Lỗi validation - đã có thông báo từ Ant Design
+        // antd validation error - already handled
         console.log("Lỗi validation:", error.errorFields);
       } else {
-        // Lỗi API hoặc lỗi khác
+        // other errors
         console.error("Lỗi bước 1:", error);
         notification.error({
           message: "Lỗi",
@@ -274,11 +356,13 @@ const ProductPage: React.FC = () => {
     }
   };
 
-    // Bước 2: Lưu thông số kỹ thuật
+    // step 2: techspec vibes
     const handleStep2Submit = async () => {
         try {
             const values = await modalForm.validateFields(["techSpec"]);
             const techSpecData = values.techSpec;
+            
+            // Check if any field has value
             const hasTechSpecData = techSpecData && (
                 techSpecData.sensorType ||
                 techSpecData.lensMount ||
@@ -308,21 +392,37 @@ const ProductPage: React.FC = () => {
 
                 let techSpecId = tempTechSpecId;
                 if (tempTechSpecId) {
-                    // Cập nhật techSpec hiện có
+                    // update existing techspec
                     await techSpecApi.update(tempTechSpecId, techSpecPayload);
                     notification.success({ message: "Đã cập nhật thông số kỹ thuật" });
                 } else {
-                    // Tạo techSpec mới
+                    // create new techspec
                     const response = await techSpecApi.create(techSpecPayload);
-                    techSpecId = response.data.id;
-                    setTempTechSpecId(techSpecId);
-                    notification.success({ message: "Đã thêm thông số kỹ thuật" });
+                    console.log("TechSpec create response:", response);
+                    
+                    // got the id from response.data
+                    if (response && response.data) {
+                        techSpecId = response.data.id;
+                        setTempTechSpecId(techSpecId);
+                        notification.success({ message: "Đã thêm thông số kỹ thuật" });
+                    } else {
+                        notification.error({ message: "Lỗi", description: "Không nhận được phản hồi từ server" });
+                        setStepLoading(false);
+                        return;
+                    }
                 }
 
-                // Cập nhật product với techSpecId
+                // update tempProductData with new idTechSpec
+                if (techSpecId && tempProductData) {
+                    setTempProductData({ ...tempProductData, idTechSpec: techSpecId });
+                }
+
+                // update product with techSpecId
                 if (tempProductData) {
                     await productApi.update(tempProductId, { ...tempProductData, idTechSpec: techSpecId });
                 }
+            } else {
+                notification.info({ message: "Bỏ qua thông số kỹ thuật", description: "Không có thông số kỹ thuật nào được chọn" });
             }
 
             setCurrentStep(2);
@@ -334,24 +434,24 @@ const ProductPage: React.FC = () => {
         }
     };
 
-    // Bước 3: Hoàn tất - chọn ảnh đại diện
+    // step 3: the final boss (images)
     const handleStep3Submit = async () => {
         if (!tempProductId) return;
 
         try {
             setStepLoading(true);
 
-            // Lấy danh sách ảnh hiện tại từ redux
+            // get current images from redux
             const imageUrlsFromRedux = productImages.map((img: ProductImageResponse) => img.url);
 
             if (selectedThumbnail && imageUrlsFromRedux.length > 0) {
-                // Đặt ảnh đại diện (cập nhật product với imageUrls mới)
+                // set thumbnail (update product with new imageUrls)
                 const newImageUrls = [selectedThumbnail, ...imageUrlsFromRedux.filter(url => url !== selectedThumbnail)];
                 if (tempProductData) {
                     await productApi.update(tempProductId, { ...tempProductData, imageUrls: newImageUrls });
                 }
             } else if (imageUrlsFromRedux.length > 0) {
-                // Nếu không chọn ảnh đại diện, vẫn cập nhật imageUrls (theo thứ tự hiện tại)
+                // no thumbnail selected? still update images
                 if (tempProductData) {
                     await productApi.update(tempProductId, { ...tempProductData, imageUrls: imageUrlsFromRedux });
                 }
@@ -372,14 +472,14 @@ const ProductPage: React.FC = () => {
         }
     };
 
-    // Quay lại bước trước
+    // go back plz
     const handleBackStep = () => {
         if (currentStep > 0) {
             setCurrentStep(prev => prev - 1);
         }
     };
 
-    // ========== END MULTI-STEP FORM HANDLERS ==========
+    // ===== END FORM WIZARD =====
 
     const handleDelete = (id: string) => {
         dispatch(productActions.deleteProduct(id));
@@ -397,12 +497,12 @@ const ProductPage: React.FC = () => {
         setIsDetailOpen(false);
         setSelectedProduct(null);
         dispatch(productImageActions.resetImages());
-        // Cleanup drawer pending images
+        // clean up drawer images
         drawerPendingImages.forEach((img) => URL.revokeObjectURL(img.preview));
         setDrawerPendingImages([]);
     };
 
-    // Upload ảnh sản phẩm - hỗ trợ upload nhiều ảnh với preview
+    // upload images - multi upload with preview support
     const uploadProps: UploadProps = {
         listType: "picture-card",
         showUploadList: false,
@@ -418,7 +518,7 @@ const ProductPage: React.FC = () => {
                 message.error("Hình ảnh phải nhỏ hơn 5MB!");
                 return Upload.LIST_IGNORE;
             }
-            // Thêm vào danh sách chờ upload
+            // add to pending
             setPendingImages((prev) => [
                 ...prev,
                 { file, preview: URL.createObjectURL(file) },
@@ -439,7 +539,7 @@ const ProductPage: React.FC = () => {
                         file: file as File,
                     })
                 );
-                // Upload hoàn tất sẽ được refresh danh sách ảnh trong saga
+                // saga will refresh images list
                 onSuccess?.(file);
             } catch (error) {
                 onError?.({ error: error as Error });
@@ -449,7 +549,7 @@ const ProductPage: React.FC = () => {
         },
     };
 
-    // Upload props cho drawer (chi tiết sản phẩm)
+    // upload props for drawer
     const drawerUploadProps: UploadProps = {
         listType: "picture-card",
         showUploadList: false,
@@ -465,7 +565,7 @@ const ProductPage: React.FC = () => {
                 message.error("Hình ảnh phải nhỏ hơn 5MB!");
                 return Upload.LIST_IGNORE;
             }
-            // Thêm vào danh sách chờ upload của drawer
+            // add to drawer's pending list
             setDrawerPendingImages((prev) => [
                 ...prev,
                 { file, preview: URL.createObjectURL(file) },
@@ -504,7 +604,7 @@ const ProductPage: React.FC = () => {
         );
     };
 
-    // Xử lý upload tất cả ảnh đang chờ
+    // upload all pending images
     const handleUploadAllPendingImages = () => {
         const targetProductId = tempProductId || selectedProduct?.id;
         if (!targetProductId) {
@@ -517,7 +617,7 @@ const ProductPage: React.FC = () => {
             return;
         }
 
-        // Upload từng ảnh trong queue
+        // upload each image with delay
         pendingImages.forEach((img, index) => {
             setTimeout(() => {
                 dispatch(
@@ -526,10 +626,10 @@ const ProductPage: React.FC = () => {
                         file: img.file,
                     })
                 );
-            }, index * 500); // Delay 500ms giữa mỗi lần upload
+            }, index * 500); // 500ms delay between uploads
         });
 
-        // Clear pending images sau khi upload
+        // clear pending after upload
         notification.success({
             message: "Đang tải ảnh lên",
             description: `Đã thêm ${pendingImages.length} ảnh vào hàng đợi`,
@@ -537,16 +637,16 @@ const ProductPage: React.FC = () => {
         setPendingImages([]);
     };
 
-    // Xóa ảnh khỏi danh sách chờ
+    // remove from pending list
     const handleRemovePendingImage = (index: number) => {
         const newPendingImages = [...pendingImages];
-        // Revoke URL để tránh memory leak
+        // revoke URL to avoid memory leak
         URL.revokeObjectURL(newPendingImages[index].preview);
         newPendingImages.splice(index, 1);
         setPendingImages(newPendingImages);
     };
 
-    // Xử lý upload tất cả ảnh đang chờ (cho drawer)
+    // upload all pending images (cho drawer)
     const handleUploadAllDrawerPendingImages = () => {
         if (!selectedProduct) {
             notification.warning({ message: "Vui lòng chọn sản phẩm!" });
@@ -558,7 +658,7 @@ const ProductPage: React.FC = () => {
             return;
         }
 
-        // Upload từng ảnh trong queue
+        // upload each image with delay
         drawerPendingImages.forEach((img, index) => {
             setTimeout(() => {
                 dispatch(
@@ -577,7 +677,7 @@ const ProductPage: React.FC = () => {
         setDrawerPendingImages([]);
     };
 
-    // Xóa ảnh khỏi danh sách chờ (cho drawer)
+    // remove from pending list (cho drawer)
     const handleRemoveDrawerPendingImage = (index: number) => {
         const newPendingImages = [...drawerPendingImages];
         URL.revokeObjectURL(newPendingImages[index].preview);
@@ -590,7 +690,7 @@ const ProductPage: React.FC = () => {
         return cat?.name || "---";
     };
 
-    // Check if techSpec has any data
+    // check if techSpec has any data
     const hasTechSpecData = (techSpec?: TechSpecResponse) => {
         if (!techSpec) return false;
         return !!(
@@ -644,7 +744,7 @@ const ProductPage: React.FC = () => {
             >
                 <Form form={form} layout="vertical">
                     <Row gutter={[16, 16]}>
-                        <Col xs={24} md={8}>
+                        <Col xs={24} md={6}>
                             <Form.Item name="keyword" label="Tìm kiếm">
                                 <Search
                                     placeholder="Nhập tên sản phẩm..."
@@ -654,7 +754,7 @@ const ProductPage: React.FC = () => {
                                 />
                             </Form.Item>
                         </Col>
-                        <Col xs={24} md={6}>
+                        <Col xs={24} md={5}>
                             <Form.Item name="idProductCategory" label="Loại sản phẩm">
                                 <Select
                                     placeholder="Tất cả loại"
@@ -668,7 +768,7 @@ const ProductPage: React.FC = () => {
                                 />
                             </Form.Item>
                         </Col>
-                        <Col xs={24} md={6}>
+                        <Col xs={24} md={4}>
                             <Form.Item name="status" label="Trạng thái">
                                 <Select
                                     placeholder="Tất cả"
@@ -679,6 +779,120 @@ const ProductPage: React.FC = () => {
                                         { label: "Hoạt động", value: "ACTIVE" },
                                         { label: "Không hoạt động", value: "INACTIVE" },
                                     ]}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="sensorType" label="Loại cảm biến">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedSensorType}
+                                    onChange={(val) => setSelectedSensorType(val)}
+                                    loading={sensorTypeState.loading}
+                                    options={sensorTypeState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={5}>
+                            <Form.Item name="lensMount" label="Ngàm lens">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedLensMount}
+                                    onChange={(val) => setSelectedLensMount(val)}
+                                    loading={lensMountState.loading}
+                                    options={lensMountState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="resolution" label="Độ phân giải">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedResolution}
+                                    onChange={(val) => setSelectedResolution(val)}
+                                    loading={resolutionState.loading}
+                                    options={resolutionState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="processor" label="Bộ xử lý">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedProcessor}
+                                    onChange={(val) => setSelectedProcessor(val)}
+                                    loading={processorState.loading}
+                                    options={processorState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="imageFormat" label="Định dạng ảnh">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedImageFormat}
+                                    onChange={(val) => setSelectedImageFormat(val)}
+                                    loading={imageFormatState.loading}
+                                    options={imageFormatState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="videoFormat" label="Định dạng video">
+                                <Select
+                                    placeholder="Tất cả"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedVideoFormat}
+                                    onChange={(val) => setSelectedVideoFormat(val)}
+                                    loading={videoFormatState.loading}
+                                    options={videoFormatState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                            <Form.Item name="iso" label="ISO">
+                                <Input
+                                    placeholder="Nhập ISO..."
+                                    allowClear
+                                    value={selectedIso}
+                                    onChange={(e) => setSelectedIso(e.target.value)}
                                 />
                             </Form.Item>
                         </Col>
@@ -821,6 +1035,11 @@ const ProductPage: React.FC = () => {
                                                 <Text type="secondary" style={{ fontSize: "12px" }}>
                                                     Loại: {getCategoryName(product.idProductCategory)}
                                                 </Text>
+                                                {product.price && (
+                                                    <Text strong style={{ fontSize: "14px", color: "#ff4d4f" }}>
+                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                                                    </Text>
+                                                )}
                                                 <Tag
                                                     color={product.status === "ACTIVE" ? "green" : "red"}
                                                     style={{ marginTop: 4 }}
@@ -932,6 +1151,18 @@ const ProductPage: React.FC = () => {
                                 <Input.TextArea rows={3} placeholder="Nhập mô tả sản phẩm" />
                             </Form.Item>
 
+                            <Form.Item name="price" label="Giá (VNĐ)">
+                                <InputNumber
+                                    placeholder="Nhập giá sản phẩm"
+                                    size="large"
+                                    style={{ width: '100%' }}
+                                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                    parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as unknown as number}
+                                    min={0}
+                                    addonAfter="VNĐ"
+                                />
+                            </Form.Item>
+
                             <Form.Item name="idProductCategory" label="Loại sản phẩm">
                                 <Select
                                     placeholder="Chọn loại sản phẩm (không bắt buộc)"
@@ -960,19 +1191,39 @@ const ProductPage: React.FC = () => {
                     {currentStep === 1 && (
                         <>
                             <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-                                Nhập thông số kỹ thuật chi tiết cho sản phẩm (không bắt buộc)
+                                Chọn thông số kỹ thuật cho sản phẩm từ danh sách có sẵn (không bắt buộc)
                             </Typography.Text>
                             <Divider style={{ margin: "12px 0" }} />
 
                             <Row gutter={[16, 0]}>
                                 <Col span={12}>
                                     <Form.Item name={["techSpec", "sensorType"]} label="Loại cảm biến">
-                                        <Input placeholder="ví dụ: CMOS Full-frame" />
+                                        <Select
+                                            placeholder="Chọn loại cảm biến"
+                                            allowClear
+                                            showSearch
+                                            optionFilterProp="children"
+                                            loading={sensorTypeState.loading}
+                                            options={sensorTypeState.list.map((item) => ({
+                                                label: item.name,
+                                                value: item.name,
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name={["techSpec", "lensMount"]} label="Mount ống kính">
-                                        <Input placeholder="ví dụ: Sony E-mount" />
+                                        <Select
+                                            placeholder="Chọn mount ống kính"
+                                            allowClear
+                                            showSearch
+                                            optionFilterProp="children"
+                                            loading={lensMountState.loading}
+                                            options={lensMountState.list.map((item) => ({
+                                                label: item.name,
+                                                value: item.name,
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                             </Row>
@@ -980,7 +1231,17 @@ const ProductPage: React.FC = () => {
                             <Row gutter={[16, 0]}>
                                 <Col span={12}>
                                     <Form.Item name={["techSpec", "resolution"]} label="Độ phân giải">
-                                        <Input placeholder="ví dụ: 24.2 MP" />
+                                        <Select
+                                            placeholder="Chọn độ phân giải"
+                                            allowClear
+                                            showSearch
+                                            optionFilterProp="children"
+                                            loading={resolutionState.loading}
+                                            options={resolutionState.list.map((item) => ({
+                                                label: item.name,
+                                                value: item.name,
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
@@ -990,22 +1251,57 @@ const ProductPage: React.FC = () => {
                                 </Col>
                             </Row>
 
-                            <Form.Item name={["techSpec", "processor"]} label="Bộ xử lý">
-                                <Input placeholder="ví dụ: BIONZ X" />
-                            </Form.Item>
-
                             <Row gutter={[16, 0]}>
                                 <Col span={12}>
-                                    <Form.Item name={["techSpec", "imageFormat"]} label="Định dạng ảnh">
-                                        <Input placeholder="ví dụ: JPEG, RAW" />
+                                    <Form.Item name={["techSpec", "processor"]} label="Bộ xử lý">
+                                        <Select
+                                            placeholder="Chọn bộ xử lý"
+                                            allowClear
+                                            showSearch
+                                            optionFilterProp="children"
+                                            loading={processorState.loading}
+                                            options={processorState.list.map((item) => ({
+                                                label: item.name,
+                                                value: item.name,
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item name={["techSpec", "videoFormat"]} label="Định dạng video">
-                                        <Input placeholder="ví dụ: 4K, 1080p" />
+                                    <Form.Item name={["techSpec", "imageFormat"]} label="Định dạng ảnh">
+                                        <Select
+                                            placeholder="Chọn định dạng ảnh"
+                                            allowClear
+                                            showSearch
+                                            optionFilterProp="children"
+                                            loading={imageFormatState.loading}
+                                            options={imageFormatState.list.map((item) => ({
+                                                label: item.name,
+                                                value: item.name,
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                             </Row>
+
+                            <Form.Item name={["techSpec", "videoFormat"]} label="Định dạng video">
+                                <Select
+                                    placeholder="Chọn định dạng video"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    loading={videoFormatState.loading}
+                                    options={videoFormatState.list.map((item) => ({
+                                        label: item.name,
+                                        value: item.name,
+                                    }))}
+                                />
+                            </Form.Item>
+
+                            <Divider />
+                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                Lưu ý: ISO vẫn nhập thủ công vì là dải giá trị. Các trường khác chọn từ danh sách.
+                            </Typography.Text>
                         </>
                     )}
 
@@ -1208,6 +1504,15 @@ const ProductPage: React.FC = () => {
                                             </Descriptions.Item>
                                             <Descriptions.Item label="Mô tả" span={2}>
                                                 {selectedProduct.description || "---"}
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Giá" span={2}>
+                                                {selectedProduct.price ? (
+                                                    <Text strong style={{ color: "#ff4d4f", fontSize: "16px" }}>
+                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedProduct.price)}
+                                                    </Text>
+                                                ) : (
+                                                    "---"
+                                                )}
                                             </Descriptions.Item>
                                             <Descriptions.Item label="Loại sản phẩm">
                                                 {getCategoryName(selectedProduct.idProductCategory)}

@@ -16,4 +16,13 @@ public class ADProductSearchRequest extends PageableRequest {
     private String idTechSpec;
     
     private EntityStatus status;
+    
+    // TechSpec filters
+    private String sensorType;
+    private String lensMount;
+    private String resolution;
+    private String processor;
+    private String imageFormat;
+    private String videoFormat;
+    private String iso;
 }

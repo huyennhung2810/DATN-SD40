@@ -7,6 +7,7 @@ import EmployeePage from "./Pages/admin/employee/EmployeeList";
 import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
 import ProductCategoryPage from "./Pages/admin/product-category/ProductCategoryList";
 import ProductPage from "./Pages/admin/product/ProductList";
+import TechSpecPage from "./Pages/admin/tech-spec/TechSpecList";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -29,6 +30,7 @@ const App: React.FC = () => {
           <Route path="/admin/employees/:id" element={<EmployeeForm />} />
           <Route path="/admin/product-categories" element={<ProductCategoryPage />} />
           <Route path="/admin/products" element={<ProductPage />} />
+          <Route path="/admin/tech-spec" element={<TechSpecPage />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

@@ -47,6 +47,13 @@ public class ADProductServiceImpl implements ADProductService {
                 request.getIdProductCategory(),
                 request.getIdTechSpec(),
                 request.getStatus(),
+                request.getSensorType(),
+                request.getLensMount(),
+                request.getResolution(),
+                request.getProcessor(),
+                request.getImageFormat(),
+                request.getVideoFormat(),
+                request.getIso(),
                 pageable
         );
         
@@ -61,9 +68,10 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setProductCategoryName((String) row[4]);
                     response.setIdTechSpec((String) row[5]);
                     response.setTechSpecName((String) row[6]);
-                    response.setStatus((EntityStatus) row[7]);
-                    response.setCreatedDate((Long) row[8]);
-                    response.setLastModifiedDate((Long) row[9]);
+                    response.setPrice(row[7] != null ? (java.math.BigDecimal) row[7] : null);
+                    response.setStatus((EntityStatus) row[8]);
+                    response.setCreatedDate((Long) row[9]);
+                    response.setLastModifiedDate((Long) row[10]);
                     
                     // Lấy thông số kỹ thuật
                     String techSpecId = (String) row[5];
@@ -122,6 +130,7 @@ public class ADProductServiceImpl implements ADProductService {
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setTechSpec(techSpec);
         product.setStatus(request.getStatus());
@@ -167,6 +176,7 @@ public class ADProductServiceImpl implements ADProductService {
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setTechSpec(techSpec);
         if (request.getStatus() != null) {
@@ -213,6 +223,7 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setId(product.getId());
                     response.setName(product.getName());
                     response.setDescription(product.getDescription());
+                    response.setPrice(product.getPrice());
                     response.setStatus(product.getStatus());
                     response.setCreatedDate(product.getCreatedDate());
                     response.setLastModifiedDate(product.getLastModifiedDate());

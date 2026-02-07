@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -29,6 +30,8 @@ public class ADProductResponse implements IsIdentify {
     private String idTechSpec;
     
     private String techSpecName;
+
+    private BigDecimal price;
     
     // techSpec
     private ADTechSpecResponse techSpec;

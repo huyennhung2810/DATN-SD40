@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -22,7 +23,9 @@ public class ADProductRequest {
     private String idProductCategory;
 
     private String idTechSpec;
-    
+
+    private BigDecimal price;
+
     private EntityStatus status = EntityStatus.ACTIVE;
     
     // Lấy urls
