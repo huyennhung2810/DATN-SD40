@@ -32,7 +32,7 @@ public class ADColorController {
         return adColorService.createColor(request);
     }
 
-    @PostMapping("/{id}")
+    @PutMapping("/{id}")
     public ResponseObject<?> updateColor(@PathVariable String id, @Valid @RequestBody ADColorRequest request) {
         return adColorService.updateColor(id, request);
     }

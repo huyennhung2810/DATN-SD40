@@ -4,12 +4,18 @@ import customerReducer from "./customer/customerSlice";
 import rootSaga from "../store/rootSaga";
 const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
+import serialReducer from "./serial/serialSlice";
+import colorReducer from "./color/colorSlice";
+import storageCapacityReducer from "./storage/storageSlice";
 
 
 export const store = configureStore({
   reducer: {
     customer: customerReducer,
     employee: employeeReducer,
+    serial: serialReducer,
+    color: colorReducer,
+    storage: storageCapacityReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ 

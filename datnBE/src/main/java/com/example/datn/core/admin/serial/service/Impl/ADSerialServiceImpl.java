@@ -7,13 +7,18 @@ import com.example.datn.core.admin.serial.service.ADSerialService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.Serial;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.repository.ProductDetailRepository;
+import com.example.datn.repository.SerialRepository;
 import com.example.datn.utils.Helper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -26,7 +31,7 @@ public class ADSerialServiceImpl implements ADSerialService {
 
     @Override
     public ResponseObject<?> getAllSerials() {
-        List<Serial> list = adSerialRepository.findAll();
+        List<Serial> list = adSerialRepository.getAllSorted();
 
         List<ADSerialResponse> dtoList = list.stream().map(entity ->
             ADSerialResponse.builder()
@@ -38,6 +43,34 @@ public class ADSerialServiceImpl implements ADSerialService {
                     .status(entity.getStatus()).build()
         ).toList();
         return ResponseObject.success(dtoList,"Hiển thị danh sách Serial thành công");
+    }
+
+    @Override
+    public ResponseObject<?> findById(String id) {
+        Serial serial = adSerialRepository.findById(id).orElse(null);
+
+        if (serial == null) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy mã Serial này");
+        }
+
+        // Khởi tạo DTO với các giá trị mặc định
+        ADSerialResponse response = ADSerialResponse.builder()
+                .id(serial.getId())
+                .serialNumber(serial.getSerialNumber())
+                .code(serial.getCode())
+                .status(serial.getStatus())
+                .createdDate(Helper.formatDate(serial.getCreatedDate()))
+                .build();
+
+        // Kiểm tra null từng tầng một trước khi lấy tên sản phẩm
+        if (serial.getProductDetail() != null) {
+            response.setProductDetailId(serial.getProductDetail().getId());
+            if (serial.getProductDetail().getProduct() != null) {
+                response.setProductName(serial.getProductDetail().getProduct().getName());
+            }
+        }
+
+        return ResponseObject.success(response, "Lấy thông tin thành công");
     }
 
     @Override
@@ -62,9 +95,9 @@ public class ADSerialServiceImpl implements ADSerialService {
     }
 
     @Override
-    public ResponseObject<?> createSerial(ADSerialRequest request) {
+    public ResponseEntity<?> createSerial(ADSerialRequest request) {
         if (adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại");
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại"));
         }
         Serial serial = new Serial();
         serial.setSerialNumber(request.getSerialNumber());
@@ -75,21 +108,21 @@ public class ADSerialServiceImpl implements ADSerialService {
          */
         ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
         if (productDetail == null) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống");
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống"));
         }
         serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
 
 
-        return ResponseObject.success(serial, "Thêm thành công Serial");
+        return ResponseEntity.ok(ResponseObject.success(serial, "Thêm thành công Serial"));
     }
 
     @Override
-    public ResponseObject<?> updateSerial(String serialId, ADSerialRequest request) {
+    public ResponseEntity<?> updateSerial(String serialId, ADSerialRequest request) {
         Serial serial = adSerialRepository.findById(serialId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Serial cần sửa"));
-        if (serial.getSerialNumber().equals(request.getSerialNumber()) && adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại");
+        if (!serial.getSerialNumber().equals(request.getSerialNumber()) && adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại"));
         }
         serial.setSerialNumber(request.getSerialNumber());
         serial.setCode(request.getCode());
@@ -100,11 +133,12 @@ public class ADSerialServiceImpl implements ADSerialService {
 
         ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
         if (productDetail == null) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống");
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống"));
         }
         serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
 
-        return ResponseObject.success(serial, "Sửa thông tin thành công");
+        return ResponseEntity.ok(ResponseObject.success(serial, "Sửa thông tin thành công"));
     }
+
 }

@@ -33,7 +33,7 @@ public class ADStorageCapacityController {
         return adStorageCapacityService.createStorageCapacity(request);
     }
 
-    @PostMapping("/{id}")
+    @PutMapping("/{id}")
     public ResponseObject<?> updateStorageCapacity(@PathVariable String id, @Valid @RequestBody ADStorageCapacityRequest request) {
         return adStorageCapacityService.updateStorageCapacity(id, request);
     }

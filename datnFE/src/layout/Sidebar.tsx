@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "antd";
-import {
+import Icon, {
   CameraOutlined,
   TeamOutlined,
   GiftOutlined,
@@ -32,6 +32,11 @@ const Sidebar: React.FC = () => {
       key: "/orders",
       icon: <OrderedListOutlined />,
       label: "Quản lý đơn hàng",
+    },
+    {
+      key: "serial",
+      icon: <TagOutlined/>,
+      label: "Quản lý Serial"
     },
     {
       key: "sub-product",

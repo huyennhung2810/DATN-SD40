@@ -40,7 +40,7 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_CUSTOMER_ADDRESSES = API_ADMIN_PREFIX_CUSTOMERS + "/{customerId}/addresses";
 
 
-    public static final String API_ADMIN_PREFIX_SERIALS = API_ADMIN_PREFIX + "/serials";
+    public static final String API_ADMIN_PREFIX_SERIALS = API_ADMIN_PREFIX + "/serial";
     public static final String API_ADMIN_PREFIX_PRODUCTS_COLOR = API_ADMIN_PREFIX_PRODUCTS + "/color";
     public static final String API_ADMIN_PREFIX_PRODUCTS_STORAGE = API_ADMIN_PREFIX_PRODUCTS + "/storage-capacity";
     public static final String API_ADMIN_PREFIX_PRODUCTS_DETAIL = API_ADMIN_PREFIX_PRODUCTS + "/product-detail";

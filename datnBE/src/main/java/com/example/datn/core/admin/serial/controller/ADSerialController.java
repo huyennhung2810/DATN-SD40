@@ -7,8 +7,10 @@ import com.example.datn.infrastructure.constant.MappingConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping(MappingConstants.API_ADMIN_PREFIX_SERIALS)
 @RequiredArgsConstructor
@@ -22,18 +24,23 @@ public class ADSerialController {
         return adSerialService.getAllSerials();
     }
 
-    @GetMapping("/{productDetailId}")
+    @GetMapping("/product-detail/{productDetailId}")
     public ResponseObject<?> getSerialByProductDetailId(@PathVariable String productDetailId) {
         return adSerialService.findByProductDetailId(productDetailId);
     }
 
+    @GetMapping("/{id}")
+    public ResponseObject<?> getSerialById(@PathVariable String id) {
+        return adSerialService.findById(id);
+    }
+
     @PostMapping
-    public ResponseObject<?> addSerial(@Valid @RequestBody ADSerialRequest serial) {
+    public ResponseEntity<?> addSerial(@Valid @RequestBody ADSerialRequest serial) {
         return adSerialService.createSerial(serial);
     }
 
-    @PostMapping("/{serialId}")
-    public ResponseObject<?> updateSerial(@Valid @PathVariable String serialId, @RequestBody ADSerialRequest serial) {
+    @PutMapping("/{serialId}")
+    public ResponseEntity<?> updateSerial(@Valid @PathVariable String serialId, @RequestBody ADSerialRequest serial) {
         return adSerialService.updateSerial(serialId, serial);
     }
 }

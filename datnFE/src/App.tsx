@@ -5,6 +5,9 @@ import CustomerPage from "./Pages/admin/customer/CustomerList";
 import CustomerForm from "./Pages/admin/customer/CustomerForm";
 import EmployeePage from "./Pages/admin/employee/EmployeeList";
 import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
+import SerialPage from "./Pages/admin/serial/SerialList";
+import StorageCapacityPage from "./Pages/admin/storage/StorageList";
+import ColorPage from "./Pages/admin/color/ColorList";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -25,6 +28,11 @@ const App: React.FC = () => {
           <Route path="/employee" element={<EmployeePage />} />
           <Route path="/employeeAdd" element={<EmployeeForm />} />
           <Route path="/admin/employees/:id" element={<EmployeeForm />} />
+          
+          <Route path="/serial" element={<SerialPage />} />
+          <Route path="/products/color" element={<ColorPage />} />
+          <Route path="/products/storage-capacity" element={<StorageCapacityPage />} />
+          
         </Routes>
       </MainLayout>
     </BrowserRouter>

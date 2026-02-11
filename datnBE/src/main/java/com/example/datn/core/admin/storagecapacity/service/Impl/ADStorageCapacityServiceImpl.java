@@ -22,7 +22,7 @@ public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
 
     @Override
     public ResponseObject<?> getAllStorageCapacity() {
-        List<StorageCapacity> list = adStorageCapacityRepository.findAll();
+        List<StorageCapacity> list = adStorageCapacityRepository.getAllSorted();
 
         List<ADStorageCapacityResponse> dtoList = list.stream().map(entity->
                 ADStorageCapacityResponse.builder()
@@ -73,9 +73,12 @@ public class ADStorageCapacityServiceImpl implements ADStorageCapacityService {
     @Override
     public ResponseObject<?> updateStorageCapacity(String storageCapacityId, ADStorageCapacityRequest request) {
         StorageCapacity storageCapacity = adStorageCapacityRepository.findById(storageCapacityId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Màu đã chọn"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dung lượng đã chọn"));
         if (!storageCapacity.getCode().equals(request.getCode()) && adStorageCapacityRepository.existsByCode(request.getCode())) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Màu đã tồn tại");
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã dung lượng đã tồn tại đã tồn tại");
+        }
+        if (!storageCapacity.getName().equals(request.getName()) && adStorageCapacityRepository.existsByName(request.getName())) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Tên dung lượng đã tồn tại");
         }
 
         storageCapacity.setCode(request.getCode());

@@ -17,5 +17,8 @@ public class ADSerialResponse {
     private String code;
     private EntityStatus status;
     private String productName;
+    private String productDetailId;
     private String createdDate;
+
+
 }

@@ -21,7 +21,7 @@ public class ADColorServiceImpl implements ADColorService {
 
     @Override
     public ResponseObject<?> getAllColors() {
-        List<Color> list = adColorRepository.findAll();
+        List<Color> list = adColorRepository.getAllSorted();
 
         List<ADColorResponse> dtoList = list.stream().map(entity->
                 ADColorResponse.builder()
@@ -75,7 +75,10 @@ public class ADColorServiceImpl implements ADColorService {
         Color color = adColorRepository.findById(colorId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Màu đã chọn"));
         if (!color.getCode().equals(request.getCode()) && adColorRepository.existsByCode(request.getCode())) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Màu đã tồn tại");
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã màu đã tồn tại");
+        }
+        if (!color.getName().equals(request.getName()) && adColorRepository.existsByName(request.getName())) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST , "Tên màu đã đã tồn tại");
         }
 
         color.setCode(request.getCode());
