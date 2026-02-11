@@ -83,3 +83,5 @@ export const mapResponseToFormValues = (response: CustomerResponse): CustomerFor
       : [{ ...initialAddress, isDefault: true }]
   };
 };
+
+export type Customer = CustomerResponse;

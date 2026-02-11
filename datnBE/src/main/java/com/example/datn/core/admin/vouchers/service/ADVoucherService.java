@@ -12,7 +12,10 @@ public interface ADVoucherService {
 
    ResponseObject<?> createOrUpdate(String Id, PostOrPutVoucherDto Dto);
 
-    ResponseObject<?> delete(String id);
+    ResponseObject<?> autoUpdateStatus();
+   boolean isCodeExists(String code);
 
+
+    ResponseObject<?> stopVoucher(String id);
 
 }

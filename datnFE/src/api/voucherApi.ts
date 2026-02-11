@@ -22,13 +22,11 @@ export const voucherApi = {
     /**
      * Thêm mới một voucher
      */
-    create: (data: any) => {
+  create: (data: any) => {
         return axios.post(BASE_URL, data);
     },
 
-    /**
-     * Cập nhật thông tin voucher
-     */
+    
     update: (id: string, data: any) => {
         return axios.put(`${BASE_URL}/${id}`, data);
     },
@@ -38,5 +36,15 @@ export const voucherApi = {
      */
     delete: (id: string) => {
         return axios.delete(`${BASE_URL}/${id}`);
-    }
+    },
+    stop: (id: string) => {
+    return axios.patch(`${BASE_URL}/${id}/stop`);
+    },
+    checkCodeExists: (code: string) => {
+        return axios.get(`${BASE_URL}/check-code/${code.trim()}`);
+    },
+    // Thêm vào class voucherApi của bạn
+updateDetailStatus: (detailId: string, params: { status: number; reason: string }) => {
+    return axios.patch(`${BASE_URL}/detail/${detailId}/status`, params);
+},
 };

@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class ADVoucherSearchRequest extends PageableRequest {
     private String keyword;
-    private String status;
+    private Integer status;
     private String voucherType;
     private Long startDate;
     private Long endDate;

@@ -1,5 +1,7 @@
 package com.example.datn.core.admin.vouchers.service.Impl;
 
+import com.example.datn.core.admin.voucherDetail.repository.ADVoucherDetailRepository;
+import com.example.datn.core.admin.voucherDetail.service.ADVoucherDetailService;
 import com.example.datn.core.admin.vouchers.model.PostOrPutVoucherDto;
 import com.example.datn.core.admin.vouchers.model.request.ADVoucherSearchRequest;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
@@ -7,21 +9,28 @@ import com.example.datn.core.admin.vouchers.service.ADVoucherService;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Voucher;
+import com.example.datn.infrastructure.email.EmailService;
 import com.example.datn.utils.Helper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ADVoucherServiceImpl implements ADVoucherService {
     private final ADVouchersRepository  adVouchersRepository;
+    private final ADVoucherDetailService adVoucherDetailService;
+    private final EmailService emailService;
+
 
     @Override
     public ResponseObject<?> getAllVoucher(ADVoucherSearchRequest request) {
@@ -38,6 +47,24 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                 request.getEndDate()    // Tham số mới
         );
 
+        long now = System.currentTimeMillis();
+        List<Voucher> vouchers = adVouchersRepository.findAll();
+
+        vouchers.forEach(v -> {
+            // Chỉ cập nhật nếu không bị "Buộc dừng" (status != 0)
+            if (v.getStatus() != 0) {
+                if (v.getStartDate() > now) {
+                    v.setStatus(1); // Sắp diễn ra
+                } else if (v.getStartDate() <= now && v.getEndDate() >= now) {
+                    v.setStatus(2); // Đang diễn ra
+                } else {
+                    v.setStatus(3); // Đã kết thúc
+                }
+            }
+        });
+
+        adVouchersRepository.saveAll(vouchers); // Lưu lại trạng thái mới nhất vào DB
+
         // 3. Trả về kết quả bọc trong PageableObject để Frontend xử lý phân trang
         return ResponseObject.success(PageableObject.of(page), "Lấy danh sách voucher thành công");
     }
@@ -46,60 +73,181 @@ public class ADVoucherServiceImpl implements ADVoucherService {
 
     @Override
     public ResponseObject<?> getByVoucher(String voucherId) {
-        // Tìm Voucher theo ID, nếu không thấy thì trả về thông báo lỗi
-        return adVouchersRepository.findById(voucherId)
-                .map(v -> ResponseObject.success(v, "Lấy chi tiết voucher thành công"))
+        return adVouchersRepository.findDetailById(voucherId)
+                .map(v -> {
+                    // Kiểm tra nếu là voucher cá nhân thì mới tính toán lại quantity
+                    if ("INDIVIDUAL".equalsIgnoreCase(v.getVoucherType())) {
+                        // Lấy danh sách details từ voucher
+                        // Giả sử Voucher có method getDetails() trả về List<VoucherDetail>
+                        if (v.getDetails() != null) {
+                            long availableCount = v.getDetails().stream()
+                                    .filter(detail -> detail.getUsageStatus() == 0)
+                                    .count();
+
+                            // Cập nhật lại số lượng hiển thị trước khi trả về FE
+                            v.setQuantity((int) availableCount);
+                        }
+                    }
+                    return ResponseObject.success(v, "Lấy chi tiết voucher thành công");
+                })
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy Voucher với ID: " + voucherId));
     }
 
     @Override
+    @Transactional
     public ResponseObject<?> createOrUpdate(String id, PostOrPutVoucherDto dto) {
-        // 1. Kiểm tra trùng mã
-        // Nếu id == null (tạo mới), ta truyền một chuỗi rỗng vào IdNot để nó check toàn bộ bảng
-        String currentId = (id != null) ? id : "";
-
-        if (adVouchersRepository.existsByCodeAndIdNot(dto.getVoucherCode(), currentId)) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã voucher '" + dto.getVoucherCode() + "' đã tồn tại!");
-        }
-        Voucher voucher;
-        long currentTime = System.currentTimeMillis(); // Lấy timestamp hiện tại cho created_date/last_modified_date
-
-        if (id != null && !id.isEmpty()) {
-            // TRƯỜNG HỢP UPDATE: Tìm voucher cũ trong DB
-            voucher = adVouchersRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Voucher không tồn tại để cập nhật"));
-            voucher.setLastModifiedDate(currentTime);
+        // 1. Kiểm tra trùng mã (Dùng logic riêng cho Create và Update để an toàn nhất)
+        boolean isExisted;
+        if (id == null || id.isEmpty()) {
+            isExisted = adVouchersRepository.existsByCode(dto.getCode());
         } else {
-            // TRƯỜNG HỢP CREATE: Tạo mới hoàn toàn
-            voucher = new Voucher();
-            voucher.setId(UUID.randomUUID().toString()); // Sử dụng VARCHAR(36) làm Primary Key
-            voucher.setCreatedDate(currentTime);
-            voucher.setLastModifiedDate(currentTime);
+            isExisted = adVouchersRepository.existsByCodeAndIdNot(dto.getCode(), id);
         }
 
-        // Mapping dữ liệu từ DTO sang Entity (Dựa trên cấu trúc bảng thực tế của bạn)
-        voucher.setCode(dto.getVoucherCode());
-        voucher.setName(dto.getVoucherName());
+        if (isExisted) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã voucher '" + dto.getCode() + "' đã tồn tại!");
+        }
+
+        Voucher voucher;
+        long currentTime = System.currentTimeMillis();
+// SỬA LẠI ĐOẠN NÀY
+        if (id != null && !id.isEmpty()) {
+            voucher = adVouchersRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+
+            // CHỈ kiểm tra đổi loại khi là cập nhật
+            if (!voucher.getVoucherType().equalsIgnoreCase(dto.getVoucherType())) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                        "Không được phép thay đổi đối tượng áp dụng sau khi đã tạo voucher!");
+            }
+        } else {
+            // Tạo mới hoàn toàn
+            voucher = new Voucher();
+            voucher.setId(UUID.randomUUID().toString());
+            // Khi tạo mới, gán luôn type để tránh lỗi null ở các bước sau nếu cần dùng
+            voucher.setVoucherType(dto.getVoucherType());
+        }
+
+        // 2. Logic Trạng thái thông minh
+        // Nếu FE gửi về status = 0 (Buộc dừng), ta giữ nguyên 0.
+        // Nếu khác 0, ta mới tự động tính toán theo thời gian.
+        if (dto.getStatus() != null && dto.getStatus() == 0) {
+            voucher.setStatus(0); // Buộc dừng
+        } else {
+            long now = System.currentTimeMillis();
+            if (dto.getStartDate() > now) {
+                voucher.setStatus(1); // Sắp diễn ra
+            } else if (dto.getStartDate() <= now && dto.getEndDate() >= now) {
+                voucher.setStatus(2); // Đang diễn ra
+            } else {
+                voucher.setStatus(3); // Đã kết thúc
+            }
+        }
+
+        // 3. Mapping dữ liệu
+        voucher.setCode(dto.getCode());
+        voucher.setName(dto.getName());
         voucher.setVoucherType(dto.getVoucherType());
         voucher.setDiscountUnit(dto.getDiscountUnit());
         voucher.setMaxDiscountAmount(dto.getMaxDiscountAmount());
         voucher.setConditions(dto.getConditions());
-        voucher.setStartDate(dto.getStartDate()); // Nhận kiểu Long (BIGINT)
-        voucher.setEndDate(dto.getEndDate());     // Nhận kiểu Long (BIGINT)
+        voucher.setStartDate(dto.getStartDate());
+        voucher.setEndDate(dto.getEndDate());
         voucher.setNote(dto.getNote());
-        voucher.setStatus(dto.getStatus());       // TINYINT trong DB ứng với Integer/Short trong Java
+        voucher.setDiscountValue(dto.getDiscountValue());
         voucher.setQuantity(dto.getQuantity());
-        Voucher savedVoucher = adVouchersRepository.save(voucher);
-        return ResponseObject.success(savedVoucher, (id == null ? "Thêm mới" : "Cập nhật") + " thành công");
+        // Luôn cập nhật thông tin người sửa/ngày sửa
+        voucher.setLastModifiedDate(currentTime);
+        voucher.setLastModifiedBy(dto.getLastModifiedBy());
+        Voucher savedVoucher;
+
+
+        // --- PHẦN 3 & 4: XỬ LÝ VOUCHER CÁ NHÂN & GỬI MAIL ---
+        // Sử dụng .equals() hoặc equalsIgnoreCase() để so sánh chuỗi trong Java
+        if ("INDIVIDUAL".equalsIgnoreCase(dto.getVoucherType())) {
+            List<String> customerIds = dto.getCustomerIds();
+
+            if (customerIds == null || customerIds.isEmpty()) {
+                throw new RuntimeException("Vui lòng chọn ít nhất một khách hàng cho voucher cá nhân");
+            }
+            // Bước A: Lưu Voucher tạm thời để đảm bảo thực thể được managed
+            savedVoucher = adVouchersRepository.save(voucher);
+
+            // Bước B: Gọi hàm cập nhật chi tiết (Logic đổi trạng thái thay vì xóa cứng)
+            // Hàm này sẽ xử lý: Thêm mới ID chưa có, và set usage_status = 2 cho ID bị bỏ chọn
+            adVoucherDetailService.updateVoucherDetails(savedVoucher.getId(), customerIds);
+
+            // Bước C: Tính toán lại số lượng voucher dựa trên các bản ghi có trạng thái 0 (Chưa dùng)
+            int validQuantity = adVoucherDetailService.countActiveVoucherDetails(savedVoucher.getId());
+            savedVoucher.setQuantity(validQuantity);
+
+
+            // Lưu Voucher trước để có ID
+            savedVoucher = adVouchersRepository.save(voucher);
+            savedVoucher = adVouchersRepository.save(savedVoucher);
+            // Cập nhật danh sách khách hàng được nhận voucher
+            adVoucherDetailService.updateVoucherDetails(savedVoucher.getId(), customerIds);
+
+            // Lấy danh sách email cần thông báo (những người có isNotified = 0)
+            List<String> emails = adVoucherDetailService.getEmailsToNotify(savedVoucher.getId());
+
+            if (emails != null && !emails.isEmpty()) {
+                try {
+                    // Gửi mail thông báo
+                    emailService.sendVoucherNotification(emails, savedVoucher);
+
+                    // Cập nhật trạng thái đã gửi mail thành công (isNotified = 1)
+                    adVoucherDetailService.updateNotificationStatus(savedVoucher.getId(), customerIds);
+                } catch (Exception e) {
+                    // Log lỗi gửi mail nhưng không làm stop tiến trình chính nếu bạn muốn
+                    System.err.println("Lỗi gửi email: " + e.getMessage());
+                }
+            }
+        } else {
+            // Trường hợp voucher chung (PUBLIC/GLOBAL), chỉ cần save voucher
+            savedVoucher = adVouchersRepository.save(voucher);
+        }
+
+        String action = (id == null) ? "Thêm mới" : "Cập nhật";
+        return ResponseObject.success(savedVoucher, action + " thành công");
     }
 
     @Override
-    public ResponseObject<?> delete(String id) {
-        // Kiểm tra tồn tại trước khi xóa
-        if (!adVouchersRepository.existsById(id)) {
-            return ResponseObject.error(HttpStatus.NOT_FOUND,"Không tìm thấy Voucher để xóa");
-        }
-        adVouchersRepository.deleteById(id);
-        return ResponseObject.success(null, "Xóa voucher thành công");
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional
+    public ResponseObject<?> autoUpdateStatus() {
+        long now = System.currentTimeMillis();
+
+        // LOGIC 1: Sắp diễn ra (1) -> Đang diễn ra (2)
+        // Nếu hiện tại đã vượt qua ngày bắt đầu
+        List<Voucher> startVouchers = adVouchersRepository.findAllByStatusAndStartDateBefore(1, now);
+        startVouchers.forEach(v -> v.setStatus(2));
+        adVouchersRepository.saveAll(startVouchers);
+
+        // LOGIC 2: Đang diễn ra (2) -> Đã kết thúc (3)
+        // Nếu hiện tại đã vượt qua ngày kết thúc
+        List<Voucher> endVouchers = adVouchersRepository.findAllByStatusAndEndDateBefore(2, now);
+        endVouchers.forEach(v -> v.setStatus(3));
+        adVouchersRepository.saveAll(endVouchers);
+
+        // Lưu ý: Những Voucher có status = 0 (Buộc dừng) sẽ KHÔNG bị quét trúng
+        // nên nó sẽ đứng yên ở trạng thái đó cho đến khi bạn bật lại.
+        return null;
     }
+
+    @Override
+    public boolean isCodeExists(String code) {
+        return adVouchersRepository.existsByCode(code);
+    }
+
+    @Override
+    public ResponseObject<?> stopVoucher(String id) {
+        Voucher voucher = adVouchersRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Voucher"));
+        voucher.setStatus(0); // Thiết lập trạng thái Buộc dừng
+        adVouchersRepository.save(voucher);
+        return null;
+    }
+
+
 }
