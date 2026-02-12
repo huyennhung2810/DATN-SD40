@@ -25,8 +25,8 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     private WorkSchedule workSchedule;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id")
-    private Employee employee;
+    @JoinColumn(name = "successor_id")
+    private Employee successor;
 
     private Long checkInTime;
     private Long checkOutTime;
@@ -52,15 +52,16 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     private BigDecimal differenceAmount;
 
     // Lý do lệch (Bắt buộc nếu differenceAmount != 0)
-    @Column(columnDefinition = "TEXT")
+    @Column
     private String differenceReason;
 
     // Ghi chú chung
-    @Column(columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "note")
     private String note;
 
     @Enumerated(EnumType.STRING)
-    private HandoverStatus status;
+    private HandoverStatus handoverStatus;
 
     // Danh sách kiểm kê máy ảnh
     @OneToMany(mappedBy = "shiftHandover", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalTime;
 
 
 @Getter
@@ -20,11 +21,11 @@ import java.io.Serializable;
 public class ShiftTemplate extends NameEntity implements Serializable {
 
     @Column(nullable = false)
-    private Long startTime;
+    private LocalTime startTime;
 
     @Column(nullable = false)
-    private Long endTime;
+    private LocalTime endTime;
 
-    @Column(columnDefinition = "boolean default true")
-    private Boolean isActive;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 }

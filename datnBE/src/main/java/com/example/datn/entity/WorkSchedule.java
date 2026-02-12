@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -26,11 +27,11 @@ public class WorkSchedule extends PrimaryEntity implements Serializable {
     private ShiftTemplate shiftTemplate;
 
     @Column(nullable = false)
-    private Long workDate;
+    private LocalDate workDate;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private ShiftStatus status;
+    private ShiftStatus shiftStatus;
 
     @OneToOne(mappedBy = "workSchedule", cascade = CascadeType.ALL)
     private ShiftHandover shiftHandover;
