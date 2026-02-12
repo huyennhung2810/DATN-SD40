@@ -5,6 +5,12 @@ import watchSerialFlow from "../redux/serial/serialSaga";
 import watchColorFlow from "../redux/color/colorSaga";
 import watchStorageFlow from "../redux/storage/storageSaga";
 
+import statisticsSaga from "../redux/statistics/statisticsSaga";
+
+
+import { voucherSaga } from "../redux/Voucher/voucherSaga";
+import { discountSaga } from "../redux/discount/discountSaga"; 
+
 
 export default function* rootSaga() {
   yield all([
@@ -12,6 +18,9 @@ export default function* rootSaga() {
     fork(watchEmployeeFlow),
     fork(watchSerialFlow),
     fork(watchColorFlow),
-    fork(watchStorageFlow)
+    fork(watchStorageFlow),
+    fork(statisticsSaga),
+    fork(voucherSaga),
+    fork(discountSaga)
   ]);
 }

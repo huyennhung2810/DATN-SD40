@@ -29,7 +29,7 @@ const breadcrumbNameMap: Record<string, string> = {
   "/employee": "Nhân viên",
   "/chat": "Hỗ trợ khách hàng",
   "/vouchers": "Phiếu giảm giá",
-  "/promitions": "Khuyến mãi",
+  "/discounts": "Khuyến mãi",
 };
 
 const Header: React.FC = () => {

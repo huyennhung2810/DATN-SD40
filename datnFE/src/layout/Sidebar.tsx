@@ -8,8 +8,6 @@ import Icon, {
   LineChartOutlined,
   ShopOutlined,
   OrderedListOutlined,
-  UnorderedListOutlined,
-  RetweetOutlined,
   UsergroupAddOutlined,
   SolutionOutlined,
   TagOutlined,
@@ -34,27 +32,21 @@ const Sidebar: React.FC = () => {
       label: "Quản lý đơn hàng",
     },
     {
-      key: "serial",
+      key: "/serial",
       icon: <TagOutlined/>,
       label: "Quản lý Serial"
     },
     {
-      key: "sub-product",
+      key: "/product",
       icon: <CameraOutlined />,
       label: "Quản lý sản phẩm",
-      children: [
-        {
-          key: "/product",
-          icon: <UnorderedListOutlined />,
-          label: "Danh sách sản phẩm",
-        },
-        { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
-      ],
     },
+    // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
+
     {
       key: "sub-account",
       icon: <UsergroupAddOutlined />,
-      label: "Tài khoản",
+      label: "Quản lý người dùng",
       children: [
         { key: "/customer", icon: <TeamOutlined />, label: "Khách hàng" },
         { key: "/employee", icon: <SolutionOutlined />, label: "Nhân viên" },
@@ -63,11 +55,11 @@ const Sidebar: React.FC = () => {
     {
       key: "sub-voucher",
       icon: <GiftOutlined />,
-      label: "Giảm giá",
+      label: "Quản lý giảm giá",
       children: [
         { key: "/voucher", icon: <TagOutlined />, label: "Phiếu giảm giá" },
         {
-          key: "/promotion",
+          key: "/discount",
           icon: <CalendarOutlined />,
           label: "Đợt giảm giá",
         },

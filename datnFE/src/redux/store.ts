@@ -2,11 +2,16 @@ import { configureStore } from "@reduxjs/toolkit";
 import createSagaMiddleware from 'redux-saga';
 import customerReducer from "./customer/customerSlice";
 import rootSaga from "../store/rootSaga";
+import voucherReducer from "./Voucher/voucherSlice"; // Import reducer mới
 const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
 import serialReducer from "./serial/serialSlice";
 import colorReducer from "./color/colorSlice";
 import storageCapacityReducer from "./storage/storageSlice";
+
+import statisticsReducer from "./statistics/statisticsSlice";
+
+import discountReducer from "../redux/discount/discountSlice"; // Kiểm tra lại đường dẫn này
 
 
 export const store = configureStore({
@@ -15,11 +20,16 @@ export const store = configureStore({
     employee: employeeReducer,
     serial: serialReducer,
     color: colorReducer,
-    storage: storageCapacityReducer
+    storage: storageCapacityReducer,
+
+    statistics: statisticsReducer,
+
+    voucher: voucherReducer, // Đăng ký voucher reducer vào store
+    discount: discountReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ 
-      thunk: false,
+      thunk: true,
       serializableCheck: false 
     }).concat(sagaMiddleware),
 });

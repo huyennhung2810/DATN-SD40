@@ -507,6 +507,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Tỉnh/Thành phố"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 options={provinces.map((p) => ({
                   label: p.name,
                   value: p.code,
@@ -532,6 +540,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Xã/Phường/Thị trấn"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 disabled={!communesMap[index]}
                 options={communesMap[index]?.map((w) => ({
                   label: w.name,
@@ -644,7 +660,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="identityCard"
                   label={<Text strong>Số CCCD</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   hasFeedback
                   rules={[
                     {
@@ -732,7 +748,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="email"
                   label={<Text strong>Email</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   hasFeedback
                   rules={[
                     {
@@ -748,7 +764,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="phoneNumber"
                   label={<Text strong>SĐT</Text>}
-                  validateTrigger="onBlur"
+                  validateTrigger="onChange"
                   rules={[
                     {
                       required: true,
