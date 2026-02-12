@@ -63,7 +63,7 @@ const pageInfoMap: Record<
     desc: "Thiết lập các mã giảm giá và chương trình tri ân",
     icon: <TagOutlined />,
   },
-  "/promotion": {
+  "/discount": {
     title: "Quản lý Đợt giảm giá",
     desc: "Quản lý các đợt giảm giá theo sự kiện",
     icon: <CalendarOutlined />,
