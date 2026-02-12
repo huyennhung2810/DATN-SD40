@@ -42,4 +42,5 @@ export interface VoucherFormValues extends Omit<VoucherRequest, 'startDate' | 'e
     maxDiscountValue: number;    // Số tiền giảm tối đa
     lastModifiedBy: string;      // Người cập nhật cuối cùng
     lastModifiedDate: number;   // Ngày cập nhật cuối cùng (thường do BE trả về)
+    voucherName :String;
 }

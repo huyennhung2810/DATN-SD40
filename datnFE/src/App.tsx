@@ -8,6 +8,8 @@ import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
 // --- Import thêm các trang Voucher ---
 import VoucherList from "./Pages/admin/voucher/VoucherList";
 import VoucherForm from "./Pages/admin/voucher/VoucherForm";
+import DiscountList from "./Pages/admin/discount/DiscountList";
+import DiscountForm from "./Pages/admin/discount/DiscountForm";
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
     <h1>Hệ thống Quản lý Hikari Camera</h1>{" "}
@@ -30,6 +32,9 @@ const App: React.FC = () => {
           <Route path="/voucher" element={<VoucherList />} />
           <Route path="/voucher/create" element={<VoucherForm />} />
           <Route path="/voucher/edit/:id" element={<VoucherForm />} />
+          <Route path="/discount" element={<DiscountList />} />
+          <Route path="/discount/create" element={<DiscountForm />} />
+          <Route path="/discount/edit/:id" element={<DiscountForm />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

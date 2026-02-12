@@ -5,13 +5,14 @@ import rootSaga from "../store/rootSaga";
 import voucherReducer from "./Voucher/voucherSlice"; // Import reducer mới
 const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
-
+import discountReducer from "../redux/discount/discountSlice"; // Kiểm tra lại đường dẫn này
 
 export const store = configureStore({
   reducer: {
     customer: customerReducer,
     employee: employeeReducer,
     voucher: voucherReducer, // Đăng ký voucher reducer vào store
+    discount: discountReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ 

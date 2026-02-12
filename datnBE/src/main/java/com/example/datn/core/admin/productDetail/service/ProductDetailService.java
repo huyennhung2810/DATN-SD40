@@ -1,0 +1,9 @@
+package com.example.datn.core.admin.productDetail.service;
+
+import com.example.datn.entity.ProductDetail;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+public interface ProductDetailService {
+    Page<ProductDetail> getAll(String keyword, Pageable pageable);
+}

@@ -36,6 +36,7 @@ public interface ADVouchersRepository extends VoucherRepository {
 
     // Nếu bạn muốn kiểm tra trùng mã khi tạo mới (chưa có ID)
     boolean existsByCode(String code);
+
     List<Voucher> findAllByStatusAndStartDateBefore(Integer status, Long now);
 
     // Tìm các voucher cần chuyển sang "Đã kết thúc"

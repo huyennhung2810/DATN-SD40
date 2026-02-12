@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Table, Button, Card, Input, Space, Tag, Typography, Tooltip,
-  Row, Col, Select, DatePicker, Popconfirm, message,
+  Row, Col, Select, DatePicker, Popconfirm, 
 } from "antd";
 import {
   PlusOutlined,
@@ -11,7 +11,7 @@ import {
   UserOutlined,
   StopOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,  } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 
@@ -21,6 +21,7 @@ import type { Voucher } from "../../../models/Voucher";
 
 const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
+
 
 const VoucherList: React.FC = () => {
   const navigate = useNavigate();
@@ -221,7 +222,7 @@ const handleStopVoucher = (id: string) => {
           </Button>
         </div>
 
-       {/* Thay thế đoạn div tìm kiếm cũ bằng đoạn code dưới đây */}
+    
 <Card 
   style={{ marginBottom: 16, backgroundColor: "#fafafa" }} 
   size="small" 
