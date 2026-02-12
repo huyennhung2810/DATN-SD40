@@ -22,18 +22,19 @@ public interface ADDiscountDetailRepository extends DiscountDetailRepository {
     @Transactional
     @Query("DELETE FROM DiscountDetail dd WHERE dd.discount.id = :discountId")
     void deleteByDiscountId(@Param("discountId") String discountId);
-    @Query("SELECT COUNT(dd) FROM DiscountDetail dd " +
-            "JOIN dd.discount d " +
-            "WHERE dd.productDetail.id = :productDetailId " +
-            "AND d.status IN (0, 1) " + // Chỉ check các đợt Sắp chạy hoặc Đang chạy
-            "AND d.id <> :currentDiscountId " + // Bỏ qua chính nó (dùng cho trường hợp Update)
-            "AND (" +
-            "   (:startDate BETWEEN d.startDate AND d.endDate) OR " +
-            "   (:endDate BETWEEN d.startDate AND d.endDate) OR " +
-            "   (d.startDate BETWEEN :startDate AND :endDate)" +
-            ")")
-    Long countConflictingDiscounts(@Param("productDetailId") String pdId,
-                                   @Param("currentDiscountId") String discountId,
-                                   @Param("startDate") Long start,
-                                   @Param("endDate") Long end);
+
+    @Query("""
+    SELECT COUNT(dd) FROM DiscountDetail dd 
+    WHERE dd.productDetail.id IN :pdIds 
+    AND dd.discount.id != :currentId 
+    AND dd.discount.status IN (1, 2) 
+    AND dd.discount.startDate <= :endDate 
+    AND dd.discount.endDate >= :startDate
+""")
+    Long countConflicts(
+            @Param("pdIds") List<String> pdIds,
+            @Param("currentId") String currentId,
+            @Param("startDate") Long startDate,
+            @Param("endDate") Long endDate
+    );
 }

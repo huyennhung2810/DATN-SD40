@@ -110,13 +110,14 @@ public class DiscountServiceImpl implements DiscountService {
 
     // --- LOGIC CHUNG CHO THÊM VÀ SỬA (Giống cấu trúc Voucher) ---
     private Discount createOrUpdateLogic(String id, DiscountRequest req) {
-        // 1. Kiểm tra trùng mã
+        // 1. Kiểm tra trùng mã (Loại trừ bản ghi hiện tại nếu là Update)
         boolean isExisted;
         if (id == null) {
             isExisted = adDiscountRepository.existsByCode(req.getCode());
         } else {
             isExisted = adDiscountRepository.existsByCodeAndIdNot(req.getCode(), id);
         }
+
         if (isExisted) {
             throw new RuntimeException("Mã giảm giá '" + req.getCode() + "' đã tồn tại!");
         }
@@ -124,21 +125,31 @@ public class DiscountServiceImpl implements DiscountService {
         Discount discount;
         long now = System.currentTimeMillis();
 
+        // 2. Khởi tạo hoặc lấy đối tượng từ DB
         if (id != null) {
-            // Update
+            // Trường hợp UPDATE
             discount = adDiscountRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Đợt giảm giá không tồn tại"));
         } else {
-            // Create
+            // Trường hợp CREATE mới
             discount = new Discount();
-            discount.setId(UUID.randomUUID().toString());
+            discount.setId(UUID.randomUUID().toString()); // Tạo ID ngay từ đầu
             discount.setCreatedAt(now);
         }
 
-        // 2. Logic Trạng thái thông minh (Copy từ Voucher)
-        // Nếu FE gửi status = 0 (Buộc dừng) thì giữ nguyên, ngược lại tính theo thời gian
-        if (req.getStatus() != null && req.getStatus() == 0) { // Giả sử 2 là buộc dừng trong Voucher, bạn chỉnh lại theo enum của bạn
-            discount.setStatus(0);
+        // 3. Mapping dữ liệu từ Request vào Entity
+        discount.setCode(req.getCode());
+        discount.setName(req.getName());
+        discount.setDiscountPercent(req.getDiscountPercent());
+        discount.setStartDate(req.getStartDate());
+        discount.setEndDate(req.getEndDate());
+        discount.setQuantity(req.getQuantity());
+        discount.setNote(req.getNote());
+        discount.setUpdatedAt(now);
+
+        // 4. Tính toán trạng thái dựa trên thời gian (Hoặc giữ nguyên nếu là Buộc dừng)
+        if (req.getStatus() != null && req.getStatus() == 0) {
+            discount.setStatus(0); // Trạng thái buộc dừng (Hủy)
         } else {
             if (req.getStartDate() > now) {
                 discount.setStatus(1); // Sắp diễn ra
@@ -149,41 +160,30 @@ public class DiscountServiceImpl implements DiscountService {
             }
         }
 
-        // 3. Mapping dữ liệu
-        discount.setCode(req.getCode());
-        discount.setName(req.getName());
-        discount.setDiscountPercent(req.getDiscountPercent());
-        discount.setStartDate(req.getStartDate());
-        discount.setEndDate(req.getEndDate());
-        discount.setQuantity(req.getQuantity());
-        discount.setNote(req.getNote());
-        discount.setUpdatedAt(now);
-        if (req.getProductDetailIds() != null) {
-            for (String pdId : req.getProductDetailIds()) {
-                // Truyền ID hiện tại vào (nếu thêm mới thì truyền chuỗi rỗng hoặc UUID giả để không bị lỗi SQL)
-                String currentId = (id == null) ? "" : id;
+        // 5. KIỂM TRA XUNG ĐỘT SẢN PHẨM (Chỉ check nếu đợt này còn hiệu lực 1 hoặc 2)
+        if (discount.getStatus() == 1 || discount.getStatus() == 2) {
+            if (req.getProductDetailIds() != null && !req.getProductDetailIds().isEmpty()) {
 
-                Long conflictCount = adDiscountDetailRepository.countConflictingDiscounts(
-                        pdId,
+                // QUAN TRỌNG: Truyền ID thực của object để loại trừ chính nó trong SQL
+                String currentId = discount.getId();
+
+                Long conflictCount = adDiscountDetailRepository.countConflicts(
+                        req.getProductDetailIds(),
                         currentId,
                         req.getStartDate(),
                         req.getEndDate()
                 );
 
                 if (conflictCount > 0) {
-                    // Lấy tên sản phẩm để báo lỗi cho chi tiết
-                    ProductDetail pd = adProductDetailRepository.findById(pdId).orElse(null);
-                    String prodName = (pd != null) ? pd.getProduct().getName() : pdId;
-
-                    throw new RuntimeException("Sản phẩm '" + prodName + "' đang nằm trong một đợt giảm giá khác cùng thời gian!");
+                    throw new RuntimeException("Có sản phẩm đã chọn đang tham gia chương trình khác (Sắp diễn ra hoặc Đang diễn ra)!");
                 }
             }
         }
-        // BƯỚC QUAN TRỌNG: Lưu Discount (Cha) trước để có ID
+
+        // 6. Lưu thông tin Discount (Bảng cha)
         Discount savedDiscount = adDiscountRepository.save(discount);
 
-        // 4. Xử lý danh sách sản phẩm (Tương tự xử lý danh sách Khách hàng bên Voucher)
-        // Gọi sang Service con để xử lý logic: Xóa cũ -> Thêm mới -> Tính giá PriceAfter
+        // 7. Xử lý danh sách sản phẩm chi tiết (Xóa cũ - Thêm mới)
         if (req.getProductDetailIds() != null) {
             discountDetailService.saveAll(savedDiscount, req.getProductDetailIds());
         }

@@ -69,24 +69,20 @@ function* handleGetDiscountById(action: any): any {
 // 4. Xử lý cập nhật đợt giảm giá
 function* handleUpdateDiscount(action: any): any {
   try {
-    // action.payload = { id: string, data: payload, navigate: function }
     const { id, data, navigate } = action.payload;
-
-    if (!id) {
-        message.error("Thiếu mã định danh chương trình (ID)");
-        return;
-    }
-
     const response = yield call(discountApi.update, id, data);
-
-    if (response.status === 200 || response.status === 204) {
-      yield put(updateDiscountSuccess(response.data));
-      message.success("Cập nhật chương trình giảm giá thành công");
-      if (navigate) navigate();
-    }
+    
+    // Nếu thành công
+    yield put(updateDiscountSuccess(response.data));
+    message.success("Cập nhật thành công!");
+    if (navigate) navigate();
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || "Lỗi khi cập nhật";
-    message.error(errorMessage);
+    // QUAN TRỌNG: Bắt lỗi từ Backend trả về (RuntimeException)
+    const errorMsg = error.response?.data?.message || "Lỗi xung đột thời gian giảm giá!";
+    message.error(errorMsg);
+    
+    // Dispatch action Failure để tắt trạng thái Loading trên nút Lưu
+    yield put(fetchDiscountsFailure()); 
   }
 }
 
