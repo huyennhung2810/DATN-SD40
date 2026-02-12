@@ -19,9 +19,9 @@ const GrowthChart: React.FC = () => {
     <Card
       variant="borderless"
       style={{
-        backgroundColor: "#1f1f1f",
+        backgroundColor: "#ffffff",
         borderRadius: "8px",
-        color: "#fff",
+        color: "#bfbaba",
         height: "100%",
         overflow: "hidden",
       }}
@@ -36,7 +36,7 @@ const GrowthChart: React.FC = () => {
           padding: "0 8px",
         }}
       >
-        <Text strong style={{ color: "#fff", fontSize: 16 }}>
+        <Text strong style={{ color: "#000000", fontSize: 16 }}>
           Tốc độ tăng trưởng của cửa hàng
         </Text>
         <SyncOutlined
@@ -59,7 +59,7 @@ const GrowthChart: React.FC = () => {
               <div
                 key={index}
                 style={{
-                  backgroundColor: "#000",
+                  backgroundColor: "#fbf4f4",
                   borderRadius: "6px",
                   padding: "12px 16px",
                   display: "flex",
@@ -76,14 +76,16 @@ const GrowthChart: React.FC = () => {
                     flex: 1,
                   }}
                 >
-                  <BarChartOutlined style={{ color: "#fff", fontSize: 14 }} />
-                  <Text style={{ color: "#fff", fontSize: 13 }}>
+                  <BarChartOutlined
+                    style={{ color: "#fa9292", fontSize: 14 }}
+                  />
+                  <Text style={{ color: "#000000", fontSize: 13 }}>
                     {item.label}
                   </Text>
                 </div>
 
                 <div style={{ flex: 1, textAlign: "center" }}>
-                  <Text strong style={{ color: "#fff", fontSize: 14 }}>
+                  <Text strong style={{ color: "#000000", fontSize: 14 }}>
                     {item.isCurrency
                       ? item.value.toLocaleString("vi-VN") + " đ"
                       : item.value.toLocaleString("vi-VN")}

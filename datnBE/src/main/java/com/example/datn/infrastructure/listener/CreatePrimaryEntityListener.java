@@ -62,6 +62,8 @@ public class CreatePrimaryEntityListener {
             case "Warranty" -> "BH";      // Bảo hành
             case "WarrantyHistory" -> "BHH"; // Lịch sử bảo hành
 
+            case "WorkSchedule" -> "WS";
+
             // Khác
             case "RefreshToken" -> "RT";
             default -> "OTH";             // Others
