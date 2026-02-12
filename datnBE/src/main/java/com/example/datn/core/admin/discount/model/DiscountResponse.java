@@ -21,6 +21,8 @@ public class DiscountResponse {
     private String note;
     private Integer quantity;
     private Integer status;
+    private Long createdAt;
+    private Long updatedAt;
     private List<DiscountDetailResponse> discountDetails;
 
     public DiscountResponse(Discount discount) {
@@ -34,5 +36,7 @@ public class DiscountResponse {
         this.note = discount.getNote();
         this.quantity = discount.getQuantity();
         this.status = discount.getStatus();
+        this.createdAt = discount.getCreatedAt();
+        this.updatedAt = discount.getUpdatedAt();
     }
 }

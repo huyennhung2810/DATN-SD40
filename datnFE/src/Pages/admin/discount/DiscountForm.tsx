@@ -82,31 +82,32 @@ const DiscountForm: React.FC = () => {
     }
   }, [id, dispatch, form]);
 
-  useEffect(() => {
-    if (id && currentDiscount) {
-      form.setFieldsValue({
-        code: currentDiscount.code,
-        name: currentDiscount.name,
-        discountPercent: currentDiscount.discountPercent,
-        quantity: currentDiscount.quantity,
-        note: currentDiscount.note,
-        status: currentDiscount.status === 0 ? 0 : 1, // Logic Radio vừa thêm
-        timeRange: [
-          dayjs(currentDiscount.startDate),
-          dayjs(currentDiscount.endDate),
-        ],
-      });
+ useEffect(() => {
+  if (id && currentDiscount) {
+    form.setFieldsValue({
+      code: currentDiscount.code,
+      name: currentDiscount.name,
+      discountPercent: currentDiscount.discountPercent,
+      quantity: currentDiscount.quantity,
+      note: currentDiscount.note,
+      status: currentDiscount.status === 0 ? 0 : 1,
+      // Đổ dữ liệu vào form để hiển thị
+      createdAt: currentDiscount.createdAt ? dayjs(currentDiscount.createdAt).format("DD/MM/YYYY HH:mm") : "N/A",
+      updatedAt: currentDiscount.updatedAt ? dayjs(currentDiscount.updatedAt).format("DD/MM/YYYY HH:mm") : "N/A",
+      timeRange: [
+        dayjs(currentDiscount.startDate),
+        dayjs(currentDiscount.endDate),
+      ],
+    });
 
-      // QUAN TRỌNG: Cập nhật danh sách ID sản phẩm đã chọn
-      // Kiểm tra Backend trả về trường này là 'discountDetails' hay 'details'
-      if (currentDiscount.discountDetails) {
-        const ids = currentDiscount.discountDetails.map(
-          (item: any) => item.productDetailId || item.productDetail?.id,
-        );
-        setSelectedRowKeys(ids);
-      }
+    if (currentDiscount.discountDetails) {
+      const ids = currentDiscount.discountDetails.map(
+        (item: any) => item.productDetailId || item.productDetail?.id,
+      );
+      setSelectedRowKeys(ids);
     }
-  }, [currentDiscount, id, form]);
+  }
+}, [currentDiscount, id, form]);
 
   // Thêm useEffect này để lấy dữ liệu
   useEffect(() => {
@@ -257,7 +258,7 @@ const DiscountForm: React.FC = () => {
                 <Form.Item
                   label="Chế độ vận hành"
                   name="status"
-                  initialValue={1} // Mặc định là chạy tự động
+                  initialValue={1}
                   tooltip="Chế độ tự động sẽ kích hoạt chương trình dựa trên thời gian. Buộc dừng sẽ tắt chương trình ngay lập tức."
                 >
                   <Radio.Group optionType="button" buttonStyle="solid">
@@ -270,6 +271,33 @@ const DiscountForm: React.FC = () => {
                   </Radio.Group>
                 </Form.Item>
               </Col>
+
+              {id && (
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item label="Ngày tạo" name="createdAt">
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: "#f5f5f5",
+                          color: "rgba(0,0,0,0.65)",
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="Lần cập nhật cuối" name="updatedAt">
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: "#f5f5f5",
+                          color: "rgba(0,0,0,0.65)",
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              )}
               <Col span={24}>
                 <Form.Item label="Ghi chú" name="note">
                   <Input.TextArea
