@@ -22,7 +22,6 @@ import {
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,
-  LockOutlined,
   MailOutlined,
   PhoneOutlined,
   ArrowLeftOutlined,
@@ -116,7 +115,7 @@ const EmployeeForm: React.FC = () => {
       .then((res) => setProvinces(res.data))
       .catch(() => {
         notification.error({
-          message: "Không tải được danh sách Tỉnh/Thành",
+          title: "Không tải được danh sách Tỉnh/Thành",
         });
       });
   }, [notification]);
@@ -133,7 +132,7 @@ const EmployeeForm: React.FC = () => {
         return wardList;
       } catch (error) {
         console.error("Error loading wards:", error);
-        notification.error({ message: "Lỗi tải danh sách Phường/Xã" });
+        notification.error({ title: "Lỗi tải danh sách Phường/Xã" });
         return [];
       }
     },
@@ -191,7 +190,7 @@ const EmployeeForm: React.FC = () => {
       try {
         const parts = decodedText.split("|");
         if (parts.length < 6) {
-          notification.warning({ message: "Mã QR không đúng định dạng CCCD" });
+          notification.warning({ title: "Mã QR không đúng định dạng CCCD" });
           return;
         }
 
@@ -200,7 +199,7 @@ const EmployeeForm: React.FC = () => {
 
         if (provinces.length === 0) {
           notification.warning({
-            message: "Dữ liệu hành chính chưa sẵn sàng, vui lòng thử lại!",
+            title: "Dữ liệu hành chính chưa sẵn sàng, vui lòng thử lại!",
           });
           return;
         }
@@ -261,11 +260,11 @@ const EmployeeForm: React.FC = () => {
           }
         }
         notification.success({
-          message: "Đã lấy thông tin từ CCCD thành công",
+          title: "Đã lấy thông tin từ CCCD thành công",
         });
       } catch (error) {
         console.error("Lỗi quét QR:", error);
-        notification.error({ message: "Có lỗi xảy ra khi xử lý dữ liệu QR" });
+        notification.error({ title: "Có lỗi xảy ra khi xử lý dữ liệu QR" });
       }
     },
     [provinces, notification, form],
@@ -306,15 +305,36 @@ const EmployeeForm: React.FC = () => {
           ...(password && password.trim() !== "" ? { password } : {}),
         };
 
+        const key = "updatable";
+        if (!isEdit) {
+          notification.info({
+            key,
+            title: "Đang xử lý",
+            description: "Đang khởi tạo tài khoản và gửi email thông báo...",
+            duration: 0,
+          });
+        }
+
         dispatch(
           isEdit
             ? employeeActions.updateEmployee({
                 data: payload,
-                navigate: () => navigate("/employee"),
+                navigate: () => {
+                  notification.success({ title: "Cập nhật thành công!" });
+                  navigate("/employee");
+                },
               })
             : employeeActions.addEmployee({
                 data: payload,
-                navigate: () => navigate("/employee"),
+                navigate: () => {
+                  notification.success({
+                    key,
+                    title: "Thành công",
+                    description: `Tài khoản đã được gửi tới email: ${values.email}`,
+                    duration: 5,
+                  });
+                  navigate("/employee");
+                },
               }),
         );
       },
@@ -345,13 +365,13 @@ const EmployeeForm: React.FC = () => {
         file.type === "image/jpeg" || file.type === "image/png";
       if (!isJpgOrPng) {
         notification.error({
-          message: "Bạn chỉ có thể tải lên định dạng JPG/PNG!",
+          title: "Bạn chỉ có thể tải lên định dạng JPG/PNG!",
         });
         return Upload.LIST_IGNORE;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        notification.error({ message: "Hình ảnh phải nhỏ hơn 2MB!" });
+        notification.error({ title: "Hình ảnh phải nhỏ hơn 2MB!" });
         return Upload.LIST_IGNORE;
       }
       setImageFile(file);
@@ -431,7 +451,7 @@ const EmployeeForm: React.FC = () => {
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        requiredMark="optional"
+        requiredMark={false}
       >
         <Card
           variant="borderless"
@@ -441,7 +461,7 @@ const EmployeeForm: React.FC = () => {
           }}
         >
           <Row gutter={48}>
-            <Col xs={24} lg={8} style={{ borderRight: "1px solid #f0f0f0" }}>
+            <Col xs={24} lg={10} style={{ borderRight: "1px solid #f0f0f0" }}>
               <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <Title level={4} style={{ marginBottom: 24 }}>
                   Ảnh đại diện
@@ -464,187 +484,129 @@ const EmployeeForm: React.FC = () => {
                     />
                   ) : (
                     <div>
-                      <PlusOutlined style={{ fontSize: 24 }} />
+                      <PlusOutlined style={{ fontSize: 32 }} />
                       <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
                     </div>
                   )}
                 </Upload>
+
+                <Divider titlePlacement="left" style={{ marginTop: 65 }}>
+                  <UserOutlined /> Thông tin cơ bản
+                </Divider>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      name="identityCard"
+                      label={<Text strong>Số CCCD</Text>}
+                      validateTrigger="onChange"
+                      hasFeedback
+                      rules={[
+                        {
+                          required: true,
+                          pattern: /^\d{12}$/,
+                          message: "CCCD phải đủ 12 số",
+                        },
+                        { validator: duplicateValidator("identityCard") },
+                      ]}
+                    >
+                      <Input
+                        size="large"
+                        maxLength={12}
+                        suffix={
+                          <ScanOutlined
+                            onClick={() => setIsScannerOpen(true)}
+                            style={{ color: "#1890ff", cursor: "pointer" }}
+                          />
+                        }
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      name="name"
+                      label={<Text strong>Họ và tên</Text>}
+                      rules={[
+                        { required: true, message: "Vui lòng nhập họ tên" },
+                        {
+                          whitespace: true,
+                          message: "Họ tên không được chỉ chứa khoảng trắng",
+                        },
+                        { min: 2, message: "Họ tên phải có ít nhất 2 ký tự" },
+                      ]}
+                    >
+                      <Input size="large" placeholder="Vd: Nguyễn Văn A" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      name="gender"
+                      label={<Text strong>Giới tính</Text>}
+                      rules={[
+                        { required: true, message: "Vui lòng chọn giới tính" },
+                      ]}
+                    >
+                      <Radio.Group
+                        buttonStyle="solid"
+                        style={{ width: "100%", display: "flex" }}
+                      >
+                        <Radio.Button
+                          value={true}
+                          style={{ flex: 1, textAlign: "center" }}
+                        >
+                          Nam
+                        </Radio.Button>
+                        <Radio.Button
+                          value={false}
+                          style={{ flex: 1, textAlign: "center" }}
+                        >
+                          Nữ
+                        </Radio.Button>
+                      </Radio.Group>
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      name="dateOfBirth"
+                      label={<Text strong>Ngày sinh</Text>}
+                      rules={[
+                        { required: true, message: "Vui lòng chọn ngày sinh" },
+                        { validator: validateAge },
+                      ]}
+                    >
+                      <DatePicker
+                        size="large"
+                        format="DD/MM/YYYY"
+                        style={{ width: "100%" }}
+                        disabledDate={disabledDate}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
               </div>
-
-              <Divider titlePlacement="left">
-                <LockOutlined /> Tài khoản
-              </Divider>
-
-              <Form.Item
-                name="username"
-                label={<Text strong>Tên đăng nhập</Text>}
-                validateTrigger="onChange"
-                hasFeedback
-                rules={[
-                  {
-                    required: !isEdit,
-                    message: "Vui lòng nhập tên đăng nhập",
-                  },
-                  {
-                    validator: duplicateValidator("username"),
-                  },
-                ]}
-              >
-                <Input
-                  size="large"
-                  prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
-                  disabled={isEdit}
-                  placeholder="Nhập tên đăng nhập"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                label={<Text strong>Mật khẩu</Text>}
-                rules={[
-                  {
-                    required: !isEdit,
-                    message: "Vui lòng nhập mật khẩu",
-                  },
-                  {
-                    min: 8,
-                    message: "Mật khẩu phải có ít nhất 8 ký tự",
-                  },
-                  {
-                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-                    message: "Mật khẩu phải bao gồm chữ hoa, chữ thường và số",
-                  },
-                  {
-                    validator: (_, value) => {
-                      if (value && value.includes(" ")) {
-                        return Promise.reject(
-                          new Error("Mật khẩu không được chứa khoảng trắng"),
-                        );
-                      }
-                      return Promise.resolve();
-                    },
-                  },
-                ]}
-              >
-                <Input.Password
-                  size="large"
-                  prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
-                  placeholder={
-                    isEdit ? "Để trống nếu không muốn đổi" : "Nhập mật khẩu"
-                  }
-                  autoComplete="new-password"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="role"
-                label={<Text strong>Chức vụ</Text>}
-                initialValue="STAFF"
-              >
-                <Select
-                  size="large"
-                  options={[
-                    { label: "Nhân viên", value: "STAFF" },
-                    { label: "ADMIN", value: "ADMIN" },
-                  ]}
-                />
-              </Form.Item>
             </Col>
 
-            <Col xs={24} lg={16}>
+            <Col xs={24} lg={14}>
               <Divider titlePlacement="left" style={{ marginTop: 0 }}>
-                <UserOutlined /> Thông tin cơ bản
+                <UserOutlined /> Chức vụ
               </Divider>
+
               <Row gutter={16}>
-                <Col span={12}>
+                <Col span={24}>
                   <Form.Item
-                    name="identityCard"
-                    label={<Text strong>Số CCCD</Text>}
-                    validateTrigger="onChange"
-                    hasFeedback
-                    rules={[
-                      {
-                        required: true,
-                        pattern: /^\d{12}$/,
-                        message: "CCCD phải đủ 12 số",
-                      },
-                      { validator: duplicateValidator("identityCard") },
-                    ]}
+                    name="role"
+                    label={<Text strong>Chức vụ</Text>}
+                    initialValue="STAFF"
                   >
-                    <Input
+                    <Select
                       size="large"
-                      maxLength={12}
-                      suffix={
-                        <ScanOutlined
-                          onClick={() => setIsScannerOpen(true)}
-                          style={{ color: "#1890ff", cursor: "pointer" }}
-                        />
-                      }
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="name"
-                    label={<Text strong>Họ và tên</Text>}
-                    rules={[
-                      { required: true, message: "Vui lòng nhập họ tên" },
-                      {
-                        whitespace: true,
-                        message: "Họ tên không được chỉ chứa khoảng trắng",
-                      },
-                      { min: 2, message: "Họ tên phải có ít nhất 2 ký tự" },
-                    ]}
-                  >
-                    <Input size="large" placeholder="Vd: Nguyễn Văn A" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="gender"
-                    label={<Text strong>Giới tính</Text>}
-                    rules={[
-                      { required: true, message: "Vui lòng chọn giới tính" },
-                    ]}
-                  >
-                    <Radio.Group
-                      buttonStyle="solid"
-                      style={{ width: "100%", display: "flex" }}
-                    >
-                      <Radio.Button
-                        value={true}
-                        style={{ flex: 1, textAlign: "center" }}
-                      >
-                        Nam
-                      </Radio.Button>
-                      <Radio.Button
-                        value={false}
-                        style={{ flex: 1, textAlign: "center" }}
-                      >
-                        Nữ
-                      </Radio.Button>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="dateOfBirth"
-                    label={<Text strong>Ngày sinh</Text>}
-                    rules={[
-                      { required: true, message: "Vui lòng chọn ngày sinh" },
-                      { validator: validateAge },
-                    ]}
-                  >
-                    <DatePicker
-                      size="large"
-                      format="DD/MM/YYYY"
-                      style={{ width: "100%" }}
-                      disabledDate={disabledDate}
+                      options={[
+                        { label: "Nhân viên", value: "STAFF" },
+                        { label: "Quản trị viên", value: "ADMIN" },
+                      ]}
                     />
                   </Form.Item>
                 </Col>
               </Row>
-
               <Divider titlePlacement="left">
                 <EnvironmentOutlined /> Liên lạc & Địa chỉ
               </Divider>
@@ -691,13 +653,20 @@ const EmployeeForm: React.FC = () => {
                 <Col span={12}>
                   <Form.Item
                     name="provinceCode"
-                    label={<Text strong>Tỉnh/Thành</Text>}
+                    label={<Text strong>Tỉnh/Thành phố</Text>}
                     rules={[{ required: true }]}
                   >
                     <Select
                       size="large"
                       showSearch
-                      placeholder="Chọn tỉnh thành"
+                      placeholder="Chọn Tỉnh/Thành phố"
+                      filterOption={(input, option) => {
+                        const label = normalizeString(
+                          option?.label ? String(option.label) : "",
+                        );
+                        const search = normalizeString(input);
+                        return label.includes(search);
+                      }}
                       options={provinces.map((p) => ({
                         label: p.name,
                         value: p.code,
@@ -720,13 +689,20 @@ const EmployeeForm: React.FC = () => {
                 <Col span={12}>
                   <Form.Item
                     name="wardCode"
-                    label={<Text strong>Phường/Xã</Text>}
+                    label={<Text strong>Xã/Phường/Thị trấn</Text>}
                     rules={[{ required: true }]}
                   >
                     <Select
                       size="large"
                       showSearch
-                      placeholder="Chọn phường xã"
+                      placeholder="Chọn Xã/Phường/Thị trấn"
+                      filterOption={(input, option) => {
+                        const label = normalizeString(
+                          option?.label ? String(option.label) : "",
+                        );
+                        const search = normalizeString(input);
+                        return label.includes(search);
+                      }}
                       loading={
                         isEdit &&
                         wards.length === 0 &&

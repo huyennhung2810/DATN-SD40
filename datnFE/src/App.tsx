@@ -1,10 +1,12 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import MainLayout from "./layout/MainLayout";
+import MainLayout from "./layout/admin/MainLayout";
 import CustomerPage from "./Pages/admin/customer/CustomerList";
 import CustomerForm from "./Pages/admin/customer/CustomerForm";
 import EmployeePage from "./Pages/admin/employee/EmployeeList";
 import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
+import ChangePasswordPage from "./Pages/admin/otp/DoiMatKhau";
+import StatisticsPage from "./layout/admin/Statistics";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -25,6 +27,12 @@ const App: React.FC = () => {
           <Route path="/employee" element={<EmployeePage />} />
           <Route path="/employeeAdd" element={<EmployeeForm />} />
           <Route path="/admin/employees/:id" element={<EmployeeForm />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
+
+          <Route
+            path="/change-password/:username"
+            element={<ChangePasswordPage />}
+          />
         </Routes>
       </MainLayout>
     </BrowserRouter>

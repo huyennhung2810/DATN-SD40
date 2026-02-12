@@ -65,6 +65,12 @@ export interface EmployeeRequest {
     role: string;
 }
 
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  newPassword?: string;
+}
+
 
 //Giá trị khởi tạo ban đầu cho Form
 export const initialEmployee: EmployeeRequest = {

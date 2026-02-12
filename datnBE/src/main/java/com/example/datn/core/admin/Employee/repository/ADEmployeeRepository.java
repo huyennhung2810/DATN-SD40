@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface ADEmployeeRepository extends EmployeeRepository {
 
@@ -45,4 +47,7 @@ public interface ADEmployeeRepository extends EmployeeRepository {
 
     @Query("SELECT COUNT(a) > 0 FROM Account a WHERE a.username = :username AND (:id IS NULL OR :id = '' OR a.id <> (SELECT e.account.id FROM Employee e WHERE e.id = :id))")
     boolean existsByUsernameCustom(@Param("username") String username, @Param("id") String id);
+
+    @Query("SELECT e FROM Employee e WHERE e.email = :email")
+    Optional<Employee> findByEmail(@Param("email") String email);
 }

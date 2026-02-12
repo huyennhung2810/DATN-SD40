@@ -4,16 +4,17 @@ import customerReducer from "./customer/customerSlice";
 import rootSaga from "../store/rootSaga";
 const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
-
+import statisticsReducer from "./statistics/statisticsSlice";
 
 export const store = configureStore({
   reducer: {
     customer: customerReducer,
     employee: employeeReducer,
+    statistics: statisticsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ 
-      thunk: false,
+      thunk: true,
       serializableCheck: false 
     }).concat(sagaMiddleware),
 });

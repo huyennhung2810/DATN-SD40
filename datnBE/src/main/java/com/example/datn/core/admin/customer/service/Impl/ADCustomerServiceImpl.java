@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -192,10 +193,18 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 .findFirst()
                 .orElse(customer.getAddresses().get(0));
 
-        return String.format("%s, %s, %s, %s",
-                address.getAddressDetail(),
-                address.getWardCommune(),
-                address.getProvinceCity());
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.hasText(address.getAddressDetail())) sb.append(address.getAddressDetail());
+        if (StringUtils.hasText(address.getWardCommune())) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(address.getWardCommune());
+        }
+        if (StringUtils.hasText(address.getProvinceCity())) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(address.getProvinceCity());
+        }
+
+        return sb.length() > 0 ? sb.toString() : "Địa chỉ trống";
     }
 
     @Override
@@ -228,7 +237,9 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 Optional.ofNullable(c.getEmail()).orElse(""),
                 Optional.ofNullable(c.getPhoneNumber()).orElse(""),
                 c.getGender() != null ? (c.getGender() ? "Nam" : "Nữ") : "Khác",
-                c.getDateOfBirth() != null ? DateConverter.convertDateToString(c.getDateOfBirth()) : "---",
+                c.getDateOfBirth() != null
+                        ? new SimpleDateFormat("dd/MM/yyyy").format(c.getDateOfBirth())
+                        : "---",
                 Optional.ofNullable(c.getIdentityCard()).orElse(""),
                 EntityStatus.ACTIVE.equals(c.getStatus()) ? "Hoạt động" : "Ngừng",
                 getFormattedAddress(c)

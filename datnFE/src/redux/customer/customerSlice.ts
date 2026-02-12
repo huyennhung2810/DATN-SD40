@@ -11,6 +11,7 @@ interface CustomerState {
   totalElements: number;
   totalPages: number;
   currentCustomer: CustomerResponse | null; 
+  filter: CustomerPageParams;
 }
 
 
@@ -21,6 +22,12 @@ const initialState: CustomerState = {
   totalElements: 0,
   totalPages: 0,
   currentCustomer: null,
+  filter: {
+    page: 0,
+    size: 10,
+    keyword: "",
+    status: undefined,
+  }
 };
 
 
@@ -28,9 +35,10 @@ const customerSlice = createSlice ({
     name: "customer",
     initialState,
     reducers: {
-        getAll: (state, _action: PayloadAction<CustomerPageParams>) => {
+        getAll: (state, action: PayloadAction<CustomerPageParams>) => {
             state.loading = true;
             state.error = null;
+            state.filter = action.payload;
         },
 
         getCustomerById: (state, _action: PayloadAction<string>) => {

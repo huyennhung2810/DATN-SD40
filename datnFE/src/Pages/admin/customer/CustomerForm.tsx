@@ -507,6 +507,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Tỉnh/Thành phố"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 options={provinces.map((p) => ({
                   label: p.name,
                   value: p.code,
@@ -532,6 +540,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Xã/Phường/Thị trấn"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 disabled={!communesMap[index]}
                 options={communesMap[index]?.map((w) => ({
                   label: w.name,
