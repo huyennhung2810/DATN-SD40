@@ -1,6 +1,7 @@
-package com.example.datn.core.admin.employee.model.response;
+package com.example.datn.core.admin.Employee.model.response;
 
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class ADEmployeeResponse {
@@ -18,9 +19,9 @@ public class ADEmployeeResponse {
     private String status;
     private Long createdDate;
     private String provinceCity;
+    private String district;
     private String wardCommune;
     private Integer provinceCode;
     private Integer wardCode;
-    private String salt;
     private String role;
 }

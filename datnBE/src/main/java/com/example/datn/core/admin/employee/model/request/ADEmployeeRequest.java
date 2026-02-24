@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.employee.model.request;
+package com.example.datn.core.admin.Employee.model.request;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -39,6 +39,7 @@ public class ADEmployeeRequest {
     private String identityCard;
 
     //account info
+    @NotBlank(message = "Username không được để trống")
     private String username;
 
     private String password;

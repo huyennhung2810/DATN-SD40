@@ -1,8 +1,8 @@
-package com.example.datn.core.admin.employee.controller;
+package com.example.datn.core.admin.Employee.controller;
 
-import com.example.datn.core.admin.employee.model.request.ADEmployeeRequest;
-import com.example.datn.core.admin.employee.model.request.ADEmployeeSearchRequest;
-import com.example.datn.core.admin.employee.service.ADEmployeeService;
+import com.example.datn.core.admin.Employee.model.request.ADEmployeeRequest;
+import com.example.datn.core.admin.Employee.model.request.ADEmployeeSearchRequest;
+import com.example.datn.core.admin.Employee.service.ADEmployeeService;
 import com.example.datn.infrastructure.constant.MappingConstants;
 import com.example.datn.utils.Helper;
 import jakarta.validation.Valid;
@@ -49,6 +49,11 @@ public class ADEmployeeController {
         return Helper.createResponseEntity(ademployeeService.changeEmployeeStatus(id));
     }
 
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<?> changeRole(@PathVariable String id) {
+        return ResponseEntity.ok(ademployeeService.changeEmployeeRole(id));
+    }
+
     @GetMapping("/export")
     public ResponseEntity<byte[]> export() {
         return ResponseEntity.ok()
@@ -65,27 +70,5 @@ public class ADEmployeeController {
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String id) {
         return ResponseEntity.ok(ademployeeService.checkDuplicate(identityCard, phoneNumber, email, id, username));
-    }
-
-    @PostMapping("/forgot-password/request-otp")
-    public ResponseEntity<?> requestOtp(@RequestParam("email") String email) {
-        return Helper.createResponseEntity(ademployeeService.requestForgotPassword(email));
-    }
-
-    @PostMapping("/forgot-password/reset")
-    public ResponseEntity<?> resetPassword(
-            @RequestParam("email") String email,
-            @RequestParam("otp") String otp,
-            @RequestParam("newPassword") String newPassword) {
-        return Helper.createResponseEntity(
-                ademployeeService.resetPasswordWithOTP(email, otp, newPassword)
-        );
-    }
-
-    @PutMapping("/change-password/{username}")
-    public ResponseEntity<?> changePassword(
-            @PathVariable("username") String username,
-            @RequestBody com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request) {
-        return Helper.createResponseEntity(ademployeeService.changePassword(username, request));
     }
 }
