@@ -156,7 +156,7 @@ const Header: React.FC = () => {
             </div>
             <Avatar
               icon={<UserOutlined />}
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nhung"
+              // src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nhung"
               style={{ border: "2px solid #e6f7ff" }}
             />
           </Space>

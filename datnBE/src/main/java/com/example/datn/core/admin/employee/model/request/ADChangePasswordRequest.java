@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.Employee.model.request;
+package com.example.datn.core.admin.employee.model.request;
 
 import lombok.Data;
 

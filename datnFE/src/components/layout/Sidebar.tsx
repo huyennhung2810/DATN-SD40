@@ -13,6 +13,8 @@ import {
   CalendarOutlined,
   MessageOutlined,
   UserOutlined,
+  ScheduleOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -59,6 +61,17 @@ const Sidebar: React.FC = () => {
           label: "Đợt giảm giá",
         },
       ],
+    },
+
+    {
+      key: "/work-schedule",
+      icon: <ScheduleOutlined />,
+      label: "Lịch làm việc",
+    },
+    {
+      key: "/shift-handover",
+      icon: <SwapOutlined />,
+      label: "Giao ca",
     },
 
     {

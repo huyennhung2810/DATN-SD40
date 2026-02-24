@@ -1,8 +1,8 @@
-package com.example.datn.core.admin.Employee.controller;
+package com.example.datn.core.admin.employee.controller;
 
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeRequest;
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeSearchRequest;
-import com.example.datn.core.admin.Employee.service.ADEmployeeService;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeRequest;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeSearchRequest;
+import com.example.datn.core.admin.employee.service.ADEmployeeService;
 import com.example.datn.infrastructure.constant.MappingConstants;
 import com.example.datn.utils.Helper;
 import jakarta.validation.Valid;
@@ -85,7 +85,7 @@ public class ADEmployeeController {
     @PutMapping("/change-password/{username}")
     public ResponseEntity<?> changePassword(
             @PathVariable("username") String username,
-            @RequestBody com.example.datn.core.admin.Employee.model.request.ADChangePasswordRequest request) {
+            @RequestBody com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request) {
         return Helper.createResponseEntity(ademployeeService.changePassword(username, request));
     }
 }

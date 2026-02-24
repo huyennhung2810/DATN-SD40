@@ -39,7 +39,7 @@ const Sidebar: React.FC = () => {
     // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
 
     {
-      key: "sub-account",
+      key: "/sub-account",
       icon: <UsergroupAddOutlined />,
       label: "Quản lý người dùng",
       children: [
@@ -48,7 +48,7 @@ const Sidebar: React.FC = () => {
       ],
     },
     {
-      key: "sub-voucher",
+      key: "/sub-voucher",
       icon: <GiftOutlined />,
       label: "Quản lý giảm giá",
       children: [
