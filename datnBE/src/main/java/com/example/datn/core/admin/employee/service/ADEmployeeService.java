@@ -1,7 +1,7 @@
-package com.example.datn.core.admin.Employee.service;
+package com.example.datn.core.admin.employee.service;
 
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeRequest;
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeSearchRequest;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeRequest;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeSearchRequest;
 import com.example.datn.core.common.base.ResponseObject;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,5 +27,5 @@ public interface ADEmployeeService {
     ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id, String username);
 
     @Transactional
-    ResponseObject<?> changePassword(String username, com.example.datn.core.admin.Employee.model.request.ADChangePasswordRequest request);
+    ResponseObject<?> changePassword(String username, com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request);
 }

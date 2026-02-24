@@ -8,6 +8,8 @@ import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
 
 import ChangePasswordPage from "./Pages/admin/otp/DoiMatKhau";
 import StatisticsPage from "./layout/admin/Statistics";
+import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
+import WorkSchedulePage from "./Pages/admin/workSchedule/WorkSchedulePage";
 
 
 // --- Import thêm các trang Voucher ---
@@ -37,6 +39,8 @@ const App: React.FC = () => {
 
           <Route path="/admin/employees/:id" element={<EmployeeForm />} />
           <Route path="/statistics" element={<StatisticsPage />} />
+          <Route path="/work-schedule" element={<WorkSchedulePage />} />
+          <Route path="/shift-handover" element={<ShiftHandoverPage />} />
 
           <Route
             path="/change-password/:username"

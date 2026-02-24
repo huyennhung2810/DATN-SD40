@@ -1,9 +1,9 @@
-package com.example.datn.core.admin.Employee.service.Impl;
+package com.example.datn.core.admin.employee.service.Impl;
 
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeRequest;
-import com.example.datn.core.admin.Employee.model.request.ADEmployeeSearchRequest;
-import com.example.datn.core.admin.Employee.repository.ADEmployeeRepository;
-import com.example.datn.core.admin.Employee.service.ADEmployeeService;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeRequest;
+import com.example.datn.core.admin.employee.model.request.ADEmployeeSearchRequest;
+import com.example.datn.core.admin.employee.repository.ADEmployeeRepository;
+import com.example.datn.core.admin.employee.service.ADEmployeeService;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Account;
@@ -376,7 +376,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
 
     @Transactional
     @Override
-    public ResponseObject<?> changePassword(String username, com.example.datn.core.admin.Employee.model.request.ADChangePasswordRequest request) {
+    public ResponseObject<?> changePassword(String username, com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request) {
         Account account = accountRepository.findByUsername(username);
 
         if (account == null) {

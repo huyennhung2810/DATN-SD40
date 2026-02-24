@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.Employee.repository;
+package com.example.datn.core.admin.employee.repository;
 
 import com.example.datn.entity.Employee;
 import com.example.datn.infrastructure.constant.EntityStatus;

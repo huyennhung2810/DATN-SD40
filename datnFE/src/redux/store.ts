@@ -7,6 +7,8 @@ const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
 
 import statisticsReducer from "./statistics/statisticsSlice";
+import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
+
 
 import discountReducer from "../redux/discount/discountSlice"; // Kiểm tra lại đường dẫn này
 

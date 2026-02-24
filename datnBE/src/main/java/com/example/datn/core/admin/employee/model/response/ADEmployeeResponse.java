@@ -1,7 +1,6 @@
-package com.example.datn.core.admin.Employee.model.response;
+package com.example.datn.core.admin.employee.model.response;
 
 import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class ADEmployeeResponse {
