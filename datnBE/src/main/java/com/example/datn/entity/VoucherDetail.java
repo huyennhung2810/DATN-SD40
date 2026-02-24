@@ -1,7 +1,6 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
-import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,24 +13,13 @@ import java.io.Serializable;
 @NoArgsConstructor
 @ToString
 @Table(name = "voucher_detail")
-public class VoucherDetail implements Serializable {
-
-    @Id
-    @Column(length = EntityProperties.LENGTH_ID, updatable = false)
-    private String id;
+public class VoucherDetail extends PrimaryEntity implements Serializable {
 
     @Column(name = "usage_status")
-    private Integer usageStatus;
+    private String usageStatus;
 
-    @Column(name = "used_date")
-    private Long usedDate;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_order", referencedColumnName = "id")
-    private Order order;
-
-    @Column(name = "created_date")
-    private Long created_date;
+    @Column(name = "note")
+    private String note;
 
     @ManyToOne
     @JoinColumn(name = "id_voucher", referencedColumnName = "id")
@@ -40,11 +28,4 @@ public class VoucherDetail implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_customer", referencedColumnName = "id")
     private Customer customer;
-
-    @Column(name = "reason", length = 255)
-    private String reason; // Lưu lý do vô hiệu hóa hoặc ghi chú đặc biệt
-
-    @Column(name = "is_notified")
-    private Integer isNotified;
-
 }

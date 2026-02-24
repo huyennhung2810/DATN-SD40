@@ -4,13 +4,9 @@ import { customerActions } from "./customerSlice";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { saveAs } from 'file-saver';
 import dayjs from "dayjs";
-import { call, put, select, takeLatest } from "redux-saga/effects";
+import { call, put, takeLatest } from "redux-saga/effects";
 import type { PageResponse, ResponseObject } from "../../models/base";
 import { notification } from "antd";
-import type { RootState } from "../store";
-
-const selectCustomerFilter = (state: RootState) => state.customer.filter;
-
 
 // Helper lấy message lỗi an toàn
 function getErrorMessage(error: unknown): string {
@@ -64,10 +60,7 @@ function* handleCustomerAction(action: PayloadAction<CustomerActionPayload>) {
         });
 
         if (navigate) yield call(navigate); 
-        
-        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
-
-        yield put(customerActions.getAll(currentFilter));
+        yield put(customerActions.getAll({ page: 0, size: 10 }));
     } catch (error: unknown) {
         const errorMsg = getErrorMessage(error);
         yield put(customerActions.actionFailed(errorMsg));
@@ -87,10 +80,7 @@ function* handleChangeStatus(action: PayloadAction<string>) {
             title: "Cập nhật",
             description: "Đã thay đổi trạng thái khách hàng thành công" 
         });
-
-        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
-
-        yield put(customerActions.getAll( currentFilter ));
+        yield put(customerActions.getAll({ page: 0, size: 10 }));
     } catch (error: unknown) {
         yield put(customerActions.actionFailed(getErrorMessage(error)));
     }
