@@ -54,7 +54,7 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/voucher", icon: <TagOutlined />, label: "Phiếu giảm giá" },
         {
-          key: "/promotion",
+          key: "/discount",
           icon: <CalendarOutlined />,
           label: "Đợt giảm giá",
         },

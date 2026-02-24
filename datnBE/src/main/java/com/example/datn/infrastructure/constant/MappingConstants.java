@@ -34,6 +34,9 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_DISCOUNT_DISCOUNT = API_ADMIN_PREFIX_DISCOUNT + "/discount";
     public static final String API_ADMIN_PREFIX_DISCOUNT_DETAIL = API_ADMIN_PREFIX_DISCOUNT + "/detail";
 
+
+
+
     public static final String API_ADMIN_PREFIX_STATISTICS= API_ADMIN_PREFIX + "/statistics";
     public static final String API_ADMIN_PREFIX_WORK_SCHEDULE= API_ADMIN_PREFIX + "/work-schedule";
     public static final String API_ADMIN_PREFIX_SHIFT_HANDOVER= API_ADMIN_PREFIX + "/shift-handover";
