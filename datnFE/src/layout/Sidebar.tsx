@@ -43,6 +43,11 @@ const Sidebar: React.FC = () => {
         { key: "/admin/tech-spec", icon: <SettingOutlined />, label: "Thông số kỹ thuật" },
       ],
     },
+    {
+      key: "/admin/banner",
+      icon: <AppstoreOutlined />,
+      label: "Quản lý Banner",
+    },
     // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
 
     {

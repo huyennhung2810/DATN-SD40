@@ -56,6 +56,7 @@ public class MappingConstants {
     public static final String ADMIN_PRODUCT = API + ADMIN + "/product";
     public static final String ADMIN_TECH_SPEC = API + ADMIN + "/tech-spec";
     public static final String ADMIN_PRODUCT_IMAGE = API + ADMIN + "/product-image";
+    public static final String ADMIN_BANNER = API + ADMIN + "/banner";
 
     // Common endpoints
     public static final String COMMON_PRODUCT = API + COMMON + "/product";}

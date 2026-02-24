@@ -11,6 +11,7 @@ import watchResolutionFlow from "../redux/techSpec/resolutionSaga";
 import watchProcessorFlow from "../redux/techSpec/processorSaga";
 import watchImageFormatFlow from "../redux/techSpec/imageFormatSaga";
 import watchVideoFormatFlow from "../redux/techSpec/videoFormatSaga";
+import watchBannerFlow from "../redux/banner/bannerSaga";
 
 
 export default function* rootSaga() {
@@ -27,5 +28,6 @@ export default function* rootSaga() {
     fork(watchProcessorFlow),
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
+    fork(watchBannerFlow),
   ]);
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import MainLayout from "./layout/MainLayout";
+import ClientLayout from "./layout/ClientLayout";
 import CustomerPage from "./Pages/admin/customer/CustomerList";
 import CustomerForm from "./Pages/admin/customer/CustomerForm";
 import EmployeePage from "./Pages/admin/employee/EmployeeList";
@@ -8,6 +9,8 @@ import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
 import ProductCategoryPage from "./Pages/admin/product-category/ProductCategoryList";
 import ProductPage from "./Pages/admin/product/ProductList";
 import TechSpecPage from "./Pages/admin/tech-spec/TechSpecList";
+import BannerPage from "./Pages/admin/banner/BannerList";
+import ClientHomePage from "./Pages/client/ClientHomePage";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -19,20 +22,24 @@ const HomePage = () => (
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/customer" element={<CustomerPage />} />
-          <Route path="/customerAdd" element={<CustomerForm />} />
-          <Route path="/admin/customers/:id" element={<CustomerForm />} />
-          <Route path="/employee" element={<EmployeePage />} />
-          <Route path="/employeeAdd" element={<EmployeeForm />} />
-          <Route path="/admin/employees/:id" element={<EmployeeForm />} />
-          <Route path="/admin/product-categories" element={<ProductCategoryPage />} />
-          <Route path="/admin/products" element={<ProductPage />} />
-          <Route path="/admin/tech-spec" element={<TechSpecPage />} />
-        </Routes>
-      </MainLayout>
+      <Routes>
+        {/* Admin Routes - sử dụng MainLayout */}
+        <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
+        <Route path="/customer" element={<MainLayout><CustomerPage /></MainLayout>} />
+        <Route path="/customerAdd" element={<MainLayout><CustomerForm /></MainLayout>} />
+        <Route path="/admin/customers/:id" element={<MainLayout><CustomerForm /></MainLayout>} />
+        <Route path="/employee" element={<MainLayout><EmployeePage /></MainLayout>} />
+        <Route path="/employeeAdd" element={<MainLayout><EmployeeForm /></MainLayout>} />
+        <Route path="/admin/employees/:id" element={<MainLayout><EmployeeForm /></MainLayout>} />
+        <Route path="/admin/product-categories" element={<MainLayout><ProductCategoryPage /></MainLayout>} />
+        <Route path="/admin/products" element={<MainLayout><ProductPage /></MainLayout>} />
+        <Route path="/admin/tech-spec" element={<MainLayout><TechSpecPage /></MainLayout>} />
+        <Route path="/admin/banner" element={<MainLayout><BannerPage /></MainLayout>} />
+
+        {/* Client Routes - sử dụng ClientLayout */}
+        <Route path="/client" element={<ClientLayout><ClientHomePage /></ClientLayout>} />
+        <Route path="/client/*" element={<ClientLayout><ClientHomePage /></ClientLayout>} />
+      </Routes>
     </BrowserRouter>
   );
 };

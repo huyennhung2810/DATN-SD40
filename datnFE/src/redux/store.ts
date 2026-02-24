@@ -14,7 +14,7 @@ import resolutionReducer from "./techSpec/resolutionSlice";
 import processorReducer from "./techSpec/processorSlice";
 import imageFormatReducer from "./techSpec/imageFormatSlice";
 import videoFormatReducer from "./techSpec/videoFormatSlice";
-
+import bannerReducer from "./banner/bannerSlice";
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +30,7 @@ export const store = configureStore({
     processor: processorReducer,
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
+    banner: bannerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
