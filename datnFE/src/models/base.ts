@@ -8,10 +8,11 @@ export interface BaseEntity {
 }
 
 export interface ResponseObject<T> {
-  status: string;
-  message: string;
+  isSuccess: boolean;
+  status: any;
   data: T;
-  success: boolean;
+  message: string;
+  timestamp?: string;
 }
 
 export interface PageResponse<T> {

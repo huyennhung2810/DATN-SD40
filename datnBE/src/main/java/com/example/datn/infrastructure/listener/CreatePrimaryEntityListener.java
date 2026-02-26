@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public class CreatePrimaryEntityListener {
     @PrePersist
-    private void onCreate(PrimaryEntity entity) {
+    public void onCreate(PrimaryEntity entity) {
         //Tự động tạo UUID
         entity.setId(UUID.randomUUID().toString());
 
@@ -63,8 +63,6 @@ public class CreatePrimaryEntityListener {
             case "DiscountDetail" -> "DCD"; // Chi tiết giảm giá
             case "Warranty" -> "BH";      // Bảo hành
             case "WarrantyHistory" -> "BHH"; // Lịch sử bảo hành
-
-            case "WorkSchedule" -> "WS";
 
             // Khác
             case "RefreshToken" -> "RT";

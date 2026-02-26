@@ -36,4 +36,6 @@ public class TechSpec extends PrimaryEntity implements Serializable {
 
     @Column(name = "video_format")
     private String videoFormat;
+
+    // Xóa createdAt và updatedAt vì PrimaryEntity đã có
 }

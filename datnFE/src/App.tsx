@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import MainLayout from "./layout/admin/MainLayout";
+import MainLayout from "./layout/MainLayout";
+import ClientLayout from "./layout/ClientLayout";
 import CustomerPage from "./Pages/admin/customer/CustomerList";
 import CustomerForm from "./Pages/admin/customer/CustomerForm";
 import EmployeePage from "./Pages/admin/employee/EmployeeList";
@@ -19,6 +20,11 @@ import VoucherForm from "./Pages/admin/voucher/VoucherForm";
 import DiscountList from "./Pages/admin/discount/DiscountList";
 import DiscountForm from "./Pages/admin/discount/DiscountForm";
 import ProductDetailPage from "./Pages/admin/productdetail/productDetailList";
+import ProductCategoryPage from "./Pages/admin/product-category/ProductCategoryList";
+import ProductPage from "./Pages/admin/product/ProductList";
+import TechSpecPage from "./Pages/admin/tech-spec/TechSpecList";
+import BannerPage from "./Pages/admin/banner/BannerList";
+import ClientHomePage from "./Pages/client/ClientHomePage";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -30,37 +36,40 @@ const HomePage = () => (
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/customer" element={<CustomerPage />} />
-          <Route path="/customerAdd" element={<CustomerForm />} />
-          <Route path="/admin/customers/:id" element={<CustomerForm />} />
-          <Route path="/employee" element={<EmployeePage />} />
-          <Route path="/employeeAdd" element={<EmployeeForm />} />
-
-          <Route path="/admin/employees/:id" element={<EmployeeForm />} />
+      <Routes>
+        {/* Admin Routes - sử dụng MainLayout */}
+        <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
+        <Route path="/customer" element={<MainLayout><CustomerPage /></MainLayout>} />
+        <Route path="/customerAdd" element={<MainLayout><CustomerForm /></MainLayout>} />
+        <Route path="/admin/customers/:id" element={<MainLayout><CustomerForm /></MainLayout>} />
+        <Route path="/employee" element={<MainLayout><EmployeePage /></MainLayout>} />
+        <Route path="/employeeAdd" element={<MainLayout><EmployeeForm /></MainLayout>} />
+        <Route path="/admin/employees/:id" element={<MainLayout><EmployeeForm /></MainLayout>} />
+        <Route path="/admin/product-categories" element={<MainLayout><ProductCategoryPage /></MainLayout>} />
+        <Route path="/admin/products" element={<MainLayout><ProductPage /></MainLayout>} />
+        <Route path="/admin/tech-spec" element={<MainLayout><TechSpecPage /></MainLayout>} />
+        <Route path="/admin/banner" element={<MainLayout><BannerPage /></MainLayout>} />
+        <Route path="/admin/employees/:id" element={<EmployeeForm />} />
           
-          <Route path="/serial" element={<SerialPage />} />
-          <Route path="/products/color" element={<ColorPage />} />
-          <Route path="/products/product-detail" element={<ProductDetailPage />} />
-          <Route path="/products/storage-capacity" element={<StorageCapacityPage />} />
-          <Route path="/statistics" element={<StatisticsPage />} />
+        <Route path="/serial" element={<SerialPage />} />
+        <Route path="/products/color" element={<ColorPage />} />
+        <Route path="/products/product-detail" element={<ProductDetailPage />} />
+        <Route path="/products/storage-capacity" element={<StorageCapacityPage />} />
+        <Route path="/statistics" element={<StatisticsPage />} />
 
-          <Route
-            path="/change-password/:username"
-            element={<ChangePasswordPage />}
-          />
+        <Route path="/change-password/:username" element={<ChangePasswordPage />}/>
 
-          <Route path="/employees/:id" element={<EmployeeForm />} />
-          <Route path="/voucher" element={<VoucherList />} />
-          <Route path="/voucher/create" element={<VoucherForm />} />
-          <Route path="/voucher/edit/:id" element={<VoucherForm />} />
-          <Route path="/discount" element={<DiscountList />} />
-          <Route path="/discount/create" element={<DiscountForm />} />
-          <Route path="/discount/edit/:id" element={<DiscountForm />} />
-        </Routes>
-      </MainLayout>
+        <Route path="/employees/:id" element={<EmployeeForm />} />
+        <Route path="/voucher" element={<VoucherList />} />
+        <Route path="/voucher/create" element={<VoucherForm />} />
+        <Route path="/voucher/edit/:id" element={<VoucherForm />} />
+        <Route path="/discount" element={<DiscountList />} />
+        <Route path="/discount/create" element={<DiscountForm />} />
+        <Route path="/discount/edit/:id" element={<DiscountForm />} />
+        {/* Client Routes - sử dụng ClientLayout */}
+        <Route path="/client" element={<ClientLayout><ClientHomePage /></ClientLayout>} />
+        <Route path="/client/*" element={<ClientLayout><ClientHomePage /></ClientLayout>} />
+      </Routes>
     </BrowserRouter>
   );
 };
