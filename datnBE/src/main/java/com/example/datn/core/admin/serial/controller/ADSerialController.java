@@ -3,6 +3,7 @@ package com.example.datn.core.admin.serial.controller;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.service.ADSerialService;
 import com.example.datn.core.common.base.ResponseObject;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.MappingConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,11 @@ public class ADSerialController {
     private final ADSerialService adSerialService;
 
     @GetMapping
-    public ResponseObject<?> getAllSerials() {
-        return adSerialService.getAllSerials();
+    public ResponseObject<?> getAllSerials(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "status", required = false) EntityStatus status
+    ) {
+        return adSerialService.getAllSerials(keyword, status);
     }
 
     @GetMapping("/product-detail/{productDetailId}")

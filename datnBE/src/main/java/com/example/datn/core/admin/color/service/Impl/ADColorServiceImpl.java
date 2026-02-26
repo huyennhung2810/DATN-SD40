@@ -54,6 +54,7 @@ public class ADColorServiceImpl implements ADColorService {
 
     @Override
     public ResponseObject<?> createColor(ADColorRequest request) {
+        System.out.println("Status nhan duoc: " + request.getStatus());
         if (adColorRepository.existsByCode(request.getCode())) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã màu đã tồn tại");
         }

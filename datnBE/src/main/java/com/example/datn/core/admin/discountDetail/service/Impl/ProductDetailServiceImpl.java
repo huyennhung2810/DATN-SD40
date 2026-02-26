@@ -1,9 +1,8 @@
-package com.example.datn.core.admin.productDetail.service.Impl;
+package com.example.datn.core.admin.discountDetail.service.Impl;
 
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
-import com.example.datn.core.admin.productDetail.service.ProductDetailService;
+import com.example.datn.core.admin.discountDetail.service.ProductDetailService;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.entity.ProductDetail;
-import com.example.datn.repository.ProductDetailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,8 +11,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProductDetailServiceImpl implements ProductDetailService {
 
-    @Autowired
-    private ProductDetailRepository productDetailRepository;
     @Autowired
     private ADProductDetailRepository adProductDetailRepository;
     @Override

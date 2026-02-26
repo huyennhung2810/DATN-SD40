@@ -1,6 +1,6 @@
-package com.example.datn.core.admin.productDetail.controller;
+package com.example.datn.core.admin.discountDetail.controller;
 
-import com.example.datn.core.admin.productDetail.service.ProductDetailService;
+import com.example.datn.core.admin.discountDetail.service.ProductDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

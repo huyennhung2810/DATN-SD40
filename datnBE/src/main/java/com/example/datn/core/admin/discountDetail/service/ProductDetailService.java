@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.service;
+package com.example.datn.core.admin.discountDetail.service;
 
 import com.example.datn.entity.ProductDetail;
 import org.springframework.data.domain.Page;

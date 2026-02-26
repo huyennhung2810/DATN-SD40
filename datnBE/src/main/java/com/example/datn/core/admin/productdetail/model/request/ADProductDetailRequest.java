@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.productdetail.model.request;
 
+import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -7,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ADProductDetailRequest {
@@ -24,15 +26,23 @@ public class ADProductDetailRequest {
     private String note;
 
     @NotNull(message = "Số lượng không được để trống")
-    @Size(message = "Vui lòng nhập số lượng lớn hơn 0")
     private Integer quantity;
 
     @NotNull(message = "Giá bán không được để trống")
-    @Size(message = "Vui lòng nhập giá lớn hơn 0")
     private BigDecimal salePrice;
 
+    @NotNull(message = "Trạng thái không được để trống")
     private EntityStatus status;
+
+    @NotNull(message = "Màu sắc không được để trống")
     private String colorId;
+
+    @NotNull(message = "Sản phẩm không được để trống")
     private String productId;
+
+    @NotNull(message = "Dung lượng không được để trống")
     private String storageCapacityId;
+
+    private List<ADSerialRequest> serials;
+
 }

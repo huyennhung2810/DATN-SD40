@@ -20,7 +20,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const items = [
-    { key: "/statitics", icon: <LineChartOutlined />, label: "Thống kê" },
+    { key: "/statistics", icon: <LineChartOutlined />, label: "Thống kê" },
     {
       key: "/pos",
       icon: <ShopOutlined />,
@@ -33,7 +33,7 @@ const Sidebar: React.FC = () => {
     },
     {
       key: "/serial",
-      icon: <TagOutlined/>,
+      icon:<TagOutlined />,
       label: "Quản lý Serial"
     },
     {
@@ -41,8 +41,6 @@ const Sidebar: React.FC = () => {
       icon: <CameraOutlined />,
       label: "Quản lý sản phẩm",
     },
-    // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
-
     {
       key: "sub-account",
       icon: <UsergroupAddOutlined />,

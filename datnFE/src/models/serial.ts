@@ -7,7 +7,7 @@ export interface SerialResponse {
   code: string;
   productName: string;
   productDetailId: string;
-  createdDate: string; // Đã format ở Backend
+  createdDate: string;
   status: CommonStatus;
 }
 
@@ -18,7 +18,6 @@ export interface SerialFormValues {
   status: CommonStatus
 }
 
-//Giá trị khởi tạo cho Form (Giống initialCustomer)
 export const initialSerial: SerialFormValues = {
   code: "",
   serialNumber: "",

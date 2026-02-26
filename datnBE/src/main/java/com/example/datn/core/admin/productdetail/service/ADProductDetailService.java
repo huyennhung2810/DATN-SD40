@@ -2,14 +2,13 @@ package com.example.datn.core.admin.productdetail.service;
 
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.common.base.ResponseObject;
+import com.example.datn.infrastructure.constant.EntityStatus;
 
 public interface ADProductDetailService {
 
-    ResponseObject<?> getAllProductDetails();
+    ResponseObject<?> getAllProductDetails(String keyword, EntityStatus status);
 
-    ResponseObject<?> getAllProductDetailsByProductId(String productId);
-
-    ResponseObject<?> getAllProductDetailsByProductIdAndStatus(String productId);
+    ResponseObject<?> getById(String id);
 
     ResponseObject<?> createProductDetail(ADProductDetailRequest request);
 

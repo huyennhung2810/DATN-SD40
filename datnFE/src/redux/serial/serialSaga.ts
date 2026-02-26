@@ -23,7 +23,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 // 1. Lấy danh sách Serial (Phân trang)
-function* handleFetch(action: PayloadAction<SerialPageParams>) {
+function* handleFetch(action: PayloadAction<SerialPageParams>): Generator<any, any, any>{
     try {
         const res: any = yield call(serialApi.getAll, action.payload);
         

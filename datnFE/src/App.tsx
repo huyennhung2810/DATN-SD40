@@ -18,6 +18,7 @@ import VoucherList from "./Pages/admin/voucher/VoucherList";
 import VoucherForm from "./Pages/admin/voucher/VoucherForm";
 import DiscountList from "./Pages/admin/discount/DiscountList";
 import DiscountForm from "./Pages/admin/discount/DiscountForm";
+import ProductDetailPage from "./Pages/admin/productdetail/productDetailList";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -42,6 +43,7 @@ const App: React.FC = () => {
           
           <Route path="/serial" element={<SerialPage />} />
           <Route path="/products/color" element={<ColorPage />} />
+          <Route path="/products/product-detail" element={<ProductDetailPage />} />
           <Route path="/products/storage-capacity" element={<StorageCapacityPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
 

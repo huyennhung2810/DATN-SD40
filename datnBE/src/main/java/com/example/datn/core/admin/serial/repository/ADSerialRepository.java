@@ -2,6 +2,7 @@ package com.example.datn.core.admin.serial.repository;
 
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.entity.Serial;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.repository.SerialRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,13 +14,16 @@ import java.util.List;
 
 @Repository
 public interface ADSerialRepository extends SerialRepository {
-    Page<Serial> getAllSerialsByProductDetailId(String productDetailId, Pageable pageable);
-
-
-    Page<Serial> findByStatus(String status, Pageable pageable);
 
     Page<Serial> findByProductDetailId(String productId, Pageable pageable);
 
-    @Query("SELECT s FROM Serial s ORDER BY s.createdDate DESC")
-    List<Serial> getAllSorted();
+    // Trong ADSerialRepository.java
+    @Query("SELECT s FROM Serial s WHERE " +
+            "(:kw IS NULL OR :kw = '' OR s.serialNumber LIKE %:kw% OR s.code LIKE %:kw%) " +
+            "AND (:sts IS NULL OR s.status = :sts) " +
+            "ORDER BY s.createdDate DESC")
+    List<Serial> searchSerials(
+            @Param("kw") String keyword,
+            @Param("sts") EntityStatus status
+    );
 }

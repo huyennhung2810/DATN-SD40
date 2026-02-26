@@ -12,6 +12,7 @@ import storageCapacityReducer from "./storage/storageSlice";
 import statisticsReducer from "./statistics/statisticsSlice";
 
 import discountReducer from "../redux/discount/discountSlice"; // Kiểm tra lại đường dẫn này
+import productDetailReducer from "./productdetail/productDetailSlice";
 
 
 export const store = configureStore({
@@ -19,6 +20,7 @@ export const store = configureStore({
     customer: customerReducer,
     employee: employeeReducer,
     serial: serialReducer,
+    productDetail: productDetailReducer,
     color: colorReducer,
     storage: storageCapacityReducer,
 

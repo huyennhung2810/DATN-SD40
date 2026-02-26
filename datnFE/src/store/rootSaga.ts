@@ -10,6 +10,7 @@ import statisticsSaga from "../redux/statistics/statisticsSaga";
 
 import { voucherSaga } from "../redux/Voucher/voucherSaga";
 import { discountSaga } from "../redux/discount/discountSaga"; 
+import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 
 
 export default function* rootSaga() {
@@ -17,6 +18,7 @@ export default function* rootSaga() {
     fork(watchCustomerFlow),
     fork(watchEmployeeFlow),
     fork(watchSerialFlow),
+    fork(watchProductDetailFlow),
     fork(watchColorFlow),
     fork(watchStorageFlow),
     fork(statisticsSaga),

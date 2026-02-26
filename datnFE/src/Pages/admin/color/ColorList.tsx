@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Table, Card, Button, Input, Tag, Space, Typography,
-  Pagination, Tooltip, Form, Radio, notification, Drawer
-} from "antd";
-import {
-  SearchOutlined, EditOutlined,
-  PlusOutlined, SaveOutlined, SyncOutlined
-} from "@ant-design/icons";
+  Pagination, Tooltip, Form, Radio, notification, Drawer } from "antd";
+import { EditOutlined, PlusOutlined, SaveOutlined, SyncOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { colorActions } from "../../../redux/color/colorSlice";
 import type { ColumnsType } from "antd/es/table";
@@ -27,7 +23,7 @@ const ColorPage: React.FC = () => {
     (state: RootState) => state.color || {}
   );
 
-  const [keyword, setKeyword] = useState("");
+  const [keyword] = useState("");
   const [filter, setFilter] = useState<ColorPageParams>({
     page: 0,
     size: 10,
@@ -38,8 +34,6 @@ const ColorPage: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  /* ================= FETCH ================= */
 
   const fetchColors = useCallback(() => {
     dispatch(colorActions.getAll(filter));
@@ -55,8 +49,6 @@ const ColorPage: React.FC = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [keyword]);
-
-  /* ================= HANDLER ================= */
 
   const openDrawer = (record?: ColorResponse) => {
     formManager.resetFields();
@@ -110,8 +102,6 @@ const ColorPage: React.FC = () => {
     }
   };
 
-  /* ================= TABLE ================= */
-
   const columns: ColumnsType<ColorResponse> = [
     {
       title: "STT",
@@ -160,35 +150,9 @@ const ColorPage: React.FC = () => {
         <Title level={4}>Quản lý Màu sắc</Title>
       </Card>
 
-      {/* FILTER */}
-      <Card style={{ marginBottom: 12 }}>
-        <Space size="large">
-          <Input
-            allowClear
-            placeholder="Tìm mã hoặc tên màu..."
-            prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={e => setKeyword(e.target.value)}
-          />
 
-          <Radio.Group
-            value={filter.status}
-            onChange={e => setFilter(p => ({
-              ...p,
-              status: e.target.value,
-              page: 0
-            }))}
-          >
-            <Radio.Button value={undefined}>Tất cả</Radio.Button>
-            <Radio.Button value="ACTIVE">Hoạt động</Radio.Button>
-            <Radio.Button value="INACTIVE">Ngừng</Radio.Button>
-          </Radio.Group>
-        </Space>
-      </Card>
-
-      {/* TABLE */}
       <Card
-        title={`Danh sách (${totalElements})`}
+        title={`Danh sách (${totalElements || 0})`}
         extra={
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openDrawer()}>
@@ -198,25 +162,27 @@ const ColorPage: React.FC = () => {
           </Space>
         }
       >
-        <Table
-          columns={columns}
-          dataSource={list}
-          rowKey="id"
-          loading={loading}
-          pagination={false}
-          bordered
-        />
+      <Table
+        columns={columns}
+        dataSource={list.slice(
+          filter.page * filter.size, 
+          (filter.page + 1) * filter.size
+        )}
+        rowKey="id"
+        loading={loading}
+        pagination={false}
+        bordered
+      />
 
-        <Pagination
-          style={{ marginTop: 16, textAlign: "right" }}
-          current={filter.page + 1}
-          pageSize={filter.size}
-          total={totalElements}
-          onChange={(p, s) => setFilter({ ...filter, page: p - 1, size: s })}
-        />
+      <Pagination
+        style={{ marginTop: 16, textAlign: "right" }}
+        current={filter.page + 1}
+        pageSize={filter.size}
+        total={list.length} 
+        onChange={(p, s) => setFilter({ ...filter, page: p - 1, size: s })}
+      />
       </Card>
 
-      {/* DRAWER */}
       <Drawer
         title={editingId ? "Cập nhật màu" : "Thêm màu"}
         open={drawerOpen}

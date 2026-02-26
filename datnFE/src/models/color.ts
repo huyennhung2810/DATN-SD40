@@ -11,7 +11,7 @@ export interface ColorResponse {
 export interface ColorFormValues {
   code: string;
   name: string;
-  status: CommonStatus;
+  status?: number | string | CommonStatus;
 }
 
 export const initialColor: ColorFormValues = {
