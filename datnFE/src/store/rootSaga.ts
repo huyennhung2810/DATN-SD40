@@ -14,11 +14,9 @@ export default function* rootSaga() {
   yield all([
     fork(watchCustomerFlow),
     fork(watchEmployeeFlow),
-
     fork(statisticsSaga),
-
     fork(voucherSaga),
     fork(discountSaga),
-
+    fork(shiftHandoverSaga),
   ]);
 }
