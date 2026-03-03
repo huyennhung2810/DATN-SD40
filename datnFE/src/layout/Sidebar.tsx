@@ -13,6 +13,8 @@ import {
   TagOutlined,
   CalendarOutlined,
   MessageOutlined,
+  AppstoreOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -35,6 +37,11 @@ const Sidebar: React.FC = () => {
       key: "/product",
       icon: <CameraOutlined />,
       label: "Quản lý sản phẩm",
+      children: [
+        { key: "/admin/product-categories", icon: <TagOutlined />, label: "Loại sản phẩm" },
+        { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
+        { key: "/admin/tech-spec", icon: <SettingOutlined />, label: "Thông số kỹ thuật" },
+      ],
     },
     // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
 

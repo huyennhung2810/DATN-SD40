@@ -1,8 +1,9 @@
 import React from "react";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const MainLayout: React.FC = () => {
   return (
     <div
       style={{
@@ -30,7 +31,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             overflowX: "hidden",
           }}
         >
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

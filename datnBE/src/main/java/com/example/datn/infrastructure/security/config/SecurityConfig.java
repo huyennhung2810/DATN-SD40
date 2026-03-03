@@ -101,6 +101,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/upload/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/api/v1/admin/product-image/**").permitAll()
                         .requestMatchers(MappingConstants.API_LOGIN).permitAll()
                         .anyRequest().permitAll() // test
                 );
