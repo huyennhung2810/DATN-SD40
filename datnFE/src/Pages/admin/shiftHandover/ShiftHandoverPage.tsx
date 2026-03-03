@@ -134,7 +134,7 @@ const ShiftHandoverPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, minHeight: "80vh" }}>
+    <div style={{ minHeight: "80vh" }}>
       <Row gutter={[24, 24]}>
         <Col span={24}>
           <Card
@@ -162,7 +162,7 @@ const ShiftHandoverPage: React.FC = () => {
                       borderColor: "#52c41a",
                     }}
                   >
-                    Nhận Ca (Check-in)
+                    Check-in
                   </Button>
                   <Button
                     type="primary"
@@ -171,7 +171,7 @@ const ShiftHandoverPage: React.FC = () => {
                     icon={<LogoutOutlined />}
                     onClick={() => setIsCheckOutOpen(true)}
                   >
-                    Kết Ca (Check-out)
+                    Check-out
                   </Button>
                 </Space>
               </Col>

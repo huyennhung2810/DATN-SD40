@@ -7,12 +7,9 @@ import {
   Button,
   Space,
   Typography,
-  Divider,
   Row,
   Col,
-  Select,
 } from "antd";
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import type {
   CheckOutRequest,
@@ -118,7 +115,6 @@ const CheckOutModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
                 { required: true, message: "Vui lòng nhập số tiền thực tế!" },
               ]}
             >
-              {/* Bọc InputNumber bằng Space.Compact thay cho addonAfter */}
               <Space.Compact style={{ width: "100%" }}>
                 <InputNumber
                   style={{ width: "100%" }}
@@ -178,74 +174,6 @@ const CheckOutModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
             </Form.Item>
           </Col>
         </Row>
-
-        <Divider orientation="horizontal">Kiểm kê Hàng Trưng Bày</Divider>
-
-        <Form.List name="audits">
-          {(fields, { add, remove }) => (
-            <>
-              {fields.map(({ key, name, ...restField }) => (
-                <Space
-                  key={key}
-                  style={{ display: "flex", marginBottom: 8 }}
-                  align="baseline"
-                >
-                  <Form.Item
-                    {...restField}
-                    name={[name, "productId"]}
-                    rules={[{ required: true, message: "Vui lòng chọn SP" }]}
-                  >
-                    <Select
-                      placeholder="Chọn sản phẩm..."
-                      style={{ width: 220 }}
-                    >
-                      <Select.Option value="prod-1">
-                        Canon EOS R5 (Body)
-                      </Select.Option>
-                      <Select.Option value="prod-2">
-                        Lens Canon RF 24-70mm f/2.8L
-                      </Select.Option>
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item
-                    {...restField}
-                    name={[name, "actualQuantity"]}
-                    rules={[{ required: true, message: "Nhập SL" }]}
-                  >
-                    <InputNumber
-                      placeholder="SL"
-                      min={0}
-                      style={{ width: 80 }}
-                    />
-                  </Form.Item>
-
-                  <Form.Item {...restField} name={[name, "conditionNote"]}>
-                    <Input
-                      placeholder="Tình trạng (xước, mốc...)"
-                      style={{ width: 200 }}
-                    />
-                  </Form.Item>
-
-                  <MinusCircleOutlined
-                    onClick={() => remove(name)}
-                    style={{ color: "red", cursor: "pointer" }}
-                  />
-                </Space>
-              ))}
-              <Form.Item>
-                <Button
-                  type="dashed"
-                  onClick={() => add()}
-                  block
-                  icon={<PlusOutlined />}
-                >
-                  Thêm sản phẩm cần kiểm kê
-                </Button>
-              </Form.Item>
-            </>
-          )}
-        </Form.List>
 
         <Form.Item
           style={{ textAlign: "right", marginTop: 16, marginBottom: 0 }}

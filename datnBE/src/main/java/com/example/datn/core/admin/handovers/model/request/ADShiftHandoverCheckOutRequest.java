@@ -13,9 +13,6 @@ public class ADShiftHandoverCheckOutRequest {
     private BigDecimal actualCash;   // Tiền thực tế đếm được
     private BigDecimal withdrawAmount; // Tiền chi tiêu trong ca (nếu có)
 
-    // Hàng hóa (Kiểm kê)
-    private List<ADShiftHandoverProductAuditRequest> audits;
-
     // Ghi chú
     private String note;
 }

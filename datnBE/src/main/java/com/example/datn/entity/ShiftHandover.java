@@ -63,9 +63,5 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     private HandoverStatus handoverStatus;
 
-    // Danh sách kiểm kê máy ảnh
-    @OneToMany(mappedBy = "shiftHandover", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<HandoverProductAudit> productAudits;
-
 }
 

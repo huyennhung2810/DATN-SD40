@@ -16,7 +16,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 interface CheckInFormValues {
-  initialCash?: number;
+  initialCash?: number | string;
   note?: string;
 }
 
@@ -40,9 +40,13 @@ const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
   );
 
   const handleFinish = (values: CheckInFormValues) => {
+    const cleanInitialCash = values.initialCash
+      ? Number(String(values.initialCash).replace(/,/g, ""))
+      : undefined;
+
     const payload: CheckInRequest = {
       scheduleId,
-      initialCash: values.initialCash,
+      initialCash: cleanInitialCash,
       note: values.note,
     };
     dispatch(shiftActions.checkInRequest(payload));
