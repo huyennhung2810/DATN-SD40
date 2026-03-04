@@ -1,5 +1,5 @@
 import { call, put, takeLatest } from "redux-saga/effects";
-import discountApi from "../../api/discountApi";
+import {discountApi,productDetailApi} from "../../api/discountApi";
 import { message } from "antd";
 import {
   fetchDiscountsRequest,

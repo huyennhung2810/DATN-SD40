@@ -7,13 +7,12 @@ import com.example.datn.core.admin.discount.service.DiscountService;
 import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.discountDetail.service.DiscountDetailService; // Service con chúng ta đã tạo
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.discountDetail.repository.ADProductDetailForDiscountRepository;
 import com.example.datn.core.admin.vouchers.model.request.ADVoucherSearchRequest;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Discount;
 import com.example.datn.entity.ProductDetail;
-import com.example.datn.entity.Voucher;
 import com.example.datn.utils.Helper; // Giả sử bạn dùng chung Helper
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,7 +33,7 @@ public class DiscountServiceImpl implements DiscountService {
     private final ADDiscountRepository adDiscountRepository;
     private final ADDiscountDetailRepository adDiscountDetailRepository;
     private final DiscountDetailService discountDetailService; // Gọi service con để xử lý bảng chi tiết
-    private final ADProductDetailRepository adProductDetailRepository;
+    private final ADProductDetailForDiscountRepository adProductDetailRepository;
     @Override
     public ResponseObject<?> getAll(ADVoucherSearchRequest request) {
         // 1. Tạo Pageable từ Helper

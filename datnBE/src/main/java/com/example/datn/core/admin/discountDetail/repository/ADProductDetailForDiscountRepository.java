@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.repository;
+package com.example.datn.core.admin.discountDetail.repository;
 
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.entity.ProductDetail;
@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ADProductDetailRepository extends ProductDetailRepository {
+public interface ADProductDetailForDiscountRepository extends ProductDetailRepository {
     // Tìm kiếm theo tên sản phẩm hoặc mã sản phẩm
     @Query("SELECT pd FROM ProductDetail pd WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR " +
