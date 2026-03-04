@@ -114,10 +114,11 @@ const DiscountForm: React.FC = () => {
     const loadProducts = async () => {
       try {
         // Lấy danh sách sản phẩm (giả sử lấy 1000 cái để chọn cho thoải mái)
-        const response: any = await productDetailApi.getAll({
+        const response: any = await productDetailApi.productDetail.getAll({
           page: 0,
           size: 1000,
         });
+        console.log("Check data nè:", response);
 
         // Map lại dữ liệu để hiển thị tên máy ảnh đầy đủ hơn
         const mappedData = response.data.content.map((item: any) => ({

@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface DBAccountRepository extends AccountRepository {
 
+    Optional<Account> findByUsername(String username);
 }

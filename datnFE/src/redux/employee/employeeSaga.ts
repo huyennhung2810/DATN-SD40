@@ -1,16 +1,12 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { EmployeePageParams, EmployeeRequest, EmployeeResponse} from "../../models/employee";
 import employeeApi from "../../api/employeeApi";
-import { call, put, select, takeLatest } from "redux-saga/effects";
+import { call, put, takeLatest } from "redux-saga/effects";
 import { employeeActions } from "./employeeSlice";
 import { notification } from "antd";
 import dayjs from "dayjs";
 import { saveAs } from 'file-saver';
 import type { PageResponse, ResponseObject } from "../../models/base";
-import type { RootState } from "../store";
-
-
-const selectEmployeeFilter = (state: RootState) => state.employee.filter;
 
 
 // Helper lấy message lỗi an toàn từ API
@@ -26,7 +22,8 @@ function getErrorMessage(error: unknown): string {
 //Lấy danh sách
 function* handleFetch(action: PayloadAction<EmployeePageParams>) {
     try {
-const response = (yield call(employeeApi.getAll, action.payload)) as PageResponse<EmployeeResponse>;        yield put(employeeActions.fetchSuccess(response));
+        const response: PageResponse<EmployeeResponse> = yield call(employeeApi.getAll, action.payload);
+        yield put(employeeActions.fetchSuccess(response));
     } catch (error: unknown) {
         yield put(employeeActions.actionFailed(getErrorMessage(error)));
     }
@@ -65,11 +62,9 @@ function* handleEmployeeAction(action: PayloadAction<EmployeeActionPayload>) {
 
         // Chuyển trang nếu có hàm navigate truyền vào
         if (navigate) yield call(navigate); 
-
-        const currentFilter: EmployeePageParams = yield select(selectEmployeeFilter);
         
         // Load lại trang đầu tiên sau khi thao tác thành công
-        yield put(employeeActions.getAll(currentFilter));
+        yield put(employeeActions.getAll({ page: 0, size: 10 }));
     } catch (error: unknown) {
         const errorMsg = getErrorMessage(error);
         yield put(employeeActions.actionFailed(errorMsg));
@@ -89,11 +84,8 @@ function* handleChangeStatus(action: PayloadAction<string>) {
             title: "Cập nhật",
             description: "Đã thay đổi trạng thái nhân viên thành công" 
         });
-
-        const currentFilter: EmployeePageParams = yield select(selectEmployeeFilter);
-        
         // Refresh danh sách
-        yield put(employeeActions.getAll(currentFilter));
+        yield put(employeeActions.getAll({ page: 0, size: 10 }));
     } catch (error: unknown) {
         yield put(employeeActions.actionFailed(getErrorMessage(error)));
         notification.error({

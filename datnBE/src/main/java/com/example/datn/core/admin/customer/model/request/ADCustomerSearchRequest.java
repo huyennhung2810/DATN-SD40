@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 public class ADCustomerSearchRequest extends PageableRequest {
     @Size(max = 100, message = "Từ khóa tìm kiếm tối đa 100 ký tự")
     private String keyword;
+
     private Boolean gender;
     private EntityStatus status;
 }

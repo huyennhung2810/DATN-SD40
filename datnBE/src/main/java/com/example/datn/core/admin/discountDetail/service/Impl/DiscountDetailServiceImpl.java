@@ -9,7 +9,7 @@
     import com.example.datn.entity.Discount;
     import com.example.datn.entity.DiscountDetail;
     import com.example.datn.entity.ProductDetail;
-    import com.example.datn.repository.ProductDetailRepository; // Giả định bạn đã có Repo này
+    import com.example.datn.repository.ProductDetailRepository;
     import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.stereotype.Service;
     import org.springframework.transaction.annotation.Transactional;

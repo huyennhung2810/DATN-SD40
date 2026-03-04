@@ -22,13 +22,14 @@ const { Text } = Typography;
 const breadcrumbNameMap: Record<string, string> = {
   "/statitics": "Thống kê",
   "/products": "Sản phẩm",
+  "/serial": "Serial",
   "/orders": "Quản lý Đơn hàng",
   "/customer": "Khách hàng",
   "/pos": "Bán hàng tại quầy",
   "/employee": "Nhân viên",
   "/chat": "Hỗ trợ khách hàng",
   "/vouchers": "Phiếu giảm giá",
-  "/discounts": "Khuyến mãi",
+  "/promitions": "Khuyến mãi",
 };
 
 const Header: React.FC = () => {

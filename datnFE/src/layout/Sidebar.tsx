@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "antd";
-import {
+import Icon, {
   CameraOutlined,
   TeamOutlined,
   GiftOutlined,
@@ -13,6 +13,8 @@ import {
   TagOutlined,
   CalendarOutlined,
   MessageOutlined,
+  AppstoreOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -20,7 +22,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const items = [
-    { key: "/statitics", icon: <LineChartOutlined />, label: "Thống kê" },
+    { key: "/statistics", icon: <LineChartOutlined />, label: "Thống kê" },
     {
       key: "/pos",
       icon: <ShopOutlined />,
@@ -32,14 +34,27 @@ const Sidebar: React.FC = () => {
       label: "Quản lý đơn hàng",
     },
     {
+      key: "/serial",
+      icon:<TagOutlined />,
+      label: "Quản lý Serial"
+    },
+    {
       key: "/product",
       icon: <CameraOutlined />,
       label: "Quản lý sản phẩm",
+      children: [
+        { key: "/admin/product-categories", icon: <TagOutlined />, label: "Loại sản phẩm" },
+        { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
+        { key: "/admin/tech-spec", icon: <SettingOutlined />, label: "Thông số kỹ thuật" },
+      ],
     },
-    // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
-
     {
-      key: "/sub-account",
+      key: "/admin/banner",
+      icon: <AppstoreOutlined />,
+      label: "Quản lý Banner",
+    },
+    {
+      key: "sub-account",
       icon: <UsergroupAddOutlined />,
       label: "Quản lý người dùng",
       children: [
@@ -48,13 +63,13 @@ const Sidebar: React.FC = () => {
       ],
     },
     {
-      key: "/sub-voucher",
+      key: "sub-voucher",
       icon: <GiftOutlined />,
       label: "Quản lý giảm giá",
       children: [
         { key: "/voucher", icon: <TagOutlined />, label: "Phiếu giảm giá" },
         {
-          key: "/discount",
+          key: "/promotion",
           icon: <CalendarOutlined />,
           label: "Đợt giảm giá",
         },
