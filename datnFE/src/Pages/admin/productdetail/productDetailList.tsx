@@ -77,13 +77,12 @@ const ProductDetailPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  // 3. Xử lý lưu dữ liệu (Đóng gói Serial đúng chuẩn ADSerialRequest)
+  
   const onFinish = (values: any) => {
     const serialNumbers = values.serialList
       ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
       : [];
 
-    // Map đúng theo ADSerialRequest ở Backend
     const serials = serialNumbers.map((sn: string) => ({
       serialNumber: sn,
       code: values.serialCode, // Đây là trường 'code' trong ADSerialRequest
@@ -96,6 +95,14 @@ const ProductDetailPage: React.FC = () => {
       quantity: !editingId ? serials.length : values.quantity,
       serials: serials,
     };
+
+    const uniqueSerials = Array.from(new Set(serialNumbers));
+        if (uniqueSerials.length !== serialNumbers.length) {
+          notification.warning({
+            message: "Phát hiện mã trùng lặp",
+            description: "Có một số mã Serial bị trùng trong danh sách nhập vào. Hệ thống sẽ tự lọc bỏ các mã trùng."
+          });
+        }
 
     if (editingId) {
       dispatch(productDetailActions.update({ 
@@ -234,7 +241,7 @@ const ProductDetailPage: React.FC = () => {
             </Form.Item>
           </div>
 
-          <Form.Item label="Sản phẩm cha" name="productId" rules={[{ required: true }]}>
+          <Form.Item label="Sản phẩm" name="productId" rules={[{ required: true }]}>
             <Select 
               placeholder="Chọn sản phẩm" 
               // options={products.map(p => ({ label: p.name, value: p.id }))} 
@@ -243,16 +250,16 @@ const ProductDetailPage: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Màu sắc" name="colorId" rules={[{ required: true }]}>
-              <Select options={colors.map(c => ({ label: c.name, value: c.id }))} />
+              <Select placeholder="Chọn màu sắc" options={colors.map(c => ({ label: c.name, value: c.id }))} />
             </Form.Item>
             <Form.Item label="Dung lượng" name="storageCapacityId" rules={[{ required: true }]}>
-              <Select options={capacities.map(s => ({ label: s.name, value: s.id }))} />
+              <Select placeholder="Chọn dung lượng" options={capacities.map(s => ({ label: s.name, value: s.id }))} />
             </Form.Item>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Giá bán (VNĐ)" name="salePrice" rules={[{ required: true }]}>
-              <InputNumber 
+              <InputNumber
                 style={{ width: '100%' }} 
                 formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
                 parser={v => v!.replace(/\$\s?|(,*)/g, '')} 
