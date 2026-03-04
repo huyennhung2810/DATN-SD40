@@ -38,8 +38,7 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_STATISTICS= API_ADMIN_PREFIX + "/statistics";
 
     public static final String API_ADMIN_PREFIX_WORK_SCHEDULE= API_ADMIN_PREFIX + "/work-schedule";
-    
-    public static final String API_ADMIN_PREFIX_DISCOUNT_DETAIL = API_ADMIN_PREFIX_DISCOUNT + "/detail";
+
     public static final String API_ADMIN_PREFIX_DISCOUNT_VOUCHER = API_ADMIN_PREFIX_DISCOUNT + "/voucher";
 
 
@@ -53,8 +52,7 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_PRODUCTS_STORAGE = API_ADMIN_PREFIX_PRODUCTS + "/storage-capacity";
     public static final String API_ADMIN_PREFIX_PRODUCTS_DETAIL = API_ADMIN_PREFIX_PRODUCTS + "/product-detail";
 
-}
-// Admin endpoints - dau api cua khanh khoi nham
+    // Admin endpoints - dau api cua khanh khoi nham
     public static final String ADMIN_PRODUCT_CATEGORY = API + ADMIN + "/product-category";
     public static final String ADMIN_PRODUCT = API + ADMIN + "/product";
     public static final String ADMIN_TECH_SPEC = API + ADMIN + "/tech-spec";
@@ -63,3 +61,5 @@ public class MappingConstants {
 
     // Common endpoints
     public static final String COMMON_PRODUCT = API + COMMON + "/product";
+
+}
