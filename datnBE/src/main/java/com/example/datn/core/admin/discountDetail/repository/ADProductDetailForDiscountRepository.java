@@ -1,4 +1,8 @@
-package com.example.datn.core.admin.productdetail.repository;
+
+
+
+package com.example.datn.core.admin.discountDetail.repository;
+
 
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -9,10 +13,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+
 import java.util.List;
 
 @Repository
-public interface ADProductDetailRepository extends ProductDetailRepository {
+public interface ADProductDetailForDiscountRepository extends ProductDetailRepository {
     Page<ProductDetail> findAll(Pageable pageable);
 
     Page<ProductDetail> findByProductId(String productId, Pageable pageable);
@@ -25,7 +30,6 @@ public interface ADProductDetailRepository extends ProductDetailRepository {
             @Param("kw") String keyword,
             @Param("sts") EntityStatus status
     );
-
 
     @Query("SELECT pd FROM ProductDetail pd WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR " +
