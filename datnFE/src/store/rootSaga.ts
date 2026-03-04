@@ -46,5 +46,9 @@ export default function* rootSaga() {
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
     fork(watchBannerFlow)
+    fork(statisticsSaga),
+    fork(voucherSaga),
+    fork(discountSaga),
+    fork(shiftHandoverSaga)
   ]);
 }
