@@ -23,6 +23,13 @@ import processorReducer from "./techSpec/processorSlice";
 import imageFormatReducer from "./techSpec/imageFormatSlice";
 import videoFormatReducer from "./techSpec/videoFormatSlice";
 import bannerReducer from "./banner/bannerSlice";
+import voucherReducer from "./Voucher/voucherSlice"; 
+const sagaMiddleware = createSagaMiddleware();
+import employeeReducer from "./employee/employeeSlice";
+import statisticsReducer from "./statistics/statisticsSlice";
+import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
+import discountReducer from "../redux/discount/discountSlice";
+
 
 export const store = configureStore({
   reducer: {
@@ -47,6 +54,10 @@ export const store = configureStore({
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
     banner: bannerReducer,
+    statistics: statisticsReducer,
+    voucher: voucherReducer,
+    discount: discountReducer,
+    shiftHandover: shiftHandoverReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

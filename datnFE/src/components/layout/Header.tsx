@@ -10,6 +10,8 @@ import {
   TeamOutlined,
   TagOutlined,
   CalendarOutlined,
+  ScheduleOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
@@ -34,22 +36,22 @@ const pageInfoMap: Record<
     icon: <LineChartOutlined />,
   },
   "/product": {
-    title: "Quản lý Sản phẩm",
+    title: "Sản phẩm",
     desc: "Quản lý danh mục máy ảnh",
     icon: <CameraOutlined />,
   },
   "/orders": {
-    title: "Quản lý Đơn hàng",
+    title: "Đơn hàng",
     desc: "Theo dõi trạng thái đơn hàng và lịch sử giao dịch",
     icon: <ShoppingCartOutlined />,
   },
   "/customer": {
-    title: "Quản lý Khách hàng",
+    title: "Khách hàng",
     desc: "Xem và quản lý thông tin khách hàng",
     icon: <TeamOutlined />,
   },
   "/employee": {
-    title: "Quản lý Nhân viên",
+    title: "Nhân viên",
     desc: "Xem và quản lý hồ sơ, hiệu suất nhân viên",
     icon: <UserOutlined />,
   },
@@ -59,14 +61,24 @@ const pageInfoMap: Record<
     icon: <ShopOutlined />,
   },
   "/voucher": {
-    title: "Quản lý Phiếu giảm giá",
+    title: "Phiếu giảm giá",
     desc: "Thiết lập các mã giảm giá và chương trình tri ân",
     icon: <TagOutlined />,
   },
   "/discount": {
-    title: "Quản lý Đợt giảm giá",
+    title: "Đợt giảm giá",
     desc: "Quản lý các đợt giảm giá theo sự kiện",
     icon: <CalendarOutlined />,
+  },
+  "/work-schedule": {
+    title: "Lịch làm việc",
+    desc: "Quản lý lịch làm việc của nhân viên",
+    icon: <ScheduleOutlined />,
+  },
+  "/shift-handover": {
+    title: "Giao ca",
+    desc: "Quản lý các ca làm việc và chuyển ca giữa nhân viên",
+    icon: <SwapOutlined />,
   },
 };
 
@@ -156,7 +168,6 @@ const Header: React.FC = () => {
             </div>
             <Avatar
               icon={<UserOutlined />}
-              // src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nhung"
               style={{ border: "2px solid #e6f7ff" }}
             />
           </Space>

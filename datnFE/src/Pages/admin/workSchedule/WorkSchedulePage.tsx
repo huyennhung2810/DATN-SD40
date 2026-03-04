@@ -196,7 +196,7 @@ const WorkSchedulePage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "24px", background: "#f5f5f5", minHeight: "100vh" }}>
+    <div style={{ background: "#f5f5f5", minHeight: "100vh" }}>
       <Card style={{ marginBottom: 20, borderRadius: 8 }}>
         <Row justify="space-between" align="bottom">
           <Col>

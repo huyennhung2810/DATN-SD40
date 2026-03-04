@@ -2,17 +2,14 @@ package com.example.datn.core.admin.handovers.service.Impl;
 
 import com.example.datn.core.admin.handovers.model.request.ADShiftHandoverCheckInRequest;
 import com.example.datn.core.admin.handovers.model.request.ADShiftHandoverCheckOutRequest;
-import com.example.datn.core.admin.handovers.model.request.ADShiftHandoverProductAuditRequest;
 import com.example.datn.core.admin.handovers.model.response.ADShiftHandoverStatsResponse;
 import com.example.datn.core.admin.handovers.repository.ADShiftHandoverRepository;
 import com.example.datn.core.admin.handovers.service.ADShiftHandoverService;
 import com.example.datn.core.common.base.ResponseObject;
-import com.example.datn.entity.HandoverProductAudit;
 import com.example.datn.entity.ShiftHandover;
 import com.example.datn.entity.WorkSchedule;
 import com.example.datn.infrastructure.constant.HandoverStatus;
 import com.example.datn.infrastructure.constant.ShiftStatus;
-import com.example.datn.repository.HandoverProductAuditRepository;
 import com.example.datn.repository.ProductRepository;
 import com.example.datn.repository.WorkScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +22,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -36,7 +31,6 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
 
     private final ADShiftHandoverRepository shiftHandoverRepository;
     private final WorkScheduleRepository workScheduleRepository;
-    private final HandoverProductAuditRepository handoverProductAuditRepository;
     private final ProductRepository productRepository;
 
     @Override
@@ -120,20 +114,6 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             if (!StringUtils.hasText(request.getNote())) {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST, "Số tiền bị lệch so với hệ thống! Bắt buộc phải nhập lý do/ghi chú.");
             }
-        }
-
-        //Lưu dữ liệu kiểm kê
-        if (request.getAudits() != null && !request.getAudits().isEmpty()) {
-            List<HandoverProductAudit> auditList = new ArrayList<>();
-            for (ADShiftHandoverProductAuditRequest auditReq : request.getAudits()) {
-                HandoverProductAudit audit = new HandoverProductAudit();
-                audit.setShiftHandover(handover);
-                audit.setProduct(productRepository.getReferenceById(auditReq.getProductId()));
-                audit.setActualQuantity(auditReq.getActualQuantity());
-                audit.setConditionNote(auditReq.getConditionNote());
-                auditList.add(audit);
-            }
-            handoverProductAuditRepository.saveAll(auditList);
         }
 
         WorkSchedule schedule = handover.getWorkSchedule();
