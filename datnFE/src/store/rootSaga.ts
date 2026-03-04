@@ -45,10 +45,9 @@ export default function* rootSaga() {
     fork(watchProcessorFlow),
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
-    fork(watchBannerFlow)
+    fork(watchBannerFlow),
     fork(statisticsSaga),
     fork(voucherSaga),
-    fork(discountSaga),
-    fork(shiftHandoverSaga)
+    fork(discountSaga)
   ]);
 }

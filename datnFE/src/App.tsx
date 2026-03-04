@@ -23,7 +23,6 @@ import ProductDetailPage from "./Pages/admin/productdetail/productDetailList";
 import ProductCategoryPage from "./Pages/admin/product-category/ProductCategoryList";
 import ProductPage from "./Pages/admin/product/ProductList";
 import TechSpecPage from "./Pages/admin/tech-spec/TechSpecList";
-import BannerPage from "./Pages/admin/banner/BannerList";
 import ClientHomePage from "./Pages/client/ClientHomePage";
 
 const HomePage = () => (
@@ -48,7 +47,6 @@ const App: React.FC = () => {
         <Route path="/admin/product-categories" element={<MainLayout><ProductCategoryPage /></MainLayout>} />
         <Route path="/admin/products" element={<MainLayout><ProductPage /></MainLayout>} />
         <Route path="/admin/tech-spec" element={<MainLayout><TechSpecPage /></MainLayout>} />
-        <Route path="/admin/banner" element={<MainLayout><BannerPage /></MainLayout>} />
         <Route path="/admin/employees/:id" element={<EmployeeForm />} />
           
         <Route path="/serial" element={<SerialPage />} />
