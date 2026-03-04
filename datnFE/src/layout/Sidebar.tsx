@@ -15,6 +15,8 @@ import Icon, {
   MessageOutlined,
   AppstoreOutlined,
   SettingOutlined,
+  BgColorsOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -45,7 +47,10 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/admin/product-categories", icon: <TagOutlined />, label: "Loại sản phẩm" },
         { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
+        { key: "/products/product-detail", icon: <CameraOutlined />, label: "Sản phẩm chi tiết" },
         { key: "/admin/tech-spec", icon: <SettingOutlined />, label: "Thông số kỹ thuật" },
+        { key: "/products/color", icon: <BgColorsOutlined />, label: "Màu sắc" },
+        { key: "/products/storage-capacity", icon: <DatabaseOutlined />, label: "Dung lượng" },
       ],
     },
     {
@@ -69,7 +74,7 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/voucher", icon: <TagOutlined />, label: "Phiếu giảm giá" },
         {
-          key: "/promotion",
+          key: "/discount",
           icon: <CalendarOutlined />,
           label: "Đợt giảm giá",
         },

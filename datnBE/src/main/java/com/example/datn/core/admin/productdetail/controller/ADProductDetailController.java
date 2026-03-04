@@ -5,6 +5,7 @@ import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.MappingConstants;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

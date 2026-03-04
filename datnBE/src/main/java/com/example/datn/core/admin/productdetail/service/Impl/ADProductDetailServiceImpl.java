@@ -17,8 +17,6 @@ import com.example.datn.utils.Helper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +32,6 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     private final ADProductDetailRepository adProductDetailRepository;
     private final ADColorRepository adColorRepository;
     private final ADStorageCapacityRepository adStorageCapacityRepository;
-    private final ADProductDetailRepository productDetailRepository;
     private final ADSerialRepository adSerialRepository;
 
         @Override
@@ -104,7 +101,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
 
         productDetail.setColor(adColorRepository.findById(request.getProductId()).orElse(null));
         productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(null));
-        productDetail.setProduct(adProductDetailRepository.findById(request.getProductId()).orElseThrow().getProduct());
+        //productDetail.setProduct(adProductDetailRepository.findById(request.getProductId()).orElseThrow().getProduct());
 
         List<Serial> serialEntities = new ArrayList<>();
         if (request.getSerials() != null && !request.getSerials().isEmpty()) {
