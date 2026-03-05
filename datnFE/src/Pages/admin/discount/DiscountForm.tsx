@@ -26,7 +26,7 @@ import {
   resetCurrentDiscount,
 } from "../../../redux/discount/discountSlice";
 import type { DiscountRequest } from "../../../models/Discount";
-import productDetailApi from "../../../api/productDetailApi";
+import {productDetailApi,discountApi} from "../../../api/discountApi";
 const { Search } = Input; // Lấy component Search
 const { Title } = Typography;
 const { RangePicker } = DatePicker;

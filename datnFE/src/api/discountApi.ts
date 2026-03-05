@@ -1,8 +1,8 @@
 import axios from 'axios';
-
+import axiosClient from "./axiosClient";
 // ĐỊNH NGHĨA URL GỐC (Bỏ /api/v1 nếu nó đã có trong cấu hình chung)
 const BASE_URL = 'http://localhost:8386/api/admin/discounts';
-
+const PRODUCT_DETAIL_URL = 'http://localhost:8386/api/admin/product-details';
 export const discountApi = {
     /**
      * Lấy danh sách đợt giảm giá (Phân trang + Tìm kiếm)
@@ -40,5 +40,12 @@ export const discountApi = {
         return axios.patch(`${BASE_URL}/${id}/status`);
     }
 };
-
-export default discountApi;
+export const productDetailApi = {
+    /**
+     * Lấy tất cả chi tiết sản phẩm để chọn áp dụng giảm giá
+     */
+    getAll: (params: any) => {
+        return axiosClient.get(PRODUCT_DETAIL_URL, { params });
+    },
+};
+export default { discountApi, productDetailApi };
