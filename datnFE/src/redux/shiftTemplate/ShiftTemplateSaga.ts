@@ -33,6 +33,21 @@ function* handleCreate(action: PayloadAction<any>) {
     }
 }
 
+function* handleUpdate(action: PayloadAction<any>) {
+    try {
+        const { id, ...payload } = action.payload;
+        yield call(shiftTemplateApi.update, id, payload);
+        
+        yield put(shiftTemplateActions.updateSuccess());
+        message.success("Cập nhật thông tin ca thành công!");
+        
+        yield put(shiftTemplateActions.getAllRequest({})); 
+    } catch (error: any) {
+        yield put(shiftTemplateActions.updateFailed());
+        message.error(error.response?.data?.message || "Lỗi khi cập nhật ca làm việc");
+    }
+}
+
 function* handleChangeStatus(action: PayloadAction<string>) {
     try {
         yield call(shiftTemplateApi.changeStatus, action.payload);
@@ -50,4 +65,5 @@ export default function* shiftTemplateSaga() {
     yield takeLatest(shiftTemplateActions.getAllRequest.type, handleGetAll);
     yield takeLatest(shiftTemplateActions.createRequest.type, handleCreate);
     yield takeLatest(shiftTemplateActions.changeStatusRequest.type, handleChangeStatus);
+    yield takeLatest(shiftTemplateActions.updateRequest.type, handleUpdate);
 }

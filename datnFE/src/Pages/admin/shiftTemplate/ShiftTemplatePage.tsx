@@ -24,6 +24,7 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
+import dayjs from "dayjs";
 import type { RootState } from "../../../redux/store";
 import { shiftTemplateActions } from "../../../redux/shiftTemplate/ShiftTemplateSlice";
 
@@ -34,13 +35,12 @@ const ShiftTemplatePage: React.FC = () => {
   const [formFilter] = Form.useForm();
   const [formModal] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Lấy dữ liệu từ Redux
   const { list, isLoading, totalElements } = useSelector(
     (state: RootState) => state.shiftTemplate,
   );
 
-  // 1. Hàm fetch dữ liệu kèm bộ lọc
   const fetchShifts = useCallback(() => {
     const values = formFilter.getFieldsValue();
     const params = {
@@ -60,16 +60,40 @@ const ShiftTemplatePage: React.FC = () => {
     fetchShifts();
   }, [fetchShifts]);
 
-  // 2. Xử lý tạo mới
-  const handleCreate = (values: any) => {
+  // Xử lý mở modal Sửa
+  const handleEdit = (record: any) => {
+    setEditingId(record.id);
+    setIsModalOpen(true);
+    formModal.setFieldsValue({
+      name: record.name,
+      timeRange: [
+        dayjs(record.startTime, "HH:mm:ss"),
+        dayjs(record.endTime, "HH:mm:ss"),
+      ],
+    });
+  };
+
+  const handleCancelModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    formModal.resetFields();
+  };
+
+  const onFinishModal = (values: any) => {
     const payload = {
       name: values.name,
       startTime: values.timeRange[0].format("HH:mm:ss"),
       endTime: values.timeRange[1].format("HH:mm:ss"),
     };
-    dispatch(shiftTemplateActions.createRequest(payload));
-    setIsModalOpen(false);
-    formModal.resetFields();
+
+    if (editingId) {
+      dispatch(
+        shiftTemplateActions.updateRequest({ id: editingId, ...payload }),
+      );
+    } else {
+      dispatch(shiftTemplateActions.createRequest(payload));
+    }
+    handleCancelModal();
   };
 
   const handleReset = () => {
@@ -93,20 +117,52 @@ const ShiftTemplatePage: React.FC = () => {
       dataIndex: "code",
       key: "code",
       width: 200,
-      render: (t: string) => <Text strong>{t}</Text>,
-    },
-    { title: "Tên Ca", dataIndex: "name", key: "name" },
-    {
-      title: "Thời Gian",
-      key: "time",
-      width: 200,
-      render: (record: any) => (
-        <Space>
-          <Tag color="blue">{record.startTime}</Tag>
-          <Text>-</Text>
-          <Tag color="orange">{record.endTime}</Tag>
-        </Space>
+      align: "center" as const,
+
+      render: (t: string) => (
+        <Tag color="blue" style={{ fontWeight: "bold" }}>
+          {t}
+        </Tag>
       ),
+    },
+    {
+      title: "Tên Ca",
+      dataIndex: "name",
+      key: "name",
+      width: 200,
+      align: "center" as const,
+    },
+    {
+      title: "Giờ Bắt Đầu",
+      dataIndex: "startTime",
+      key: "startTime",
+      width: 200,
+      align: "center" as const,
+      render: (time: string) => (
+        <Tag
+          color="blue"
+          style={{ borderRadius: "4px", border: "none", fontWeight: "500" }}
+        >
+          {time}
+        </Tag>
+      ),
+      sorter: (a: any, b: any) => a.startTime.localeCompare(b.startTime),
+    },
+    {
+      title: "Giờ Kết Thúc",
+      dataIndex: "endTime",
+      key: "endTime",
+      width: 200,
+      align: "center" as const,
+      render: (time: string) => (
+        <Tag
+          color="orange"
+          style={{ borderRadius: "4px", border: "none", fontWeight: "500" }}
+        >
+          {time}
+        </Tag>
+      ),
+      sorter: (a: any, b: any) => a.endTime.localeCompare(b.endTime),
     },
     {
       title: "Trạng thái",
@@ -117,19 +173,13 @@ const ShiftTemplatePage: React.FC = () => {
       render: (status: string, record: any) => (
         <Popconfirm
           title="Thay đổi trạng thái"
-          description={`Bạn có chắc chắn muốn ${
-            status === "ACTIVE" ? "ngừng hoạt động" : "kích hoạt"
-          } ca làm việc này?`}
+          description="Bạn chắc chắn muốn đổi trạng thái ca này?"
           onConfirm={() => handleStatusChange(record.id)}
           okText="Đồng ý"
           cancelText="Hủy"
         >
           <Tooltip
-            title={
-              status === "ACTIVE"
-                ? "Click để ngừng hoạt động"
-                : "Click để kích hoạt"
-            }
+            title={status === "ACTIVE" ? "Đang hoạt động" : "Ngừng hoạt động"}
           >
             <Switch
               checked={status === "ACTIVE"}
@@ -140,21 +190,20 @@ const ShiftTemplatePage: React.FC = () => {
         </Popconfirm>
       ),
     },
-
     {
       title: "Thao tác",
       key: "action",
       align: "center" as const,
-      width: 200,
+      width: 150,
       fixed: "right" as const,
       render: (record: any) => (
         <Tooltip title="Chỉnh sửa">
           <Button
             type="text"
+            shape="circle"
+            size="large"
             icon={<EditOutlined style={{ color: "#faad14" }} />}
-            onClick={() => {
-              console.log("Edit record:", record);
-            }}
+            onClick={() => handleEdit(record)}
           />
         </Tooltip>
       ),
@@ -170,7 +219,6 @@ const ShiftTemplatePage: React.FC = () => {
         padding: "20px",
       }}
     >
-      {/* CARD BỘ LỌC */}
       <Card
         title={
           <span>
@@ -218,8 +266,6 @@ const ShiftTemplatePage: React.FC = () => {
           </div>
         </Form>
       </Card>
-
-      {/* CARD DANH SÁCH */}
       <Card
         title={<Text strong>Danh sách ca làm việc ({totalElements})</Text>}
         extra={
@@ -251,32 +297,32 @@ const ShiftTemplatePage: React.FC = () => {
           pagination={{ pageSize: 10 }}
         />
       </Card>
-
-      {/* MODAL THÊM MỚI */}
+      //Thêm/sửa
       <Modal
         title={
           <span>
-            <ClockCircleOutlined /> Tạo ca làm việc mới
+            <ClockCircleOutlined />{" "}
+            {editingId ? "Cập nhật ca làm việc" : "Tạo ca làm việc mới"}
           </span>
         }
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleCancelModal}
         onOk={() => formModal.submit()}
-        okText="Lưu lại"
+        okText={editingId ? "Cập nhật" : "Lưu lại"}
         cancelText="Hủy bỏ"
       >
-        <Form form={formModal} layout="vertical" onFinish={handleCreate}>
+        <Form form={formModal} layout="vertical" onFinish={onFinishModal}>
           <Form.Item
             name="name"
             label="Tên ca"
-            rules={[{ required: true, message: "Nhập tên ca!" }]}
+            rules={[{ required: true, message: "Vui lòng nhập tên ca!" }]}
           >
-            <Input placeholder="Ví dụ: Ca sáng" />
+            <Input placeholder="Ví dụ: Ca sáng, Ca hành chính..." />
           </Form.Item>
           <Form.Item
             name="timeRange"
-            label="Thời gian"
-            rules={[{ required: true, message: "Chọn thời gian!" }]}
+            label="Thời gian (Bắt đầu - Kết thúc)"
+            rules={[{ required: true, message: "Vui lòng chọn khung giờ!" }]}
           >
             <TimePicker.RangePicker format="HH:mm" style={{ width: "100%" }} />
           </Form.Item>

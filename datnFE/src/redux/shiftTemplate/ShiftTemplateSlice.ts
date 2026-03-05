@@ -41,7 +41,18 @@ const shiftTemplateSlice = createSlice({
             state.isLoading = false;
         },
 
+        //update
+        updateRequest: (state, _action: PayloadAction<{id: string, name: string, startTime: string, endTime: string}>) => {
+            state.isLoading = true;
+        },
+        updateSuccess: (state) => {
+            state.isLoading = false;
+        },
+        updateFailed: (state) => {
+            state.isLoading = false;
+        },
 
+        //Thay đổi trạng thái
         changeStatusRequest: (state, _action: PayloadAction<string>) => {
             state.isLoading = true;
         },

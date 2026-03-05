@@ -40,19 +40,35 @@ public class ADShiftTemplateService {
         return mapToResponse(saved);
     }
 
+    public ADShiftTemplateResponse update(String id, ADShiftTemplateRequest request) {
+        ShiftTemplate shift = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
+
+        if (request.getStartTime().isAfter(request.getEndTime())) {
+            throw new RuntimeException("Giờ bắt đầu phải trước giờ kết thúc");
+        }
+
+        shift.setName(request.getName());
+        shift.setStartTime(request.getStartTime());
+        shift.setEndTime(request.getEndTime());
+
+        ShiftTemplate saved = repository.save(shift);
+        return mapToResponse(saved);
+    }
+
     public ADShiftTemplateResponse changeStatus(String id) {
-        // 1. Tìm ca làm việc, nếu không thấy thì báo lỗi
+        //Tìm ca làm việc
         ShiftTemplate shift = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc này"));
 
-        // 2. Logic đảo trạng thái (Toggle)
+        //Logic đảo trạng thái
         if (shift.getStatus() == EntityStatus.ACTIVE) {
             shift.setStatus(EntityStatus.INACTIVE);
         } else {
             shift.setStatus(EntityStatus.ACTIVE);
         }
 
-        // 3. Lưu lại và trả về response
+        //Lưu lại và trả về response
         ShiftTemplate saved = repository.save(shift);
         return mapToResponse(saved);
     }

@@ -28,7 +28,6 @@ public class ADShiftTemplateController {
             @RequestParam(required = false) String startTime, // Nhận dạng String để dễ convert
             @RequestParam(required = false) String endTime) {
 
-        // Convert String sang LocalTime nếu có dữ liệu
         LocalTime start = (startTime != null && !startTime.isEmpty()) ? LocalTime.parse(startTime) : null;
         LocalTime end = (endTime != null && !endTime.isEmpty()) ? LocalTime.parse(endTime) : null;
 
@@ -40,6 +39,14 @@ public class ADShiftTemplateController {
     public ResponseEntity<ResponseObject<ADShiftTemplateResponse>> create(@RequestBody ADShiftTemplateRequest request) {
         ADShiftTemplateResponse data = service.create(request);
         return ResponseEntity.ok(ResponseObject.success(data, "Tạo ca làm việc mẫu thành công"));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ResponseObject<ADShiftTemplateResponse>> update(
+            @PathVariable String id,
+            @RequestBody ADShiftTemplateRequest request) {
+        ADShiftTemplateResponse data = service.update(id, request);
+        return ResponseEntity.ok(ResponseObject.success(data, "Cập nhật ca làm việc thành công"));
     }
 
     @PutMapping("/{id}/change-status")

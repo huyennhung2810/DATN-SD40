@@ -9,6 +9,7 @@ import {
   Typography,
   Row,
   Col,
+  message,
 } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import type {
@@ -54,7 +55,7 @@ const CheckOutModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
         .then((res) => {
           setInitialCash(res.initialCash);
         })
-        .catch(() => console.error("Lỗi tải thông tin ca"));
+        .catch(() => message.error("Không lấy được thông tin tiền đầu ca"));
     }
   }, [isOpen, scheduleId]);
 

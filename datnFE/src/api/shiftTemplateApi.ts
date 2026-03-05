@@ -11,10 +11,16 @@ export const shiftTemplateApi = {
         return res.data;
     },
 
-    // Tạo mới ca làm việc mẫu
+    // Tạo mới ca làm việc
     create: async (data: ADShiftTemplateRequest): Promise<ResponseObject<ADShiftTemplateResponse>> => {
         const res = await axiosClient.post<ResponseObject<ADShiftTemplateResponse>>(BASE_URL, data);
         return res.data;
+    },
+
+    //Update ca làm việc
+    update: async (id: string, data: ADShiftTemplateRequest): Promise<ResponseObject<ADShiftTemplateResponse>> => {
+    const res = await axiosClient.put<ResponseObject<ADShiftTemplateResponse>>(`${BASE_URL}/${id}`, data);
+    return res.data;
     },
 
     changeStatus: async (id: string): Promise<ResponseObject<ADShiftTemplateResponse>> => {
