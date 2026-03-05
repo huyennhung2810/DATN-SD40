@@ -9,14 +9,12 @@ import java.util.UUID;
 
 public class CreatePrimaryEntityListener {
     @PrePersist
-    public void onCreate(PrimaryEntity entity) {
+    private void onCreate(PrimaryEntity entity) {
         //Tự động tạo UUID
         entity.setId(UUID.randomUUID().toString());
 
         //Mọi bản ghi mới mặc định là hoạt động
-        if (entity.getStatus() == null) {
-            entity.setStatus(EntityStatus.ACTIVE);
-        }
+        entity.setStatus(EntityStatus.ACTIVE);
 
         //hàm logic để sinh mã riêng biệt cho từng thực thể
         entity.setCode(setCodePrimaryEntity(entity));

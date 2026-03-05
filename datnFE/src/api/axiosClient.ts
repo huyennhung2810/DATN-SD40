@@ -1,20 +1,14 @@
 import axios from "axios";
 
+
 const axiosClient = axios.create({
     baseURL: "http://localhost:8386/api/v1",
-    withCredentials: true,
-});
+    headers: {
+  "Content-Type": "multipart/form-data"
+    },
 
-// Response interceptor to handle errors
-axiosClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response && error.response.data) {
-            // Return the error data so saga can handle it
-            return Promise.reject(error.response.data);
-        }
-        return Promise.reject(error);
-    }
-);
+
+    withCredentials: true,
+})
 
 export default axiosClient;

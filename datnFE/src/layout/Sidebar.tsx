@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "antd";
-import Icon, {
+import {
   CameraOutlined,
   TeamOutlined,
   GiftOutlined,
@@ -13,10 +13,6 @@ import Icon, {
   TagOutlined,
   CalendarOutlined,
   MessageOutlined,
-  AppstoreOutlined,
-  SettingOutlined,
-  BgColorsOutlined,
-  DatabaseOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -24,7 +20,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const items = [
-    { key: "/statistics", icon: <LineChartOutlined />, label: "Thống kê" },
+    { key: "/statitics", icon: <LineChartOutlined />, label: "Thống kê" },
     {
       key: "/pos",
       icon: <ShopOutlined />,
@@ -36,28 +32,12 @@ const Sidebar: React.FC = () => {
       label: "Quản lý đơn hàng",
     },
     {
-      key: "/serial",
-      icon:<TagOutlined />,
-      label: "Quản lý Serial"
-    },
-    {
       key: "/product",
       icon: <CameraOutlined />,
       label: "Quản lý sản phẩm",
-      children: [
-        { key: "/admin/product-categories", icon: <TagOutlined />, label: "Loại sản phẩm" },
-        { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
-        { key: "/products/product-detail", icon: <CameraOutlined />, label: "Sản phẩm chi tiết" },
-        { key: "/admin/tech-spec", icon: <SettingOutlined />, label: "Thông số kỹ thuật" },
-        { key: "/products/color", icon: <BgColorsOutlined />, label: "Màu sắc" },
-        { key: "/products/storage-capacity", icon: <DatabaseOutlined />, label: "Dung lượng" },
-      ],
     },
-    {
-      key: "/admin/banner",
-      icon: <AppstoreOutlined />,
-      label: "Quản lý Banner",
-    },
+    // { key: "/return", icon: <RetweetOutlined />, label: "Trả hàng" },
+
     {
       key: "sub-account",
       icon: <UsergroupAddOutlined />,
@@ -74,7 +54,7 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/voucher", icon: <TagOutlined />, label: "Phiếu giảm giá" },
         {
-          key: "/discount",
+          key: "/promotion",
           icon: <CalendarOutlined />,
           label: "Đợt giảm giá",
         },

@@ -10,9 +10,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.text.Normalizer;
 import java.text.NumberFormat;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -79,17 +76,5 @@ public class Helper {
         Locale localeVN = new Locale("vi", "VN");
         NumberFormat vncuFormat = NumberFormat.getCurrencyInstance(localeVN);
         return vncuFormat.format(amount);
-    }
-
-
-    public static String formatDate(Long timestamp) {
-        if (timestamp == null) {
-            return "";
-        }
-        // Sử dụng DateTimeFormatter để định dạng
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-                .withZone(ZoneId.systemDefault()); // Lấy múi giờ hệ thống (Việt Nam)
-
-        return formatter.format(Instant.ofEpochMilli(timestamp));
     }
 }
