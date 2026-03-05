@@ -22,6 +22,9 @@ public class Product extends NameEntity implements Serializable {
     @Column(length = EntityProperties.LENGTH_DESCRIPTION)
     private String description;
 
+    @Column(name = "price", precision = 15, scale = 2)
+    private java.math.BigDecimal price;
+
     @ManyToOne
     @JoinColumn(name = "id_tech_spec", referencedColumnName = "id")
     private TechSpec techSpec;

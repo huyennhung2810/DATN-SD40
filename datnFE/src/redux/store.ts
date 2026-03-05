@@ -8,8 +8,17 @@ import employeeReducer from "./employee/employeeSlice";
 import statisticsReducer from "./statistics/statisticsSlice";
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
 import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
-
 import discountReducer from "../redux/discount/discountSlice";
+import productCategoryReducer from "./productCategory/productCategorySlice";
+import techSpecReducer from "./techSpec/techSpecSlice";
+import productReducer from "./product/productSlice";
+import productImageReducer from "./productImage/productImageSlice";
+import sensorTypeReducer from "./techSpec/sensorTypeSlice";
+import lensMountReducer from "./techSpec/lensMountSlice";
+import resolutionReducer from "./techSpec/resolutionSlice";
+import processorReducer from "./techSpec/processorSlice";
+import imageFormatReducer from "./techSpec/imageFormatSlice";
+import videoFormatReducer from "./techSpec/videoFormatSlice";
 
 
 export const store = configureStore({
@@ -21,11 +30,21 @@ export const store = configureStore({
     discount: discountReducer,
     shiftHandover: shiftHandoverReducer,
     shiftTemplate: shiftTemplateReducer,
+    productCategory: productCategoryReducer,
+    techSpec: techSpecReducer,
+    product: productReducer,
+    productImage: productImageReducer,
+    sensorType: sensorTypeReducer,
+    lensMount: lensMountReducer,
+    resolution: resolutionReducer,
+    processor: processorReducer,
+    imageFormat: imageFormatReducer,
+    videoFormat: videoFormatReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({ 
-      thunk: true,
-      serializableCheck: false 
+    getDefaultMiddleware({
+      thunk: false,
+      serializableCheck: false
     }).concat(sagaMiddleware),
 });
 

@@ -7,11 +7,19 @@ export interface BaseEntity {
   lastModifiedDate: number;
 }
 
+export interface BaseSearchParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  orderBy?: string;
+}
+
 export interface ResponseObject<T> {
-  status: string;
-  message: string;
+  isSuccess: boolean;
+  status: any;
   data: T;
-  success: boolean;
+  message: string;
+  timestamp?: string;
 }
 
 export interface PageResponse<T> {
