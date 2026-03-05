@@ -11,12 +11,12 @@ import StatisticsPage from "./layout/admin/Statistics";
 import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
 import WorkSchedulePage from "./Pages/admin/workSchedule/WorkSchedulePage";
 
-
 // --- Import thêm các trang Voucher ---
 import VoucherList from "./Pages/admin/voucher/VoucherList";
 import VoucherForm from "./Pages/admin/voucher/VoucherForm";
 import DiscountList from "./Pages/admin/discount/DiscountList";
 import DiscountForm from "./Pages/admin/discount/DiscountForm";
+import ShiftTemplatePage from "./Pages/admin/shiftTemplate/ShiftTemplatePage";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -54,7 +54,8 @@ const App: React.FC = () => {
           <Route path="/discount" element={<DiscountList />} />
           <Route path="/discount/create" element={<DiscountForm />} />
           <Route path="/discount/edit/:id" element={<DiscountForm />} />
-
+          <Route path="/discount" element={<DiscountList />} />
+          <Route path="/shift-template" element={<ShiftTemplatePage />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

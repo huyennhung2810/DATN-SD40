@@ -7,3 +7,11 @@ export interface ADShiftTemplateResponse {
     status: string;
     isActive: boolean;
 }
+
+export interface ADShiftTemplateRequest {
+    code: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+}

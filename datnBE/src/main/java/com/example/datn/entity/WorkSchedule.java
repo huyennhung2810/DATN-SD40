@@ -16,6 +16,7 @@ import java.time.LocalDate;
 @Entity
 @ToString
 @Table(name = "work_schedule")
+//lịch làm việc
 public class WorkSchedule extends PrimaryEntity implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)

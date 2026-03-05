@@ -8,6 +8,7 @@ import com.example.datn.infrastructure.constant.EntityStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,8 +17,9 @@ import java.util.stream.Collectors;
 public class ADShiftTemplateService {
     private final ADShiftTemplateRepository repository;
 
-    public List<ADShiftTemplateResponse> getAll() {
-        return repository.findAllByStatus(EntityStatus.ACTIVE)
+    public List<ADShiftTemplateResponse> getAll(String keyword, EntityStatus status, LocalTime startTime, LocalTime endTime) {
+        // Sử dụng câu Query searchShifts bạn đã viết trong Repository
+        return repository.searchShifts(keyword, status, startTime, endTime)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -34,6 +36,23 @@ public class ADShiftTemplateService {
         shift.setEndTime(request.getEndTime());
         shift.setStatus(EntityStatus.ACTIVE);
 
+        ShiftTemplate saved = repository.save(shift);
+        return mapToResponse(saved);
+    }
+
+    public ADShiftTemplateResponse changeStatus(String id) {
+        // 1. Tìm ca làm việc, nếu không thấy thì báo lỗi
+        ShiftTemplate shift = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc này"));
+
+        // 2. Logic đảo trạng thái (Toggle)
+        if (shift.getStatus() == EntityStatus.ACTIVE) {
+            shift.setStatus(EntityStatus.INACTIVE);
+        } else {
+            shift.setStatus(EntityStatus.ACTIVE);
+        }
+
+        // 3. Lưu lại và trả về response
         ShiftTemplate saved = repository.save(shift);
         return mapToResponse(saved);
     }

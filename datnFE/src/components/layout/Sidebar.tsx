@@ -15,6 +15,7 @@ import {
   UserOutlined,
   ScheduleOutlined,
   SwapOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 
 const Sidebar: React.FC = () => {
@@ -72,6 +73,12 @@ const Sidebar: React.FC = () => {
       key: "/shift-handover",
       icon: <SwapOutlined />,
       label: "Giao ca",
+    },
+
+    {
+      key: "/shift-template",
+      icon: <ClockCircleOutlined />,
+      label: "Quản lý ca làm việc",
     },
 
     {

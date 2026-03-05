@@ -10,10 +10,8 @@ import {
   Row,
   Col,
   Space,
-  
   Typography,
   Divider,
-
   Radio,
   Tag,
   Badge,
@@ -22,7 +20,6 @@ import {
 import {
   SaveOutlined,
   ArrowLeftOutlined,
-
   CalendarOutlined,
   UsergroupAddOutlined,
   UserOutlined,
@@ -50,11 +47,16 @@ const { Title, Text } = Typography;
 // Helper function để hiển thị tag trạng thái
 const getStatusTag = (status: number) => {
   switch (status) {
-    case 0: return <Tag color="default">Buộc dừng</Tag>;
-    case 1: return <Tag color="blue">Sắp diễn ra</Tag>;
-    case 2: return <Tag color="success">Đang diễn ra</Tag>;
-    case 3: return <Tag color="error">Đã kết thúc</Tag>;
-    default: return <Tag>Không xác định</Tag>;
+    case 0:
+      return <Tag color="default">Buộc dừng</Tag>;
+    case 1:
+      return <Tag color="blue">Sắp diễn ra</Tag>;
+    case 2:
+      return <Tag color="success">Đang diễn ra</Tag>;
+    case 3:
+      return <Tag color="error">Đã kết thúc</Tag>;
+    default:
+      return <Tag>Không xác định</Tag>;
   }
 };
 
@@ -65,23 +67,29 @@ const VoucherForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
 
-  const { loading, currentVoucher } = useSelector((state: RootState) => state.voucher);
-  
+  const { loading, currentVoucher } = useSelector(
+    (state: RootState) => state.voucher,
+  );
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const voucherTypeWatch = Form.useWatch("voucherType", form);
   const discountUnit = Form.useWatch("discountUnit", form);
 
   // --- HÀM XỬ LÝ CẬP NHẬT TRẠNG THÁI DETAIL (Vô hiệu hóa khách hàng) ---
-  const handleUpdateDetailStatus = async (detailId: string, status: number, reason: string) => {
+  const handleUpdateDetailStatus = async (
+    detailId: string,
+    status: number,
+    reason: string,
+  ) => {
     try {
       // Gọi trực tiếp API
       await voucherApi.updateDetailStatus(detailId, { status, reason });
       message.success("Cập nhật trạng thái khách hàng thành công");
-      
+
       // Sau khi cập nhật thành công, load lại dữ liệu Voucher để đồng bộ số lượng
       if (id) {
-        dispatch(getVoucherByIdRequest(id)); 
+        dispatch(getVoucherByIdRequest(id));
       }
     } catch (error) {
       console.error(error);
@@ -95,11 +103,14 @@ const VoucherForm: React.FC = () => {
       if (isEdit && currentVoucher) {
         const details: any[] = (currentVoucher as any).details || [];
         const existingUnusedCount = details.filter(
-          (d) => selectedCustomerIds.includes(d.customer?.id) && d.usageStatus === 0
+          (d) =>
+            selectedCustomerIds.includes(d.customer?.id) && d.usageStatus === 0,
         ).length;
 
         const oldIds = details.map((d) => d.customer?.id);
-        const newAddedCount = selectedCustomerIds.filter(cid => !oldIds.includes(cid)).length;
+        const newAddedCount = selectedCustomerIds.filter(
+          (cid) => !oldIds.includes(cid),
+        ).length;
 
         form.setFieldsValue({ quantity: existingUnusedCount + newAddedCount });
       } else {
@@ -124,7 +135,10 @@ const VoucherForm: React.FC = () => {
     if (isEdit && currentVoucher) {
       form.setFieldsValue({
         ...currentVoucher,
-        dateRange: [dayjs(currentVoucher.startDate), dayjs(currentVoucher.endDate)],
+        dateRange: [
+          dayjs(currentVoucher.startDate),
+          dayjs(currentVoucher.endDate),
+        ],
       });
 
       if (currentVoucher.voucherType === "INDIVIDUAL") {
@@ -142,7 +156,8 @@ const VoucherForm: React.FC = () => {
       startDate: dateRange ? dateRange[0].startOf("day").valueOf() : null,
       endDate: dateRange ? dateRange[1].endOf("day").valueOf() : null,
       id: id,
-      customerIds: values.voucherType === "INDIVIDUAL" ? selectedCustomerIds : [],
+      customerIds:
+        values.voucherType === "INDIVIDUAL" ? selectedCustomerIds : [],
       lastModifiedBy: localStorage.getItem("employeeCode") || "Nhung",
       lastModifiedDate: Date.now(),
     };
@@ -151,7 +166,8 @@ const VoucherForm: React.FC = () => {
     dispatch(action({ data: payload, navigate: () => navigate("/voucher") }));
   };
 
-  const disabledDate = (current: Dayjs) => current && current < dayjs().startOf("day");
+  const disabledDate = (current: Dayjs) =>
+    current && current < dayjs().startOf("day");
   return (
     <div
       style={{
@@ -559,7 +575,7 @@ const VoucherForm: React.FC = () => {
         visible={isModalVisible}
         isEdit={isEdit}
         initialSelectedKeys={selectedCustomerIds}
-        voucherDetails={(currentVoucher as any)?.details || []} 
+        voucherDetails={(currentVoucher as any)?.details || []}
         onCancel={() => setIsModalVisible(false)}
         onSelect={(ids) => setSelectedCustomerIds(ids)}
         onUpdateDetailStatus={handleUpdateDetailStatus} // Đã gán hàm xử lý thực tế

@@ -52,7 +52,7 @@ const WorkScheduleModal: React.FC<Props> = ({
     try {
       const [empRes, shiftRes] = await Promise.all([
         employeeApi.getAll({ page: 0, size: 100 }),
-        shiftTemplateApi.getAll(),
+        shiftTemplateApi.getAll({ page: 0, size: 100 }),
       ]);
 
       const empData = empRes.data;

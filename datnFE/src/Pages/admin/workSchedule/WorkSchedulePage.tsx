@@ -136,10 +136,10 @@ const WorkSchedulePage: React.FC = () => {
 
   const columns: ColumnsType<WorkScheduleResponse> = [
     { title: "ID", width: 60, render: (_, __, index) => index + 1 },
-    { title: "MÃ NHÂN VIÊN", dataIndex: "employeeCode", key: "employeeCode" },
-    { title: "TÊN NHÂN VIÊN", dataIndex: "employeeName", key: "employeeName" },
+    { title: "Mã nhân viên", dataIndex: "employeeCode", key: "employeeCode" },
+    { title: "Tên nhân viên", dataIndex: "employeeName", key: "employeeName" },
     {
-      title: "CA LÀM",
+      title: "Ca làm",
       render: (_: string, record: WorkScheduleResponse) => {
         const startH = parseInt(record.startTime.split(":")[0]);
         const endH = parseInt(record.endTime.split(":")[0]);
@@ -147,12 +147,12 @@ const WorkSchedulePage: React.FC = () => {
       },
     },
     {
-      title: "NGÀY LÀM",
+      title: "Ngày làm",
       dataIndex: "workDate",
       render: (date) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
-      title: "THAO TÁC",
+      title: "Thao tác",
       render: (_: string, record: WorkScheduleResponse) => (
         <Space>
           <Button

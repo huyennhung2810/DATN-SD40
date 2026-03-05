@@ -7,6 +7,8 @@ const sagaMiddleware = createSagaMiddleware();
 import employeeReducer from "./employee/employeeSlice";
 import statisticsReducer from "./statistics/statisticsSlice";
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
+import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
+
 import discountReducer from "../redux/discount/discountSlice";
 
 
@@ -18,7 +20,7 @@ export const store = configureStore({
     voucher: voucherReducer,
     discount: discountReducer,
     shiftHandover: shiftHandoverReducer,
-
+    shiftTemplate: shiftTemplateReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ 
