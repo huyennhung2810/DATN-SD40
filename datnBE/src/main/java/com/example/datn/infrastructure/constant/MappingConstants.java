@@ -35,10 +35,12 @@ public class MappingConstants {
     public static final String API_ADMIN_PREFIX_DISCOUNT_DETAIL = API_ADMIN_PREFIX_DISCOUNT + "/detail";
 
     public static final String API_ADMIN_PREFIX_STATISTICS= API_ADMIN_PREFIX + "/statistics";
+    public static final String API_ADMIN_PREFIX_WORK_SCHEDULE= API_ADMIN_PREFIX + "/work-schedule";
+    public static final String API_ADMIN_PREFIX_SHIFT_HANDOVER= API_ADMIN_PREFIX + "/shift-handover";
+    public static final String API_ADMIN_PREFIX_SHIFT_TEMPLATE= API_ADMIN_PREFIX + "/shift-template";
+
 
     public static final String API_ADMIN_PREFIX_DISCOUNT_VOUCHER = API_ADMIN_PREFIX_DISCOUNT + "/voucher";
-
-
     public static final String API_ADMIN_PREFIX_PRODUCTS_DETAIL = API_ADMIN_PREFIX_PRODUCTS + "/product-detail";
 
     public static final String API_ADMIN_PREFIX_EMPLOYEE =  API_ADMIN_PREFIX + "/employee";
