@@ -5,6 +5,7 @@ import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -15,12 +16,13 @@ public class CloudinaryUtils {
 
     private final Cloudinary cloudinary;
 
+    // e có sửa qua tý :_)) -> lỗi bảo e ạ
     public String uploadImage(byte[] data, String folder) {
         try {
             Map uploadResult = cloudinary.uploader().upload(
                     data,
                     ObjectUtils.asMap(
-                            "folder", "customer/" + folder,
+                            "folder", folder,
                             "resource_type", "image"
                     )
             );
@@ -30,6 +32,22 @@ public class CloudinaryUtils {
             log.error("Upload image error", e);
             throw new RuntimeException("Không thể upload ảnh");
         }
+    }
+
+    // Thêm MultipartFile
+    public String uploadImage(MultipartFile file, String folder) {
+        try {
+            byte[] data = file.getBytes();
+            return uploadImage(data, folder);
+        } catch (Exception e) {
+            log.error("Upload image from MultipartFile error", e);
+            throw new RuntimeException("Không thể upload ảnh từ file");
+        }
+    }
+
+    // Thêm phương thức mặc định (không cần folder)
+    public String uploadImage(MultipartFile file) {
+        return uploadImage(file, "default");
     }
 
     public void deleteImage(String imageUrl) {
