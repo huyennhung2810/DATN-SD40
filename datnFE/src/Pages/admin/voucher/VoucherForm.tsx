@@ -150,6 +150,7 @@ const VoucherForm: React.FC = () => {
   }, [currentVoucher, isEdit, form]);
 
   const onFinish = async (values: VoucherFormValues) => {
+    if (loading) return;
     const { dateRange, ...rest } = values;
     const payload: VoucherRequest = {
       ...rest,
@@ -444,17 +445,20 @@ const VoucherForm: React.FC = () => {
                   <Form.Item
                     name="maxDiscountAmount"
                     label={<Text strong>Giảm tối đa (VNĐ)</Text>}
+                    dependencies={["conditions"]} // THÊM DÒNG NÀY: Để tự động check lại khi Đơn tối thiểu thay đổi
                     rules={[
                       {
                         required: true,
                         message: "Vui lòng nhập số tiền giảm tối đa",
                       },
-                      {
-                        validator: (_, value) => {
-                          const conditions = form.getFieldValue("conditions");
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          const conditions = getFieldValue("conditions");
                           if (
-                            value &&
-                            conditions &&
+                            value !== undefined &&
+                            value !== null &&
+                            conditions !== undefined &&
+                            conditions !== null &&
                             Number(value) > Number(conditions)
                           ) {
                             return Promise.reject(
@@ -463,7 +467,7 @@ const VoucherForm: React.FC = () => {
                           }
                           return Promise.resolve();
                         },
-                      },
+                      }),
                     ]}
                   >
                     <InputNumber
@@ -488,13 +492,30 @@ const VoucherForm: React.FC = () => {
                   <Form.Item
                     name="conditions"
                     label={<Text strong>Đơn tối thiểu (VNĐ)</Text>}
+                    dependencies={["maxDiscountAmount"]} // SỬA LẠI TÊN BIẾN CHO ĐÚNG
                     rules={[
                       {
                         required: true,
                         message: "Vui lòng nhập giá trị tối thiểu",
                       },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          const maxDiscountAmount = getFieldValue("maxDiscountAmount");
+                          if (
+                            value !== undefined &&
+                            value !== null &&
+                            maxDiscountAmount !== undefined &&
+                            maxDiscountAmount !== null &&
+                            Number(value) < Number(maxDiscountAmount)
+                          ) {
+                            return Promise.reject(
+                              new Error("Đơn tối thiểu không được nhỏ hơn Giảm tối đa!"),
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      }),
                     ]}
-                    dependencies={["maxDiscountValue"]} // Thêm dòng này
                   >
                     <InputNumber
                       size="large"
@@ -560,6 +581,7 @@ const VoucherForm: React.FC = () => {
                     size="large"
                     icon={<SaveOutlined />}
                     loading={loading}
+                    
                     style={{ minWidth: 150, borderRadius: "8px" }}
                   >
                     {isEdit ? "Cập nhật Voucher" : "Lưu Voucher"}

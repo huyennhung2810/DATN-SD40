@@ -206,9 +206,6 @@ const handleStopVoucher = (id: string) => {
           }}
         >
           <Space direction="vertical" size={0}>
-            <Title level={3} style={{ margin: 0 }}>
-              Quản lý Voucher
-            </Title>
             <Text type="secondary">Phát hành và theo dõi mã giảm giá</Text>
           </Space>
           <Button

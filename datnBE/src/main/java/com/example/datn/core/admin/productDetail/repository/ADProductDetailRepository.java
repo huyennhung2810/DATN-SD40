@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ADProductDetailForDiscountRepository extends ProductDetailRepository {
+public interface ADProductDetailRepository extends ProductDetailRepository {
 
     Page<ProductDetail> findAll(Pageable pageable);
 

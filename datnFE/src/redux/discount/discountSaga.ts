@@ -66,7 +66,7 @@ function* handleGetDiscountById(action: any): any {
   }
 }
 
-// 4. Xử lý cập nhật đợt giảm giá
+// Sửa lại hàm số 4
 function* handleUpdateDiscount(action: any): any {
   try {
     const { id, data, navigate } = action.payload;
@@ -74,15 +74,15 @@ function* handleUpdateDiscount(action: any): any {
     
     // Nếu thành công
     yield put(updateDiscountSuccess(response.data));
-    message.success("Cập nhật thành công!");
+     message.success("Cập nhật thành công!");
+   
     if (navigate) navigate();
   } catch (error: any) {
-    // QUAN TRỌNG: Bắt lỗi từ Backend trả về (RuntimeException)
-    const errorMsg = error.response?.data?.message || "Lỗi xung đột thời gian giảm giá!";
+    const errorMsg = error.response?.data?.message || "Lỗi cập nhật đợt giảm giá!";
     message.error(errorMsg);
     
-    // Dispatch action Failure để tắt trạng thái Loading trên nút Lưu
-    yield put(fetchDiscountsFailure()); 
+    // SỬA DÒNG NÀY: Phải gọi đúng action Failure của Update
+    yield put({ type: "discount/updateDiscountFailure", payload: errorMsg }); 
   }
 }
 

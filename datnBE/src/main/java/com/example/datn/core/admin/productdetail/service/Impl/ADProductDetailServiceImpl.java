@@ -3,7 +3,7 @@ package com.example.datn.core.admin.productdetail.service.Impl;
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
 import com.example.datn.core.admin.color.repository.ADColorRepository;
-import com.example.datn.core.admin.productdetail.repository.ADProductDetailForDiscountRepository;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ADProductDetailServiceImpl implements ADProductDetailService {
 
-    private final ADProductDetailForDiscountRepository adProductDetailRepository;
+    private final ADProductDetailRepository adProductDetailRepository;
     private final ADColorRepository adColorRepository;
     private final ADStorageCapacityRepository adStorageCapacityRepository;
     private final ADSerialRepository adSerialRepository;

@@ -229,9 +229,10 @@ const DiscountList: React.FC = () => {
                 value={params.status}
                 onChange={(val) => setParams({ ...params, status: val, page: 0 })}
               >
-                <Select.Option value={0}>Sắp diễn ra</Select.Option>
-                <Select.Option value={1}>Đang diễn ra</Select.Option>
-                <Select.Option value={2}>Đã kết thúc</Select.Option>
+                <Select.Option value={1}>Sắp diễn ra</Select.Option>
+                <Select.Option value={2}>Đang diễn ra</Select.Option>
+                <Select.Option value={3}>Đã kết thúc</Select.Option>
+                <Select.Option value={0}>Buộc dừng</Select.Option>
               </Select>
             </Col>
 
