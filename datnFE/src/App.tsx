@@ -25,6 +25,7 @@ import WorkSchedulePage from "./Pages/admin/workSchedule/WorkSchedulePage";
 import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
 import MainLayout from "./layout/admin/MainLayout";
 import PosPage from "./Pages/admin/pos/PosPage";
+import OrderPage from "./Pages/admin/order/OrderList";
 
 // Admin Home Page
 const HomePage = () => (
@@ -40,7 +41,8 @@ const App: React.FC = () => {
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/admin/pos" element={<PosPage />} />
+          <Route path="/pos" element={<PosPage />} />
+          <Route path="/orders" element={<OrderPage />} />
           {/* Khách hàng */}
           <Route path="/customer" element={<CustomerPage />} />
           <Route path="/customerAdd" element={<CustomerForm />} />
