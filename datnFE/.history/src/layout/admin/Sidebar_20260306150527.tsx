@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Children } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "antd";
 import {
@@ -20,6 +20,7 @@ import {
   DatabaseOutlined,
   AppstoreOutlined,
 } from "@ant-design/icons";
+import { Label } from "recharts";
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -108,24 +109,24 @@ const Sidebar: React.FC = () => {
       key: "/schedule",
       icon: <CalendarOutlined />,
       label: "Quản lý Lịch làm việc",
-      children: [
-        {
-          key: "/work-schedule",
-          icon: <ScheduleOutlined />,
-          label: "Lịch làm việc",
-        },
-        {
-          key: "/shift-handover",
-          icon: <SwapOutlined />,
-          label: "Giao ca",
-        },
+      Children: 
+    }
 
-        {
-          key: "/shift-template",
-          icon: <ClockCircleOutlined />,
-          label: "Quản lý ca làm việc",
-        },
-      ],
+    {
+      key: "/work-schedule",
+      icon: <ScheduleOutlined />,
+      label: "Lịch làm việc",
+    },
+    {
+      key: "/shift-handover",
+      icon: <SwapOutlined />,
+      label: "Giao ca",
+    },
+
+    {
+      key: "/shift-template",
+      icon: <ClockCircleOutlined />,
+      label: "Quản lý ca làm việc",
     },
 
     // {
