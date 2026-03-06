@@ -213,7 +213,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
     }
 
     @Override
-    @Scheduled(cron = "0 * * * * *")
+    //@Scheduled(cron = "0 * * * * *")
     @Transactional
     public ResponseObject<?> autoUpdateStatus() {
         long now = System.currentTimeMillis();

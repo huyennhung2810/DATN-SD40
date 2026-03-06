@@ -1,14 +1,17 @@
-package com.example.datn.core.admin.productdetail.controller;
+package com.example.datn.core.admin.productDetail.controller;
 
-import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
+
+import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.MappingConstants;
-import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,8 +33,21 @@ public class ADProductDetailController {
     }
 
     @PostMapping
-    public ResponseObject<?> addProductDetail(@Valid @RequestBody ADProductDetailRequest adProductDetailRequest) {
-        return adProductDetailService.createProductDetail(adProductDetailRequest);
+    public ResponseEntity<ResponseObject<ADProductDetailResponse>> add(@RequestBody ADProductDetailRequest request) {
+
+
+        ResponseObject<ADProductDetailResponse> res = new ResponseObject<>();
+        try {
+            ADProductDetailResponse response = adProductDetailService.addProductDetail(request);
+            res.setStatus(HttpStatus.OK);
+            res.setMessage("Thêm mới sản phẩm chi tiết thành công!");
+            res.setData(response);
+            res.setSuccess(true);
+        }catch (Exception e) {
+            System.out.println("===LỖI RỒI");
+        }
+
+        return ResponseEntity.ok(res);
     }
 
     @PutMapping("/{id}")

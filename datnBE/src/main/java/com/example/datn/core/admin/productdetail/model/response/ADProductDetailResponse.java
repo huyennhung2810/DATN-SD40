@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productdetail.model.response;
+package com.example.datn.core.admin.productDetail.model.response;
 
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -23,8 +23,14 @@ public class ADProductDetailResponse {
     private Integer quantity;
     private BigDecimal salePrice;
     private EntityStatus status;
+
+    private String colorId;
     private String colorName;
+
+    private String productId;
     private String productName;
+
+    private String storageCapacityId;
     private String storageCapacityName;
     private String creationDate;
 
