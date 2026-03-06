@@ -11,8 +11,8 @@ import GrowthChart from "../../Pages/admin/statistics/GrowthStat";
 
 const StatisticsPage: React.FC = () => {
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <Row gutter={[24, 24]}>
+    <div style={{ padding: "var(--spacing-xl)" }}>
+      <Row gutter={[20, 20]}>
         <Col span={24}>
           <DashboardSummaryCards />
         </Col>
@@ -31,7 +31,7 @@ const StatisticsPage: React.FC = () => {
         <Col xs={24} lg={16}>
           <TopSelling />
 
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 20 }}>
             <LowStockTable />
           </div>
         </Col>

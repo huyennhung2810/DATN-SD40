@@ -79,6 +79,8 @@ const TechSpecTab: React.FC<TabItemProps> = ({
   const [form] = Form.useForm();
   const [modalForm] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { notification } = App.useApp();
 
   const fetchData = useCallback(() => {
@@ -145,6 +147,9 @@ const TechSpecTab: React.FC<TabItemProps> = ({
   };
 
   const handleSubmit = () => {
+    if (isSubmitting) {
+      return;
+    }
     modalForm.validateFields().then((values) => {
       const data = {
         id: currentItem?.id,
@@ -153,16 +158,37 @@ const TechSpecTab: React.FC<TabItemProps> = ({
         status: values.status,
       };
 
+      setIsSubmitting(true);
       dispatch(
         currentItem
-          ? actions.update({ data, onSuccess: closeModal })
-          : actions.create({ data, onSuccess: closeModal })
+          ? actions.update({
+              data,
+              onSuccess: () => {
+                setIsSubmitting(false);
+                closeModal();
+              },
+            })
+          : actions.create({
+              data,
+              onSuccess: () => {
+                setIsSubmitting(false);
+                closeModal();
+              },
+            })
       );
     });
   };
 
   const handleDelete = (id: string) => {
+    if (deletingId) {
+      return;
+    }
+    setDeletingId(id);
     dispatch(deleteItem(id));
+    // reset trạng thái sau một khoảng ngắn để tránh khóa vĩnh viễn
+    setTimeout(() => {
+      setDeletingId((current) => (current === id ? null : current));
+    }, 800);
   };
 
   const columns: ColumnsType<any> = [
@@ -229,6 +255,10 @@ const TechSpecTab: React.FC<TabItemProps> = ({
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{
+              loading: deletingId === record.id,
+              disabled: !!deletingId && deletingId !== record.id,
+            }}
           >
             <Tooltip title="Xóa">
               <Button
@@ -346,6 +376,7 @@ const TechSpecTab: React.FC<TabItemProps> = ({
         open={isModalOpen}
         onCancel={closeModal}
         onOk={handleSubmit}
+        confirmLoading={isSubmitting}
         okText="Lưu"
         cancelText="Hủy"
         width={500}

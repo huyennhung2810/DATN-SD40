@@ -26,7 +26,8 @@ import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
 import MainLayout from "./layout/admin/MainLayout";
 import PosPage from "./Pages/admin/pos/PosPage";
 import OrderPage from "./Pages/admin/order/OrderList";
-
+import BannerList from "./Pages/admin/banner/BannerList";
+import 'antd/dist/reset.css';
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -68,6 +69,8 @@ const App: React.FC = () => {
             path="/products/storage-capacity"
             element={<StorageCapacityPage />}
           />
+          {/* Banner Management */}
+          <Route path="/admin/banner" element={<BannerList />} />
           {/* Thống kê */}
           <Route path="/statistics" element={<StatisticsPage />} />
           {/* Lịch làm việc */}

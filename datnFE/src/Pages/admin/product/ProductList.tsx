@@ -107,6 +107,7 @@ const ProductPage: React.FC = () => {
     const [stepLoading, setStepLoading] = useState(false);
     const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
     const [drawerPendingImages, setDrawerPendingImages] = useState<{ file: File; preview: string }[]>([]);
+    const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
     // load ảnh
     useEffect(() => {
@@ -482,6 +483,10 @@ const ProductPage: React.FC = () => {
     // ===== END FORM WIZARD =====
 
     const handleDelete = (id: string) => {
+        if (isDeletingId) {
+            return;
+        }
+        setIsDeletingId(id);
         dispatch(productActions.deleteProduct(id));
     };
 
@@ -705,43 +710,30 @@ const ProductPage: React.FC = () => {
     };
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <Card className="mb-3" style={{ borderRadius: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+            <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
                 <Space align="center" size={16}>
                     <div
                         style={{
-                            backgroundColor: "#e6f7ff",
+                            backgroundColor: "var(--color-primary-light)",
                             padding: "12px",
-                            borderRadius: "10px",
+                            borderRadius: "var(--radius-md)",
                         }}
                     >
-                        <CameraOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
+                        <CameraOutlined style={{ fontSize: "24px", color: "var(--color-primary)" }} />
                     </div>
                     <div>
-                        <Title level={4} style={{ margin: 0 }}>
+                        <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
                             Quản lý sản phẩm
                         </Title>
-                        <Text type="secondary" style={{ fontSize: "14px" }}>
+                        <Text type="secondary" style={{ fontSize: "13px" }}>
                             Quản lý sản phẩm của hệ thống
                         </Text>
                     </div>
                 </Space>
-            </Card>
+            </div>
 
-            <Card
-                title={<span><SearchOutlined /> Bộ lọc tìm kiếm</span>}
-                extra={
-                    <Tooltip title="Làm mới bộ lọc">
-                        <Button
-                            shape="circle"
-                            icon={<ReloadOutlined />}
-                            onClick={handleReset}
-                            type="primary"
-                            ghost
-                        />
-                    </Tooltip>
-                }
-            >
+            <div className="filter-bar" style={{ marginBottom: "var(--spacing-lg)" }}>
                 <Form form={form} layout="vertical">
                     <Row gutter={[16, 16]}>
                         <Col xs={24} md={6}>
@@ -898,34 +890,29 @@ const ProductPage: React.FC = () => {
                         </Col>
                     </Row>
                 </Form>
-            </Card>
+            </div>
 
-            <Card
-                title={
-                    <Text strong style={{ fontSize: "16px" }}>
+            <div className="content-card" style={{ padding: 0, overflow: "hidden" }}>
+                <div className="content-card-header" style={{ padding: "var(--spacing-lg)", margin: 0, borderBottom: "1px solid var(--color-border-secondary)" }}>
+                    <Text strong style={{ fontSize: "15px" }}>
                         Danh sách sản phẩm ({totalElements})
                     </Text>
-                }
-                extra={
                     <Space size="middle">
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={() => openModal()}
-                            style={{ borderRadius: "20px", height: "35px" }}
                         >
                             Thêm mới
                         </Button>
                         <Button
                             icon={<ReloadOutlined spin={loading} />}
                             onClick={handleRefresh}
-                            style={{ borderRadius: "20px" }}
                         >
                             Tải lại
                         </Button>
                     </Space>
-                }
-            >
+                </div>
                 {loading ? (
                     <div style={{ textAlign: "center", padding: "50px" }}>
                         <Spin size="large" />
@@ -1013,6 +1000,7 @@ const ProductPage: React.FC = () => {
                                             onCancel={(e) => e?.stopPropagation()}
                                             okText="Xóa"
                                             cancelText="Hủy"
+                                            okButtonProps={{ loading: isDeletingId === product.id, disabled: !!isDeletingId && isDeletingId !== product.id }}
                                             key="delete"
                                         >
                                             <Tooltip title="Xóa">
@@ -1073,7 +1061,7 @@ const ProductPage: React.FC = () => {
                         pageSizeOptions={["12", "24", "48"]}
                     />
                 </div>
-            </Card>
+            </div>
 
             {/* Create/Edit Modal with Steps */}
             <Modal

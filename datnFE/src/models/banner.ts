@@ -4,7 +4,10 @@ export interface BannerResponse {
   id: string;
   code?: string;
   title?: string;
+  description?: string;
+  buttonText?: string;
   imageUrl: string;
+  mobileImageUrl?: string;
   linkUrl?: string;
   position?: string;
   priority?: number;
@@ -16,7 +19,6 @@ export interface BannerResponse {
   slot: string;
   targetUrl?: string;
   altText?: string;
-  description?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -25,7 +27,10 @@ export interface BannerRequest {
   id?: string;
   code?: string;
   title?: string;
+  description?: string;
+  buttonText?: string;
   imageUrl: string;
+  mobileImageUrl?: string;
   linkUrl?: string;
   position?: string;
   priority?: number;

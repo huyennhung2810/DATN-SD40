@@ -15,6 +15,8 @@ import {
   ClockCircleOutlined,
   SettingOutlined,
   BarcodeOutlined,
+  PictureOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
@@ -22,12 +24,14 @@ import {
   Typography,
   Space,
   Dropdown,
+  Input,
   type MenuProps,
   Button,
 } from "antd";
 import { useLocation } from "react-router-dom";
 
 const { Text, Title } = Typography;
+const { Search } = Input;
 
 const pageInfoMap: Record<
   string,
@@ -93,13 +97,20 @@ const pageInfoMap: Record<
     desc: "Tạo và quản lý các ca làm việc định kỳ",
     icon: <ClockCircleOutlined />,
   },
+  "/admin/banner": {
+    title: "Quản lý Banner",
+    desc: "Quản lý banner hiển thị trên trang khách hàng",
+    icon: <PictureOutlined />,
+  },
 };
 
 const Header: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const currentPage = pageInfoMap[currentPath] || {
+  const basePath = "/" + currentPath.split("/").slice(1, 2).join("/");
+
+  const currentPage = pageInfoMap[basePath] || pageInfoMap[currentPath] || {
     title: "Tổng quan",
     desc: "Chào mừng bạn quay trở lại hệ thống quản lý",
     icon: <ShopOutlined />,
@@ -124,76 +135,197 @@ const Header: React.FC = () => {
   ];
 
   return (
-    <header
-      style={{
-        height: "60px",
-        padding: "0 24px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        borderBottom: "1px solid #f0f0f0",
-        backgroundColor: "#fff",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <Space size="middle" align="center">
-        <div
-          style={{
-            padding: "10px",
-            backgroundColor: "#f8c0c0",
-            borderRadius: "8px",
-            color: "#ff1818",
-            fontSize: "22px",
-            display: "flex",
-          }}
-        >
+    <header className="admin-header">
+      {/* Page Info */}
+      <div className="header-page-info">
+        <div className="page-icon">
           {currentPage.icon}
         </div>
-        <div>
-          <Title
-            level={4}
-            style={{ margin: 0, fontWeight: 600, fontSize: "18px" }}
-          >
+        <div className="page-text">
+          <Title level={5} className="page-title">
             {currentPage.title}
           </Title>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
+          <Text type="secondary" className="page-desc">
             {currentPage.desc}
           </Text>
         </div>
-      </Space>
+      </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+      {/* Search */}
+      <div className="header-search">
+        <Search
+          placeholder="Tìm kiếm..."
+          allowClear
+          className="header-search-input"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="header-actions">
         <Badge count={3} size="small">
           <Button
             type="text"
-            icon={<BellOutlined style={{ fontSize: "20px" }} />}
+            icon={<BellOutlined />}
+            className="header-action-btn"
           />
         </Badge>
 
-        <Dropdown menu={{ items }} trigger={["click"]}>
-          <Space
-            style={{
-              cursor: "pointer",
-              padding: "4px 8px",
-              borderRadius: "8px",
-            }}
-            className="hover:bg-gray-50 transition-all"
-          >
-            <div style={{ textAlign: "right", lineHeight: "1.2" }}>
-              <div style={{ fontWeight: 600, fontSize: "14px" }}>Nhung</div>
-              <Text type="secondary" style={{ fontSize: "11px" }}>
-                Quản trị viên
-              </Text>
-            </div>
+        <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+          <div className="header-user">
             <Avatar
               icon={<UserOutlined />}
-              style={{ border: "2px solid #e6f7ff" }}
+              className="header-avatar"
             />
-          </Space>
+            <div className="header-user-info">
+              <div className="header-user-name">Admin</div>
+              <div className="header-user-role">Quản trị viên</div>
+            </div>
+          </div>
         </Dropdown>
       </div>
+
+      <style>{`
+        .admin-header {
+          height: var(--header-height);
+          padding: 0 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid var(--color-border-secondary);
+          background: #fff;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          flex-shrink: 0;
+        }
+
+        /* Page Info */
+        .header-page-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .page-icon {
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
+          border-radius: 10px;
+          color: #fff;
+          font-size: 18px;
+        }
+
+        .page-text {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .page-title {
+          margin: 0 !important;
+          font-weight: 600 !important;
+          font-size: 15px !important;
+          color: var(--color-text-primary);
+          line-height: 1.3;
+        }
+
+        .page-desc {
+          font-size: 12px;
+          color: var(--color-text-secondary) !important;
+        }
+
+        /* Search */
+        .header-search {
+          flex: 1;
+          max-width: 400px;
+          margin: 0 24px;
+        }
+
+        .header-search-input {
+          width: 100%;
+        }
+
+        .header-search-input .ant-input {
+          border-radius: 8px;
+          background: var(--color-bg-spotlight);
+        }
+
+        .header-search-input .ant-input:hover,
+        .header-search-input .ant-input:focus {
+          border-color: #0A84FF;
+        }
+
+        /* Actions */
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .header-action-btn {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          color: var(--color-text-secondary);
+        }
+
+        .header-action-btn:hover {
+          background: var(--color-bg-spotlight);
+          color: #0A84FF;
+        }
+
+        /* User */
+        .header-user {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .header-user:hover {
+          background: var(--color-bg-spotlight);
+        }
+
+        .header-avatar {
+          background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
+        }
+
+        .header-user-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .header-user-name {
+          font-weight: 600;
+          font-size: 13px;
+          color: var(--color-text-primary);
+          line-height: 1.3;
+        }
+
+        .header-user-role {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .header-search {
+            display: none;
+          }
+
+          .header-user-info {
+            display: none;
+          }
+        }
+      `}</style>
     </header>
   );
 };
