@@ -24,7 +24,7 @@ public class Warranty extends PrimaryEntity implements Serializable {
     @Column(name = "note")
     private String note;
 
-    @ManyToOne
-    @JoinColumn(name = "id_order_detail", referencedColumnName = "id")
-    private OrderDetail orderDetail;
+    @OneToOne
+    @JoinColumn(name = "id_serial", referencedColumnName = "id")
+    private Serial serial;
 }

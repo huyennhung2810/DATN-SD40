@@ -1,4 +1,5 @@
 package com.example.datn.entity;
+
 import com.example.datn.entity.base.PrimaryEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -39,8 +40,4 @@ public class OrderDetail extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_product_detail", referencedColumnName = "id")
     private ProductDetail productDetail;
-
-    @OneToOne
-    @JoinColumn(name = "id_warranty", referencedColumnName = "id")
-    private Warranty warranty;
 }

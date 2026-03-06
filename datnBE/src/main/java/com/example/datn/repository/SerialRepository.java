@@ -15,4 +15,6 @@ public interface SerialRepository extends JpaRepository<Serial, String> {
     Set<String> findByCodeIn(Collection<String> codes);
 
     boolean existsBySerialNumber(String serialNumber);
+
+    java.util.Optional<Serial> findBySerialNumber(String serialNumber);
 }

@@ -33,17 +33,16 @@ public class ADSerialServiceImpl implements ADSerialService {
     public ResponseObject<?> getAllSerials(String keyword, EntityStatus status) {
         List<Serial> list = adSerialRepository.searchSerials(keyword, status);
 
-        List<ADSerialResponse> dtoList = list.stream().map(entity ->
-                ADSerialResponse.builder()
-                        .id(entity.getId())
-                        .serialNumber(entity.getSerialNumber())
-                        .code(entity.getCode())
-                        .productName(entity.getProductDetail() != null ?
-                                entity.getProductDetail().getProduct().getName() : "N/A")
-                        .createdDate(Helper.formatDate(entity.getCreatedDate()))
-                        .status(entity.getStatus())
-                        .build()
-        ).toList();
+        List<ADSerialResponse> dtoList = list.stream().map(entity -> ADSerialResponse.builder()
+                .id(entity.getId())
+                .serialNumber(entity.getSerialNumber())
+                .code(entity.getCode())
+                .productName(
+                        entity.getProductDetail() != null ? entity.getProductDetail().getProduct().getName() : "N/A")
+                .createdDate(Helper.formatDate(entity.getCreatedDate()))
+                .status(entity.getStatus())
+                .serialStatus(entity.getSerialStatus())
+                .build()).toList();
 
         return ResponseObject.success(dtoList, "Tìm kiếm thành công");
     }
@@ -62,6 +61,7 @@ public class ADSerialServiceImpl implements ADSerialService {
                 .serialNumber(serial.getSerialNumber())
                 .code(serial.getCode())
                 .status(serial.getStatus())
+                .serialStatus(serial.getSerialStatus())
                 .createdDate(Helper.formatDate(serial.getCreatedDate()))
                 .build();
 
@@ -78,29 +78,29 @@ public class ADSerialServiceImpl implements ADSerialService {
 
     @Override
     public ResponseObject<?> findByProductDetailId(String productDetailId) {
-        if(productDetailId == null) {
+        if (productDetailId == null) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã sản phầm chi tiết không được để trống");
         }
         Page<Serial> list = adSerialRepository.findByProductDetailId(productDetailId, PageRequest.of(0, 10));
         if (list.isEmpty()) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Không tìm thấy Serial cho dòng sản phẩm này");
         }
-        List<ADSerialResponse> dtoList = list.stream().map(entity ->
-                ADSerialResponse.builder()
-                        .id(entity.getId())
-                        .serialNumber(entity.getSerialNumber())
-                        .code(entity.getCode())
-                        .productName(entity.getProductDetail().getProduct().getName())
-                        .createdDate(Helper.formatDate(entity.getCreatedDate()))
-                        .status(entity.getStatus()).build()
-        ).toList();
+        List<ADSerialResponse> dtoList = list.stream().map(entity -> ADSerialResponse.builder()
+                .id(entity.getId())
+                .serialNumber(entity.getSerialNumber())
+                .code(entity.getCode())
+                .productName(entity.getProductDetail().getProduct().getName())
+                .createdDate(Helper.formatDate(entity.getCreatedDate()))
+                .status(entity.getStatus())
+                .serialStatus(entity.getSerialStatus())
+                .build()).toList();
         return ResponseObject.success(dtoList, "Hiển thị danh sách Serial theo mã " + productDetailId);
     }
 
     @Override
     public ResponseEntity<?> createSerial(ADSerialRequest request) {
         if (adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
-            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại"));
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial đã tồn tại"));
         }
         Serial serial = new Serial();
         serial.setSerialNumber(request.getSerialNumber());
@@ -108,7 +108,7 @@ public class ADSerialServiceImpl implements ADSerialService {
 
         ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
         if (productDetail == null) {
-            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống"));
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "SPCT đang bị trống"));
         }
         serial.setProductDetail(productDetail);
         serial.setStatus(request.getStatus());
@@ -120,19 +120,20 @@ public class ADSerialServiceImpl implements ADSerialService {
     public ResponseEntity<?> updateSerial(String serialId, ADSerialRequest request) {
         Serial serial = adSerialRepository.findById(serialId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Serial cần sửa"));
-        if (!serial.getSerialNumber().equals(request.getSerialNumber()) && adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
-            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"Serial đã tồn tại"));
+        if (!serial.getSerialNumber().equals(request.getSerialNumber())
+                && adSerialRepository.existsBySerialNumber(request.getSerialNumber())) {
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial đã tồn tại"));
         }
         serial.setSerialNumber(request.getSerialNumber());
         serial.setCode(request.getCode());
 
         /*
-        Nhớ phải thêm ProductDetail Vào dây
+         * Nhớ phải thêm ProductDetail Vào dây
          */
 
         ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
         if (productDetail == null) {
-            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST,"SPCT đang bị trống"));
+            return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "SPCT đang bị trống"));
         }
         serial.setProductDetail(productDetail);
         adSerialRepository.save(serial);
