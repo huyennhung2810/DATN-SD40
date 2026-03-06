@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/pos/orders")
+@RequestMapping("/api/v1/admin/pos/orders")
 @RequiredArgsConstructor
 public class POSOrderController {
 
