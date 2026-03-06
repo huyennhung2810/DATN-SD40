@@ -478,61 +478,25 @@ const EmployeeForm: React.FC = () => {
               <Form.Item
                 name="username"
                 label={<Text strong>Tên đăng nhập</Text>}
-                validateTrigger="onChange"
-                hasFeedback
-                rules={[
-                  {
-                    required: !isEdit,
-                    message: "Vui lòng nhập tên đăng nhập",
-                  },
-                  {
-                    validator: duplicateValidator("username"),
-                  },
-                ]}
+                rules={[{ required: !isEdit }]}
               >
                 <Input
                   size="large"
                   prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
                   disabled={isEdit}
-                  placeholder="Nhập tên đăng nhập"
                 />
               </Form.Item>
 
               <Form.Item
                 name="password"
                 label={<Text strong>Mật khẩu</Text>}
-                rules={[
-                  {
-                    required: !isEdit,
-                    message: "Vui lòng nhập mật khẩu",
-                  },
-                  {
-                    min: 8,
-                    message: "Mật khẩu phải có ít nhất 8 ký tự",
-                  },
-                  {
-                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-                    message: "Mật khẩu phải bao gồm chữ hoa, chữ thường và số",
-                  },
-                  {
-                    validator: (_, value) => {
-                      if (value && value.includes(" ")) {
-                        return Promise.reject(
-                          new Error("Mật khẩu không được chứa khoảng trắng"),
-                        );
-                      }
-                      return Promise.resolve();
-                    },
-                  },
-                ]}
+                rules={[{ required: !isEdit }]}
               >
                 <Input.Password
                   size="large"
                   prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
-                  placeholder={
-                    isEdit ? "Để trống nếu không muốn đổi" : "Nhập mật khẩu"
-                  }
-                  autoComplete="new-password"
+                  placeholder="******"
+                  autoComplete="current-password"
                 />
               </Form.Item>
 
@@ -545,7 +509,7 @@ const EmployeeForm: React.FC = () => {
                   size="large"
                   options={[
                     { label: "Nhân viên", value: "STAFF" },
-                    { label: "ADMIN", value: "ADMIN" },
+                    { label: "Quản trị", value: "ADMIN" },
                   ]}
                 />
               </Form.Item>
@@ -560,7 +524,7 @@ const EmployeeForm: React.FC = () => {
                   <Form.Item
                     name="identityCard"
                     label={<Text strong>Số CCCD</Text>}
-                    validateTrigger="onChange"
+                    validateTrigger="onBlur"
                     hasFeedback
                     rules={[
                       {
@@ -653,7 +617,7 @@ const EmployeeForm: React.FC = () => {
                   <Form.Item
                     name="email"
                     label={<Text strong>Email</Text>}
-                    validateTrigger="onChange"
+                    validateTrigger="onBlur"
                     hasFeedback
                     rules={[
                       {
@@ -671,7 +635,7 @@ const EmployeeForm: React.FC = () => {
                   <Form.Item
                     name="phoneNumber"
                     label={<Text strong>SĐT</Text>}
-                    validateTrigger="onChange"
+                    validateTrigger="onBlur"
                     rules={[
                       {
                         required: true,
