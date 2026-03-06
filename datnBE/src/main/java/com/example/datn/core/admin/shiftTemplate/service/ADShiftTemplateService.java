@@ -8,6 +8,7 @@ import com.example.datn.infrastructure.constant.EntityStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,8 +17,8 @@ import java.util.stream.Collectors;
 public class ADShiftTemplateService {
     private final ADShiftTemplateRepository repository;
 
-    public List<ADShiftTemplateResponse> getAll() {
-        return repository.findAllByStatus(EntityStatus.ACTIVE)
+    public List<ADShiftTemplateResponse> getAll(String keyword, EntityStatus status, LocalTime startTime, LocalTime endTime) {
+        return repository.searchShifts(keyword, status, startTime, endTime)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -34,6 +35,40 @@ public class ADShiftTemplateService {
         shift.setEndTime(request.getEndTime());
         shift.setStatus(EntityStatus.ACTIVE);
 
+        ShiftTemplate saved = repository.save(shift);
+        return mapToResponse(saved);
+    }
+
+    public ADShiftTemplateResponse update(String id, ADShiftTemplateRequest request) {
+        ShiftTemplate shift = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
+
+        if (request.getStartTime().isAfter(request.getEndTime())) {
+            throw new RuntimeException("Giờ bắt đầu phải trước giờ kết thúc");
+        }
+
+        shift.setName(request.getName());
+        shift.setStartTime(request.getStartTime());
+        shift.setEndTime(request.getEndTime());
+
+        ShiftTemplate saved = repository.save(shift);
+        return mapToResponse(saved);
+    }
+
+
+    public ADShiftTemplateResponse changeStatus(String id) {
+        // Tìm ca làm việc
+        ShiftTemplate shift = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc này"));
+
+        //Logic đảo trạng thái
+        if (shift.getStatus() == EntityStatus.ACTIVE) {
+            shift.setStatus(EntityStatus.INACTIVE);
+        } else {
+            shift.setStatus(EntityStatus.ACTIVE);
+        }
+
+        //Lưu lại và trả về response
         ShiftTemplate saved = repository.save(shift);
         return mapToResponse(saved);
     }
