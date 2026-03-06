@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ColorRepository extends JpaRepository<Color, String> {
+
+    boolean existsByCode(String code);
+
+    boolean existsByName(String name);
 }

@@ -23,9 +23,5 @@ public interface ADAddressRepository extends AddressRepository {
     @Query("UPDATE Address a SET a.isDefault = false WHERE a.customer.id = :customerId")
     void unsetDefaultByCustomer(@Param("customerId") String customerId);
 
-    // Thêm hàm này để dùng trong luồng Update Khách hàng (Bulk Update)
     void deleteAllByCustomerId(String customerId);
-
-
-
 }

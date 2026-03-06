@@ -44,4 +44,3 @@ public class Banner extends PrimaryEntity {
     @Column(name = "status")
     private EntityStatus status;
 }
-

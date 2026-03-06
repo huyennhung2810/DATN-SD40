@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StorageCapacityRepository extends JpaRepository<StorageCapacity, String> {
+
+    boolean existsByCode(String code);
+
+    boolean existsByName(String name);
 }

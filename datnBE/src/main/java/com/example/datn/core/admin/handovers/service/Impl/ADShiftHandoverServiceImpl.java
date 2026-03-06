@@ -42,7 +42,6 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Ca làm việc này đã được Check-in");
         }
 
-        // Logic lấy tiền từ ca cuối cùng nếu không nhập tiền đầu ca
         BigDecimal initialCash = request.getInitialCash();
         if (initialCash == null) {
             Optional<ShiftHandover> lastShift = shiftHandoverRepository
@@ -54,7 +53,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         shiftHandover.setWorkSchedule(workSchedule);
         shiftHandover.setCheckInTime(System.currentTimeMillis());
         shiftHandover.setInitialCash(initialCash);
-        shiftHandover.setHandoverStatus(HandoverStatus.OPEN);
+        shiftHandover.setHandoverStatus(HandoverStatus.CLOSED);
         shiftHandover.setNote(request.getNote());
 
         workSchedule.setShiftStatus(ShiftStatus.WORKING);

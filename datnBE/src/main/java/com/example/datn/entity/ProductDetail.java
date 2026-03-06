@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,4 +41,8 @@ public class ProductDetail extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_storage_capacity", referencedColumnName = "id")
     private StorageCapacity storageCapacity;
+
+    @OneToMany(mappedBy = "productDetail", fetch = FetchType.LAZY)
+    @ToString.Exclude // Để tránh lỗi vòng lặp vô tận khi in log
+    private List<Serial> serials = new ArrayList<>();
 }

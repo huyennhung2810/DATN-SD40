@@ -77,7 +77,7 @@ public class ADCustomerServiceImpl implements ADCustomerService {
 
         // Nếu là cập nhật (Edit), bạn có thể cần xóa địa chỉ cũ hoặc xử lý ghi đè
         if (isUpdate) {
-             adAddressRepository.deleteAllByCustomerId(customer.getId()); // Tùy vào logic của bạn
+            adAddressRepository.deleteAllByCustomerId(customer.getId()); // Tùy vào logic của bạn
         }
 
         List<Address> addresses = addressRequests.stream().map(req -> {
