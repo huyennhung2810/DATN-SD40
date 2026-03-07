@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   Button,
@@ -38,7 +38,7 @@ const ShiftHandoverPage: React.FC = () => {
   const [isCheckOutOpen, setIsCheckOutOpen] = useState<boolean>(false);
 
   // 2. Mock Schedule ID (Phần này Nhung sẽ thay bằng ID thật từ lịch làm việc sau này)
-  const currentScheduleId = "mock-schedule-uuid-123";
+  const currentScheduleId = "111"
 
   // 3. Xác định trạng thái ca làm việc
   const hasStartedShift = !!currentShift;
@@ -47,7 +47,7 @@ const ShiftHandoverPage: React.FC = () => {
     <div style={{ padding: "24px", minHeight: "85vh", background: "#f0f2f5" }}>
       <Row justify="center">
         <Col xs={24} sm={22} md={18} lg={14} xl={12}>
-          <Spin spinning={isLoading} tip="Đang xử lý dữ liệu...">
+          <Spin spinning={isLoading} description="Đang xử lý dữ liệu...">
             <Card
               variant="borderless"
               style={{
@@ -79,21 +79,22 @@ const ShiftHandoverPage: React.FC = () => {
                     Check-in để bắt đầu bán hàng.
                   </Text>
                   <Button
-                    type="primary"
-                    size="large"
-                    icon={<PlayCircleOutlined />}
-                    onClick={() => setIsCheckInOpen(true)}
-                    style={{
-                      height: 50,
-                      padding: "0 40px",
-                      borderRadius: 25,
-                      backgroundColor: "#20c997",
-                      borderColor: "#20c997",
-                      fontSize: 18,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Bắt Đầu Ca Ngay
+                  type="primary"
+                  size="large"
+                  icon={<PlayCircleOutlined />}
+                  disabled={!currentScheduleId} // Vô hiệu hóa nút nếu biến đang là null
+                  onClick={() => setIsCheckInOpen(true)}
+                  style={{
+                    height: 50,
+                    padding: "0 40px",
+                    borderRadius: 25,
+                    backgroundColor: currentScheduleId ? "#20c997" : "#d9d9d9", // Đổi màu xám nếu bị disable
+                    borderColor: currentScheduleId ? "#20c997" : "#d9d9d9",
+                    fontSize: 18,
+                    fontWeight: 600,
+                  }}
+                >
+                  {currentScheduleId ? "Bắt Đầu Ca Ngay" : "Đang tải lịch làm việc..."}
                   </Button>
                 </div>
               ) : (

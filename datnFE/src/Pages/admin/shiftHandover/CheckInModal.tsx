@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react"; // THÊM HOẶC SỬA: Import thêm useEffect
 import { Modal, Form, InputNumber, Button, Typography, Space } from "antd";
 import { PlayCircleOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,12 +8,14 @@ import { shiftActions } from "../../../redux/shiftHandover/shiftHandoverSlice";
 const { Title, Text } = Typography;
 
 interface CheckInFormValues {
-  initialCash?: number | string;
+  initialCash?: number; // SỬA: Chỉ để number vì AntD sẽ tự parse
 }
 
+// LƯU Ý: Tốt nhất bạn nên import RootState từ file store.ts của bạn thay vì định nghĩa lại ở đây
 interface RootState {
   shiftHandover: {
     isLoading: boolean;
+    currentShift: any; // THÊM: Để biết khi nào check-in thành công
   };
 }
 
@@ -26,20 +28,26 @@ interface Props {
 const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
   const [form] = Form.useForm<CheckInFormValues>();
   const dispatch = useDispatch();
-  const isLoading = useSelector(
-    (state: RootState) => state.shiftHandover.isLoading,
+  
+  // Lấy thêm currentShift từ Redux
+  const { isLoading, currentShift } = useSelector(
+    (state: RootState) => state.shiftHandover
   );
 
-  const handleFinish = (values: CheckInFormValues) => {
-    // "Rửa sạch" dấu phẩy thành số nguyên thủy
-    const cleanInitialCash = values.initialCash
-      ? Number(String(values.initialCash).replace(/,/g, ""))
-      : undefined;
+  // THÊM: Tự động đóng modal và reset form khi check-in thành công
+  useEffect(() => {
+    if (currentShift && isOpen) {
+      onClose();
+      form.resetFields(); // Làm sạch form cho lần sau
+    }
+  }, [currentShift, isOpen, onClose, form]);
 
+  const handleFinish = (values: CheckInFormValues) => {
+    // SỬA: Không cần "rửa" chuỗi nữa vì parser của InputNumber đã làm việc đó
     const payload: CheckInRequest = {
       scheduleId,
-      initialCash: cleanInitialCash,
-      note: "", // Giao diện mới không yêu cầu ghi chú
+      initialCash: values.initialCash || 0, // Đề phòng undefined thì mặc định là 0
+      note: "",
     };
     dispatch(shiftActions.checkInRequest(payload));
   };
@@ -57,7 +65,7 @@ const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
       open={isOpen}
       onCancel={onClose}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
       destroyOnHidden
       width={450}
     >
@@ -69,18 +77,24 @@ const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
           </Text>
         </div>
 
+        {/* THÊM: Có thể thêm rule required bắt buộc nhập */}
         <Form.Item
           name="initialCash"
           label={<Text strong>Số tiền mặt ban đầu (VND)</Text>}
+          rules={[{ required: true, message: "Vui lòng nhập số tiền mặt!" }]}
         >
           <InputNumber
-            style={{ width: "100%", height: 40 }}
-            formatter={(value) =>
-              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-            }
-            min={0}
-            placeholder="Nhập số tiền mặt"
-          />
+          style={{ width: "100%", height: 40 }}
+          formatter={(value) =>
+            `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+          }
+          parser={(value) => {
+            if (!value) return 0;
+            return Number(value.replace(/,/g, ""));
+          }}
+          min={0 as number} /* SỬA Ở ĐÂY: Ép kiểu '0' thành 'number' để TS hiểu đúng */
+          placeholder="Nhập số tiền mặt"
+        />
         </Form.Item>
 
         <Form.Item style={{ marginBottom: 0, marginTop: 10 }}>
