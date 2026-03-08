@@ -8,9 +8,7 @@ import {
 } from "@ant-design/icons";
 import BannerCarousel from "../../components/customer/BannerCarousel";
 import ProductCard from "../../components/customer/ProductCard";
-import { bannerApi } from "../../api/customerApi";
 import { customerProductApi } from "../../api/customerProductApi";
-import type { BannerResponse } from "../../models/banner";
 import type { ProductResponse } from "../../models/product";
 
 const { Title, Text } = Typography;
@@ -50,29 +48,10 @@ const services = [
 ];
 
 const HomePage: React.FC = () => {
-  const [banners, setBanners] = useState<BannerResponse[]>([]);
-  const [bannersLoading, setBannersLoading] = useState(true);
   const [featuredProducts, setFeaturedProducts] = useState<ProductResponse[]>([]);
   const [newProducts, setNewProducts] = useState<ProductResponse[]>([]);
   const [saleProducts, setSaleProducts] = useState<ProductResponse[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
-
-  // Load banners
-  useEffect(() => {
-    const loadBanners = async () => {
-      try {
-        setBannersLoading(true);
-        const data = await bannerApi.getActiveBanners("HOME_HERO");
-        setBanners(data);
-      } catch (error) {
-        console.error("Error loading banners:", error);
-        setBanners([]);
-      } finally {
-        setBannersLoading(false);
-      }
-    };
-    loadBanners();
-  }, []);
 
   // Load products
   useEffect(() => {
@@ -134,15 +113,7 @@ const HomePage: React.FC = () => {
   return (
     <>
       {/* Hero Banner with Promo Strip */}
-      <BannerCarousel
-        banners={banners}
-        loading={bannersLoading}
-        onBannerClick={(linkUrl) => {
-          if (linkUrl) {
-            window.open(linkUrl, "_blank");
-          }
-        }}
-      />
+      <BannerCarousel position="HOME_HERO" autoPlay={true} />
 
       {/* Category Shortcuts */}
       <section className="category-shortcuts">

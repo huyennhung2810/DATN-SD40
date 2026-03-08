@@ -10,7 +10,6 @@ export interface ProductResponse {
   idTechSpec?: string;
   techSpecName?: string;
   techSpec?: TechSpecResponse;
-  price?: number;
   status: CommonStatus;
   createdDate: number;
   lastModifiedDate: number;
@@ -24,7 +23,6 @@ export interface ProductRequest {
   idProductCategory?: string | null;
   idTechSpec?: string | null;
   techSpec?: TechSpecRequest | null;
-  price?: number | null;
   status?: CommonStatus;
   imageUrls?: string[];
 }
@@ -44,9 +42,6 @@ export interface ProductPageParams {
   imageFormat?: string;
   videoFormat?: string;
   iso?: string;
-  // Price filters
-  minPrice?: number;
-  maxPrice?: number;
   // Sorting
   sortBy?: string;
   orderBy?: string;
@@ -57,7 +52,6 @@ export const initialProduct: ProductRequest = {
   description: "",
   idProductCategory: "",
   status: "ACTIVE",
-  price: null,
   techSpec: {
     sensorType: undefined,
     lensMount: undefined,

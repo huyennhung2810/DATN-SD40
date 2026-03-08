@@ -64,7 +64,7 @@ function* handleItemAction(action: PayloadAction<ItemActionPayload>) {
       yield call(onSuccess);
     }
 
-    yield put(videoFormatActions.getAll({ page: 0, size: 10 }));
+    yield put(videoFormatActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     const errorMsg = getErrorMessage(error);
     yield put(videoFormatActions.actionFailed(errorMsg));
@@ -83,7 +83,7 @@ function* handleDelete(action: PayloadAction<string>) {
       title: "Thành công",
       description: "Xóa thành công",
     });
-    yield put(videoFormatActions.getAll({ page: 0, size: 10 }));
+    yield put(videoFormatActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     yield put(videoFormatActions.actionFailed(getErrorMessage(error)));
     notification.error({

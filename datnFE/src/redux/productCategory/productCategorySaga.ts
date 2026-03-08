@@ -64,7 +64,7 @@ function* handleCategoryAction(action: PayloadAction<CategoryActionPayload>) {
       yield call(onSuccess);
     }
 
-    yield put(productCategoryActions.getAll({ page: 0, size: 10 }));
+    yield put(productCategoryActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     const errorMsg = getErrorMessage(error);
     yield put(productCategoryActions.actionFailed(errorMsg));
@@ -83,7 +83,7 @@ function* handleDelete(action: PayloadAction<string>) {
       title: "Thành công",
       description: "Xóa danh mục thành công",
     });
-    yield put(productCategoryActions.getAll({ page: 0, size: 10 }));
+    yield put(productCategoryActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     yield put(productCategoryActions.actionFailed(getErrorMessage(error)));
     notification.error({

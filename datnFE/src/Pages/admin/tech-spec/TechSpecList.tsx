@@ -140,6 +140,35 @@ const TechSpecTab: React.FC<TabItemProps> = ({
     setIsModalOpen(true);
   };
 
+  // Validate name - check for duplicates
+  const validateName = async (_: any, value: string) => {
+    if (!value) {
+      return Promise.reject("Vui lòng nhập tên");
+    }
+    if (!value.trim()) {
+      return Promise.reject("Tên không được chỉ chứa khoảng trắng");
+    }
+    if (value.trim().length < 2) {
+      return Promise.reject("Tên phải có ít nhất 2 ký tự");
+    }
+    
+    // Check for duplicates
+    const trimmedValue = value.trim().toLowerCase();
+    const isDuplicate = list.some(
+      (item) => item[nameField]?.toLowerCase().trim() === trimmedValue
+    );
+    
+    if (isDuplicate) {
+      // If updating, allow keeping the same name
+      if (currentItem && currentItem[nameField]?.toLowerCase().trim() === trimmedValue) {
+        return Promise.resolve();
+      }
+      return Promise.reject(`Tên ${title.toLowerCase()} đã tồn tại`);
+    }
+    
+    return Promise.resolve();
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setCurrentItem(null);
@@ -153,8 +182,8 @@ const TechSpecTab: React.FC<TabItemProps> = ({
     modalForm.validateFields().then((values) => {
       const data = {
         id: currentItem?.id,
-        name: values.name,
-        description: values.description,
+        name: values.name?.trim(),
+        description: values.description?.trim() || undefined,
         status: values.status,
       };
 
@@ -386,8 +415,7 @@ const TechSpecTab: React.FC<TabItemProps> = ({
             name="name"
             label="Tên"
             rules={[
-              { required: true, message: `Vui lòng nhập tên ${title.toLowerCase()}` },
-              { min: 2, message: "Tên phải có ít nhất 2 ký tự" },
+              { validator: validateName }
             ]}
           >
             <Input placeholder={`Nhập tên ${title.toLowerCase()}`} />

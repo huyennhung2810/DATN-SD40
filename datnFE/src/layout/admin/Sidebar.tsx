@@ -84,11 +84,6 @@ const Sidebar: React.FC = () => {
       ],
     },
     {
-      key: "/admin/banner",
-      icon: <PictureOutlined />,
-      label: "Quản lý Banner",
-    },
-    {
       key: "sub-account",
       icon: <UsergroupAddOutlined />,
       label: "Quản lý người dùng",
@@ -109,6 +104,11 @@ const Sidebar: React.FC = () => {
           label: "Đợt giảm giá",
         },
       ],
+    },
+    {
+      key: "/admin/banners",
+      icon: <PictureOutlined />,
+      label: "Quản lý Banner",
     },
     {
       key: "/schedule",

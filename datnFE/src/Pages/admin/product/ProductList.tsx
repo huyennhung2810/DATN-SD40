@@ -23,7 +23,8 @@ import {
     Descriptions,
     Divider,
     Steps,
-    Tabs, // tabs are life
+    Tabs,
+    Table,
 } from "antd";
 import {
     PlusOutlined,
@@ -57,6 +58,8 @@ import { App } from "antd";
 import { initialTechSpec } from "../../../models/techSpec";
 import productApi from "../../../api/productApi";
 import techSpecApi from "../../../api/techSpecApi";
+import productDetailApi from "../../../api/productDetailApi";
+import type { ProductDetailResponse } from "../../../models/productdetail";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -95,6 +98,10 @@ const ProductPage: React.FC = () => {
     const [selectedImageFormat, setSelectedImageFormat] = useState<string | undefined>();
     const [selectedVideoFormat, setSelectedVideoFormat] = useState<string | undefined>();
     const [selectedIso, setSelectedIso] = useState<string | undefined>();
+    const [selectedColorId, setSelectedColorId] = useState<string | undefined>();
+    const [selectedStorageCapacityId, setSelectedStorageCapacityId] = useState<string | undefined>();
+    const [productDetails, setProductDetails] = useState<ProductDetailResponse[]>([]);
+    const [productDetailsLoading, setProductDetailsLoading] = useState(false);
     const [uploadLoading, setUploadLoading] = useState(false);
     const { notification, message } = App.useApp();
 
@@ -240,7 +247,6 @@ const ProductPage: React.FC = () => {
                 description: product.description,
                 idProductCategory: product.idProductCategory,
                 idTechSpec: product.idTechSpec || null,
-                price: product.price || null,
                 status: product.status,
             });
             setTempTechSpecId(product.idTechSpec || null);
@@ -249,7 +255,6 @@ const ProductPage: React.FC = () => {
                 name: product.name,
                 description: product.description,
                 idProductCategory: product.idProductCategory,
-                price: product.price,
                 status: product.status,
                 techSpec: product.techSpec ? {
                     sensorType: product.techSpec.sensorType || undefined,
@@ -311,7 +316,6 @@ const ProductPage: React.FC = () => {
         name: values.name,
         description: values.description || undefined,
         idProductCategory: values.idProductCategory || undefined,
-        price: values.price || undefined,
         status: values.status || "ACTIVE",
       };
 
@@ -496,12 +500,27 @@ const ProductPage: React.FC = () => {
         setSelectedProduct(product);
         setIsDetailOpen(true);
         dispatch(productImageActions.getImagesByProduct(product.id));
+
+        // Fetch product details (variants) for this product
+        setProductDetailsLoading(true);
+        productDetailApi.getAll({ page: 0, size: 100, productId: product.id })
+            .then((response) => {
+                setProductDetails(response.data || []);
+            })
+            .catch((error) => {
+                console.error("Error fetching product details:", error);
+                setProductDetails([]);
+            })
+            .finally(() => {
+                setProductDetailsLoading(false);
+            });
     };
 
     const closeDetail = () => {
         setIsDetailOpen(false);
         setSelectedProduct(null);
         dispatch(productImageActions.resetImages());
+        setProductDetails([]);
         // clean up drawer images
         drawerPendingImages.forEach((img) => URL.revokeObjectURL(img.preview));
         setDrawerPendingImages([]);
@@ -1023,11 +1042,6 @@ const ProductPage: React.FC = () => {
                                                 <Text type="secondary" style={{ fontSize: "12px" }}>
                                                     Loại: {getCategoryName(product.idProductCategory)}
                                                 </Text>
-                                                {product.price && (
-                                                    <Text strong style={{ fontSize: "14px", color: "#ff4d4f" }}>
-                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
-                                                    </Text>
-                                                )}
                                                 <Tag
                                                     color={product.status === "ACTIVE" ? "green" : "red"}
                                                     style={{ marginTop: 4 }}
@@ -1115,7 +1129,7 @@ const ProductPage: React.FC = () => {
                     style={{ marginBottom: 24 }}
                     items={[
                         { title: "Sản phẩm", description: "Thông tin cơ bản" },
-                        { title: "TechSpec", description: "Thông số kỹ thuật" },
+                        { title: "Thông số & Phiên bản", description: "TechSpec & Màu/Dung lượng" },
                         { title: "Hình ảnh", description: "Ảnh sản phẩm" },
                     ]}
                 />
@@ -1137,18 +1151,6 @@ const ProductPage: React.FC = () => {
 
                             <Form.Item name="description" label="Mô tả">
                                 <Input.TextArea rows={3} placeholder="Nhập mô tả sản phẩm" />
-                            </Form.Item>
-
-                            <Form.Item name="price" label="Giá (VNĐ)">
-                                <InputNumber
-                                    placeholder="Nhập giá sản phẩm"
-                                    size="large"
-                                    style={{ width: '100%' }}
-                                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                    parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as unknown as number}
-                                    min={0}
-                                    addonAfter="VNĐ"
-                                />
                             </Form.Item>
 
                             <Form.Item name="idProductCategory" label="Loại sản phẩm">
@@ -1286,9 +1288,11 @@ const ProductPage: React.FC = () => {
                                 />
                             </Form.Item>
 
-                            <Divider />
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                Lưu ý: ISO vẫn nhập thủ công vì là dải giá trị. Các trường khác chọn từ danh sách.
+                            <Divider orientation="left">
+                                <Typography.Text strong>Phiên bản sản phẩm</Typography.Text>
+                            </Divider>
+                            <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
+                                Lưu ý: Các trường thông số kỹ thuật bên trên chọn từ danh sách có sẵn, riêng ISO nhập thủ công vì là dải giá trị.
                             </Typography.Text>
                         </>
                     )}
@@ -1493,15 +1497,6 @@ const ProductPage: React.FC = () => {
                                             <Descriptions.Item label="Mô tả" span={2}>
                                                 {selectedProduct.description || "---"}
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="Giá" span={2}>
-                                                {selectedProduct.price ? (
-                                                    <Text strong style={{ color: "#ff4d4f", fontSize: "16px" }}>
-                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedProduct.price)}
-                                                    </Text>
-                                                ) : (
-                                                    "---"
-                                                )}
-                                            </Descriptions.Item>
                                             <Descriptions.Item label="Loại sản phẩm">
                                                 {getCategoryName(selectedProduct.idProductCategory)}
                                             </Descriptions.Item>
@@ -1564,6 +1559,82 @@ const ProductPage: React.FC = () => {
                                                         </Descriptions.Item>
                                                     )}
                                                 </Descriptions>
+                                            </>
+                                        )}
+
+                                        {/* Product Variants Section - Color, Capacity, Quantity */}
+                                        {productDetails.length > 0 && (
+                                            <>
+                                                <Divider orientation="left">
+                                                    <Space>
+                                                        <CameraOutlined />
+                                                        <Text strong>Phiên bản sản phẩm</Text>
+                                                    </Space>
+                                                </Divider>
+                                                <Descriptions column={2} bordered size="small">
+                                                    <Descriptions.Item label="Tổng số lượng" span={2}>
+                                                        <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
+                                                            {productDetails.reduce((total, detail) => total + (detail.quantity || 0), 0)} máy
+                                                        </Text>
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Các phiên bản" span={2}>
+                                                        <Space wrap>
+                                                            {productDetails.map((detail) => (
+                                                                <Tag key={detail.id} color="blue" style={{ marginBottom: 4 }}>
+                                                                    {detail.colorName} | {detail.storageCapacityName} - {detail.quantity} máy
+                                                                </Tag>
+                                                            ))}
+                                                        </Space>
+                                                    </Descriptions.Item>
+                                                </Descriptions>
+                                                <Table
+                                                    dataSource={productDetails}
+                                                    size="small"
+                                                    pagination={false}
+                                                    style={{ marginTop: 16 }}
+                                                    columns={[
+                                                        {
+                                                            title: "Phiên bản",
+                                                            dataIndex: "version",
+                                                            key: "version",
+                                                        },
+                                                        {
+                                                            title: "Màu sắc",
+                                                            dataIndex: "colorName",
+                                                            key: "colorName",
+                                                        },
+                                                        {
+                                                            title: "Dung lượng",
+                                                            dataIndex: "storageCapacityName",
+                                                            key: "storageCapacityName",
+                                                        },
+                                                        {
+                                                            title: "Giá bán",
+                                                            dataIndex: "salePrice",
+                                                            key: "salePrice",
+                                                            render: (value: number) => value?.toLocaleString('vi-VN') + ' đ'
+                                                        },
+                                                        {
+                                                            title: "Số lượng",
+                                                            dataIndex: "quantity",
+                                                            key: "quantity",
+                                                            render: (value: number) => (
+                                                                <Tag color={value > 0 ? "green" : "red"}>{value} máy</Tag>
+                                                            )
+                                                        },
+                                                        {
+                                                            title: "Trạng thái",
+                                                            dataIndex: "status",
+                                                            key: "status",
+                                                            render: (status: string) => (
+                                                                <Tag color={status === "ACTIVE" ? "success" : "default"}>
+                                                                    {status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+                                                                </Tag>
+                                                            )
+                                                        },
+                                                    ]}
+                                                    rowKey="id"
+                                                />
                                             </>
                                         )}
                                     </>
@@ -1712,6 +1783,57 @@ const ProductPage: React.FC = () => {
                                                 </Row>
                                             </>
                                         ) : null}
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: "variants",
+                                label: `Phiên bản (${productDetails.length})`,
+                                children: (
+                                    <div>
+                                        {productDetailsLoading ? (
+                                            <div style={{ textAlign: "center", padding: 20 }}>
+                                                <Spin />
+                                            </div>
+                                        ) : productDetails.length === 0 ? (
+                                            <Empty description="Chưa có phiên bản nào" />
+                                        ) : (
+                                            <>
+                                                <Typography.Text strong style={{ marginBottom: 16, display: "block" }}>
+                                                    Danh sách các phiên bản sản phẩm (Màu sắc - Dung lượng)
+                                                </Typography.Text>
+                                                <Row gutter={[16, 16]}>
+                                                    {productDetails.map((detail) => (
+                                                        <Col xs={24} sm={12} md={8} key={detail.id}>
+                                                            <Card
+                                                                size="small"
+                                                                hoverable
+                                                                style={{ borderColor: "#1890ff" }}
+                                                            >
+                                                                <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                                                                    <Text strong>{detail.version}</Text>
+                                                                    <Tag color="blue" style={{ alignSelf: "flex-start" }}>
+                                                                        {detail.colorName} | {detail.storageCapacityName}
+                                                                    </Tag>
+                                                                    <Divider style={{ margin: "8px 0" }} />
+                                                                    <Text type="secondary">Giá bán:</Text>
+                                                                    <Text strong style={{ color: "#ff4d4f" }}>
+                                                                        {detail.salePrice?.toLocaleString('vi-VN')} đ
+                                                                    </Text>
+                                                                    <Text type="secondary">Tồn kho:</Text>
+                                                                    <Tag color={detail.quantity > 0 ? "green" : "red"}>
+                                                                        {detail.quantity} máy
+                                                                    </Tag>
+                                                                    <Tag color={detail.status === "ACTIVE" ? "success" : "default"}>
+                                                                        {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+                                                                    </Tag>
+                                                                </Space>
+                                                            </Card>
+                                                        </Col>
+                                                    ))}
+                                                </Row>
+                                            </>
+                                        )}
                                     </div>
                                 ),
                             },

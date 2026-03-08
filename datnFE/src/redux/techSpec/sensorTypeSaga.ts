@@ -64,7 +64,9 @@ function* handleItemAction(action: PayloadAction<ItemActionPayload>) {
       yield call(onSuccess);
     }
 
-    yield put(sensorTypeActions.getAll({ page: 0, size: 10 }));
+    // Refresh data - keep current filter but reset to first page
+    // Note: The component will re-fetch with its current filter state
+    yield put(sensorTypeActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     const errorMsg = getErrorMessage(error);
     yield put(sensorTypeActions.actionFailed(errorMsg));
@@ -83,7 +85,8 @@ function* handleDelete(action: PayloadAction<string>) {
       title: "Thành công",
       description: "Xóa thành công",
     });
-    yield put(sensorTypeActions.getAll({ page: 0, size: 10 }));
+    // Refresh data - reset to first page
+    yield put(sensorTypeActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     yield put(sensorTypeActions.actionFailed(getErrorMessage(error)));
     notification.error({
