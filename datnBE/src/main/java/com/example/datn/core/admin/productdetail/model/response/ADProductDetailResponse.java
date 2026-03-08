@@ -27,6 +27,7 @@ public class ADProductDetailResponse {
     private String productName;
     private String storageCapacityName;
     private String creationDate;
+    private BigDecimal discountedPrice;
 
     private List<ADSerialResponse> serials;
 }

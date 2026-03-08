@@ -68,5 +68,5 @@ public class Voucher implements Serializable {
 
     @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("voucher") // ✅ Bỏ tham chiếu ngược
-    private List<VoucherDetail> details; // Đây chính là 'details' mà bạn đang thiếu
+    private List<VoucherDetail> details;
 }

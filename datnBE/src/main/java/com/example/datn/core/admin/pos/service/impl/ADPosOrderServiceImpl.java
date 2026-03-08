@@ -2,6 +2,7 @@ package com.example.datn.core.admin.pos.service.impl;
 
 import com.example.datn.core.admin.pos.repository.ADPosOrderDetailRepository;
 import com.example.datn.core.admin.pos.repository.ADPosOrderRepository;
+import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.Order;
@@ -13,7 +14,11 @@ import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.CustomerRepository;
 import com.example.datn.repository.SerialRepository;
 import com.example.datn.repository.WarrantyRepository;
+import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
+import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.entity.Customer;
+import com.example.datn.entity.ProductDetail;
+import com.example.datn.entity.DiscountDetail;
 import com.example.datn.entity.Warranty;
 import lombok.RequiredArgsConstructor;
 import java.util.Date;
@@ -23,6 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +42,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final SerialRepository serialRepository;
     private final CustomerRepository customerRepository;
     private final WarrantyRepository warrantyRepository;
+    private final ProductDetailRepository productDetailRepository;
+    private final ADDiscountDetailRepository adDiscountDetailRepository;
 
     @Override
     @Transactional
@@ -48,63 +59,117 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     @Transactional
-    public ResponseObject<?> addSerialToOrder(String orderId, String serialNumber) {
+    public ResponseObject<?> addProductToOrder(String orderId, String productDetailId, int quantity) {
         Order order = posOrderRepository.findById(orderId).orElse(null);
         if (order == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn: " + orderId);
         }
 
-        Serial serial = serialRepository.findBySerialNumber(serialNumber).orElse(null);
-        if (serial == null) {
-            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy thiết bị với mã Serial: " + serialNumber);
-        }
-
-        if (serial.getSerialStatus() != SerialStatus.AVAILABLE) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Thiết bị này không ở trạng thái có sẵn để bán");
+        ProductDetail productDetail = productDetailRepository.findById(productDetailId).orElse(null);
+        if (productDetail == null) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm");
         }
 
         List<OrderDetail> existingDetails = posOrderDetailRepository.findByOrderId(orderId);
 
         OrderDetail targetDetail = null;
         for (OrderDetail detail : existingDetails) {
-            if (detail.getProductDetail().getId().equals(serial.getProductDetail().getId())) {
+            if (detail.getProductDetail().getId().equals(productDetail.getId())) {
                 targetDetail = detail;
                 break;
             }
         }
 
-        BigDecimal unitPrice = serial.getProductDetail().getSalePrice();
+        BigDecimal unitPrice = productDetail.getSalePrice();
         if (unitPrice == null) {
             unitPrice = BigDecimal.ZERO;
         }
 
+        // --- CHECK ACTIVE PRODUCT DISCOUNT ---
+        Optional<DiscountDetail> discountDetail = adDiscountDetailRepository.findActiveByProductDetailId(productDetailId, System.currentTimeMillis());
+        if (discountDetail.isPresent()) {
+            unitPrice = discountDetail.get().getPriceAfter();
+        }
+        // ------------------------------------
+
         if (targetDetail == null) {
             targetDetail = new OrderDetail();
             targetDetail.setOrder(order);
-            targetDetail.setProductDetail(serial.getProductDetail());
-            targetDetail.setQuantity(1);
+            targetDetail.setProductDetail(productDetail);
+            targetDetail.setQuantity(quantity);
             targetDetail.setUnitPrice(unitPrice);
-            targetDetail.setTotalPrice(unitPrice);
+            targetDetail.setTotalPrice(unitPrice.multiply(new BigDecimal(quantity)));
         } else {
-            targetDetail.setQuantity(targetDetail.getQuantity() + 1);
-            targetDetail.setTotalPrice(unitPrice.multiply(new BigDecimal(targetDetail.getQuantity())));
+            int newQuantity = targetDetail.getQuantity() + quantity;
+            targetDetail.setQuantity(newQuantity);
+            // Re-calculate unit price in case discount status changed or for consistency
+            targetDetail.setUnitPrice(unitPrice);
+            targetDetail.setTotalPrice(unitPrice.multiply(new BigDecimal(newQuantity)));
         }
 
         posOrderDetailRepository.save(targetDetail);
 
-        // Map Serial to OrderDetail and Reserve it
-        serial.setOrderDetail(targetDetail);
-        serial.setSerialStatus(SerialStatus.RESERVED);
-        serialRepository.save(serial);
-
-        // Update Order total
-        BigDecimal newTotal = order.getTotalAmount().add(unitPrice);
+        // Update Order totals
+        List<OrderDetail> allDetails = posOrderDetailRepository.findByOrderId(orderId);
+        BigDecimal newTotal = allDetails.stream()
+                .map(OrderDetail::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
         order.setTotalAmount(newTotal);
-        order.setTotalAfterDiscount(newTotal);
+
+        // Apply Automatic Order Discount (if any)
+        BigDecimal automaticDiscount = BigDecimal.ZERO;
+        if (newTotal.compareTo(new BigDecimal("50000000")) >= 0) {
+            automaticDiscount = new BigDecimal("1500000"); // 1.5M
+        } else if (newTotal.compareTo(new BigDecimal("20000000")) >= 0) {
+            automaticDiscount = new BigDecimal("500000"); // 500k
+        }
+        
+        BigDecimal finalTotal = newTotal.subtract(automaticDiscount);
+        if (finalTotal.compareTo(BigDecimal.ZERO) < 0) finalTotal = BigDecimal.ZERO;
+        order.setTotalAfterDiscount(finalTotal);
+        
         posOrderRepository.save(order);
 
-        return ResponseObject.success(targetDetail,
-                "Thêm sản phẩm mang mã Serial " + serialNumber + " vào hóa đơn thành công");
+        return ResponseObject.success(targetDetail, "Thêm sản phẩm vào hóa đơn thành công");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> assignSerialsToOrderDetail(String orderId, String detailId, List<String> serialNumbers) {
+        OrderDetail detail = posOrderDetailRepository.findById(detailId).orElse(null);
+        if (detail == null || !detail.getOrder().getId().equals(orderId)) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy chi tiết hóa đơn");
+        }
+
+        if (serialNumbers.size() != detail.getQuantity()) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Số lượng Serial gán (" + serialNumbers.size()
+                    + ") phải bằng số lượng yêu cầu (" + detail.getQuantity() + ")");
+        }
+
+        List<Serial> targetSerials = serialRepository.findBySerialNumberIn(serialNumbers);
+        if (targetSerials.size() != serialNumbers.size()) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Một số mã Serial không tồn tại");
+        }
+
+        for (Serial serial : targetSerials) {
+            if (!serial.getProductDetail().getId().equals(detail.getProductDetail().getId())) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                        "Serial " + serial.getSerialNumber() + " không thuộc sản phẩm này");
+            }
+            if (serial.getSerialStatus() != SerialStatus.AVAILABLE) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                        "Serial " + serial.getSerialNumber() + " không ở trạng thái sẵn sàng");
+            }
+        }
+
+        for (Serial serial : targetSerials) {
+            serial.setOrderDetail(detail);
+            serial.setSerialStatus(SerialStatus.RESERVED);
+        }
+        serialRepository.saveAll(targetSerials);
+
+        return ResponseObject.success(detail, "Đã gán Serial thành công");
     }
 
     @Override
@@ -122,51 +187,115 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
 
         List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
-        // Note: For a real POS, we should map this to a DTO including the list of
-        // serials for each detail.
-        // For simplicity we return the details as-is.
-        return ResponseObject.success(details, "Lấy chi tiết hóa đơn thành công");
+
+        // Map elements to DTO to prevent infinite recursion and lazy initialization
+        // exceptions
+        List<Map<String, Object>> result = details.stream().map(d -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", d.getId());
+            map.put("quantity", d.getQuantity());
+            map.put("unitPrice", d.getUnitPrice());
+            map.put("totalPrice", d.getTotalPrice());
+
+            long assignedCount = serialRepository.findAll().stream()
+                    .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(d.getId()))
+                    .count();
+            map.put("assignedSerialsCount", assignedCount);
+
+            Map<String, Object> pdMap = new HashMap<>();
+            if (d.getProductDetail() != null) {
+                pdMap.put("id", d.getProductDetail().getId());
+                pdMap.put("version", d.getProductDetail().getVersion());
+                String imageUrl = null;
+                if (d.getProductDetail().getProduct() != null && !d.getProductDetail().getProduct().getImages().isEmpty()) {
+                    imageUrl = d.getProductDetail().getProduct().getImages().get(0).getUrl();
+                }
+                pdMap.put("image", imageUrl);
+                // Add original price to help FE show "Price Before vs Price After"
+                BigDecimal originalPrice = d.getProductDetail().getSalePrice();
+                pdMap.put("originalPrice", originalPrice);
+
+                Map<String, Object> productMap = new HashMap<>();
+                if (d.getProductDetail().getProduct() != null) {
+                    productMap.put("id", d.getProductDetail().getProduct().getId());
+                    productMap.put("name", d.getProductDetail().getProduct().getName());
+                }
+                pdMap.put("product", productMap);
+
+                Map<String, Object> colorMap = new HashMap<>();
+                if (d.getProductDetail().getColor() != null) {
+                    colorMap.put("id", d.getProductDetail().getColor().getId());
+                    colorMap.put("name", d.getProductDetail().getColor().getName());
+                }
+                pdMap.put("color", colorMap);
+            }
+            map.put("productDetail", pdMap);
+
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseObject.success(result, "Lấy chi tiết hóa đơn thành công");
     }
 
     @Override
     @Transactional
-    public ResponseObject<?> removeSerialFromOrder(String orderId, String serialNumber) {
-        Order order = posOrderRepository.findById(orderId).orElse(null);
-        if (order == null)
-            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
-
+    public ResponseObject<?> removeSerialFromOrderDetail(String orderId, String detailId, String serialNumber) {
         Serial serial = serialRepository.findBySerialNumber(serialNumber).orElse(null);
         if (serial == null || serial.getOrderDetail() == null
-                || !serial.getOrderDetail().getOrder().getId().equals(orderId)) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial này không nằm trong hóa đơn hiện tại");
+                || !serial.getOrderDetail().getId().equals(detailId)) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial này không nằm trong chi tiết hóa đơn hiện tại");
         }
 
-        OrderDetail targetDetail = serial.getOrderDetail();
-
-        // Remove serial link and make it available again
         serial.setOrderDetail(null);
         serial.setSerialStatus(SerialStatus.AVAILABLE);
         serialRepository.save(serial);
 
-        BigDecimal unitPrice = targetDetail.getUnitPrice() != null ? targetDetail.getUnitPrice() : BigDecimal.ZERO;
+        return ResponseObject.success(null, "Đã Xóa serial " + serialNumber + " khỏi sản phẩm");
+    }
 
-        if (targetDetail.getQuantity() > 1) {
-            targetDetail.setQuantity(targetDetail.getQuantity() - 1);
-            targetDetail.setTotalPrice(targetDetail.getTotalPrice().subtract(unitPrice));
-            posOrderDetailRepository.save(targetDetail);
-        } else {
-            posOrderDetailRepository.delete(targetDetail);
+    @Override
+    @Transactional
+    public ResponseObject<?> removeProductFromOrder(String orderId, String detailId) {
+        OrderDetail targetDetail = posOrderDetailRepository.findById(detailId).orElse(null);
+        if (targetDetail == null || !targetDetail.getOrder().getId().equals(orderId)) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy chi tiết hóa đơn");
+        }
+
+        // Free any reserved serials
+        List<Serial> reservedSerials = targetDetail.getProductDetail().getSerials().stream()
+                .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(detailId))
+                .toList();
+        for (Serial serial : reservedSerials) {
+            serial.setOrderDetail(null);
+            serial.setSerialStatus(SerialStatus.AVAILABLE);
+        }
+        if (!reservedSerials.isEmpty()) {
+            serialRepository.saveAll(reservedSerials);
         }
 
         // Update Order total
-        BigDecimal newTotal = order.getTotalAmount().subtract(unitPrice);
+        Order order = targetDetail.getOrder();
+        BigDecimal newTotal = order.getTotalAmount().subtract(targetDetail.getTotalPrice());
         if (newTotal.compareTo(BigDecimal.ZERO) < 0)
             newTotal = BigDecimal.ZERO;
         order.setTotalAmount(newTotal);
-        order.setTotalAfterDiscount(newTotal);
+
+        // Apply Automatic Discount
+        BigDecimal discount = BigDecimal.ZERO;
+        if (newTotal.compareTo(new BigDecimal("50000000")) >= 0) {
+            discount = new BigDecimal("1500000"); // 1.5M
+        } else if (newTotal.compareTo(new BigDecimal("20000000")) >= 0) {
+            discount = new BigDecimal("500000"); // 500k
+        }
+        BigDecimal afterDiscount = newTotal.subtract(discount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
+        order.setTotalAfterDiscount(afterDiscount);
+
         posOrderRepository.save(order);
 
-        return ResponseObject.success(null, "Đã xóa serial " + serialNumber + " khỏi hóa đơn");
+        posOrderDetailRepository.delete(targetDetail);
+
+        return ResponseObject.success(null, "Đã xóa sản phẩm khỏi hóa đơn");
     }
 
     @Override
@@ -206,27 +335,81 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Hóa đơn trống, không thể thanh toán");
         }
 
+        // Validate all details have correct number of assigned serials
+        boolean isMissingSerials = false;
+        for (OrderDetail detail : details) {
+            long assignedSerialsCount = serialRepository.findAll().stream()
+                    .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(detail.getId()))
+                    .count();
+            if (assignedSerialsCount != detail.getQuantity()) {
+                isMissingSerials = true;
+                break;
+            }
+        }
+        if (isMissingSerials) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                    "Vui lòng gán đầy đủ mã Serial cho các sản phẩm trong hóa đơn trước khi thanh toán");
+        }
+
         // For each detail, find the associated serials and generate warranty
         for (OrderDetail detail : details) {
-            for (Serial serial : detail.getProductDetail().getSerials()) {
-                if (serial.getOrderDetail() != null && serial.getOrderDetail().getId().equals(detail.getId())) {
-                    // Update Serial status
-                    serial.setSerialStatus(SerialStatus.SOLD);
-                    serialRepository.save(serial);
+            ProductDetail productDetail = detail.getProductDetail();
+            int newQuantity = productDetail.getQuantity() - detail.getQuantity();
+            if (newQuantity < 0) newQuantity = 0;
+            productDetail.setQuantity(newQuantity);
+            productDetailRepository.save(productDetail);
 
-                    // Generate Warranty
-                    Warranty warranty = new Warranty();
-                    warranty.setSerial(serial);
-                    warranty.setStartDate(new Date().getTime());
-                    // default 1 year warranty
-                    warranty.setEndDate(new Date().getTime() + 31536000000L);
-                    warranty.setNote("Bảo hành tự động khi mua tại quầy");
-                    warrantyRepository.save(warranty);
-                }
+            List<Serial> assignedSerials = serialRepository.findAll().stream()
+                    .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(detail.getId()))
+                    .toList();
+            for (Serial serial : assignedSerials) {
+                // Update Serial status
+                serial.setSerialStatus(SerialStatus.SOLD);
+                serial.setStatus(com.example.datn.infrastructure.constant.EntityStatus.INACTIVE);
+                serialRepository.save(serial);
+
+                // Generate Warranty
+                Warranty warranty = new Warranty();
+                warranty.setSerial(serial);
+                warranty.setStartDate(new Date().getTime());
+                // default 1 year warranty
+                warranty.setEndDate(new Date().getTime() + 31536000000L);
+                warranty.setNote("Bảo hành tự động khi mua tại quầy");
+                warrantyRepository.save(warranty);
             }
         }
 
         posOrderRepository.save(order);
         return ResponseObject.success(order, "Thanh toán thành công");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> cancelOrder(String orderId) {
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        }
+        if (order.getOrderStatus() != OrderStatus.PENDING) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chỉ có thể hủy/xóa hóa đơn ở trạng thái CHỜ");
+        }
+
+        List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
+        for (OrderDetail detail : details) {
+            List<Serial> reservedSerials = detail.getProductDetail().getSerials().stream()
+                    .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(detail.getId()))
+                    .toList();
+            for (Serial serial : reservedSerials) {
+                serial.setOrderDetail(null);
+                serial.setSerialStatus(SerialStatus.AVAILABLE);
+            }
+            if (!reservedSerials.isEmpty()) {
+                serialRepository.saveAll(reservedSerials);
+            }
+            posOrderDetailRepository.delete(detail);
+        }
+
+        posOrderRepository.delete(order);
+        return ResponseObject.success(null, "Đã hủy hóa đơn thành công");
     }
 }

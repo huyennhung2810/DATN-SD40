@@ -35,8 +35,8 @@ const discountSlice = createSlice({
 
       // Kiểm tra cấu trúc: response (Object gốc) -> data (Lớp 1) -> data (Mảng danh sách)
       if (response && response.data && Array.isArray(response.data.data)) {
-        state.list = response.data.data; // Lấy mảng 4 đợt giảm giá
-        state.totalElements = response.data.totalElements || 0; // Lấy số 4
+        state.list = response.data.data;
+        state.totalElements = response.data.totalElements || 0;
       } else {
         // Dự phòng nếu Backend thay đổi cấu trúc trả về trực tiếp
         state.list = response?.data || [];

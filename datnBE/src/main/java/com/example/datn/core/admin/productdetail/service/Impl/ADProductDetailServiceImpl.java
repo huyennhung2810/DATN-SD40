@@ -3,14 +3,17 @@ package com.example.datn.core.admin.productdetail.service.Impl;
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
 import com.example.datn.core.admin.color.repository.ADColorRepository;
+import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.productdetail.repository.ADProductDetailForDiscountRepository;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
+import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.ProductDetail;
+import com.example.datn.entity.DiscountDetail;
 import com.example.datn.entity.Serial;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.utils.Helper;
@@ -20,8 +23,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,25 +38,36 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     private final ADColorRepository adColorRepository;
     private final ADStorageCapacityRepository adStorageCapacityRepository;
     private final ADSerialRepository adSerialRepository;
+    private final ADDiscountDetailRepository adDiscountDetailRepository;
+    private final ADProductRepository adProductRepository;
 
         @Override
         public ResponseObject<?> getAllProductDetails(String keyword, EntityStatus status) {
             List<ProductDetail> list = adProductDetailRepository.searchProductDetail(keyword, status);
     
-            List<ADProductDetailResponse> dtoList = list.stream().map(entity->
-                    ADProductDetailResponse.builder()
+            List<ADProductDetailResponse> dtoList = list.stream().map(entity-> {
+                    BigDecimal salePrice = entity.getSalePrice();
+                    BigDecimal discountedPrice = salePrice;
+                    
+                    Optional<DiscountDetail> dd = adDiscountDetailRepository.findActiveByProductDetailId(entity.getId(), System.currentTimeMillis());
+                    if (dd.isPresent()) {
+                        discountedPrice = dd.get().getPriceAfter();
+                    }
+
+                    return ADProductDetailResponse.builder()
                             .id(entity.getId())
                             .code(entity.getCode())
                             .note(entity.getNote())
                             .version(entity.getVersion())
                             .quantity(entity.getQuantity())
-                            .salePrice(entity.getSalePrice())
+                            .salePrice(salePrice)
+                            .discountedPrice(discountedPrice)
                             .status(entity.getStatus())
-                            .colorName(entity.getColor().getName())
-                            .productName(entity.getProduct().getName())
-                            .storageCapacityName(entity.getStorageCapacity().getName())
-                            .creationDate(Helper.formatDate(entity.getCreatedDate())).build()
-                    ).toList();
+                            .colorName(entity.getColor() != null ? entity.getColor().getName() : null)
+                            .productName(entity.getProduct() != null ? entity.getProduct().getName() : null)
+                            .storageCapacityName(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getName() : null)
+                            .creationDate(Helper.formatDate(entity.getCreatedDate())).build();
+                    }).collect(Collectors.toList());
             return ResponseObject.success(dtoList,"Hiển thị danh sách sản phẩm chi tiết thành công");
         }
 
@@ -99,9 +115,9 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         productDetail.setSalePrice(request.getSalePrice());
         productDetail.setStatus(request.getStatus());
 
-        productDetail.setColor(adColorRepository.findById(request.getProductId()).orElse(null));
+        productDetail.setColor(adColorRepository.findById(request.getColorId()).orElse(null));
         productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(null));
-        //productDetail.setProduct(adProductDetailRepository.findById(request.getProductId()).orElseThrow().getProduct());
+        productDetail.setProduct(adProductRepository.findById(request.getProductId()).orElse(null));
 
         List<Serial> serialEntities = new ArrayList<>();
         if (request.getSerials() != null && !request.getSerials().isEmpty()) {
@@ -148,7 +164,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         productDetail.setStatus(request.getStatus());
 
         // 4. Cập nhật các quan hệ (Sử dụng đúng ID từ Request)
-        //productDetail.setProduct(adProductRepository.findById(request.getProductId()).orElse(productDetail.getProduct()));
+        productDetail.setProduct(adProductRepository.findById(request.getProductId()).orElse(productDetail.getProduct()));
         productDetail.setColor(adColorRepository.findById(request.getColorId()).orElse(productDetail.getColor()));
         productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(productDetail.getStorageCapacity()));
 

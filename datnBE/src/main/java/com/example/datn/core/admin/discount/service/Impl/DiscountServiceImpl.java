@@ -53,7 +53,7 @@ public class DiscountServiceImpl implements DiscountService {
             if (d.getStatus() != 0) {
                 int newStatus = d.getStatus();
                 if (d.getStartDate() > now) {
-                    newStatus = 1; // Sắp diễn ra (Hoặc 1 tùy quy ước của bạn)
+                    newStatus = 1; // Sắp diễn ra
                 } else if (d.getStartDate() <= now && d.getEndDate() >= now) {
                     newStatus = 2; // Đang diễn ra
                 } else {
@@ -72,7 +72,8 @@ public class DiscountServiceImpl implements DiscountService {
             adDiscountRepository.saveAll(discounts);
         }
 
-        return ResponseObject.success(PageableObject.of(page), "Lấy danh sách đợt giảm giá thành công");
+        Page<DiscountResponse> responsePage = page.map(DiscountResponse::new);
+        return ResponseObject.success(PageableObject.of(responsePage), "Lấy danh sách đợt giảm giá thành công");
     }
 
     @Override
