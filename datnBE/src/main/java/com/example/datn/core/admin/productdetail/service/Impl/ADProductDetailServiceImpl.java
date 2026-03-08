@@ -1,14 +1,15 @@
-package com.example.datn.core.admin.productdetail.service.Impl;
+package com.example.datn.core.admin.productDetail.service.Impl;
 
-import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
 import com.example.datn.core.admin.color.repository.ADColorRepository;
-import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.product.repository.ADProductRepository;
+import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
-import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.Serial;
@@ -33,6 +34,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     private final ADColorRepository adColorRepository;
     private final ADStorageCapacityRepository adStorageCapacityRepository;
     private final ADSerialRepository adSerialRepository;
+    private final ADProductRepository adProductRepository;
 
         @Override
         public ResponseObject<?> getAllProductDetails(String keyword, EntityStatus status) {
@@ -84,48 +86,90 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     }
 
     @Override
-    public ResponseObject<?> createProductDetail(ADProductDetailRequest request) {
-        if (request.getCode() == null) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã SPCT không được để trống");
-        }
-        if (adProductDetailRepository.existsByCode(request.getCode())) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "MÃ SPCT đã tồn tại");
-        }
-        ProductDetail productDetail = new ProductDetail();
-        productDetail.setCode(request.getCode());
-        productDetail.setNote(request.getNote());
-        productDetail.setVersion(request.getVersion());
-        productDetail.setQuantity(request.getQuantity());
-        productDetail.setSalePrice(request.getSalePrice());
-        productDetail.setStatus(request.getStatus());
+    public ADProductDetailResponse addProductDetail(ADProductDetailRequest request) {
 
-        productDetail.setColor(adColorRepository.findById(request.getProductId()).orElse(null));
-        productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(null));
-        //productDetail.setProduct(adProductDetailRepository.findById(request.getProductId()).orElseThrow().getProduct());
+        List<String> serialNumbers = new ArrayList<>();
 
-        List<Serial> serialEntities = new ArrayList<>();
+        // 1. Kiểm tra trùng mã Serial trong Database
         if (request.getSerials() != null && !request.getSerials().isEmpty()) {
-            productDetail.setQuantity(request.getSerials().size());
+            serialNumbers = request.getSerials().stream()
+                    .map(ADSerialRequest::getSerialNumber)
+                    .collect(Collectors.toList());
 
-            for (ADSerialRequest serialReq : request.getSerials()) {
-                if (adSerialRepository.existsBySerialNumber(serialReq.getSerialNumber())) {
-                    return ResponseObject.error(HttpStatus.BAD_REQUEST, "Số Serial " + serialReq.getSerialNumber() + " đã tồn tại");
-                }
-
-                Serial serial = new Serial();
-                serial.setSerialNumber(serialReq.getSerialNumber());
-                serial.setProductDetail(productDetail);
-                serialEntities.add(serial);
+            if (adSerialRepository.existsBySerialNumberIn(serialNumbers)) {
+                // Bạn có thể ném ra Custom Exception của dự án
+                throw new RuntimeException("Phát hiện mã Serial đã tồn tại trong hệ thống!");
             }
-        } else {
-            productDetail.setQuantity(request.getQuantity());
         }
 
-        adProductDetailRepository.save(productDetail);
-        if (!serialEntities.isEmpty()) {
+        ProductDetail spct = new ProductDetail();
+        spct.setCode(request.getCode());
+        spct.setVersion(request.getVersion());
+        spct.setSalePrice(request.getSalePrice());
+        spct.setStatus(request.getStatus());
+        spct.setNote(request.getNote());
+
+        // Chốt chặt số lượng tồn kho bằng chính số lượng Serial gửi lên
+        spct.setQuantity(serialNumbers.size());
+
+        // Móc nối các khóa ngoại (Product, Color, StorageCapacity)
+        spct.setProduct(adProductRepository.findById(request.getProductId()).orElseThrow());
+        spct.setColor(adColorRepository.findById(request.getColorId()).orElseThrow());
+        spct.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElseThrow());
+
+        // LƯU SPCT LẦN 1: Để Database sinh ra ID cho cái SPCT này
+        ProductDetail savedSpct = adProductDetailRepository.save(spct);
+
+        // 3. Xử lý lưu mảng Serial
+        if (request.getSerials() != null && !request.getSerials().isEmpty()) {
+            List<Serial> serialEntities = request.getSerials().stream().map(sReq -> {
+                Serial serial = new Serial();
+                serial.setSerialNumber(sReq.getSerialNumber());
+                serial.setCode(sReq.getCode());
+                serial.setStatus(sReq.getStatus());
+
+                // Gán ID của SPCT vừa tạo vào Serial
+                serial.setProductDetail(savedSpct);
+                return serial;
+            }).collect(Collectors.toList());
+
+            // Lưu toàn bộ danh sách Serial bằng Batch Insert (cực kỳ tối ưu)
             adSerialRepository.saveAll(serialEntities);
         }
-        return ResponseObject.success(productDetail,"Thêm thành công SPCT");
+
+        // 4. Map thực thể vừa lưu sang Response (bạn tự gọi hàm map của bạn)
+         ADProductDetailResponse response = ADProductDetailResponse.builder()
+                .id(savedSpct.getId())
+                .code(savedSpct.getCode())
+                .version(savedSpct.getVersion())
+                .salePrice(savedSpct.getSalePrice())
+                .quantity(savedSpct.getQuantity())
+                .status(savedSpct.getStatus())
+
+                // 1. MAP PRODUCT (Bắt buộc phải có Id cho Frontend)
+                .productId(savedSpct.getProduct() != null ? savedSpct.getProduct().getId() : null)
+                .productName(savedSpct.getProduct() != null ? savedSpct.getProduct().getName() : "")
+
+                // 2. MAP COLOR (Bắt buộc phải có Id)
+                .colorId(savedSpct.getColor() != null ? savedSpct.getColor().getId() : null)
+                .colorName(savedSpct.getColor() != null ? savedSpct.getColor().getName() : "")
+
+                // 3. MAP STORAGE CAPACITY (Bắt buộc phải có Id)
+                .storageCapacityId(savedSpct.getStorageCapacity() != null ? savedSpct.getStorageCapacity().getId() : null)
+                .storageCapacityName(savedSpct.getStorageCapacity() != null ? savedSpct.getStorageCapacity().getName() : "")
+
+                // 4. MAP LIST SERIAL (Đã fix lỗi NullPointerException)
+                .serials(savedSpct.getSerials() != null
+                        ? savedSpct.getSerials().stream().map(s -> {
+                    ADSerialResponse sRes = new ADSerialResponse();
+                    sRes.setSerialNumber(s.getSerialNumber());
+                    // sRes.setCode(s.getSerialCode());
+                    return sRes;
+                }).collect(Collectors.toList())
+                        : new ArrayList<>())
+                .build();;
+
+                return response;
     }
 
     public ResponseObject<?> updateProductDetail(String id, ADProductDetailRequest request) {

@@ -30,8 +30,8 @@ public interface ADShiftHandoverRepository extends ShiftHandoverRepository {
     AND o.createdDate BETWEEN :startTime AND :endTime
 """)
     BigDecimal sumCashRevenue(@Param("empId") String empId,
-                              @Param("startTime") LocalDateTime startTime,
-                              @Param("endTime") LocalDateTime endTime);
+                              @Param("startTime") Long startTime,
+                              @Param("endTime") Long endTime);
 
     @Query("""
     SELECT COALESCE(SUM(o.totalAmount), 0)

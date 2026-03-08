@@ -17,6 +17,8 @@ public interface ADSerialRepository extends SerialRepository {
 
     Page<Serial> findByProductDetailId(String productId, Pageable pageable);
 
+    boolean existsBySerialNumberIn(List<String> serialNumbers);
+
     // Trong ADSerialRepository.java
     @Query("SELECT s FROM Serial s WHERE " +
             "(:kw IS NULL OR :kw = '' OR s.serialNumber LIKE %:kw% OR s.code LIKE %:kw%) " +

@@ -1,6 +1,7 @@
-package com.example.datn.core.admin.productdetail.service;
+package com.example.datn.core.admin.productDetail.service;
 
-import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
 
@@ -10,7 +11,7 @@ public interface ADProductDetailService {
 
     ResponseObject<?> getById(String id);
 
-    ResponseObject<?> createProductDetail(ADProductDetailRequest request);
+    ADProductDetailResponse addProductDetail(ADProductDetailRequest request);
 
     ResponseObject<?> updateProductDetail(String productDetailId, ADProductDetailRequest request);
 }

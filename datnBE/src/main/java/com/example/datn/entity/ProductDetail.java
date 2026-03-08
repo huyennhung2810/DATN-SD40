@@ -42,7 +42,7 @@ public class ProductDetail extends PrimaryEntity implements Serializable {
     @JoinColumn(name = "id_storage_capacity", referencedColumnName = "id")
     private StorageCapacity storageCapacity;
 
-    @OneToMany(mappedBy = "productDetail", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "productDetail", cascade = CascadeType.ALL)
     @ToString.Exclude // Để tránh lỗi vòng lặp vô tận khi in log
-    private List<Serial> serials = new ArrayList<>();
+    private List<Serial> serials;
 }

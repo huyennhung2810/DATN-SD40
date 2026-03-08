@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.serial.model.request;
 
+import com.example.datn.entity.ProductDetail;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,6 @@ public class ADSerialRequest {
     @Size(max = 20, message = "Serial Number không vượt quá 20 kí tự")
     private String serialNumber;
 
-    @NotBlank(message = "ProductDetailID không được để trống")
-    private String productDetailId;
+    private ProductDetail productDetail;
+
 }

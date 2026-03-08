@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productdetail.model.request;
+package com.example.datn.core.admin.productDetail.model.request;
 
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -21,7 +21,6 @@ public class ADProductDetailRequest {
     @Size(max = 30, message = "Tên Version SPCT không vượt quá 30 lí tự")
     private String version;
 
-    @NotBlank(message = "Note không được để trống")
     @Size(max = 300, message = "Note không vượt quá 300 kí tự")
     private String note;
 

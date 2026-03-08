@@ -11,6 +11,7 @@ import {
   UsergroupAddOutlined,
   TagOutlined,
   CalendarOutlined,
+  MessageOutlined,
   UserOutlined,
   ScheduleOutlined,
   SwapOutlined,
@@ -105,27 +106,20 @@ const Sidebar: React.FC = () => {
     },
 
     {
-      key: "/schedule",
-      icon: <CalendarOutlined />,
-      label: "Quản lý Lịch làm việc",
-      children: [
-        {
-          key: "/work-schedule",
-          icon: <ScheduleOutlined />,
-          label: "Lịch làm việc",
-        },
-        {
-          key: "/shift-handover",
-          icon: <SwapOutlined />,
-          label: "Giao ca",
-        },
+      key: "/work-schedule",
+      icon: <ScheduleOutlined />,
+      label: "Lịch làm việc",
+    },
+    {
+      key: "/shift-handover",
+      icon: <SwapOutlined />,
+      label: "Giao ca",
+    },
 
-        {
-          key: "/shift-template",
-          icon: <ClockCircleOutlined />,
-          label: "Quản lý ca làm việc",
-        },
-      ],
+    {
+      key: "/shift-template",
+      icon: <ClockCircleOutlined />,
+      label: "Quản lý ca làm việc",
     },
 
     // {
