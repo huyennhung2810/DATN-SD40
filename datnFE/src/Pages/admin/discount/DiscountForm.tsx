@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; // 1. Thêm useState vào đây
+import React, { useEffect, useState, useRef } from "react"; // 1. Thêm useState vào đây
 import {
   Form,
   Input,
@@ -25,8 +25,7 @@ import {
   getDiscountByIdRequest,
   resetCurrentDiscount,
 } from "../../../redux/discount/discountSlice";
-import type { DiscountRequest } from "../../../models/Discount";
-import {productDetailApi,discountApi} from "../../../api/discountApi";
+import { productDetailApi } from "../../../api/discountApi";
 const { Search } = Input; // Lấy component Search
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -36,8 +35,8 @@ const DiscountForm: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
-  const [keyword, setKeyword] = useState<string>(""); // State lưu từ khóa tìm kiếm
-  // 3. Đưa selectedRowKeys vào TRONG component
+  const isSubmittingRef = useRef(false);
+
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 4. Giả lập dữ liệu sản phẩm (Bạn nên thay bằng dữ liệu từ Redux/API thực tế)
@@ -82,63 +81,43 @@ const DiscountForm: React.FC = () => {
     }
   }, [id, dispatch, form]);
 
- useEffect(() => {
-  if (id && currentDiscount) {
-    form.setFieldsValue({
-      code: currentDiscount.code,
-      name: currentDiscount.name,
-      discountPercent: currentDiscount.discountPercent,
-      quantity: currentDiscount.quantity,
-      note: currentDiscount.note,
-      status: currentDiscount.status === 0 ? 0 : 1,
-      // Đổ dữ liệu vào form để hiển thị
-      createdAt: currentDiscount.createdAt ? dayjs(currentDiscount.createdAt).format("DD/MM/YYYY HH:mm") : "N/A",
-      updatedAt: currentDiscount.updatedAt ? dayjs(currentDiscount.updatedAt).format("DD/MM/YYYY HH:mm") : "N/A",
-      timeRange: [
-        dayjs(currentDiscount.startDate),
-        dayjs(currentDiscount.endDate),
-      ],
-    });
-
-    if (currentDiscount.discountDetails) {
-      const ids = currentDiscount.discountDetails.map(
-        (item: any) => item.productDetailId || item.productDetail?.id,
-      );
-      setSelectedRowKeys(ids);
-    }
-  }
-}, [currentDiscount, id, form]);
-
-  // Thêm useEffect này để lấy dữ liệu
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        // Lấy danh sách sản phẩm (giả sử lấy 1000 cái để chọn cho thoải mái)
-        const response: any = await productDetailApi.productDetail.getAll({
-          page: 0,
-          size: 1000,
-        });
-        console.log("Check data nè:", response);
+    if (id && currentDiscount) {
+      form.setFieldsValue({
+        code: currentDiscount.code,
+        name: currentDiscount.name,
+        discountPercent: currentDiscount.discountPercent,
+        quantity: currentDiscount.quantity,
+        note: currentDiscount.note,
+        status: currentDiscount.status === 0 ? 0 : 1,
+        // Đổ dữ liệu vào form để hiển thị
+        createdAt: currentDiscount.createdAt
+          ? dayjs(currentDiscount.createdAt).format("DD/MM/YYYY HH:mm")
+          : "N/A",
+        updatedAt: currentDiscount.updatedAt
+          ? dayjs(currentDiscount.updatedAt).format("DD/MM/YYYY HH:mm")
+          : "N/A",
+        timeRange: [
+          dayjs(currentDiscount.startDate),
+          dayjs(currentDiscount.endDate),
+        ],
+      });
 
-        // Map lại dữ liệu để hiển thị tên máy ảnh đầy đủ hơn
-        const mappedData = response.data.content.map((item: any) => ({
-          ...item,
-          // Kết hợp Tên + Màu để người dùng dễ chọn
-          name: `${item.product?.name || "N/A"} [${item.color?.name || "N/A"}]`,
-          salePrice: item.salePrice,
-        }));
-
-        setAllProductDetails(mappedData);
-      } catch (error) {
-        console.error("Lỗi tải sản phẩm:", error);
-        message.error("Không thể tải danh sách sản phẩm máy ảnh");
+      if (currentDiscount.discountDetails) {
+        const ids = currentDiscount.discountDetails.map(
+          (item: any) => item.productDetailId || item.productDetail?.id,
+        );
+        setSelectedRowKeys(ids);
       }
-    };
-
-    loadProducts();
-  }, []);
+    }
+  }, [currentDiscount, id, form]);
 
   const onFinish = (values: any) => {
+    // 2. Chặn đứng nếu đang xử lý
+    if (isSubmittingRef.current || loading) return; 
+    
+    // 3. Khóa cửa ngay lập tức
+    isSubmittingRef.current = true;
     if (selectedRowKeys.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 sản phẩm!");
       return;
@@ -176,6 +155,9 @@ const DiscountForm: React.FC = () => {
         }),
       );
     }
+    setTimeout(() => {
+      isSubmittingRef.current = false;
+    }, 2000);
   };
   return (
     <div style={{ padding: "24px" }}>
@@ -350,7 +332,9 @@ const DiscountForm: React.FC = () => {
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 loading={loading}
+                disabled={loading} // Khóa hoàn toàn, không cho nhấn thêm lần 2
                 size="large"
+                style={{ minWidth: "150px" }} // Thêm một chút độ rộng để nút không bị co lại khi hiện icon xoay
               >
                 {id ? "Lưu thay đổi" : "Kích hoạt chương trình"}
               </Button>

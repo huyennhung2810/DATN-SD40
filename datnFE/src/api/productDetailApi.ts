@@ -7,19 +7,17 @@ import type {
 import axiosClient from "./axiosClient";
 
 const BASE_URL = "/admin/products/product-detail";
-
+const PRODUCT_BASE_URL = "/admin/product"; // URL lấy sản phẩm cha
 
 export const getAll = async (params: ProductDetailPageParams): Promise<PageResponse<ProductDetailResponse>> => {
-    
     const res = await axiosClient.get<ResponseObject<PageResponse<ProductDetailResponse>>>(BASE_URL, { params });
     return res.data.data;
 };
 
-const productDetail = {
-  // Lấy tất cả chi tiết sản phẩm để chọn áp dụng giảm giá
-  getAll: (params: any) => {
-    return axiosClient.get('http://localhost:8386/api/admin/product-details', { params });
-  },
+// Hàm lấy Sản phẩm cha đổ vào Select
+export const getAllProduct = async (params: any): Promise<any> => {
+    const res = await axiosClient.get<ResponseObject<any>>(PRODUCT_BASE_URL, { params });
+    return res.data.data;
 };
 
 export const getById = async (id: string): Promise<ProductDetailResponse> => {
@@ -56,8 +54,8 @@ export const productDetailApi = {
     add,
     update,
     changeStatus,
-    productDetail,
     exportExcel,
+    getAllProduct, // Đã thêm vào export
 };
 
 export default productDetailApi;

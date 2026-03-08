@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productdetail.repository;
+package com.example.datn.core.admin.productDetail.repository;
 
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ADProductDetailForDiscountRepository extends ProductDetailRepository {
+public interface ADProductDetailRepository extends ProductDetailRepository {
 
     Page<ProductDetail> findAll(Pageable pageable);
 

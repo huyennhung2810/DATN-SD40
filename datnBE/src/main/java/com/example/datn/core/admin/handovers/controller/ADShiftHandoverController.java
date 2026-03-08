@@ -3,6 +3,7 @@ package com.example.datn.core.admin.handovers.controller;
 import com.example.datn.core.admin.handovers.model.request.ADShiftHandoverCheckInRequest;
 import com.example.datn.core.admin.handovers.model.request.ADShiftHandoverCheckOutRequest;
 import com.example.datn.core.admin.handovers.service.ADShiftHandoverService;
+import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.MappingConstants;
 import com.example.datn.utils.Helper;
 import jakarta.validation.Valid;
@@ -21,7 +22,12 @@ public class ADShiftHandoverController {
 
     @PostMapping("/check-in")
     public ResponseEntity<?> checkIn(@RequestBody @Valid ADShiftHandoverCheckInRequest request) {
-        return Helper.createResponseEntity(shiftHandoverService.checkIn(request));
+        ResponseObject<?> response = shiftHandoverService.checkIn(request);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     @GetMapping("/stats")

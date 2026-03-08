@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Table, Card, Button, Input, Tag, Space, Typography, Form, Tooltip, Drawer,
+  Table, Card, Button, Input, Tag, Space, Typography, Form, Drawer,
   Radio, Select, InputNumber, notification
 } from "antd";
-import { SearchOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { productDetailActions } from "../../../redux/productdetail/productDetailSlice";
 import type { ColumnsType } from "antd/es/table";
 import type { ProductDetailResponse } from "../../../models/productdetail";
 import type { RootState } from "../../../redux/store";
-import dayjs from "dayjs";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
 
@@ -19,34 +18,37 @@ const ProductDetailPage: React.FC = () => {
   const dispatch = useDispatch();
   const [formManager] = Form.useForm();
   
-  // Lấy dữ liệu từ Redux
-  const { list: colors } = useSelector((state: RootState) => state.color);
-  const { list: capacities } = useSelector((state: RootState) => state.storage);
-  // Giả sử bạn có thêm danh sách sản phẩm cha
-  // const { list: products } = useSelector((state: RootState) => state.product); 
-
-  const { list = [], loading, totalElements = 0 } = useSelector(
-    (state: RootState) => state.productDetail || {}
-  );
+  // 1. Lấy dữ liệu Màu sắc và Dung lượng từ Redux (kèm fallback mảng rỗng để tránh lỗi map)
+  const { list: colors = [] } = useSelector((state: RootState) => state.color || {});
+  const { list: capacities = [] } = useSelector((state: RootState) => state.storage || {});
+  
+  // 2. Lấy danh sách SPCT (list) và Sản phẩm cha (productList) từ productDetailSlice
+  const { 
+    list = [], 
+    productList = [], 
+    loading, 
+    totalElements = 0 
+  } = useSelector((state: RootState) => state.productDetail || {});
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState({ page: 0, size: 10, keyword: "", status: undefined });
 
-  // 1. Fetch dữ liệu
+  // Fetch dữ liệu cho bảng
   const fetchData = useCallback(() => {
     dispatch(productDetailActions.getAll(filter));
   }, [dispatch, filter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Fetch dữ liệu cho các Select trong Form khi component mount
   useEffect(() => {
     dispatch(colorActions.getAll({ page: 0, size: 1000 }));
     dispatch(storageCapacityActions.getAll({ page: 0, size: 1000 }));
-    // dispatch(productActions.getAll({ page: 0, size: 1000 }));
+    dispatch(productDetailActions.getAllProduct({ page: 0, size: 1000 }));
   }, [dispatch]);
 
-  // 2. Mở Drawer (Xử lý gán ID để Select hiển thị đúng)
+  // Mở Drawer và fill dữ liệu
   const openDrawer = (record?: ProductDetailResponse) => {
     formManager.resetFields();
     setEditingId(record?.id || null);
@@ -56,16 +58,15 @@ const ProductDetailPage: React.FC = () => {
         productDetailActions.getById({
           id: record.id,
           onSuccess: (data: ProductDetailResponse) => {
-            // Biến mảng thành chuỗi xuống dòng
             const serialText = data.serials?.map((s) => s.serialNumber).join('\n') || "";
 
+            // ÉP KIỂU STRING TẤT CẢ CÁC ID ĐỂ KHÔNG BỊ HIỆN MÃ ID TRÊN FORM
             formManager.setFieldsValue({
               ...data,
-              productId: data.productId,
-              colorId: data.colorId,
-              storageCapacityId: data.storageCapacityId,
+              productId: data.productId ? String(data.productId) : undefined,
+              colorId: data.colorId ? String(data.colorId) : undefined,
+              storageCapacityId: data.storageCapacityId ? String(data.storageCapacityId) : undefined,
               serialList: serialText,
-              // TypeScript giờ đã hiểu data.serials[0].code
               serialCode: data.serials?.[0]?.code || "" 
             });
           },
@@ -77,32 +78,36 @@ const ProductDetailPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  
+  // Xử lý khi Submit Form
   const onFinish = (values: any) => {
-    const serialNumbers = values.serialList
-      ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
-      : [];
+    const rawSerials = values.serialList
+    ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
+    : [];
 
-    const serials = serialNumbers.map((sn: string) => ({
-      serialNumber: sn,
-      code: values.serialCode, // Đây là trường 'code' trong ADSerialRequest
-      status: values.status,   // Cùng trạng thái với SPCT
-      productDetailId: editingId // Backend sẽ xử lý nếu là null
-    }));
+  // 2. Loại bỏ các mã trùng lặp do người dùng nhập nhầm trong form
+  const uniqueSerials = Array.from(new Set<string>(rawSerials));
+  
+  if (uniqueSerials.length !== rawSerials.length) {
+    notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
+  }
 
-    const payload = {
-      ...values,
-      quantity: !editingId ? serials.length : values.quantity,
-      serials: serials,
-    };
+  // 3. Map thành mảng Object để gửi lên BE
+  const serials = uniqueSerials.map((sn: string) => ({
+    serialNumber: sn,
+    code: values.serialCode, // Nếu BE cần mã lô chung
+    status: "ACTIVE"
+  }));
 
-    const uniqueSerials = Array.from(new Set(serialNumbers));
-        if (uniqueSerials.length !== serialNumbers.length) {
-          notification.warning({
-            message: "Phát hiện mã trùng lặp",
-            description: "Có một số mã Serial bị trùng trong danh sách nhập vào. Hệ thống sẽ tự lọc bỏ các mã trùng."
-          });
-        }
+  // 4. Đóng gói Payload
+  const payload = {
+    ...values,
+    quantity: serials.length, // Số lượng tồn kho TỰ ĐỘNG BẰNG số lượng Serial
+    serials: serials // Gửi kèm mảng Serial
+  };
+
+  // Xóa rác
+  delete payload.serialList;
+  delete payload.serialCode;
 
     if (editingId) {
       dispatch(productDetailActions.update({ 
@@ -118,6 +123,7 @@ const ProductDetailPage: React.FC = () => {
     }
   };
 
+  // Cấu hình cột cho bảng
   const columns: ColumnsType<ProductDetailResponse> = [
     { title: "STT", align: "center", width: 60, render: (_, __, i) => filter.page * filter.size + i + 1 },
     { title: "Mã phiên bản", render: r => <Text strong>{r.code}</Text> },
@@ -127,7 +133,7 @@ const ProductDetailPage: React.FC = () => {
       render: r => (
         <Space direction="vertical" size={0}>
           <Text strong style={{ color: '#1890ff' }}>{r.version}</Text>
-          <Tag color="blue">{r.colorName} | {r.storageCapacityName}</Tag>
+          <Tag color="blue">{r.colorName || "---"} | {r.storageCapacityName || "---"}</Tag>
         </Space>
       ),
     },
@@ -205,7 +211,6 @@ const ProductDetailPage: React.FC = () => {
         }
       >
         <Form form={formManager} layout="vertical" onFinish={onFinish}>
-          {/* Section: Serial Management */}
           <Card size="small" title="Quản lý Serial" style={{ marginBottom: 16, background: '#fafafa' }}>
             <Form.Item 
               label={<Text strong>{editingId ? "Danh sách Serial hiện tại" : "Nhập danh sách Serial mới"}</Text>} 
@@ -231,29 +236,48 @@ const ProductDetailPage: React.FC = () => {
             </Form.Item>
           </Card>
 
-          {/* Section: Product Info */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Mã SPCT" name="code" rules={[{ required: true }]}>
               <Input placeholder="Mã định danh SPCT" disabled={!!editingId} />
             </Form.Item>
             <Form.Item label="Tên phiên bản" name="version" rules={[{ required: true }]}>
-              <Input placeholder="iPhone 15 Pro Max..." />
+              <Input placeholder="Ví dụ: Pro Max..." />
             </Form.Item>
           </div>
 
           <Form.Item label="Sản phẩm" name="productId" rules={[{ required: true }]}>
             <Select 
               placeholder="Chọn sản phẩm" 
-              // options={products.map(p => ({ label: p.name, value: p.id }))} 
+              showSearch
+              optionFilterProp="label"
+              loading={productList.length === 0}
+              options={(productList || []).map((p: any) => ({ 
+                label: p.name, 
+                value: String(p.id) 
+              }))} 
             />
           </Form.Item>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Màu sắc" name="colorId" rules={[{ required: true }]}>
-              <Select placeholder="Chọn màu sắc" options={colors.map(c => ({ label: c.name, value: c.id }))} />
+              <Select 
+                placeholder="Chọn màu sắc" 
+                loading={colors.length === 0}
+                options={(colors || []).map((c: any) => ({ 
+                  label: c.name, 
+                  value: String(c.id) 
+                }))} 
+              />
             </Form.Item>
             <Form.Item label="Dung lượng" name="storageCapacityId" rules={[{ required: true }]}>
-              <Select placeholder="Chọn dung lượng" options={capacities.map(s => ({ label: s.name, value: s.id }))} />
+              <Select 
+                placeholder="Chọn dung lượng" 
+                loading={capacities.length === 0}
+                options={(capacities || []).map((s: any) => ({ 
+                  label: s.name, 
+                  value: String(s.id) 
+                }))} 
+              />
             </Form.Item>
           </div>
 

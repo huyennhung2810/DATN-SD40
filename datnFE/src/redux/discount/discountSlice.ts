@@ -65,15 +65,28 @@ const discountSlice = createSlice({
       state.error = action.payload;
     },
 
-    // --- Cập nhật ---
+   // --- Cập nhật ---
     updateDiscountRequest: (
       state,
       _action: PayloadAction<{ id?: string; data: any; navigate: () => void }>,
     ) => {
       state.loading = true;
+      state.error = null; // Xóa lỗi cũ
     },
-    updateDiscountSuccess: (state) => {
+    updateDiscountSuccess: (state, action: PayloadAction<any>) => {
       state.loading = false;
+      
+      // Tùy chọn: Tìm và cập nhật item trong danh sách ngay lập tức
+      const updatedItem = action.payload;
+      const index = state.list.findIndex((item) => item.id === updatedItem.id);
+      if (index !== -1) {
+        state.list[index] = updatedItem;
+      }
+    },
+    // THÊM MỚI DÒNG NÀY: Xử lý khi Update thất bại
+    updateDiscountFailure: (state, action: PayloadAction<string>) => {
+      state.loading = false; // QUAN TRỌNG: Tắt vòng xoay loading
+      state.error = action.payload;
     },
 
     // --- Lấy chi tiết ---
@@ -121,6 +134,7 @@ export const {
   changeStatusDiscountRequest,
   changeStatusDiscountSuccess,
   resetCurrentDiscount,
+  updateDiscountFailure,
 } = discountSlice.actions;
 
 export default discountSlice.reducer;

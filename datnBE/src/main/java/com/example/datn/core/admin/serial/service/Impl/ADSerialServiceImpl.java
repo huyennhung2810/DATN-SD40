@@ -106,7 +106,7 @@ public class ADSerialServiceImpl implements ADSerialService {
         serial.setSerialNumber(request.getSerialNumber());
         serial.setCode(request.getCode());
 
-        ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
+        ProductDetail productDetail = productDetailRepository.findById(request.getProductDetail().getId()).orElse(null);
         if (productDetail == null) {
             return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "SPCT đang bị trống"));
         }
@@ -131,7 +131,7 @@ public class ADSerialServiceImpl implements ADSerialService {
          * Nhớ phải thêm ProductDetail Vào dây
          */
 
-        ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId()).orElse(null);
+        ProductDetail productDetail = productDetailRepository.findById(request.getProductDetail().getId()).orElse(null);
         if (productDetail == null) {
             return ResponseEntity.badRequest().body(ResponseObject.error(HttpStatus.BAD_REQUEST, "SPCT đang bị trống"));
         }
