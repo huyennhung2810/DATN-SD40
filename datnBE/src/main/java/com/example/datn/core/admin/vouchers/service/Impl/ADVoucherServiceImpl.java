@@ -96,7 +96,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
     @Override
     @Transactional
     public ResponseObject<?> createOrUpdate(String id, PostOrPutVoucherDto dto) {
-        // 1. Kiểm tra trùng mã (Dùng logic riêng cho Create và Update để an toàn nhất)
+
         boolean isExisted;
         if (id == null || id.isEmpty()) {
             isExisted = adVouchersRepository.existsByCode(dto.getCode());
@@ -110,7 +110,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
 
         Voucher voucher;
         long currentTime = System.currentTimeMillis();
-// SỬA LẠI ĐOẠN NÀY
+
         if (id != null && !id.isEmpty()) {
             voucher = adVouchersRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
@@ -121,16 +121,13 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                         "Không được phép thay đổi đối tượng áp dụng sau khi đã tạo voucher!");
             }
         } else {
-            // Tạo mới hoàn toàn
+
             voucher = new Voucher();
             voucher.setId(UUID.randomUUID().toString());
-            // Khi tạo mới, gán luôn type để tránh lỗi null ở các bước sau nếu cần dùng
+
             voucher.setVoucherType(dto.getVoucherType());
         }
 
-        // 2. Logic Trạng thái thông minh
-        // Nếu FE gửi về status = 0 (Buộc dừng), ta giữ nguyên 0.
-        // Nếu khác 0, ta mới tự động tính toán theo thời gian.
         if (dto.getStatus() != null && dto.getStatus() == 0) {
             voucher.setStatus(0); // Buộc dừng
         } else {
@@ -144,7 +141,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
             }
         }
 
-        // 3. Mapping dữ liệu
+
         voucher.setCode(dto.getCode());
         voucher.setName(dto.getName());
         voucher.setVoucherType(dto.getVoucherType());
@@ -156,14 +153,13 @@ public class ADVoucherServiceImpl implements ADVoucherService {
         voucher.setNote(dto.getNote());
         voucher.setDiscountValue(dto.getDiscountValue());
         voucher.setQuantity(dto.getQuantity());
-        // Luôn cập nhật thông tin người sửa/ngày sửa
+
         voucher.setLastModifiedDate(currentTime);
         voucher.setLastModifiedBy(dto.getLastModifiedBy());
         Voucher savedVoucher;
 
 
         // --- PHẦN 3 & 4: XỬ LÝ VOUCHER CÁ NHÂN & GỬI MAIL ---
-        // Sử dụng .equals() hoặc equalsIgnoreCase() để so sánh chuỗi trong Java
         if ("INDIVIDUAL".equalsIgnoreCase(dto.getVoucherType())) {
             List<String> customerIds = dto.getCustomerIds();
 
