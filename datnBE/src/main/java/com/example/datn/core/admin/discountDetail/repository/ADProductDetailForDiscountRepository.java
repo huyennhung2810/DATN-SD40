@@ -13,7 +13,7 @@ public interface ADProductDetailForDiscountRepository extends ProductDetailRepos
     @Query("SELECT pd FROM ProductDetail pd " +
             "LEFT JOIN pd.product p " +
             // Thêm điều kiện status = 1 (hoặc status = ACTIVE tùy kiểu dữ liệu của bạn)
-            "WHERE pd.status = 1 AND " +
+            "WHERE pd.status = 0 AND " +
             // Bọc toàn bộ logic check keyword vào 1 ngoặc tròn
             "(:keyword IS NULL OR :keyword = '' OR " +
             "lower(p.name) LIKE lower(concat('%', :keyword, '%')) OR " +
