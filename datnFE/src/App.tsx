@@ -26,7 +26,9 @@ import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
 import MainLayout from "./layout/admin/MainLayout";
 import PosPage from "./Pages/admin/pos/PosPage";
 import OrderPage from "./Pages/admin/order/OrderList";
-
+import BannerList from "./Pages/admin/banner/BannerList";
+import BannerForm from "./Pages/admin/banner/BannerForm";
+import 'antd/dist/reset.css';
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -86,6 +88,11 @@ const App: React.FC = () => {
           <Route path="/discount" element={<DiscountList />} />
           <Route path="/discount/create" element={<DiscountForm />} />
           <Route path="/discount/edit/:id" element={<DiscountForm />} />
+          {/* Banner */}
+          <Route path="/admin/banners" element={<BannerList />} />
+          <Route path="/admin/banners/create" element={<BannerForm />} />
+          <Route path="/admin/banners/:id/edit" element={<BannerForm />} />
+          <Route path="/admin/banners/:id" element={<BannerForm />} />
         </Route>
         {/* Client Pages */}
         <Route path="/client" element={<CustomerLayout />}>

@@ -64,7 +64,7 @@ function* handleItemAction(action: PayloadAction<ItemActionPayload>) {
       yield call(onSuccess);
     }
 
-    yield put(resolutionActions.getAll({ page: 0, size: 10 }));
+    yield put(resolutionActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     const errorMsg = getErrorMessage(error);
     yield put(resolutionActions.actionFailed(errorMsg));
@@ -83,7 +83,7 @@ function* handleDelete(action: PayloadAction<string>) {
       title: "Thành công",
       description: "Xóa thành công",
     });
-    yield put(resolutionActions.getAll({ page: 0, size: 10 }));
+    yield put(resolutionActions.getAll({ page: 0, size: 10, keyword: "" }));
   } catch (error: unknown) {
     yield put(resolutionActions.actionFailed(getErrorMessage(error)));
     notification.error({

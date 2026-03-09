@@ -113,6 +113,35 @@ const ProductCategoryPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Validate name - check for duplicates
+  const validateName = async (_: any, value: string) => {
+    if (!value) {
+      return Promise.reject("Vui lòng nhập tên danh mục");
+    }
+    if (!value.trim()) {
+      return Promise.reject("Tên danh mục không được chỉ chứa khoảng trắng");
+    }
+    if (value.trim().length < 2) {
+      return Promise.reject("Tên danh mục phải có ít nhất 2 ký tự");
+    }
+
+    // Check for duplicates
+    const trimmedValue = value.trim().toLowerCase();
+    const isDuplicate = list.some(
+      (item) => item.name?.toLowerCase().trim() === trimmedValue
+    );
+
+    if (isDuplicate) {
+      // If updating, allow keeping the same name
+      if (editingCategory && editingCategory.name?.toLowerCase().trim() === trimmedValue) {
+        return Promise.resolve();
+      }
+      return Promise.reject("Tên danh mục đã tồn tại");
+    }
+
+    return Promise.resolve();
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
@@ -123,9 +152,9 @@ const ProductCategoryPage: React.FC = () => {
         modalForm.validateFields().then((values) => {
             const data = {
                 id: editingCategory?.id,
-                name: values.name,
-                code: values.code,
-                description: values.description,
+                name: values.name?.trim(),
+                code: values.code?.trim(),
+                description: values.description?.trim() || undefined,
                 status: values.status,
             };
 
@@ -369,8 +398,7 @@ const ProductCategoryPage: React.FC = () => {
             name="name"
             label="Tên danh mục"
             rules={[
-              { required: true, message: "Vui lòng nhập tên danh mục" },
-              { min: 2, message: "Tên phải có ít nhất 2 ký tự" },
+              { validator: validateName }
             ]}
           >
             <Input placeholder="Nhập tên danh mục" />

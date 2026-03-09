@@ -1,9 +1,8 @@
-import type { BannerResponse } from "../models/banner";
 import type { PageResponse, ResponseObject } from "../models/base";
-import type { 
-    CustomerPageParams, 
-    CustomerRequest, 
-    CustomerResponse, 
+import type {
+    CustomerPageParams,
+    CustomerRequest,
+    CustomerResponse,
 } from "../models/customer";
 import axiosClient from "./axiosClient";
 
@@ -62,15 +61,6 @@ if (data.addresses && data.addresses.length > 0) {
   return formData;
 }
 
-
-// Banner endpoints
-export const bannerApi = {
-  getActiveBanners: async (position: string = "HOME_TOP"): Promise<BannerResponse[]> => {
-    const res = await axiosClient.get<ResponseObject<BannerResponse[]>>(`/banners/active?position=${position}`);
-    return res.data.data;
-  },
-};
-
 export const addCustomer = async (data: CustomerRequest): Promise<ResponseObject<CustomerResponse>> => {
   const formData = convertToFormData(data);
   const res = await axiosClient.post<ResponseObject<CustomerResponse>>(BASE_URL, formData, {
@@ -128,6 +118,5 @@ export const customerApi = {
 };
 
 export default {
-  banner: bannerApi,
   customer: customerApi,
 };

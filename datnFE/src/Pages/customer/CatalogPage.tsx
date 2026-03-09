@@ -6,6 +6,7 @@ import ProductCard from "../../components/customer/ProductCard";
 import FilterPanel from "../../components/customer/FilterPanel";
 import FilterDrawer from "../../components/customer/FilterDrawer";
 import { CustomPagination, SortSelect } from "../../components/customer/Pagination";
+import BannerCarousel from "../../components/customer/BannerCarousel";
 import { customerProductApi } from "../../api/customerProductApi";
 import type { ProductResponse, ProductPageParams } from "../../models/product";
 import type { ProductCategoryResponse } from "../../models/productCategory";
@@ -215,6 +216,7 @@ const CatalogPage: React.FC = () => {
 
   return (
     <div className="customer-page">
+      <BannerCarousel position="HOME_TOP" autoPlay={false} />
       <div className="bg-gray-100 py-4">
         <div className="container mx-auto px-4">
           <Breadcrumb
