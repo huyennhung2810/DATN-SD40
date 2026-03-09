@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Table, Card, Button, Input, Tag, Space, Typography, Form, Drawer,
-  Radio, Select, InputNumber, notification
+  Radio, Select, InputNumber, notification,
+  Upload
 } from "antd";
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +12,8 @@ import type { ProductDetailResponse } from "../../../models/productdetail";
 import type { RootState } from "../../../redux/store";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import * as XLSX from "xlsx";
+import {debounce} from "lodash";
 
 const { Title, Text } = Typography;
 
@@ -39,6 +42,17 @@ const ProductDetailPage: React.FC = () => {
     dispatch(productDetailActions.getAll(filter));
   }, [dispatch, filter]);
 
+  const handleSearch = useCallback(
+  debounce((value: string) => {
+    setFilter(prev => ({
+      ...prev,
+      keyword: value.trim(),
+      page: 0
+    }));
+  }, 500),
+  []
+);
+
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Fetch dữ liệu cho các Select trong Form khi component mount
@@ -48,35 +62,72 @@ const ProductDetailPage: React.FC = () => {
     dispatch(productDetailActions.getAllProduct({ page: 0, size: 1000 }));
   }, [dispatch]);
 
+  const generateCode = () => {
+        return `SPCT${Date.now()}`;
+    };
+    
   // Mở Drawer và fill dữ liệu
   const openDrawer = (record?: ProductDetailResponse) => {
-    formManager.resetFields();
-    setEditingId(record?.id || null);
+  formManager.resetFields();
+  setEditingId(record?.id || null);
 
-    if (record?.id) {
-      dispatch(
-        productDetailActions.getById({
-          id: record.id,
-          onSuccess: (data: ProductDetailResponse) => {
-            const serialText = data.serials?.map((s) => s.serialNumber).join('\n') || "";
+  if (record?.id) {
+    dispatch(
+      productDetailActions.getById({
+        id: record.id,
+        onSuccess: (data: ProductDetailResponse) => {
+          const serialText = data.serials?.map((s) => s.serialNumber).join('\n') || "";
 
-            // ÉP KIỂU STRING TẤT CẢ CÁC ID ĐỂ KHÔNG BỊ HIỆN MÃ ID TRÊN FORM
-            formManager.setFieldsValue({
-              ...data,
-              productId: data.productId ? String(data.productId) : undefined,
-              colorId: data.colorId ? String(data.colorId) : undefined,
-              storageCapacityId: data.storageCapacityId ? String(data.storageCapacityId) : undefined,
-              serialList: serialText,
-              serialCode: data.serials?.[0]?.code || "" 
-            });
-          },
-        })
-      );
-    } else {
-      formManager.setFieldsValue({ status: 'ACTIVE', quantity: 0 });
-    }
-    setDrawerOpen(true);
+          formManager.setFieldsValue({
+            ...data,
+            productId: data.productId ? String(data.productId) : undefined,
+            colorId: data.colorId ? String(data.colorId) : undefined,
+            storageCapacityId: data.storageCapacityId ? String(data.storageCapacityId) : undefined,
+            serialList: serialText,
+            serialCode: data.serials?.[0]?.code || ""
+          });
+        },
+      })
+    );
+  } else {
+    formManager.setFieldsValue({
+      code: generateCode(),
+      status: 'ACTIVE',
+      quantity: 0
+    });
+  }
+
+  setDrawerOpen(true);
+};
+
+const handleImportExcel = (file: any) => {
+  const reader = new FileReader();
+
+  reader.onload = (e: any) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: "array" });
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    // lấy cột đầu tiên làm serial
+    const serials = jsonData
+      .map((row: any) => row[0])
+      .filter((v: any) => v)
+      .join("\n");
+
+    formManager.setFieldsValue({
+      serialList: serials,
+      quantity: serials.split("\n").length
+    });
   };
+
+  reader.readAsArrayBuffer(file);
+
+  return false; // chặn upload lên server
+};
 
   // Xử lý khi Submit Form
   const onFinish = (values: any) => {
@@ -166,10 +217,11 @@ const ProductDetailPage: React.FC = () => {
 
       <Card style={{ marginBottom: 16 }}>
         <Space size="large">
-          <Input.Search 
-            placeholder="Tìm theo mã, tên..." 
-            onSearch={v => setFilter(p => ({...p, keyword: v.trim(), page: 0}))} 
-            style={{ width: 300 }} 
+          <Input
+            placeholder="Tìm theo mã, tên..."
+            style={{ width: 300 }}
+            onChange={(e) => handleSearch(e.target.value)}
+            allowClear
           />
           <Radio.Group 
             buttonStyle="solid" 
@@ -212,33 +264,39 @@ const ProductDetailPage: React.FC = () => {
       >
         <Form form={formManager} layout="vertical" onFinish={onFinish}>
           <Card size="small" title="Quản lý Serial" style={{ marginBottom: 16, background: '#fafafa' }}>
-            <Form.Item 
-              label={<Text strong>{editingId ? "Danh sách Serial hiện tại" : "Nhập danh sách Serial mới"}</Text>} 
-              name="serialList" 
-              extra={!editingId && "Mỗi mã một dòng. Số lượng SPCT sẽ tự động tính theo số mã này."}
-              rules={[{ required: !editingId, message: 'Vui lòng nhập Serial!' }]}
+
+          {!editingId && (
+            <Upload
+              beforeUpload={handleImportExcel}
+              showUploadList={false}
+              accept=".xlsx,.xls"
             >
-              <Input.TextArea 
-                rows={5} 
-                placeholder="Ví dụ:&#10;SN10001&#10;SN10002" 
-                disabled={!!editingId}
-                onChange={(e) => {
-                  if (!editingId) {
-                    const count = e.target.value.split(/\n/).filter(s => s.trim() !== "").length;
-                    formManager.setFieldsValue({ quantity: count });
-                  }
-                }}
-              />
-            </Form.Item>
+              <Button style={{ marginBottom: 10 }}>
+                Import Serial từ Excel
+              </Button>
+            </Upload>
+          )}
 
-            <Form.Item label="Mã Serial chung (Serial Code)" name="serialCode" rules={[{ required: true }]}>
-              <Input placeholder="Nhập mã lô hoặc mã Serial chung" />
-            </Form.Item>
-          </Card>
+          <Form.Item 
+            label={<Text strong>{editingId ? "Danh sách Serial hiện tại" : "Nhập danh sách Serial mới"}</Text>} 
+            name="serialList"
+            extra={!editingId && "Mỗi mã một dòng hoặc import từ Excel"}
+            rules={[{ required: !editingId, message: 'Vui lòng nhập Serial!' }]}
+          >
+            <Input.TextArea 
+              rows={5}
+              disabled={!!editingId}
+              placeholder={`SP0001
+                          SP0002
+                          SP0003
+                          SP0004`}
+            />
+          </Form.Item>
 
+        </Card>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Mã SPCT" name="code" rules={[{ required: true }]}>
-              <Input placeholder="Mã định danh SPCT" disabled={!!editingId} />
+              <Input placeholder="Mã định danh SPCT" disabled value={generateCode()}/>
             </Form.Item>
             <Form.Item label="Tên phiên bản" name="version" rules={[{ required: true }]}>
               <Input placeholder="Ví dụ: Pro Max..." />
@@ -289,9 +347,12 @@ const ProductDetailPage: React.FC = () => {
                 parser={v => v!.replace(/\$\s?|(,*)/g, '')} 
               />
             </Form.Item>
+
+            {editingId &&(
             <Form.Item label="Số lượng tồn" name="quantity">
               <InputNumber min={0} style={{ width: '100%' }} disabled={!!editingId}/>
             </Form.Item>
+            )}
           </div>
 
           <Form.Item label="Trạng thái kinh doanh" name="status">
