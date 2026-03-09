@@ -2,7 +2,10 @@ package com.example.datn.core.admin.product.service;
 
 import com.example.datn.core.admin.product.model.request.CustomerProductSearchRequest;
 import com.example.datn.core.admin.product.model.response.ADProductResponse;
+import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.common.base.PageableObject;
+
+import java.util.List;
 
 public interface CustomerProductService {
     
@@ -19,6 +22,13 @@ public interface CustomerProductService {
      * @return product details
      */
     ADProductResponse findById(String id);
+
+    /**
+     * Get all variants (product details) for a product
+     * @param productId product ID
+     * @return list of product variants with images
+     */
+    List<ADProductVariantResponse> getVariantsByProductId(String productId);
 }
 
 
