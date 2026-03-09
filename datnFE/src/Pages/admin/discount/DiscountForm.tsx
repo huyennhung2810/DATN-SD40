@@ -45,20 +45,30 @@ const DiscountForm: React.FC = () => {
   const { currentDiscount, loading } = useSelector(
     (state: RootState) => state.discount,
   );
-  // Hàm gọi API lấy sản phẩm (đã cập nhật để nhận keyword)
+  // Hàm gọi API lấy sản phẩm
   const fetchProducts = async (searchKey: string = "") => {
     try {
       const res: any = await productDetailApi.getAll({
         page: 0,
-        size: 1000,
-        keyword: searchKey, // Truyền keyword xuống BE
+        size: 10,
+        keyword: searchKey,
       });
 
       const rawData = res.data.content || res.data;
+
       const formattedData = rawData.map((item: any) => ({
         id: item.id,
-        name: `${item.product?.name} [${item.color?.name || "N/A"}]`,
+        // PHẢI THÊM 3 DÒNG NÀY ĐỂ BẢNG (TABLE) CÓ THỂ ĐỌC ĐƯỢC:
+        code: item.code,
+        productName: item.productName,
+        colorName: item.colorName || "N/A",
+
+        // Các dòng cũ của bạn giữ nguyên
         salePrice: item.salePrice,
+        quantity: item.quantity,
+        storageCapacityName: item.storageCapacityName || "N/A",
+        version: item.version || "N/A",
+        status: item.status,
       }));
 
       setAllProductDetails(formattedData);
@@ -66,7 +76,6 @@ const DiscountForm: React.FC = () => {
       console.error("Lỗi lấy sản phẩm:", error);
     }
   };
-
   // Gọi lần đầu khi mở form
   useEffect(() => {
     fetchProducts("");
@@ -114,8 +123,8 @@ const DiscountForm: React.FC = () => {
 
   const onFinish = (values: any) => {
     // 2. Chặn đứng nếu đang xử lý
-    if (isSubmittingRef.current || loading) return; 
-    
+    if (isSubmittingRef.current || loading) return;
+
     // 3. Khóa cửa ngay lập tức
     isSubmittingRef.current = true;
     if (selectedRowKeys.length === 0) {
@@ -311,13 +320,63 @@ const DiscountForm: React.FC = () => {
                 onChange: (keys) => setSelectedRowKeys(keys),
               }}
               columns={[
-                { title: "Tên máy ảnh", dataIndex: "name", key: "name" },
+                {
+                  title: "Mã SP",
+                  dataIndex: "code",
+                  key: "code",
+                },
+                {
+                  title: "Tên máy ảnh",
+                  dataIndex: "productName",
+                  key: "productName",
+                },
+                {
+                  title: "Màu sắc",
+                  dataIndex: "colorName",
+                  key: "colorName",
+                },
+                {
+                  title: "Dung lượng",
+                  dataIndex: "storageCapacityName",
+                  key: "storageCapacityName",
+                },
+                {
+                  title: "Cấu hình",
+                  dataIndex: "version",
+                  key: "version",
+                },
                 {
                   title: "Giá bán",
                   dataIndex: "salePrice",
                   key: "salePrice",
+                  // Thêm 'vi-VN' để dấu phẩy/chấm phân cách tiền tệ chuẩn xác theo kiểu Việt Nam
                   render: (val) =>
-                    val ? `${val.toLocaleString()} VND` : "0 VND",
+                    val ? `${val.toLocaleString("vi-VN")} VND` : "0 VND",
+                },
+                {
+                  title: "Số lượng",
+                  dataIndex: "quantity",
+                  key: "quantity",
+                },
+                {
+                  title: "Trạng thái",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (status) => {
+                    // Cập nhật trạng thái 1 thành Đang bán
+                    if (status === 1 || status === "INACTIVE") {
+                      return (
+                        <span style={{ color: "green", fontWeight: 500 }}>
+                          Đang bán
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ color: "red", fontWeight: 500 }}>
+                        Ngừng bán
+                      </span>
+                    );
+                  },
                 },
               ]}
               dataSource={allProductDetails}

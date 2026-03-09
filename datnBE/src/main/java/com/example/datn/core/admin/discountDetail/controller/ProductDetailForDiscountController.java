@@ -8,21 +8,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/product-details") // Đường dẫn khớp với Frontend
+@RequestMapping("/api/admin/product-details-discount") // Đường dẫn khớp với Frontend
 @CrossOrigin("*") // Cho phép FE gọi API
 public class ProductDetailForDiscountController {
 
     @Autowired
-    private ProductDetailForDiscountService productDetailService;
+    private ProductDetailForDiscountService productDetailForDiscountService;
 
     @GetMapping
     public ResponseEntity<?> getAll(
-            @RequestParam(required = false) String keyword, // Thêm dòng này
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "1000") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
         // Truyền keyword xuống Service
-        return ResponseEntity.ok(productDetailService.getAll(keyword, pageable));
+        return ResponseEntity.ok(productDetailForDiscountService.getAll(keyword, pageable));
     }
 }

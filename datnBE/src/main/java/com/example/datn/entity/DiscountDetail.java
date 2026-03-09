@@ -1,8 +1,7 @@
 package com.example.datn.entity;
 
-import com.example.datn.entity.base.PrimaryEntity;
+
 import com.example.datn.infrastructure.constant.EntityProperties;
-import com.example.datn.infrastructure.constant.EntityStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
