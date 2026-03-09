@@ -369,7 +369,7 @@ const DiscountForm: React.FC = () => {
                   key: "status",
                   render: (status) => {
                     // Cập nhật trạng thái 1 thành Đang bán
-                    if (status === 1 || status === "INACTIVE") {
+                    if (status === 0 || status === "ACTIVE") {
                       return (
                         <span style={{ color: "green", fontWeight: 500 }}>
                           Đang bán
