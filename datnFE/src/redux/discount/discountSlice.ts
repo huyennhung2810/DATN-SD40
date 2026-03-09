@@ -27,20 +27,22 @@ const discountSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    fetchDiscountsSuccess: (state, action: PayloadAction<any>) => {
+  fetchDiscountsSuccess: (state, action) => {
       state.loading = false;
-
-      // action.payload lúc này là toàn bộ JSON bạn gửi từ Postman
       const response = action.payload;
 
-      // Kiểm tra cấu trúc: response (Object gốc) -> data (Lớp 1) -> data (Mảng danh sách)
-      if (response && response.data && Array.isArray(response.data.data)) {
-        state.list = response.data.data; // Lấy mảng 4 đợt giảm giá
-        state.totalElements = response.data.totalElements || 0; // Lấy số 4
-      } else {
-        // Dự phòng nếu Backend thay đổi cấu trúc trả về trực tiếp
-        state.list = response?.data || [];
-        state.totalElements = response?.totalElements || 0;
+      // Nhặt đúng mảng dữ liệu từ JSON chuẩn của BE
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        state.list = response.data.data;
+        state.totalElements = response.data.totalElements || response.data.data.length;
+      } 
+      else if (response?.data && Array.isArray(response.data)) {
+        state.list = response.data;
+        state.totalElements = response.totalElements || response.data.length;
+      } 
+      else {
+        state.list = [];
+        state.totalElements = 0;
       }
     },
     fetchDiscountsFailure: (state) => {

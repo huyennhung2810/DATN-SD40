@@ -13,11 +13,12 @@ import {
   Table,
   message,
   Radio,
+  
 } from "antd";
 import { SaveOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import type { AppDispatch, RootState } from "../../../redux/store";
 import {
   addDiscountRequest,
@@ -26,6 +27,7 @@ import {
   resetCurrentDiscount,
 } from "../../../redux/discount/discountSlice";
 import { productDetailApi } from "../../../api/discountApi";
+
 const { Search } = Input; // Lấy component Search
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -41,7 +43,8 @@ const DiscountForm: React.FC = () => {
 
   // 4. Giả lập dữ liệu sản phẩm (Bạn nên thay bằng dữ liệu từ Redux/API thực tế)
   const [allProductDetails, setAllProductDetails] = useState<any[]>([]);
-
+  const disabledDate = (current: Dayjs) =>
+     current && current < dayjs().startOf("day");
   const { currentDiscount, loading } = useSelector(
     (state: RootState) => state.discount,
   );
@@ -240,9 +243,11 @@ const DiscountForm: React.FC = () => {
                   ]}
                 >
                   <RangePicker
+                  disabledDate={disabledDate}
                     showTime
                     format="DD/MM/YYYY HH:mm"
                     style={{ width: "100%" }}
+                    
                   />
                 </Form.Item>
               </Col>
