@@ -16,7 +16,6 @@ import watchResolutionFlow from "../redux/techSpec/resolutionSaga";
 import watchProcessorFlow from "../redux/techSpec/processorSaga";
 import watchImageFormatFlow from "../redux/techSpec/imageFormatSaga";
 import watchVideoFormatFlow from "../redux/techSpec/videoFormatSaga";
-import watchBannerFlow from "../redux/banner/bannerSaga";
 import watchSerialFlow from "../redux/serial/serialSaga";
 import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 import watchColorFlow from "../redux/color/colorSaga";
@@ -33,18 +32,6 @@ export default function* rootSaga() {
     fork(watchStorageFlow),
     fork(statisticsSaga),
     fork(voucherSaga),
-    fork(watchProductCategoryFlow),
-    fork(watchTechSpecFlow),
-    fork(watchProductFlow),
-    fork(watchProductImageFlow),
-    fork(watchSensorTypeFlow),
-    fork(watchLensMountFlow),
-    fork(watchResolutionFlow),
-    fork(watchProcessorFlow),
-    fork(watchImageFormatFlow),
-    fork(watchVideoFormatFlow),
-    fork(watchBannerFlow),
-    fork(statisticsSaga),
     fork(discountSaga),
     fork(shiftHandoverSaga),
     fork(shiftTemplateSaga),
