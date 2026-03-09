@@ -160,7 +160,7 @@ const StorageCapacityPage: React.FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openDrawer()}>
               Thêm
             </Button>
-            <Button icon={<SyncOutlined />} loading={loading} onClick={fetchStorageCapacities} />
+            <Button icon={<SyncOutlined />} loading={loading} onClick={fetchStorageCapacities}> Tải lại </Button>
           </Space>
         }
       >

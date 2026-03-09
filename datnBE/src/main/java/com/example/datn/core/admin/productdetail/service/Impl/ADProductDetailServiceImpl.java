@@ -73,11 +73,12 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                 .colorName(pd.getColor() != null ? pd.getColor().getName() : "")
                 .productName(pd.getProduct() != null ? pd.getProduct().getName() : "")
                 .storageCapacityName(pd.getStorageCapacity() != null ? pd.getStorageCapacity().getName() : "")
-                // MAP LIST SERIAL Ở ĐÂY
+
                 .serials(pd.getSerials().stream().map(s -> {
                     ADSerialResponse sRes = new ADSerialResponse();
                     sRes.setSerialNumber(s.getSerialNumber());
-                    // sRes.setCode(s.getSerialCode());
+                    sRes.setStatus(s.getStatus());
+                    sRes.setCreatedDate(Helper.formatDate(s.getCreatedDate()));
                     return sRes;
                 }).collect(Collectors.toList()))
                 .build();
@@ -125,10 +126,9 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
             List<Serial> serialEntities = request.getSerials().stream().map(sReq -> {
                 Serial serial = new Serial();
                 serial.setSerialNumber(sReq.getSerialNumber());
-                serial.setCode(sReq.getCode());
+                serial.setCreatedDate(System.currentTimeMillis());
                 serial.setStatus(sReq.getStatus());
-
-                // Gán ID của SPCT vừa tạo vào Serial
+                serial.setProductDetail(spct);
                 serial.setProductDetail(savedSpct);
                 return serial;
             }).collect(Collectors.toList());
@@ -161,10 +161,11 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                 // 4. MAP LIST SERIAL (Đã fix lỗi NullPointerException)
                 .serials(savedSpct.getSerials() != null
                         ? savedSpct.getSerials().stream().map(s -> {
-                    ADSerialResponse sRes = new ADSerialResponse();
-                    sRes.setSerialNumber(s.getSerialNumber());
-                    // sRes.setCode(s.getSerialCode());
-                    return sRes;
+                    ADSerialResponse serialRes = new ADSerialResponse();
+                    serialRes.setSerialNumber(s.getSerialNumber());
+                    serialRes.setStatus(s.getStatus());
+                    serialRes.setCreatedDate(String.valueOf(System.currentTimeMillis()));
+                    return serialRes;
                 }).collect(Collectors.toList())
                         : new ArrayList<>())
                 .build();;

@@ -67,14 +67,6 @@ const SerialPage: React.FC = () => {
       )
     },
     {
-      title: "Code",
-      render: r => (
-        <div>
-          <Text strong>{r.code}</Text>
-        </div>
-      ),
-    },
-    {
       title: "Sản phẩm",
       dataIndex: "productName",
       render: v => (

@@ -158,7 +158,7 @@ const ColorPage: React.FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openDrawer()}>
               Thêm
             </Button>
-            <Button icon={<SyncOutlined />} loading={loading} onClick={fetchColors} />
+            <Button icon={<SyncOutlined />} loading={loading} onClick={fetchColors}> Tải lại </Button>
           </Space>
         }
       >
