@@ -22,4 +22,12 @@ public interface ADPosOrderService {
     ResponseObject<?> checkoutOrder(String orderId);
 
     ResponseObject<?> cancelOrder(String orderId);
+
+    ResponseObject<?> getAvailableSerials(String productDetailId);
+
+    ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal);
+
+    ResponseObject<?> applyVoucher(String orderId, String voucherId);
+
+    ResponseObject<?> removeVoucher(String orderId);
 }

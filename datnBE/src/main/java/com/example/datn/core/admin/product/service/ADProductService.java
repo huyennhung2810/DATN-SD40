@@ -5,8 +5,8 @@ import com.example.datn.core.admin.product.model.request.ADProductSearchRequest;
 import com.example.datn.core.admin.product.model.response.ADProductResponse;
 import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
 import com.example.datn.core.common.base.PageableObject;
 
 public interface ADProductService {

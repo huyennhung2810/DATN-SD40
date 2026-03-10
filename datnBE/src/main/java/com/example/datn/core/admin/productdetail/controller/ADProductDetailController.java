@@ -1,9 +1,9 @@
-package com.example.datn.core.admin.productDetail.controller;
+package com.example.datn.core.admin.productdetail.controller;
 
 
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
-import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.MappingConstants;

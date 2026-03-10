@@ -1,6 +1,6 @@
 package com.example.datn.core.admin.productimage.service.Impl;
 
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productimage.model.request.ADProductImageRequest;
 import com.example.datn.core.admin.productimage.model.response.ADProductImageResponse;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;

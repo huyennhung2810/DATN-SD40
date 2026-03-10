@@ -1,11 +1,12 @@
 import * as React from "react";
 const { useEffect, useState } = React;
-import { Card, Button, Tabs, Table, Row, Col, Typography, message, Tag, Space, Input, Modal, InputNumber, Select } from "antd";
-import { PlusOutlined, DeleteOutlined, ScanOutlined, SearchOutlined, ShoppingCartOutlined, CheckCircleOutlined, PrinterOutlined, UserOutlined } from "@ant-design/icons";
+import { Card, Button, Tabs, Table, Row, Col, Typography, message, Tag, Space, Input, Modal, InputNumber, Select, Tooltip } from "antd";
+import { PlusOutlined, DeleteOutlined, ScanOutlined, SearchOutlined, ShoppingCartOutlined, CheckCircleOutlined, PrinterOutlined, UserOutlined, UserAddOutlined, TagsOutlined, CloseCircleOutlined, GiftOutlined } from "@ant-design/icons";
 import { posApi } from "../../../api/admin/posApi";
 import { productDetailApi } from "../../../api/productDetailApi";
 import { customerApi } from "../../../api/customerApi";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
+import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
 
 const { Title, Text } = Typography;
 
@@ -28,6 +29,7 @@ const PosPage: React.FC = () => {
     // Customer Selection State
     const [customerOptions, setCustomerOptions] = useState<{ value: string; label: string }[]>([]);
     const [fetchingCustomer, setFetchingCustomer] = useState(false);
+    const [quickAddOpen, setQuickAddOpen] = useState(false);
 
     // Assign Serial Modal State
     const [assignModal, setAssignModal] = useState<{
@@ -36,7 +38,15 @@ const PosPage: React.FC = () => {
         detailId: string;
         productName: string;
         requiredQty: number;
-    }>({ open: false, orderId: "", detailId: "", productName: "", requiredQty: 0 });
+        productDetailId: string;
+        initialSerials: { id: string; serialNumber: string; code: string }[];
+    }>({ open: false, orderId: "", detailId: "", productName: "", requiredQty: 0, productDetailId: "", initialSerials: [] });
+
+    // Voucher State
+    const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+    const [applicableVouchers, setApplicableVouchers] = useState<any[]>([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(false);
+    const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
 
     useEffect(() => {
         fetchPendingOrders();
@@ -137,10 +147,12 @@ const PosPage: React.FC = () => {
                 fetchPendingOrders();
                 setActiveKey(res.data.data.id);
                 setCartDetails([]);
+            } else {
+                message.error(res.data?.message || "Lỗi khi tạo hóa đơn mới");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            message.error("Lỗi khi tạo hóa đơn mới");
+            message.error(error.response?.data?.message || "Lỗi khi tạo hóa đơn mới");
         }
     };
 
@@ -193,6 +205,67 @@ const PosPage: React.FC = () => {
             message.error("Lỗi khi thêm khách hàng");
             console.error(error);
         }
+    };
+
+    const handleQuickCustomerCreated = async (customerId: string, label: string) => {
+        setCustomerOptions([{ value: customerId, label }]);
+        await handleSelectCustomer(customerId);
+    };
+
+    const openVoucherModal = async () => {
+        if (!activeOrder) return;
+        setVoucherModalOpen(true);
+        setLoadingVouchers(true);
+        try {
+            const res = await posApi.getApplicableVouchers(activeOrder.totalAmount || 0);
+            setApplicableVouchers(res.data?.data || []);
+        } catch {
+            message.error('Không thể tải danh sách voucher');
+        } finally {
+            setLoadingVouchers(false);
+        }
+    };
+
+    const handleApplyVoucher = async (voucher: any) => {
+        try {
+            await posApi.applyVoucher(activeKey, voucher.id);
+            setAppliedVoucher(voucher);
+            message.success(`Đã áp dụng voucher ${voucher.code}`);
+            setVoucherModalOpen(false);
+            fetchPendingOrders();
+        } catch (err: any) {
+            message.error(err.response?.data?.message || 'Lỗi khi áp dụng voucher');
+        }
+    };
+
+    const handleRemoveVoucher = async () => {
+        try {
+            await posApi.removeVoucher(activeKey);
+            setAppliedVoucher(null);
+            message.success('Đã bỏ voucher');
+            fetchPendingOrders();
+        } catch {
+            message.error('Lỗi khi bỏ voucher');
+        }
+    };
+
+    // Helper: compute best voucher saving amount
+    const calcVoucherSaving = (voucher: any, total: number): number => {
+        if (!voucher) return 0;
+        if (voucher.discountUnit === '%') {
+            const disc = total * voucher.discountValue / 100;
+            return voucher.maxDiscountAmount ? Math.min(disc, voucher.maxDiscountAmount) : disc;
+        }
+        return voucher.discountValue || 0;
+    };
+
+    // Helper: product discount = totalAmount - sum(unitPrice*qty from cart before voucher)
+    const productDiscountAmount = (): number => {
+        return cartDetails.reduce((acc: number, d: any) => {
+            const originalPrice = d.productDetail?.originalPrice || 0;
+            const currentPrice = d.unitPrice || 0;
+            return acc + (originalPrice - currentPrice) * (d.quantity || 1);
+        }, 0);
     };
 
 
@@ -263,6 +336,20 @@ const PosPage: React.FC = () => {
             },
         },
         {
+            title: "Mã SP",
+            key: "productCode",
+            render: (_: any, record: any) => (
+                <Text code style={{ fontSize: 12 }}>{record.productDetail?.product?.code || '—'}</Text>
+            ),
+        },
+        {
+            title: "Mã SPCT",
+            key: "productDetailCode",
+            render: (_: any, record: any) => (
+                <Text code style={{ fontSize: 12 }}>{record.productDetail?.code || '—'}</Text>
+            ),
+        },
+        {
             title: "Đơn giá",
             key: "unitPrice",
             render: (_: any, record: any) => {
@@ -321,7 +408,9 @@ const PosPage: React.FC = () => {
                                 orderId: activeKey,
                                 detailId: record.id,
                                 productName: record.productDetail?.product?.name || "Sản phẩm",
-                                requiredQty: record.quantity
+                                requiredQty: record.quantity,
+                                productDetailId: record.productDetail?.id || "",
+                                initialSerials: record.assignedSerials || []
                             })}
                         >
                             {isComplete ? "Sửa Serial" : "Chọn Serial"}
@@ -342,14 +431,32 @@ const PosPage: React.FC = () => {
 
     const productColumns = [
         {
+            title: "Mã SP",
+            key: "productCode",
+            render: (_: any, record: any) => (
+                <Text code style={{ fontSize: 12 }}>{record.productCode || '—'}</Text>
+            ),
+        },
+        {
+            title: "Mã SPCT",
+            key: "productDetailCode",
+            render: (_: any, record: any) => (
+                <Text code style={{ fontSize: 12 }}>{record.code || '—'}</Text>
+            ),
+        },
+        {
             title: "Tên SP",
             key: "name",
-            render: (_: any, record: any) => <Text strong>{record.product?.name}</Text>,
+            render: (_: any, record: any) => (
+                <Text strong>{record.productName || record.product?.name || '—'}</Text>
+            ),
         },
         {
             title: "Màu sắc",
-            dataIndex: ["color", "name"],
             key: "color",
+            render: (_: any, record: any) => (
+                <Text>{record.colorName || record.color?.name || '—'}</Text>
+            ),
         },
         {
             title: "Phiên bản",
@@ -405,9 +512,22 @@ const PosPage: React.FC = () => {
         <div style={{ padding: 24, background: "#f0f2f5", minHeight: "100vh" }}>
             <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
                 <Title level={3} style={{ margin: 0 }}>Bán Hàng Tại Quầy (POS)</Title>
-                <Button type="primary" size="large" icon={<PlusOutlined />} onClick={createNewOrder}>
-                    Tạo Hóa đơn Mới
-                </Button>
+                <Space>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                        Hóa đơn chờ: <Text strong style={{ color: orders.length >= 10 ? '#f5222d' : undefined }}>{orders.length}/10</Text>
+                    </Text>
+                    <Tooltip title={orders.length >= 10 ? 'Đã đạt giới hạn 10 hóa đơn chờ' : ''}>
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlusOutlined />}
+                            onClick={createNewOrder}
+                            disabled={orders.length >= 10}
+                        >
+                            Tạo Hóa đơn Mới
+                        </Button>
+                    </Tooltip>
+                </Space>
             </Row>
 
             <Row gutter={[16, 16]}>
@@ -423,7 +543,7 @@ const PosPage: React.FC = () => {
                                 type="editable-card"
                                 hideAdd
                                 onEdit={handleTabEdit}
-                                items={orders.map((order, i) => ({
+                                items={orders.map((order) => ({
                                     label: `HĐ ${order.code || order.id.substring(0, 5)}`,
                                     key: order.id,
                                     children: (
@@ -476,19 +596,28 @@ const PosPage: React.FC = () => {
                         <div style={{ flex: 1, marginTop: 16 }}>
                             <div style={{ marginBottom: 16 }}>
                                 <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>Khách hàng:</Text>
-                                <Select
-                                    showSearch
-                                    placeholder={activeOrder && activeOrder.customer ? `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber}` : "Chọn khách hàng (Có thể để trống)"}
-                                    style={{ width: "100%" }}
-                                    allowClear
-                                    onSearch={handleSearchCustomer}
-                                    onChange={handleSelectCustomer}
-                                    filterOption={false}
-                                    options={customerOptions}
-                                    loading={fetchingCustomer}
-                                    suffixIcon={<UserOutlined />}
-                                    notFoundContent={fetchingCustomer ? null : <Text type="secondary">Không tìm thấy KH</Text>}
-                                />
+                                <Space.Compact style={{ width: '100%' }}>
+                                    <Select
+                                        showSearch
+                                        placeholder={activeOrder && activeOrder.customer ? `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber}` : "Chọn khách hàng (Có thể để trống)"}
+                                        style={{ flex: 1 }}
+                                        allowClear
+                                        onSearch={handleSearchCustomer}
+                                        onChange={handleSelectCustomer}
+                                        filterOption={false}
+                                        options={customerOptions}
+                                        loading={fetchingCustomer}
+                                        suffixIcon={<UserOutlined />}
+                                        notFoundContent={fetchingCustomer ? null : <Text type="secondary">Không tìm thấy KH</Text>}
+                                    />
+                                    <Tooltip title="Thêm nhanh khách hàng mới">
+                                        <Button
+                                            icon={<UserAddOutlined />}
+                                            onClick={() => setQuickAddOpen(true)}
+                                            disabled={!activeKey}
+                                        />
+                                    </Tooltip>
+                                </Space.Compact>
                             </div>
                             {activeOrder ? (
                                 <>
@@ -500,11 +629,47 @@ const PosPage: React.FC = () => {
                                         <Text>Tổng tiền hàng:</Text>
                                         <Text strong>{activeOrder.totalAmount?.toLocaleString("vi-VN") || 0} đ</Text>
                                     </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                                        <Text>Giảm giá tự động:</Text>
-                                        <Text strong type="success">
-                                            {((activeOrder.totalAmount || 0) - (activeOrder.totalAfterDiscount || 0)).toLocaleString("vi-VN")} đ
-                                        </Text>
+                                    {/* Discount sản phẩm */}
+                                    {productDiscountAmount() > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                                            <Space size={4}>
+                                                <TagsOutlined style={{ color: '#1890ff' }} />
+                                                <Text>Giảm giá sản phẩm:</Text>
+                                            </Space>
+                                            <Text strong type="success">-{productDiscountAmount().toLocaleString("vi-VN")} đ</Text>
+                                        </div>
+                                    )}
+
+                                    {/* Voucher selector */}
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                            <Space size={4}>
+                                                <GiftOutlined style={{ color: '#fa8c16' }} />
+                                                <Text>Voucher:</Text>
+                                            </Space>
+                                            {appliedVoucher ? (
+                                                <Space size={4}>
+                                                    <Tag color="orange" icon={<GiftOutlined />}>{appliedVoucher.code}</Tag>
+                                                    <Text strong type="success">
+                                                        -{calcVoucherSaving(appliedVoucher, activeOrder.totalAmount || 0).toLocaleString('vi-VN')} đ
+                                                    </Text>
+                                                    <Button
+                                                        type="text" danger size="small"
+                                                        icon={<CloseCircleOutlined />}
+                                                        onClick={handleRemoveVoucher}
+                                                    />
+                                                </Space>
+                                            ) : (
+                                                <Button
+                                                    size="small"
+                                                    icon={<TagsOutlined />}
+                                                    onClick={openVoucherModal}
+                                                    disabled={!activeKey || cartDetails.length === 0}
+                                                >
+                                                    Chọn voucher
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, borderTop: "1px dashed #ccc", paddingTop: 16 }}>
                                         <Title level={4} style={{ margin: 0 }}>Khách cần trả:</Title>
@@ -570,8 +735,89 @@ const PosPage: React.FC = () => {
                 detailId={assignModal.detailId}
                 productName={assignModal.productName}
                 requiredQuantity={assignModal.requiredQty}
+                productDetailId={assignModal.productDetailId}
                 onSuccess={() => fetchOrderDetails(activeKey)}
+                initialSerials={assignModal.initialSerials}
             />
+
+            <QuickAddCustomerModal
+                open={quickAddOpen}
+                onClose={() => setQuickAddOpen(false)}
+                onCreated={handleQuickCustomerCreated}
+            />
+
+            {/* Voucher Selection Modal */}
+            <Modal
+                title={
+                    <Space>
+                        <GiftOutlined style={{ color: '#fa8c16' }} />
+                        <span>Chọn Voucher</span>
+                    </Space>
+                }
+                open={voucherModalOpen}
+                onCancel={() => setVoucherModalOpen(false)}
+                footer={null}
+                width={520}
+            >
+                {loadingVouchers ? (
+                    <div style={{ textAlign: 'center', padding: 32 }}><Text type="secondary">Đang tải...</Text></div>
+                ) : applicableVouchers.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 32 }}>
+                        <GiftOutlined style={{ fontSize: 40, color: '#d9d9d9' }} />
+                        <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>Không có voucher phù hợp với đơn hàng này</Text>
+                    </div>
+                ) : (() => {
+                    const total = activeOrder?.totalAmount || 0;
+                    const withSavings = applicableVouchers.map((v: any) => ({ ...v, saving: calcVoucherSaving(v, total) }));
+                    const bestId = withSavings.reduce((best: any, v: any) => v.saving > (best?.saving ?? -1) ? v : best, null)?.id;
+                    return (
+                        <div>
+                            {withSavings.map((v: any) => (
+                                <div
+                                    key={v.id}
+                                    style={{
+                                        border: v.id === bestId ? '2px solid #fa8c16' : '1px solid #f0f0f0',
+                                        borderRadius: 8, padding: '12px 16px', marginBottom: 12,
+                                        background: v.id === bestId ? '#fff9f0' : '#fafafa',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    {v.id === bestId && (
+                                        <Tag color="orange" style={{ position: 'absolute', top: -10, left: 12, fontSize: 11 }}>GỢI Ý TỐT NHẤT</Tag>
+                                    )}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <Space>
+                                                <Tag color="orange">{v.code}</Tag>
+                                                <Text strong>{v.name}</Text>
+                                            </Space>
+                                            <div style={{ marginTop: 4 }}>
+                                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                                    Giảm: {v.discountUnit === '%'
+                                                        ? `${v.discountValue}% (tối đa ${v.maxDiscountAmount?.toLocaleString('vi-VN')} đ)`
+                                                        : `${v.discountValue?.toLocaleString('vi-VN')} đ`}
+                                                    {v.conditions ? ` · Đơn tối thiểu ${v.conditions?.toLocaleString('vi-VN')} đ` : ''}
+                                                </Text>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div><Text type="success" strong>-{v.saving.toLocaleString('vi-VN')} đ</Text></div>
+                                            <Button
+                                                type={v.id === bestId ? 'primary' : 'default'}
+                                                size="small"
+                                                style={{ marginTop: 4 }}
+                                                onClick={() => handleApplyVoucher(v)}
+                                            >
+                                                Áp dụng
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
+            </Modal>
 
             {/* Thanh toán thành công Modal */}
             <Modal

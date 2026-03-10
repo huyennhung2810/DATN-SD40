@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.repository;
+package com.example.datn.core.admin.productdetail.repository;
 
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.infrastructure.constant.EntityStatus;

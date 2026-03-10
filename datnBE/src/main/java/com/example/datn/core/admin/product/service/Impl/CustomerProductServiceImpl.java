@@ -5,7 +5,7 @@ import com.example.datn.core.admin.product.model.response.ADProductResponse;
 import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.CustomerProductService;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;

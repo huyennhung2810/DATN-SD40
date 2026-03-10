@@ -1,12 +1,12 @@
-package com.example.datn.core.admin.productDetail.service.Impl;
+package com.example.datn.core.admin.productdetail.service.Impl;
 
 import com.example.datn.core.admin.color.repository.ADColorRepository;
 import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
-import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
@@ -74,6 +74,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                 .colorId(entity.getColor() != null ? entity.getColor().getId() : null)
                 .colorName(entity.getColor() != null ? entity.getColor().getName() : "")
                 .productId(entity.getProduct() != null ? entity.getProduct().getId() : null)
+                .productCode(entity.getProduct() != null ? entity.getProduct().getCode() : null)
                 .productName(entity.getProduct() != null ? entity.getProduct().getName() : "")
                 .storageCapacityId(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getId() : null)
                 .storageCapacityName(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getName() : "")

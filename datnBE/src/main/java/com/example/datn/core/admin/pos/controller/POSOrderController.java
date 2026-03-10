@@ -70,4 +70,24 @@ public class POSOrderController {
     public ResponseEntity<?> cancelOrder(@PathVariable String orderId) {
         return ResponseEntity.ok(posOrderService.cancelOrder(orderId));
     }
+
+    @GetMapping("/available-serials")
+    public ResponseEntity<?> getAvailableSerials(@RequestParam String productDetailId) {
+        return ResponseEntity.ok(posOrderService.getAvailableSerials(productDetailId));
+    }
+
+    @GetMapping("/applicable-vouchers")
+    public ResponseEntity<?> getApplicableVouchers(@RequestParam java.math.BigDecimal orderTotal) {
+        return ResponseEntity.ok(posOrderService.getApplicableVouchers(orderTotal));
+    }
+
+    @PostMapping("/{orderId}/apply-voucher")
+    public ResponseEntity<?> applyVoucher(@PathVariable String orderId, @RequestParam String voucherId) {
+        return ResponseEntity.ok(posOrderService.applyVoucher(orderId, voucherId));
+    }
+
+    @DeleteMapping("/{orderId}/remove-voucher")
+    public ResponseEntity<?> removeVoucher(@PathVariable String orderId) {
+        return ResponseEntity.ok(posOrderService.removeVoucher(orderId));
+    }
 }

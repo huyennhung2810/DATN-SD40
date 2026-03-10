@@ -15,6 +15,9 @@ import com.example.datn.repository.CustomerRepository;
 import com.example.datn.repository.SerialRepository;
 import com.example.datn.repository.WarrantyRepository;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
+import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
+import com.example.datn.entity.Voucher;
+import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.entity.Customer;
 import com.example.datn.entity.ProductDetail;
@@ -44,10 +47,18 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final WarrantyRepository warrantyRepository;
     private final ProductDetailRepository productDetailRepository;
     private final ADDiscountDetailRepository adDiscountDetailRepository;
+    private final ADVouchersRepository adVouchersRepository;
 
     @Override
     @Transactional
     public ResponseObject<?> createEmptyOrder() {
+        long pendingCount = posOrderRepository.findAll().stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.PENDING && o.getOrderType() == TypeInvoice.OFFLINE)
+                .count();
+        if (pendingCount >= 10) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                    "Đã đạt giới hạn tối đa 10 hóa đơn chờ. Vui lòng thanh toán hoặc hủy bớt hóa đơn trước khi tạo mới.");
+        }
         Order order = new Order();
         order.setOrderStatus(OrderStatus.PENDING);
         order.setOrderType(TypeInvoice.OFFLINE);
@@ -109,26 +120,16 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         posOrderDetailRepository.save(targetDetail);
 
-        // Update Order totals
+        // Recalculate order totals based on cart contents
         List<OrderDetail> allDetails = posOrderDetailRepository.findByOrderId(orderId);
         BigDecimal newTotal = allDetails.stream()
                 .map(OrderDetail::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
         order.setTotalAmount(newTotal);
 
-        // Apply Automatic Order Discount (if any)
-        BigDecimal automaticDiscount = BigDecimal.ZERO;
-        if (newTotal.compareTo(new BigDecimal("50000000")) >= 0) {
-            automaticDiscount = new BigDecimal("1500000"); // 1.5M
-        } else if (newTotal.compareTo(new BigDecimal("20000000")) >= 0) {
-            automaticDiscount = new BigDecimal("500000"); // 500k
-        }
-        
-        BigDecimal finalTotal = newTotal.subtract(automaticDiscount);
-        if (finalTotal.compareTo(BigDecimal.ZERO) < 0) finalTotal = BigDecimal.ZERO;
-        order.setTotalAfterDiscount(finalTotal);
-        
+        // Recalculate totalAfterDiscount respecting any applied voucher
+        order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
+
         posOrderRepository.save(order);
 
         return ResponseObject.success(targetDetail, "Thêm sản phẩm vào hóa đơn thành công");
@@ -157,10 +158,30 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST,
                         "Serial " + serial.getSerialNumber() + " không thuộc sản phẩm này");
             }
-            if (serial.getSerialStatus() != SerialStatus.AVAILABLE) {
+            // Allow AVAILABLE or RESERVED-by-this-same-detail
+            boolean isAvailable = serial.getSerialStatus() == SerialStatus.AVAILABLE;
+            boolean isReservedBySelf = serial.getSerialStatus() == SerialStatus.RESERVED
+                    && serial.getOrderDetail() != null
+                    && serial.getOrderDetail().getId().equals(detailId);
+            if (!isAvailable && !isReservedBySelf) {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST,
                         "Serial " + serial.getSerialNumber() + " không ở trạng thái sẵn sàng");
             }
+        }
+
+        // Release previously assigned serials for this detail (not in new list)
+        List<String> newSerialNumbers = serialNumbers;
+        List<Serial> oldSerials = serialRepository.findAll().stream()
+                .filter(s -> s.getOrderDetail() != null
+                        && s.getOrderDetail().getId().equals(detailId)
+                        && !newSerialNumbers.contains(s.getSerialNumber()))
+                .toList();
+        for (Serial old : oldSerials) {
+            old.setOrderDetail(null);
+            old.setSerialStatus(SerialStatus.AVAILABLE);
+        }
+        if (!oldSerials.isEmpty()) {
+            serialRepository.saveAll(oldSerials);
         }
 
         for (Serial serial : targetSerials) {
@@ -197,14 +218,24 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             map.put("unitPrice", d.getUnitPrice());
             map.put("totalPrice", d.getTotalPrice());
 
-            long assignedCount = serialRepository.findAll().stream()
+            List<Serial> detailSerials = serialRepository.findAll().stream()
                     .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(d.getId()))
-                    .count();
+                    .toList();
+            long assignedCount = detailSerials.size();
             map.put("assignedSerialsCount", assignedCount);
+            map.put("assignedSerials", detailSerials.stream()
+                    .map(s -> {
+                        Map<String, Object> sm = new HashMap<>();
+                        sm.put("id", s.getId());
+                        sm.put("serialNumber", s.getSerialNumber());
+                        sm.put("code", s.getCode());
+                        return sm;
+                    }).collect(Collectors.toList()));
 
             Map<String, Object> pdMap = new HashMap<>();
             if (d.getProductDetail() != null) {
                 pdMap.put("id", d.getProductDetail().getId());
+                pdMap.put("code", d.getProductDetail().getCode());
                 pdMap.put("version", d.getProductDetail().getVersion());
                 String imageUrl = null;
                 if (d.getProductDetail().getProduct() != null && !d.getProductDetail().getProduct().getImages().isEmpty()) {
@@ -218,6 +249,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 Map<String, Object> productMap = new HashMap<>();
                 if (d.getProductDetail().getProduct() != null) {
                     productMap.put("id", d.getProductDetail().getProduct().getId());
+                    productMap.put("code", d.getProductDetail().getProduct().getCode());
                     productMap.put("name", d.getProductDetail().getProduct().getName());
                 }
                 pdMap.put("product", productMap);
@@ -411,5 +443,89 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         posOrderRepository.delete(order);
         return ResponseObject.success(null, "Đã hủy hóa đơn thành công");
+    }
+
+    @Override
+    public ResponseObject<?> getAvailableSerials(String productDetailId) {
+        if (productDetailId == null || productDetailId.isBlank()) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã sản phẩm chi tiết không được để trống");
+        }
+        List<Serial> availableSerials = serialRepository.findAll().stream()
+                .filter(s -> s.getProductDetail() != null
+                        && s.getProductDetail().getId().equals(productDetailId)
+                        && s.getSerialStatus() == SerialStatus.AVAILABLE)
+                .toList();
+
+        List<Map<String, Object>> result = availableSerials.stream().map(s -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", s.getId());
+            map.put("serialNumber", s.getSerialNumber());
+            map.put("code", s.getCode());
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseObject.success(result, "Lấy danh sách Serial khả dụng thành công");
+    }
+
+    // ----- Helper: Calculate totalAfterDiscount with voucher -----
+    private BigDecimal calculateTotalAfterVoucher(BigDecimal total, Voucher voucher) {
+        if (voucher == null) return total;
+        BigDecimal discount = BigDecimal.ZERO;
+        if ("%".equalsIgnoreCase(voucher.getDiscountUnit())) {
+            discount = total.multiply(voucher.getDiscountValue()).divide(new BigDecimal("100"));
+            if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
+                discount = voucher.getMaxDiscountAmount();
+            }
+        } else { // VND
+            discount = voucher.getDiscountValue() != null ? voucher.getDiscountValue() : BigDecimal.ZERO;
+        }
+        BigDecimal result = total.subtract(discount);
+        return result.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : result;
+    }
+
+    @Override
+    public ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal) {
+        long now = System.currentTimeMillis();
+        List<VoucherResponse> applicable = adVouchersRepository.findAll().stream()
+                .filter(v -> v.getStatus() != null && v.getStatus() == 1
+                        && v.getQuantity() != null && v.getQuantity() > 0
+                        && v.getStartDate() != null && v.getStartDate() <= now
+                        && v.getEndDate() != null && v.getEndDate() >= now
+                        && (v.getConditions() == null || v.getConditions().compareTo(orderTotal) <= 0))
+                .map(VoucherResponse::new)
+                .collect(Collectors.toList());
+        return ResponseObject.success(applicable, "Lấy danh sách voucher áp dụng được");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> applyVoucher(String orderId, String voucherId) {
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        Voucher voucher = adVouchersRepository.findById(voucherId).orElse(null);
+        if (voucher == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy voucher");
+        if (voucher.getConditions() != null && order.getTotalAmount().compareTo(voucher.getConditions()) < 0) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                    "Đơn hàng chưa đạt giá trị tối thiểu " + voucher.getConditions().toPlainString() + " để dùng voucher này");
+        }
+        order.setVoucher(voucher);
+        order.setTotalAfterDiscount(calculateTotalAfterVoucher(order.getTotalAmount(), voucher));
+        posOrderRepository.save(order);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("voucherId", voucher.getId());
+        resp.put("voucherCode", voucher.getCode());
+        resp.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        return ResponseObject.success(resp, "Áp dụng voucher thành công");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> removeVoucher(String orderId) {
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        order.setVoucher(null);
+        order.setTotalAfterDiscount(order.getTotalAmount());
+        posOrderRepository.save(order);
+        return ResponseObject.success(null, "Đã bỏ voucher");
     }
 }
