@@ -27,12 +27,8 @@ import {
   Input,
   type MenuProps,
   Button,
-  message,
 } from "antd";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState, AppDispatch } from "../../redux/store";
-import { authActions } from "../../redux/auth/authSlice";
+import { useLocation } from "react-router-dom";
 
 const { Text, Title } = Typography;
 const { Search } = Input;
@@ -106,24 +102,11 @@ const pageInfoMap: Record<
     desc: "Quản lý banner hiển thị trên trang khách hàng",
     icon: <PictureOutlined />,
   },
-  "/profile": {
-    title: "Hồ sơ cá nhân",
-    desc: "Xem và chỉnh sửa thông tin cá nhân",
-    icon: <UserOutlined />,
-  },
-  "/account-settings": {
-    title: "Cài đặt tài khoản",
-    desc: "Thay đổi thông tin và mật khẩu",
-    icon: <SettingOutlined />,
-  },
 };
 
 const Header: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
   const currentPath = location.pathname;
-  const { user } = useSelector((state: RootState) => state.auth);
 
   const basePath = "/" + currentPath.split("/").slice(1, 2).join("/");
 
@@ -131,41 +114,6 @@ const Header: React.FC = () => {
     title: "Tổng quan",
     desc: "Chào mừng bạn quay trở lại hệ thống quản lý",
     icon: <ShopOutlined />,
-  };
-
-  const getRoleName = (role?: string | null): string => {
-    if (!role) return "Nhân viên";
-    switch (role) {
-      case "ADMIN":
-        return "Quản trị viên";
-      case "STAFF":
-        return "Nhân viên";
-      case "CUSTOMER":
-        return "Khách hàng";
-      default:
-        return "Nhân viên";
-    }
-  };
-
-  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
-    switch (key) {
-      case "profile":
-        navigate("/profile");
-        break;
-      case "settings":
-        navigate("/account-settings");
-        break;
-      case "logout":
-        dispatch(
-          authActions.logout({
-            onDone: () => {
-              message.success("Đã đăng xuất");
-              navigate("/login");
-            },
-          })
-        );
-        break;
-    }
   };
 
   const items: MenuProps["items"] = [
@@ -222,24 +170,15 @@ const Header: React.FC = () => {
           />
         </Badge>
 
-        <Dropdown
-          menu={{ items, onClick: handleMenuClick }}
-          trigger={["click"]}
-          placement="bottomRight"
-        >
+        <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
           <div className="header-user">
             <Avatar
-              src={user?.employeeImage}
-              icon={!user?.employeeImage && <UserOutlined />}
+              icon={<UserOutlined />}
               className="header-avatar"
             />
             <div className="header-user-info">
-              <div className="header-user-name">
-                {user?.name || user?.username || "Admin"}
-              </div>
-              <div className="header-user-role">
-                {getRoleName(user?.role)}
-              </div>
+              <div className="header-user-name">Admin</div>
+              <div className="header-user-role">Quản trị viên</div>
             </div>
           </div>
         </Dropdown>
