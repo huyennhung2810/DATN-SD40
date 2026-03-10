@@ -2,7 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Table, Card, Button, Input, Tag, Space, Typography, Form, Drawer,
   Radio, Select, InputNumber, notification,
-  Upload
+  Upload,
+  Modal,
+  Spin,
+  List
 } from "antd";
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -20,10 +23,49 @@ const { Title, Text } = Typography;
 const ProductDetailPage: React.FC = () => {
   const dispatch = useDispatch();
   const [formManager] = Form.useForm();
+
+  // --- STATE CHO MODAL XEM SERIAL ---
+  const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [selectedSerials, setSelectedSerials] = useState<any[]>([]);
+  const [viewingProductName, setViewingProductName] = useState("");
+  const [loadingSerials, setLoadingSerials] = useState(false);
   
   // 1. Lấy dữ liệu Màu sắc và Dung lượng từ Redux (kèm fallback mảng rỗng để tránh lỗi map)
   const { list: colors = [] } = useSelector((state: RootState) => state.color || {});
   const { list: capacities = [] } = useSelector((state: RootState) => state.storage || {});
+
+  const handleViewSerials = (record: ProductDetailResponse) => {
+    if (!record || !record.id) return;
+
+    setSerialModalOpen(true);
+    setViewingProductName(`${record.productName || 'Sản phẩm'} - ${record.version || ''}`);
+    setLoadingSerials(true);
+
+    dispatch(
+      productDetailActions.getById({
+        id: record.id,
+        onSuccess: (response: any) => { 
+          const productDetail = response.data ? response.data : response;
+
+          if (productDetail && productDetail.serials) {
+            // Lọc và giữ lại nguyên object thay vì chỉ lấy string
+            const serialsList = productDetail.serials
+              .filter((s: any) => s.serialNumber && String(s.serialNumber).trim() !== "")
+              .map((s: any) => ({
+                serialNumber: String(s.serialNumber),
+                status: s.status || s.serialStatus, // Tùy BE trả về trường nào
+                createdDate: s.createdDate
+              }));
+            
+            setSelectedSerials(serialsList);
+          } else {
+            setSelectedSerials([]);
+          }
+          setLoadingSerials(false);
+        },
+      })
+    );
+  };
   
   // 2. Lấy danh sách SPCT (list) và Sản phẩm cha (productList) từ productDetailSlice
   const { 
@@ -102,7 +144,7 @@ const ProductDetailPage: React.FC = () => {
 
 const handleImportExcel = (file: any) => {
   const reader = new FileReader();
-
+  
   reader.onload = (e: any) => {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: "array" });
@@ -137,15 +179,13 @@ const handleImportExcel = (file: any) => {
 
   // 2. Loại bỏ các mã trùng lặp do người dùng nhập nhầm trong form
   const uniqueSerials = Array.from(new Set<string>(rawSerials));
-  
+
   if (uniqueSerials.length !== rawSerials.length) {
     notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
   }
 
-  // 3. Map thành mảng Object để gửi lên BE
   const serials = uniqueSerials.map((sn: string) => ({
     serialNumber: sn,
-    code: values.serialCode, // Nếu BE cần mã lô chung
     status: "ACTIVE"
   }));
 
@@ -202,9 +242,15 @@ const handleImportExcel = (file: any) => {
     {
       title: "Thao tác",
       align: "center",
-      render: r => <Button type="text" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => openDrawer(r)} />,
+      render: r => <Button type="text"
+      icon={<EditOutlined style={{ color: '#1890ff' }} />}
+      onClick={(e) =>{
+        e.stopPropagation(); 
+        openDrawer(r)}} />,
     },
   ];
+
+  
 
   return (
     <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
@@ -240,6 +286,10 @@ const handleImportExcel = (file: any) => {
         dataSource={list} 
         loading={loading} 
         rowKey="id" 
+        onRow={(record) => ({
+          onClick: () => handleViewSerials(record),
+          style: { cursor: 'pointer' }
+        })}
         pagination={{
           current: filter.page + 1,
           pageSize: filter.size,
@@ -286,10 +336,7 @@ const handleImportExcel = (file: any) => {
             <Input.TextArea 
               rows={5}
               disabled={!!editingId}
-              placeholder={`SP0001
-                          SP0002
-                          SP0003
-                          SP0004`}
+              placeholder={`SP0001\nSP0002\nSP0003\nSP0004`}
             />
           </Form.Item>
 
@@ -367,7 +414,58 @@ const handleImportExcel = (file: any) => {
           </Form.Item>
         </Form>
       </Drawer>
-    </div>
+
+      {/* --- MODAL HIỂN THỊ DANH SÁCH SERIAL --- */}
+      <Modal
+        title={`Danh sách Serial: ${viewingProductName}`}
+        open={serialModalOpen}
+        onCancel={() => setSerialModalOpen(false)}
+        width={600} // Cho Modal rộng ra một chút để chứa đủ thông tin
+        footer={[
+          <Button key="close" onClick={() => setSerialModalOpen(false)}>
+            Đóng
+          </Button>
+        ]}
+      >
+        {loadingSerials ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <Spin tip="Đang tải danh sách serial..." />
+          </div>
+        ) : (
+          <List
+            size="small"
+            bordered
+            dataSource={selectedSerials}
+            locale={{ emptyText: "Sản phẩm này hiện không có serial nào." }}
+            style={{ maxHeight: '400px', overflowY: 'auto' }}
+            renderItem={(item, index) => (
+              <List.Item key={`serial-${index}`}>
+                <List.Item.Meta
+                  avatar={<Text strong style={{ paddingTop: 4, display: 'inline-block' }}>{index + 1}.</Text>}
+                  title={<Text code style={{ fontSize: '15px' }}>{item.serialNumber}</Text>}
+                  description={
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Ngày thêm: {item.createdDate}
+                    </Text>
+                  }
+                />
+                <div>
+                  {/* Hiển thị Tag trạng thái */}
+                  {item.status === "ACTIVE" ? (
+                    <Tag color="green">TRONG KHO</Tag>
+                  ) : item.status === "INACTIVE" ? (
+                    <Tag color="red">ĐÃ BÁN</Tag>
+                  ) : (
+                    <Tag color="default">{item.status || "KHÔNG RÕ"}</Tag>
+                  )}
+                </div>
+              </List.Item>
+            )}
+          />
+        )}
+      </Modal>
+
+    </div> /* <-- Dấu đóng div cuối cùng của component */
   );
 };
 

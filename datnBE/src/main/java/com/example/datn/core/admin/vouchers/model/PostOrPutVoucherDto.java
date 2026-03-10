@@ -59,5 +59,8 @@ public class PostOrPutVoucherDto {
     private String lastModifiedBy;
 
     private List<String> customerIds; // Danh sách ID khách hàng khi targetType = 2
+
+    private String createdBy;
+    private Long createdDate;
 }
 

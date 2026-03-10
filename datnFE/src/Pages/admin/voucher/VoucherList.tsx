@@ -19,7 +19,7 @@ import { fetchVouchersRequest,stopVoucherRequest } from "../../../redux/Voucher/
 import type { RootState, AppDispatch } from "../../../redux/store";
 import type { Voucher } from "../../../models/Voucher";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 

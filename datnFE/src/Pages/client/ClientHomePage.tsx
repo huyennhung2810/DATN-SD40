@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import bannerApi from "../../api/bannerApi";
 import productApi from "../../api/productApi";
 import productCategoryApi from "../../api/productCategoryApi";
+import customerProductApi from "../../api/customerProductApi";
 import sensorTypeApi from "../../api/sensorTypeApi";
 import lensMountApi from "../../api/lensMountApi";
 import resolutionApi from "../../api/resolutionApi";
@@ -32,6 +33,8 @@ import videoFormatApi from "../../api/videoFormatApi";
 import type { BannerResponse } from "../../models/banner";
 import type { ProductResponse, ProductPageParams } from "../../models/product";
 import type { ProductCategoryResponse } from "../../models/productCategory";
+import type { ProductVariantResponse } from "../../models/productVariant";
+import ProductVariantsModal from "../../components/customer/ProductVariantsModal";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -123,13 +126,13 @@ const BannerSlider: React.FC<{ banners: BannerResponse[] }> = ({ banners }) => {
 };
 
 // Product Card Component
-const ProductCard: React.FC<{ product: ProductResponse }> = ({ product }) => {
+const ProductCard: React.FC<{ product: ProductResponse; onViewVariants: (product: ProductResponse) => void }> = ({ product, onViewVariants }) => {
   const navigate = useNavigate();
 
   return (
     <Card
       hoverable
-      onClick={() => navigate(`/client/products/${product.id}`)}
+      onClick={() => onViewVariants(product)}
       cover={
         <div
           style={{
@@ -237,6 +240,12 @@ const ClientHomePage: React.FC = () => {
     status: "ACTIVE",
   });
 
+  // States cho modal biến thể sản phẩm
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
+  const [variants, setVariants] = useState<ProductVariantResponse[]>([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+
   // Fetch filter options
   const fetchFilterOptions = useCallback(async () => {
     try {
@@ -342,6 +351,30 @@ const ClientHomePage: React.FC = () => {
       idProductCategory: undefined,
       status: "ACTIVE",
     });
+  };
+
+  // Xử lý khi click vào sản phẩm - hiển thị modal biến thể
+  const handleViewVariants = async (product: ProductResponse) => {
+    setSelectedProduct(product);
+    setVariantsModalOpen(true);
+    setVariantsLoading(true);
+    
+    try {
+      const data = await customerProductApi.getVariants(product.id);
+      setVariants(data || []);
+    } catch (error) {
+      console.error("Error fetching variants:", error);
+      setVariants([]);
+    } finally {
+      setVariantsLoading(false);
+    }
+  };
+
+  // Xử lý khi chọn biến thể
+  const handleSelectVariant = (variant: ProductVariantResponse) => {
+    console.log("Selected variant:", variant);
+    // Có thể navigate đến trang chi tiết hoặc thêm vào giỏ hàng
+    setVariantsModalOpen(false);
   };
 
   return (
@@ -536,7 +569,7 @@ const ClientHomePage: React.FC = () => {
                   <Row gutter={[16, 16]}>
                     {products.map((product) => (
                       <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
-                        <ProductCard product={product} />
+                        <ProductCard product={product} onViewVariants={handleViewVariants} />
                       </Col>
                     ))}
                   </Row>
@@ -561,6 +594,16 @@ const ClientHomePage: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Modal hiển thị biến thể sản phẩm */}
+      <ProductVariantsModal
+        open={variantsModalOpen}
+        onClose={() => setVariantsModalOpen(false)}
+        variants={variants}
+        loading={variantsLoading}
+        productName={selectedProduct?.name || ""}
+        onSelectVariant={handleSelectVariant}
+      />
     </div>
   );
 };

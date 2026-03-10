@@ -12,6 +12,8 @@ export interface Voucher {
     endDate: number;
     quantity: number;
     status: number;
+    createdBy: string;           // Người tạo ban đầu
+    createdDate: number;
     lastModifiedBy: string; // Thêm trường này
     lastModifiedDate: number; // Thêm dòng này vào Interface
     discountValue:number;
@@ -43,4 +45,6 @@ export interface VoucherFormValues extends Omit<VoucherRequest, 'startDate' | 'e
     lastModifiedBy: string;      // Người cập nhật cuối cùng
     lastModifiedDate: number;   // Ngày cập nhật cuối cùng (thường do BE trả về)
     voucherName :String;
+    createdBy: string;           // Người tạo ban đầu
+    createdDate: number;
 }

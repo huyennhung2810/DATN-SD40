@@ -54,6 +54,12 @@ public class Voucher implements Serializable {
     @Column(name = "quantity")
     private Integer quantity;
 
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @Column(name = "created_date", updatable = false)
+    private Long createdDate;
+
     @Column(name = "last_modified_by")
     private String lastModifiedBy;
 

@@ -126,7 +126,8 @@ public class ADVoucherServiceImpl implements ADVoucherService {
 
             voucher = new Voucher();
             voucher.setId(UUID.randomUUID().toString());
-
+            voucher.setCreatedBy(dto.getCreatedBy());
+            voucher.setCreatedDate(currentTime);
             voucher.setVoucherType(dto.getVoucherType());
         }
 
@@ -155,7 +156,6 @@ public class ADVoucherServiceImpl implements ADVoucherService {
         voucher.setNote(dto.getNote());
         voucher.setDiscountValue(dto.getDiscountValue());
         voucher.setQuantity(dto.getQuantity());
-
         voucher.setLastModifiedDate(currentTime);
         voucher.setLastModifiedBy(dto.getLastModifiedBy());
         Voucher savedVoucher;
@@ -181,7 +181,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
 
 
             // Lưu Voucher trước để có ID
-            savedVoucher = adVouchersRepository.save(voucher);
+
             savedVoucher = adVouchersRepository.save(savedVoucher);
             // Cập nhật danh sách khách hàng được nhận voucher
             adVoucherDetailService.updateVoucherDetails(savedVoucher.getId(), customerIds);

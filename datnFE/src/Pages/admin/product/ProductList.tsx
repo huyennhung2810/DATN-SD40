@@ -25,6 +25,7 @@ import {
     Steps,
     Tabs,
     Table,
+    Alert,
 } from "antd";
 import {
     PlusOutlined,
@@ -37,6 +38,7 @@ import {
     CloseOutlined,
     SettingOutlined,
     CheckCircleOutlined,
+    AppstoreOutlined,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
@@ -58,8 +60,10 @@ import { App } from "antd";
 import { initialTechSpec } from "../../../models/techSpec";
 import productApi from "../../../api/productApi";
 import techSpecApi from "../../../api/techSpecApi";
-import productDetailApi from "../../../api/productDetailApi";
 import type { ProductDetailResponse } from "../../../models/productdetail";
+import type { ProductWithVariantsResponse, ProductVariantResponse } from "../../../models/productVariant";
+import { colorActions } from "../../../redux/color/colorSlice";
+import { storageCapacityActions } from "../../../redux/storage/storageSlice";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -81,14 +85,20 @@ const ProductPage: React.FC = () => {
     const processorState = useSelector((state: RootState) => state.processor);
     const imageFormatState = useSelector((state: RootState) => state.imageFormat);
     const videoFormatState = useSelector((state: RootState) => state.videoFormat);
+    const colorState = useSelector((state: RootState) => state.color || { list: [], loading: false });
+    const storageCapacityState = useSelector((state: RootState) => state.storage || { list: [], loading: false });
 
     const [form] = Form.useForm();
     const [modalForm] = Form.useForm();
+    const [variantForm] = Form.useForm();
     const [keyword, setKeyword] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
+    const [selectedProductWithVariants, setSelectedProductWithVariants] = useState<ProductWithVariantsResponse | null>(null);
+    const [editingVariant, setEditingVariant] = useState<ProductVariantResponse | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
     const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
     const [selectedSensorType, setSelectedSensorType] = useState<string | undefined>();
@@ -98,11 +108,12 @@ const ProductPage: React.FC = () => {
     const [selectedImageFormat, setSelectedImageFormat] = useState<string | undefined>();
     const [selectedVideoFormat, setSelectedVideoFormat] = useState<string | undefined>();
     const [selectedIso, setSelectedIso] = useState<string | undefined>();
-    const [selectedColorId, setSelectedColorId] = useState<string | undefined>();
-    const [selectedStorageCapacityId, setSelectedStorageCapacityId] = useState<string | undefined>();
     const [productDetails, setProductDetails] = useState<ProductDetailResponse[]>([]);
     const [productDetailsLoading, setProductDetailsLoading] = useState(false);
     const [uploadLoading, setUploadLoading] = useState(false);
+    const [variantLoading, setVariantLoading] = useState(false);
+    // State riêng để theo dõi ảnh được chọn cho biến thể (đảm bảo UI phản hồi ngay)
+    const [variantSelectedImageId, setVariantSelectedImageId] = useState<string | undefined>(undefined);
     const { notification, message } = App.useApp();
 
     //
@@ -152,6 +163,8 @@ const ProductPage: React.FC = () => {
         dispatch(processorActions.getAll({ page: 0, size: 1000, keyword: "" }));
         dispatch(imageFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
         dispatch(videoFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(colorActions.getAll({ page: 0, size: 1000, keyword: "" }));
+        dispatch(storageCapacityActions.getAll({ page: 0, size: 1000, keyword: "" }));
     }, [dispatch]);
 
     // Load techspec data for modal - modal entering
@@ -494,26 +507,42 @@ const ProductPage: React.FC = () => {
         dispatch(productActions.deleteProduct(id));
     };
 
-    const openDetail = (product: ProductResponse) => {
+    const openDetail = async (product: ProductResponse) => {
         console.log("Product data:", product);
         console.log("TechSpec data:", product.techSpec);
         setSelectedProduct(product);
         setIsDetailOpen(true);
         dispatch(productImageActions.getImagesByProduct(product.id));
 
-        // Fetch product details (variants) for this product
+        // Fetch product with variants using new API
         setProductDetailsLoading(true);
-        productDetailApi.getAll({ page: 0, size: 100, productId: product.id })
-            .then((response) => {
-                setProductDetails(response.data || []);
-            })
-            .catch((error) => {
-                console.error("Error fetching product details:", error);
+        try {
+            const response = await productApi.getProductWithVariants(product.id);
+            setSelectedProductWithVariants(response);
+            // Convert variants to ProductDetailResponse format for compatibility
+            if (response.variants) {
+                const details = response.variants.map((v: ProductVariantResponse) => ({
+                    id: v.id,
+                    code: v.code,
+                    version: v.version,
+                    colorName: v.colorName,
+                    storageCapacityName: v.storageCapacityName,
+                    salePrice: v.salePrice,
+                    quantity: v.quantity,
+                    status: v.status,
+                    imageUrl: v.imageUrl,
+                } as ProductDetailResponse));
+                setProductDetails(details);
+            } else {
                 setProductDetails([]);
-            })
-            .finally(() => {
-                setProductDetailsLoading(false);
-            });
+            }
+        } catch (error) {
+            console.error("Error fetching product with variants:", error);
+            setProductDetails([]);
+            setSelectedProductWithVariants(null);
+        } finally {
+            setProductDetailsLoading(false);
+        }
     };
 
     const closeDetail = () => {
@@ -707,6 +736,177 @@ const ProductPage: React.FC = () => {
         URL.revokeObjectURL(newPendingImages[index].preview);
         newPendingImages.splice(index, 1);
         setDrawerPendingImages(newPendingImages);
+    };
+
+    // Mở modal thêm biến thể mới
+    const openAddVariantModal = () => {
+        setEditingVariant(null);
+        setVariantSelectedImageId(undefined);
+        variantForm.resetFields();
+        variantForm.setFieldsValue({
+            status: "ACTIVE",
+            quantity: 0,
+        });
+        setIsVariantModalOpen(true);
+    };
+
+    // Mở modal sửa biến thể
+    const openEditVariantModal = (variant: ProductVariantResponse) => {
+        setEditingVariant(variant);
+        const selectedImgId = variant.selectedImageId;
+        setVariantSelectedImageId(selectedImgId);
+        variantForm.setFieldsValue({
+            code: variant.code,
+            version: variant.version,
+            colorId: variant.colorId,
+            storageCapacityId: variant.storageCapacityId,
+            salePrice: variant.salePrice,
+            quantity: variant.quantity,
+            status: variant.status,
+            imageUrl: variant.imageUrl,
+            selectedImageId: selectedImgId,
+        });
+        setIsVariantModalOpen(true);
+    };
+
+    // Lưu biến thể (thêm mới hoặc cập nhật)
+    const handleSaveVariant = async () => {
+        if (!selectedProduct) return;
+
+        try {
+            await variantForm.validateFields();
+            setVariantLoading(true);
+
+            const values = variantForm.getFieldsValue();
+
+            const variantData = {
+                code: values.code,
+                version: values.version,
+                colorId: values.colorId,
+                storageCapacityId: values.storageCapacityId,
+                salePrice: values.salePrice,
+                quantity: values.quantity,
+                status: values.status,
+                imageUrl: values.imageUrl,
+                selectedImageId: values.selectedImageId || null,
+            };
+
+            if (editingVariant) {
+                // Cập nhật biến thể hiện có
+                await productApi.updateVariant(editingVariant.id, variantData);
+                notification.success({ message: "Cập nhật biến thể thành công" });
+            } else {
+                // Thêm biến thể mới
+                await productApi.addVariant(selectedProduct.id, variantData);
+                notification.success({ message: "Thêm biến thể thành công" });
+            }
+
+            setIsVariantModalOpen(false);
+            variantForm.resetFields();
+
+            // Refresh lại danh sách biến thể
+            const response = await productApi.getProductWithVariants(selectedProduct.id);
+            setSelectedProductWithVariants(response);
+            if (response.variants) {
+                const details = response.variants.map((v: ProductVariantResponse) => ({
+                    id: v.id,
+                    code: v.code,
+                    version: v.version,
+                    colorName: v.colorName,
+                    storageCapacityName: v.storageCapacityName,
+                    salePrice: v.salePrice,
+                    quantity: v.quantity,
+                    status: v.status,
+                    imageUrl: v.imageUrl,
+                    selectedImageId: v.selectedImageId,
+                    selectedImageUrl: v.selectedImageUrl,
+                } as ProductDetailResponse));
+                setProductDetails(details);
+            }
+        } catch (error: any) {
+            console.error("Lỗi khi lưu biến thể:", error);
+            notification.error({
+                message: "Lỗi",
+                description: error.response?.data?.message || error.message || "Có lỗi xảy ra",
+            });
+        } finally {
+            setVariantLoading(false);
+        }
+    };
+
+    // Xóa biến thể
+    const handleDeleteVariant = async (variantId: string) => {
+        if (!selectedProduct) return;
+
+        try {
+            setVariantLoading(true);
+            await productApi.deleteVariant(variantId);
+            notification.success({ message: "Xóa biến thể thành công" });
+
+            // Refresh lại danh sách biến thể
+            const response = await productApi.getProductWithVariants(selectedProduct.id);
+            setSelectedProductWithVariants(response);
+            if (response.variants) {
+                const details = response.variants.map((v: ProductVariantResponse) => ({
+                    id: v.id,
+                    code: v.code,
+                    version: v.version,
+                    colorName: v.colorName,
+                    storageCapacityName: v.storageCapacityName,
+                    salePrice: v.salePrice,
+                    quantity: v.quantity,
+                    status: v.status,
+                    imageUrl: v.imageUrl,
+                    selectedImageId: v.selectedImageId,
+                    selectedImageUrl: v.selectedImageUrl,
+                } as ProductDetailResponse));
+                setProductDetails(details);
+            }
+        } catch (error: any) {
+            console.error("Lỗi khi xóa biến thể:", error);
+            notification.error({
+                message: "Lỗi",
+                description: error.response?.data?.message || error.message || "Có lỗi xảy ra",
+            });
+        } finally {
+            setVariantLoading(false);
+        }
+    };
+
+    // Lưu ảnh đại diện cho biến thể (lưu ngay khi chọn)
+    const handleSaveImageVariant = async (variantId: string, imageId: string) => {
+        if (!selectedProduct) return;
+
+        try {
+            await productApi.updateVariantImage(variantId, imageId);
+            notification.success({ message: "Đã chọn ảnh đại diện" });
+
+            // Refresh lại danh sách biến thể
+            const response = await productApi.getProductWithVariants(selectedProduct.id);
+            setSelectedProductWithVariants(response);
+            if (response.variants) {
+                const details = response.variants.map((v: ProductVariantResponse) => ({
+                    id: v.id,
+                    code: v.code,
+                    version: v.version,
+                    colorName: v.colorName,
+                    storageCapacityName: v.storageCapacityName,
+                    salePrice: v.salePrice,
+                    quantity: v.quantity,
+                    status: v.status,
+                    imageUrl: v.imageUrl,
+                    selectedImageId: v.selectedImageId,
+                    selectedImageUrl: v.selectedImageUrl,
+                } as ProductDetailResponse));
+                setProductDetails(details);
+            }
+        } catch (error: any) {
+            console.error("Lỗi khi lưu ảnh:", error);
+            notification.error({
+                message: "Lỗi",
+                description: error.response?.data?.message || error.message || "Có lỗi xảy ra",
+            });
+        }
     };
 
     const getCategoryName = (id: string) => {
@@ -1795,43 +1995,129 @@ const ProductPage: React.FC = () => {
                                             <div style={{ textAlign: "center", padding: 20 }}>
                                                 <Spin />
                                             </div>
-                                        ) : productDetails.length === 0 ? (
-                                            <Empty description="Chưa có phiên bản nào" />
                                         ) : (
                                             <>
-                                                <Typography.Text strong style={{ marginBottom: 16, display: "block" }}>
-                                                    Danh sách các phiên bản sản phẩm (Màu sắc - Dung lượng)
-                                                </Typography.Text>
-                                                <Row gutter={[16, 16]}>
-                                                    {productDetails.map((detail) => (
-                                                        <Col xs={24} sm={12} md={8} key={detail.id}>
-                                                            <Card
-                                                                size="small"
-                                                                hoverable
-                                                                style={{ borderColor: "#1890ff" }}
-                                                            >
-                                                                <Space direction="vertical" size={4} style={{ width: "100%" }}>
-                                                                    <Text strong>{detail.version}</Text>
-                                                                    <Tag color="blue" style={{ alignSelf: "flex-start" }}>
-                                                                        {detail.colorName} | {detail.storageCapacityName}
-                                                                    </Tag>
-                                                                    <Divider style={{ margin: "8px 0" }} />
-                                                                    <Text type="secondary">Giá bán:</Text>
-                                                                    <Text strong style={{ color: "#ff4d4f" }}>
-                                                                        {detail.salePrice?.toLocaleString('vi-VN')} đ
-                                                                    </Text>
-                                                                    <Text type="secondary">Tồn kho:</Text>
-                                                                    <Tag color={detail.quantity > 0 ? "green" : "red"}>
-                                                                        {detail.quantity} máy
-                                                                    </Tag>
-                                                                    <Tag color={detail.status === "ACTIVE" ? "success" : "default"}>
-                                                                        {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
-                                                                    </Tag>
-                                                                </Space>
-                                                            </Card>
-                                                        </Col>
-                                                    ))}
-                                                </Row>
+                                                <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography.Text strong>
+                                                        Danh sách các biến thể sản phẩm (Màu sắc - Dung lượng)
+                                                    </Typography.Text>
+                                                    <Button
+                                                        type="primary"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={openAddVariantModal}
+                                                    >
+                                                        Thêm biến thể
+                                                    </Button>
+                                                </div>
+
+                                                {selectedProductWithVariants && (
+                                                    <Descriptions column={3} bordered size="small" style={{ marginBottom: 16 }}>
+                                                        <Descriptions.Item label="Tổng tồn kho">
+                                                            <Text strong style={{ color: "#1890ff" }}>
+                                                                {selectedProductWithVariants.totalQuantity || 0}
+                                                            </Text>
+                                                        </Descriptions.Item>
+                                                        <Descriptions.Item label="Giá thấp nhất">
+                                                            <Text strong style={{ color: "#52c41a" }}>
+                                                                {selectedProductWithVariants.minPrice?.toLocaleString('vi-VN') || 0} đ
+                                                            </Text>
+                                                        </Descriptions.Item>
+                                                        <Descriptions.Item label="Giá cao nhất">
+                                                            <Text strong style={{ color: "#ff4d4f" }}>
+                                                                {selectedProductWithVariants.maxPrice?.toLocaleString('vi-VN') || 0} đ
+                                                            </Text>
+                                                        </Descriptions.Item>
+                                                    </Descriptions>
+                                                )}
+
+                                                {productDetails.length === 0 ? (
+                                                    <Empty description="Sản phẩm này chưa có biến thể nào" />
+                                                ) : (
+                                                    <Row gutter={[16, 16]}>
+                                                        {productDetails.map((detail) => (
+                                                            <Col xs={24} sm={12} md={8} key={detail.id}>
+                                                                <Card
+                                                                    size="small"
+                                                                    hoverable
+                                                                    style={{ borderColor: "#1890ff" }}
+                                                                    actions={[
+                                                                        <Tooltip title="Sửa" key="edit">
+                                                                            <EditOutlined
+                                                                                style={{ fontSize: "16px", color: "#faad14" }}
+                                                                                onClick={(e) => {
+                                                                                    e?.stopPropagation();
+                                                                                    // Convert to variant format for editing
+                                                                                    openEditVariantModal({
+                                                                                        id: detail.id,
+                                                                                        code: detail.code,
+                                                                                        version: detail.version,
+                                                                                        colorId: detail.colorId,
+                                                                                        colorName: detail.colorName,
+                                                                                        storageCapacityId: detail.storageCapacityId,
+                                                                                        storageCapacityName: detail.storageCapacityName,
+                                                                                        salePrice: detail.salePrice,
+                                                                                        quantity: detail.quantity,
+                                                                                        status: detail.status,
+                                                                                        imageUrl: detail.imageUrl,
+                                                                                        selectedImageId: detail.selectedImageId,
+                                                                                        selectedImageUrl: detail.selectedImageUrl,
+                                                                                    } as ProductVariantResponse);
+                                                                                }}
+                                                                            />
+                                                                        </Tooltip>,
+                                                                        <Popconfirm
+                                                                            title="Xóa biến thể"
+                                                                            description="Bạn có chắc chắn muốn xóa biến thể này?"
+                                                                            onConfirm={(e) => {
+                                                                                e?.stopPropagation();
+                                                                                handleDeleteVariant(detail.id);
+                                                                            }}
+                                                                            onCancel={(e) => e?.stopPropagation()}
+                                                                            okText="Xóa"
+                                                                            cancelText="Hủy"
+                                                                            key="delete"
+                                                                        >
+                                                                            <Tooltip title="Xóa">
+                                                                                <DeleteOutlined
+                                                                                    style={{ fontSize: "16px", color: "#ff4d4f" }}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                />
+                                                                            </Tooltip>
+                                                                        </Popconfirm>,
+                                                                    ]}
+                                                                >
+                                                                    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                                                                        {(detail.selectedImageUrl || detail.imageUrl) && (
+                                                                            <div style={{ textAlign: "center", marginBottom: 8 }}>
+                                                                                <img
+                                                                                    src={detail.selectedImageUrl || detail.imageUrl}
+                                                                                    alt={detail.version}
+                                                                                    style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 4 }}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                        <Text strong>{detail.code || detail.version || "Biến thể"}</Text>
+                                                                        <Tag color="blue" style={{ alignSelf: "flex-start" }}>
+                                                                            {detail.colorName} | {detail.storageCapacityName}
+                                                                        </Tag>
+                                                                        <Divider style={{ margin: "8px 0" }} />
+                                                                        <Text type="secondary">Giá bán:</Text>
+                                                                        <Text strong style={{ color: "#ff4d4f" }}>
+                                                                            {detail.salePrice?.toLocaleString('vi-VN')} đ
+                                                                        </Text>
+                                                                        <Text type="secondary">Tồn kho:</Text>
+                                                                        <Tag color={detail.quantity > 0 ? "green" : "red"}>
+                                                                            {detail.quantity} máy
+                                                                        </Tag>
+                                                                        <Tag color={detail.status === "ACTIVE" ? "success" : "default"}>
+                                                                            {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+                                                                        </Tag>
+                                                                    </Space>
+                                                                </Card>
+                                                            </Col>
+                                                        ))}
+                                                    </Row>
+                                                )}
                                             </>
                                         )}
                                     </div>
@@ -1841,6 +2127,222 @@ const ProductPage: React.FC = () => {
                     />
                 )}
             </Drawer>
+
+            {/* Modal Thêm/Sửa Biến thể */}
+            <Modal
+                title={editingVariant ? "Cập nhật biến thể" : "Thêm biến thể mới"}
+                open={isVariantModalOpen}
+                onCancel={() => setIsVariantModalOpen(false)}
+                width={600}
+                destroyOnClose
+                footer={
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                        <Button onClick={() => setIsVariantModalOpen(false)}>Hủy</Button>
+                        <Button
+                            type="primary"
+                            onClick={handleSaveVariant}
+                            loading={variantLoading}
+                        >
+                            {editingVariant ? "Cập nhật" : "Thêm mới"}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form form={variantForm} layout="vertical">
+                    <Form.Item
+                        name="code"
+                        label="Mã sản phẩm chi tiết"
+                        rules={[{ required: true, message: "Vui lòng nhập mã sản phẩm chi tiết" }]}
+                    >
+                        <Input placeholder="Nhập mã sản phẩm chi tiết" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="version"
+                        label="Tên phiên bản"
+                    >
+                        <Input placeholder="Ví dụ: Nikon D3500 Black 128GB" />
+                    </Form.Item>
+
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="colorId"
+                                label="Màu sắc"
+                                rules={[{ required: true, message: "Vui lòng chọn màu sắc" }]}
+                            >
+                                <Select
+                                    placeholder="Chọn màu sắc"
+                                    showSearch
+                                    optionFilterProp="children"
+                                    options={(colorState?.list || []).map((c: any) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="storageCapacityId"
+                                label="Dung lượng"
+                                rules={[{ required: true, message: "Vui lòng chọn dung lượng" }]}
+                            >
+                                <Select
+                                    placeholder="Chọn dung lượng"
+                                    showSearch
+                                    optionFilterProp="children"
+                                    options={(storageCapacityState?.list || []).map((s: any) => ({
+                                        label: s.name,
+                                        value: s.id,
+                                    }))}
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="salePrice"
+                                label="Giá bán"
+                                rules={[{ required: true, message: "Vui lòng nhập giá bán" }]}
+                            >
+                                <InputNumber
+                                    placeholder="Nhập giá bán"
+                                    style={{ width: "100%" }}
+                                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="quantity"
+                                label="Số lượng tồn kho"
+                            >
+                                <InputNumber
+                                    placeholder="Số lượng"
+                                    style={{ width: "100%" }}
+                                    min={0}
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Form.Item
+                        name="imageUrl"
+                        label="URL Ảnh biến thể"
+                    >
+                        <Input placeholder="Nhập URL ảnh hoặc để trống" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="status"
+                        label="Trạng thái"
+                        initialValue="ACTIVE"
+                    >
+                        <Select
+                            options={[
+                                { label: "Hoạt động", value: "ACTIVE" },
+                                { label: "Không hoạt động", value: "INACTIVE" },
+                            ]}
+                        />
+                    </Form.Item>
+
+                    {/* Chọn ảnh đại diện từ ảnh của sản phẩm mẹ */}
+                    <Form.Item
+                        label="Ảnh đại diện cho biến thể"
+                    >
+                        {selectedProductWithVariants?.productImages && selectedProductWithVariants.productImages.length > 0 ? (
+                            <div>
+                                <Typography.Text type="secondary" style={{ marginBottom: 8, display: "block" }}>
+                                    Chọn 1 ảnh từ danh sách ảnh của sản phẩm mẹ:
+                                </Typography.Text>
+                                <Row gutter={[8, 8]}>
+                                    {selectedProductWithVariants.productImages.map((img) => (
+                                        <Col span={8} key={img.id}>
+                                            <div
+                                                onClick={() => {
+                                                    const newImageId = img.id;
+                                                    setVariantSelectedImageId(newImageId);
+                                                    variantForm.setFieldValue("selectedImageId", newImageId);
+                                                    // Lưu ngay khi chọn (chỉ khi đang sửa biến thể)
+                                                    if (editingVariant) {
+                                                        handleSaveImageVariant(editingVariant.id, newImageId);
+                                                    }
+                                                }}
+                                                style={{
+                                                    cursor: "pointer",
+                                                    border: variantSelectedImageId === img.id
+                                                        ? "3px solid #1890ff"
+                                                        : "2px solid #d9d9d9",
+                                                    borderRadius: 8,
+                                                    overflow: "hidden",
+                                                    position: "relative",
+                                                }}
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt="Ảnh sản phẩm"
+                                                    style={{
+                                                        width: "100%",
+                                                        height: 80,
+                                                        objectFit: "cover",
+                                                    }}
+                                                />
+                                                {variantSelectedImageId === img.id && (
+                                                    <div
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            bottom: 0,
+                                                            backgroundColor: "rgba(24, 144, 255, 0.3)",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                        }}
+                                                    >
+                                                        <CheckCircleOutlined style={{ fontSize: 24, color: "#fff" }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Col>
+                                    ))}
+                                </Row>
+                                <Form.Item name="selectedImageId" hidden>
+                                    <Input />
+                                </Form.Item>
+                                <Button
+                                    type="link"
+                                    onClick={() => {
+                                        setVariantSelectedImageId(undefined);
+                                        variantForm.setFieldValue("selectedImageId", undefined);
+                                    }}
+                                    style={{ padding: 0, marginTop: 8 }}
+                                    disabled={!variantSelectedImageId}
+                                >
+                                    Bỏ chọn ảnh
+                                </Button>
+                            </div>
+                        ) : (
+                            <Alert
+                                message="Chưa có ảnh"
+                                description="Sản phẩm mẹ chưa có ảnh nào. Vui lòng thêm ảnh ở tab Hình ảnh trước khi chọn ảnh cho biến thể."
+                                type="warning"
+                                showIcon
+                            />
+                        )}
+                    </Form.Item>
+
+                    {/* Ảnh cũ (URL trực tiếp) - ẩn vì đã dùng selectedImageId */}
+                    <Form.Item name="imageUrl" hidden>
+                        <Input />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 };

@@ -43,6 +43,14 @@ public class ProductDetail extends PrimaryEntity implements Serializable {
     private StorageCapacity storageCapacity;
 
     @OneToMany(mappedBy = "productDetail", cascade = CascadeType.ALL)
-    @ToString.Exclude // Để tránh lỗi vòng lặp vô tận khi in log
+    @ToString.Exclude
     private List<Serial> serials;
+
+    // Ảnh cũ của biến thể (url trực tiếp)
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    // Liên kết tới ảnh của sản phẩm mẹ - dùng cho client hiển thị ảnh theo màu/biến thể
+    @Column(name = "selected_image_id")
+    private String selectedImageId;
 }

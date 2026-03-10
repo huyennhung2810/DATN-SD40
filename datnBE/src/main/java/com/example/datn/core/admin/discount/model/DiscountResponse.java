@@ -29,7 +29,7 @@ public class DiscountResponse {
         this.id = discount.getId();
         this.code = discount.getCode();
         this.name = discount.getName();
-        // Chuyển đổi BigDecimal sang Double
+
         this.discountPercent = discount.getDiscountPercent() != null ? discount.getDiscountPercent().doubleValue() : 0.0;
         this.startDate = discount.getStartDate();
         this.endDate = discount.getEndDate();

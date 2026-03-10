@@ -2,7 +2,7 @@ import axios from 'axios';
 import axiosClient from "./axiosClient";
 // ĐỊNH NGHĨA URL GỐC (Bỏ /api/v1 nếu nó đã có trong cấu hình chung)
 const BASE_URL = 'http://localhost:8386/api/admin/discounts';
-const PRODUCT_DETAIL_URL = 'http://localhost:8386/api/admin/product-details';
+const PRODUCT_DETAIL_URL = 'http://localhost:8386/api/admin/product-details-discount';
 export const discountApi = {
     /**
      * Lấy danh sách đợt giảm giá (Phân trang + Tìm kiếm)

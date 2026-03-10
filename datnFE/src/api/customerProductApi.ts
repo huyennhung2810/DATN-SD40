@@ -2,6 +2,7 @@ import axiosClient from "./axiosClient";
 import type { ProductResponse, ProductPageParams } from "../models/product";
 import type { ProductCategoryResponse } from "../models/productCategory";
 import type { PageResponse, ResponseObject } from "../models/base";
+import type { ProductVariantResponse } from "../models/productVariant";
 
 // Customer Product endpoints
 export const customerProductApi = {
@@ -12,6 +13,12 @@ export const customerProductApi = {
 
   getProductById: async (id: string): Promise<ProductResponse> => {
     const res = await axiosClient.get<ResponseObject<ProductResponse>>(`/public/products/${id}`);
+    return res.data.data;
+  },
+
+  // Get all variants for a product
+  getVariants: async (productId: string): Promise<ProductVariantResponse[]> => {
+    const res = await axiosClient.get<ResponseObject<ProductVariantResponse[]>>(`/public/products/${productId}/variants`);
     return res.data.data;
   },
 

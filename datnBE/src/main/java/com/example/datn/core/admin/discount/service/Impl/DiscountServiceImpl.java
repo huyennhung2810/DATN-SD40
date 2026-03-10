@@ -32,30 +32,28 @@ public class DiscountServiceImpl implements DiscountService {
     private final ADDiscountRepository adDiscountRepository;
     private final ADDiscountDetailRepository adDiscountDetailRepository;
     private final DiscountDetailService discountDetailService; // Gọi service con để xử lý bảng chi tiết
-    private final ADProductDetailRepository adProductDetailRepository;
     @Override
     public ResponseObject<?> getAll(ADVoucherSearchRequest request) {
         // 1. Tạo Pageable từ Helper
         Pageable pageable = Helper.createPageable(request);
 
-        // 2. Gọi Repository (Bạn cần đảm bảo Repo có hàm tìm kiếm tương tự Voucher)
+        // 2. Gọi Repository
         Page<Discount> page = adDiscountRepository.findAllDiscount(request, pageable);
 
-        // 3. Logic cập nhật trạng thái hiển thị tức thì (Giống Voucher)
+        // 3. Logic cập nhật trạng thái hiển thị tức thì (Giữ nguyên của bạn)
         long now = System.currentTimeMillis();
-        List<Discount> discounts = page.getContent(); // Lấy list từ page hiện tại để xử lý nhanh
+        List<Discount> discounts = page.getContent();
         boolean isChanged = false;
 
         for (Discount d : discounts) {
-            // Chỉ cập nhật nếu không bị "Buộc dừng" (status != 0)
             if (d.getStatus() != 0) {
                 int newStatus = d.getStatus();
                 if (d.getStartDate() > now) {
-                    newStatus = 1; // Sắp diễn ra
+                    newStatus = 1;
                 } else if (d.getStartDate() <= now && d.getEndDate() >= now) {
-                    newStatus = 2; // Đang diễn ra
+                    newStatus = 2;
                 } else {
-                    newStatus = 3; // Đã kết thúc
+                    newStatus = 3;
                 }
 
                 if (newStatus != d.getStatus()) {
@@ -65,15 +63,17 @@ public class DiscountServiceImpl implements DiscountService {
             }
         }
 
-        // Nếu có thay đổi trạng thái thì lưu lại ngay
         if (isChanged) {
             adDiscountRepository.saveAll(discounts);
         }
 
-        Page<DiscountResponse> responsePage = page.map(DiscountResponse::new);
-        return ResponseObject.success(PageableObject.of(responsePage), "Lấy danh sách đợt giảm giá thành công");
-    }
+        // --- VŨ KHÍ CỦA BẠN LÀM Ở ĐÂY ---
+        // 4. Map Entity sang DTO bằng Constructor bạn đã viết sẵn
+        Page<DiscountResponse> dtoPage = page.map(discount -> new DiscountResponse(discount));
 
+        // 5. Trả về dtoPage thay vì page Entity gốc
+        return ResponseObject.success(PageableObject.of(dtoPage), "Lấy danh sách đợt giảm giá thành công");
+    }
     @Override
     public ResponseObject<?> getOne(String id) {
         return adDiscountRepository.findById(id)

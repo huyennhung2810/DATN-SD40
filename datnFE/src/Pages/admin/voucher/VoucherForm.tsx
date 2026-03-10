@@ -154,13 +154,13 @@ const VoucherForm: React.FC = () => {
     const { dateRange, ...rest } = values;
     const payload: VoucherRequest = {
       ...rest,
-      startDate: dateRange ? dateRange[0].startOf("day").valueOf() : null,
-      endDate: dateRange ? dateRange[1].endOf("day").valueOf() : null,
+      startDate: dateRange ? dateRange[0].valueOf() : null,
+      endDate: dateRange ? dateRange[1].valueOf() : null,
       id: id,
       customerIds:
         values.voucherType === "INDIVIDUAL" ? selectedCustomerIds : [],
       lastModifiedBy: localStorage.getItem("employeeCode") || "Nhung",
-      lastModifiedDate: Date.now(),
+      createdBy: localStorage.getItem("employeeCode") || "Nhung",
     };
 
     const action = isEdit ? updateVoucherRequest : addVoucherRequest;
@@ -399,7 +399,17 @@ const VoucherForm: React.FC = () => {
                 name="discountUnit"
                 label={<Text strong>Hình thức giảm</Text>}
               >
-                <Radio.Group buttonStyle="solid" style={{ width: "100%" }}>
+                <Radio.Group
+                  buttonStyle="solid"
+                  style={{ width: "100%" }}
+                  onChange={(e) => {
+                    // BƯỚC 1: Bắt sự kiện khi đổi Radio. Nếu chọn VND, copy ngay giá trị giảm hiện tại sang ô Giảm tối đa
+                    if (e.target.value === "VND") {
+                      const currentVal = form.getFieldValue("discountValue");
+                      form.setFieldValue("maxDiscountAmount", currentVal);
+                    }
+                  }}
+                >
                   <Radio.Button
                     value="PERCENT"
                     style={{ width: "50%", textAlign: "center" }}
@@ -438,6 +448,12 @@ const VoucherForm: React.FC = () => {
                         Number(value!.replace(/\$\s?|(,*)/g, "")) as any
                       }
                       addonAfter={discountUnit === "PERCENT" ? "%" : "VND"}
+                      onChange={(val) => {
+                        // BƯỚC 2: Nếu đang chọn VND mà người dùng gõ thay đổi giá trị, ô Giảm tối đa cũng chạy theo thời gian thực
+                        if (form.getFieldValue("discountUnit") === "VND") {
+                          form.setFieldValue("maxDiscountAmount", val);
+                        }
+                      }}
                     />
                   </Form.Item>
                 </Col>
@@ -482,6 +498,7 @@ const VoucherForm: React.FC = () => {
                       parser={(value) =>
                         value!.replace(/\$\s?|(,*)/g, "") as any
                       }
+                      disabled={discountUnit === "VND"}
                     />
                   </Form.Item>
                 </Col>
@@ -492,7 +509,7 @@ const VoucherForm: React.FC = () => {
                   <Form.Item
                     name="conditions"
                     label={<Text strong>Đơn tối thiểu (VNĐ)</Text>}
-                    dependencies={["maxDiscountAmount"]} // SỬA LẠI TÊN BIẾN CHO ĐÚNG
+                    dependencies={["maxDiscountAmount"]}
                     rules={[
                       {
                         required: true,
@@ -500,7 +517,8 @@ const VoucherForm: React.FC = () => {
                       },
                       ({ getFieldValue }) => ({
                         validator(_, value) {
-                          const maxDiscountAmount = getFieldValue("maxDiscountAmount");
+                          const maxDiscountAmount =
+                            getFieldValue("maxDiscountAmount");
                           if (
                             value !== undefined &&
                             value !== null &&
@@ -509,7 +527,9 @@ const VoucherForm: React.FC = () => {
                             Number(value) < Number(maxDiscountAmount)
                           ) {
                             return Promise.reject(
-                              new Error("Đơn tối thiểu không được nhỏ hơn Giảm tối đa!"),
+                              new Error(
+                                "Đơn tối thiểu không được nhỏ hơn Giảm tối đa!",
+                              ),
                             );
                           }
                           return Promise.resolve();
@@ -530,7 +550,28 @@ const VoucherForm: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                {isEdit && (
+              </Row>
+
+              {/* THÊM MỚI: Hàng hiển thị song song Thông tin người tạo và Cập nhật cuối */}
+              {isEdit && (
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item label={<Text strong>Thông tin người tạo</Text>}>
+                      <Input
+                        size="large"
+                        disabled
+                        prefix={<UserOutlined />}
+                        value={`${currentVoucher?.createdBy || "N/A"} - ${
+                          currentVoucher?.createdDate
+                            ? dayjs(currentVoucher.createdDate).format(
+                                "DD/MM/YYYY HH:mm",
+                              )
+                            : "N/A"
+                        }`}
+                        style={{ backgroundColor: "#f5f5f5", color: "#595959" }}
+                      />
+                    </Form.Item>
+                  </Col>
                   <Col span={12}>
                     <Form.Item
                       label={<Text strong>Thông tin cập nhật cuối</Text>}
@@ -539,14 +580,19 @@ const VoucherForm: React.FC = () => {
                         size="large"
                         disabled
                         prefix={<UserOutlined />}
-                        // Kết hợp người cập nhật và thời gian (định dạng ngày/tháng/năm giờ:phút)
-                        value={`${currentVoucher?.lastModifiedBy || "N/A"} - ${currentVoucher?.lastModifiedDate ? dayjs(currentVoucher.lastModifiedDate).format("DD/MM/YYYY HH:mm") : ""}`}
+                        value={`${currentVoucher?.lastModifiedBy || "N/A"} - ${
+                          currentVoucher?.lastModifiedDate
+                            ? dayjs(currentVoucher.lastModifiedDate).format(
+                                "DD/MM/YYYY HH:mm",
+                              )
+                            : "N/A"
+                        }`}
                         style={{ backgroundColor: "#f5f5f5", color: "#595959" }}
                       />
                     </Form.Item>
                   </Col>
-                )}
-              </Row>
+                </Row>
+              )}
 
               <Form.Item
                 name="dateRange"
@@ -556,11 +602,13 @@ const VoucherForm: React.FC = () => {
                 <RangePicker
                   size="large"
                   style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  // Thêm dòng này để chặn chọn ngày quá khứ
+                  format="DD/MM/YYYY HH:mm"
+                  showTime={{ format: "HH:mm" }}
                   disabledDate={disabledDate}
-                  // Có thể thêm showTime nếu muốn chọn cả giờ
-                  placeholder={["Ngày bắt đầu", "Ngày kết thúc"]}
+                  placeholder={[
+                    "Bắt đầu (Ngày & Giờ)",
+                    "Kết thúc (Ngày & Giờ)",
+                  ]}
                 />
               </Form.Item>
 
@@ -581,7 +629,6 @@ const VoucherForm: React.FC = () => {
                     size="large"
                     icon={<SaveOutlined />}
                     loading={loading}
-                    
                     style={{ minWidth: 150, borderRadius: "8px" }}
                   >
                     {isEdit ? "Cập nhật Voucher" : "Lưu Voucher"}
