@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.serial.repository;
 
-import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.entity.Serial;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.repository.SerialRepository;
@@ -17,7 +16,14 @@ public interface ADSerialRepository extends SerialRepository {
 
     Page<Serial> findByProductDetailId(String productId, Pageable pageable);
 
+    // Lấy tất cả serial của một product detail
+    List<Serial> findByProductDetailId(String productDetailId);
+
     boolean existsBySerialNumberIn(List<String> serialNumbers);
+
+    // Kiểm tra serial đã tồn tại theo danh sách (trả về các serial đã tồn tại)
+    @Query("SELECT s.serialNumber FROM Serial s WHERE s.serialNumber IN :serialNumbers")
+    List<String> findExistingSerialNumbers(@Param("serialNumbers") List<String> serialNumbers);
 
     // Trong ADSerialRepository.java
     @Query("SELECT s FROM Serial s WHERE " +

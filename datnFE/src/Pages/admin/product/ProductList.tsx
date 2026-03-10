@@ -57,6 +57,7 @@ import { imageFormatActions } from "../../../redux/techSpec/imageFormatSlice";
 import { videoFormatActions } from "../../../redux/techSpec/videoFormatSlice";
 import type { RcFile, UploadProps } from "antd/es/upload/interface";
 import { App } from "antd";
+import * as XLSX from "xlsx";
 import { initialTechSpec } from "../../../models/techSpec";
 import productApi from "../../../api/productApi";
 import techSpecApi from "../../../api/techSpecApi";
@@ -115,6 +116,9 @@ const ProductPage: React.FC = () => {
     // State riêng để theo dõi ảnh được chọn cho biến thể (đảm bảo UI phản hồi ngay)
     const [variantSelectedImageId, setVariantSelectedImageId] = useState<string | undefined>(undefined);
     const { notification, message } = App.useApp();
+
+    // State cho modal edit biến thể - lưu trữ serial cũ
+    const [variantSerials, setVariantSerials] = useState<any[]>([]);
 
     //
     const [currentStep, setCurrentStep] = useState(0);
@@ -525,12 +529,17 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
                     status: v.status,
                     imageUrl: v.imageUrl,
+                    selectedImageId: v.selectedImageId,
+                    selectedImageUrl: v.selectedImageUrl,
+                    serials: v.serials, // Include serials for edit modal
                 } as ProductDetailResponse));
                 setProductDetails(details);
             } else {
@@ -738,10 +747,40 @@ const ProductPage: React.FC = () => {
         setDrawerPendingImages(newPendingImages);
     };
 
+    // Xử lý import Excel cho serial biến thể
+    const handleImportExcelVariant = (file: any) => {
+        const reader = new FileReader();
+
+        reader.onload = (e: any) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            // Lấy cột đầu tiên làm serial
+            const serials = jsonData
+                .map((row: any) => row[0])
+                .filter((v: any) => v)
+                .join("\n");
+
+            variantForm.setFieldsValue({
+                serialList: serials,
+            });
+        };
+
+        reader.readAsArrayBuffer(file);
+
+        return false; // Chặn upload lên server
+    };
+
     // Mở modal thêm biến thể mới
     const openAddVariantModal = () => {
         setEditingVariant(null);
         setVariantSelectedImageId(undefined);
+        setVariantSerials([]); // Clear serials when adding new variant
         variantForm.resetFields();
         variantForm.setFieldsValue({
             status: "ACTIVE",
@@ -755,6 +794,15 @@ const ProductPage: React.FC = () => {
         setEditingVariant(variant);
         const selectedImgId = variant.selectedImageId;
         setVariantSelectedImageId(selectedImgId);
+
+        // Lấy serial từ productDetails nếu có
+        const currentDetail = productDetails.find(d => d.id === variant.id);
+        const serials = currentDetail?.serials || [];
+
+        // Format serial cũ để hiển thị (chỉ đọc)
+        setVariantSerials(serials);
+
+        // Set giá trị form
         variantForm.setFieldsValue({
             code: variant.code,
             version: variant.version,
@@ -779,17 +827,79 @@ const ProductPage: React.FC = () => {
 
             const values = variantForm.getFieldsValue();
 
-            const variantData = {
+            // Xử lý serial nếu có
+            let variantData: any = {
                 code: values.code,
                 version: values.version,
                 colorId: values.colorId,
                 storageCapacityId: values.storageCapacityId,
                 salePrice: values.salePrice,
-                quantity: values.quantity,
                 status: values.status,
                 imageUrl: values.imageUrl,
                 selectedImageId: values.selectedImageId || null,
             };
+
+            // Chỉ xử lý serial khi thêm mới biến thể (không phải khi edit)
+            if (!editingVariant && values.serialList) {
+                const rawSerials = values.serialList
+                    .split(/\n/)
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s !== "");
+
+                // Loại bỏ các mã trùng lặp
+                const uniqueSerials = Array.from(new Set<string>(rawSerials));
+
+                if (uniqueSerials.length !== rawSerials.length) {
+                    notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
+                }
+
+                // Tạo danh sách serial
+                const serials = uniqueSerials.map((sn: string) => ({
+                    serialNumber: sn,
+                    code: sn,
+                    status: "ACTIVE"
+                }));
+
+                // Gán quantity và serials
+                variantData.quantity = serials.length;
+                variantData.serials = serials;
+            } else if (editingVariant) {
+                // Khi edit, giữ nguyên quantity
+                variantData.quantity = values.quantity;
+
+                // Xử lý thêm serial mới khi cập nhật
+                if (values.newSerialList) {
+                    const rawNewSerials = values.newSerialList
+                        .split(/\n/)
+                        .map((s: string) => s.trim())
+                        .filter((s: string) => s !== "");
+
+                    if (rawNewSerials.length > 0) {
+                        // Loại bỏ trùng lặp trong danh sách mới
+                        const uniqueNewSerials = Array.from(new Set<string>(rawNewSerials));
+
+                        if (uniqueNewSerials.length !== rawNewSerials.length) {
+                            notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng trong danh sách mới!" });
+                        }
+
+                        // Kiểm tra trùng với serial cũ
+                        const existingSerialNumbers = variantSerials.map((s: any) => s.serialNumber);
+                        const duplicatesWithOld = uniqueNewSerials.filter((sn: string) => existingSerialNumbers.includes(sn));
+
+                        if (duplicatesWithOld.length > 0) {
+                            notification.error({
+                                message: "Lỗi",
+                                description: `Các serial sau đã tồn tại: ${duplicatesWithOld.join(", ")}`,
+                            });
+                            setVariantLoading(false);
+                            return;
+                        }
+
+                        // Gửi danh sách serial mới
+                        variantData.newSerials = uniqueNewSerials;
+                    }
+                }
+            }
 
             if (editingVariant) {
                 // Cập nhật biến thể hiện có
@@ -2217,18 +2327,131 @@ const ProductPage: React.FC = () => {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item
-                                name="quantity"
-                                label="Số lượng tồn kho"
-                            >
-                                <InputNumber
-                                    placeholder="Số lượng"
-                                    style={{ width: "100%" }}
-                                    min={0}
-                                />
-                            </Form.Item>
+                            {editingVariant ? (
+                                <Form.Item
+                                    name="quantity"
+                                    label="Số lượng tồn kho"
+                                >
+                                    <InputNumber
+                                        placeholder="Số lượng"
+                                        style={{ width: "100%" }}
+                                        min={0}
+                                        disabled
+                                    />
+                                </Form.Item>
+                            ) : (
+                                <Form.Item
+                                    label=" "
+                                    colon={false}
+                                >
+                                    <div style={{ padding: '8px 0', color: '#888' }}>
+                                        Số lượng sẽ được tính từ danh sách Serial
+                                    </div>
+                                </Form.Item>
+                            )}
                         </Col>
                     </Row>
+
+                    {/* Chỉ hiển thị phần nhập serial khi thêm mới biến thể */}
+                    {!editingVariant && (
+                        <Card size="small" title="Quản lý Serial" style={{ marginBottom: 16, background: '#fafafa' }}>
+                            <Upload
+                                beforeUpload={handleImportExcelVariant}
+                                showUploadList={false}
+                                accept=".xlsx,.xls"
+                            >
+                                <Button style={{ marginBottom: 10 }}>
+                                    Import Serial từ Excel
+                                </Button>
+                            </Upload>
+
+                            <Form.Item
+                                label={<Text strong>Nhập danh sách Serial mới</Text>}
+                                name="serialList"
+                                extra="Mỗi mã một dòng hoặc import từ Excel"
+                                rules={[{ required: !editingVariant, message: 'Vui lòng nhập Serial!' }]}
+                            >
+                                <Input.TextArea
+                                    rows={5}
+                                    placeholder={`SP0001\nSP0002\nSP0003\nSP0004`}
+                                />
+                            </Form.Item>
+                        </Card>
+                    )}
+
+                    {/* Khi cập nhật: hiển thị serial cũ và thêm serial mới */}
+                    {editingVariant && (
+                        <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+                            {/* Danh sách serial cũ - readonly */}
+                            <div style={{ marginBottom: 16 }}>
+                                <Text strong>Danh sách Serial hiện tại ({variantSerials.length} máy)</Text>
+                                <div style={{
+                                    maxHeight: 150,
+                                    overflowY: 'auto',
+                                    border: '1px solid #d9d9d9',
+                                    borderRadius: 4,
+                                    padding: 8,
+                                    marginTop: 8,
+                                    background: '#fff'
+                                }}>
+                                    {variantSerials.length > 0 ? (
+                                        <Space wrap>
+                                            {variantSerials.map((s: any, idx: number) => (
+                                                <Tag key={idx} color="blue">
+                                                    {s.serialNumber}
+                                                </Tag>
+                                            ))}
+                                        </Space>
+                                    ) : (
+                                        <Text type="secondary">Chưa có serial nào</Text>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Thêm serial mới */}
+                            <Divider style={{ margin: '12px 0' }} />
+                            <Text strong>Thêm Serial mới</Text>
+                            <Upload
+                                beforeUpload={(file) => {
+                                    // Import excel for new serials only
+                                    const reader = new FileReader();
+                                    reader.onload = (e: any) => {
+                                        const data = new Uint8Array(e.target.result);
+                                        const workbook = XLSX.read(data, { type: "array" });
+                                        const sheetName = workbook.SheetNames[0];
+                                        const worksheet = workbook.Sheets[sheetName];
+                                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                                        const serials = jsonData
+                                            .map((row: any) => row[0])
+                                            .filter((v: any) => v)
+                                            .join("\n");
+                                        variantForm.setFieldsValue({
+                                            newSerialList: serials,
+                                        });
+                                    };
+                                    reader.readAsArrayBuffer(file);
+                                    return false;
+                                }}
+                                showUploadList={false}
+                                accept=".xlsx,.xls"
+                            >
+                                <Button size="small" style={{ marginTop: 8, marginBottom: 8 }}>
+                                    Import Serial từ Excel
+                                </Button>
+                            </Upload>
+
+                            <Form.Item
+                                label=" "
+                                name="newSerialList"
+                                extra="Nhập serial mới (mỗi mã một dòng). Hệ thống sẽ kiểm tra trùng lặp."
+                            >
+                                <Input.TextArea
+                                    rows={4}
+                                    placeholder={`SN0001\nSN0002\nSN0003`}
+                                />
+                            </Form.Item>
+                        </Card>
+                    )}
 
                     <Form.Item
                         name="imageUrl"

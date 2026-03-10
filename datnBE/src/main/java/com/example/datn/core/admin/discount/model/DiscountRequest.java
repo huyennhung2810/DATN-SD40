@@ -37,6 +37,4 @@ public class DiscountRequest {
     private String note;
     private Integer status;
     private List<String> productDetailIds;
-    private String createdBy;
-    private String updatedBy;
 }

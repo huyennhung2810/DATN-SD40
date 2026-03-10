@@ -28,6 +28,8 @@ import PosPage from "./Pages/admin/pos/PosPage";
 import OrderPage from "./Pages/admin/order/OrderList";
 import BannerList from "./Pages/admin/banner/BannerList";
 import BannerForm from "./Pages/admin/banner/BannerForm";
+import AccountList from "./Pages/admin/account/AccountList";
+import AccountForm from "./Pages/admin/account/AccountForm";
 import 'antd/dist/reset.css';
 // Admin Home Page
 const HomePage = () => (
@@ -93,6 +95,11 @@ const App: React.FC = () => {
           <Route path="/admin/banners/create" element={<BannerForm />} />
           <Route path="/admin/banners/:id/edit" element={<BannerForm />} />
           <Route path="/admin/banners/:id" element={<BannerForm />} />
+          {/* Account */}
+          <Route path="/admin/accounts" element={<AccountList />} />
+          <Route path="/admin/accounts/create" element={<AccountForm />} />
+          <Route path="/admin/accounts/:id/edit" element={<AccountForm />} />
+          <Route path="/admin/accounts/:id" element={<AccountForm />} />
         </Route>
         {/* Client Pages */}
         <Route path="/client" element={<CustomerLayout />}>

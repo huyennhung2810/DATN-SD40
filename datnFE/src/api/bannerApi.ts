@@ -1,61 +1,76 @@
 import axiosClient from "./axiosClient";
-import type {
-  BannerRequest,
-  BannerResponse,
-  BannerSearchRequest,
-  BannerPageResponse,
-} from "../models/banner";
+import type { BannerRequest, BannerSearchParams, BannerResponse } from "../models/banner";
 import type { ResponseObject } from "../models/base";
 
-const ADMIN_BASE_URL = "/admin/banners";
-const CLIENT_BASE_URL = "/client/banners";
+const ADMIN_BANNER_URL = "/admin/banners";
+const PUBLIC_BANNER_URL = "/public/banners";
+
+// Spring Page response interface
+interface SpringPage<T> {
+  content: T[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+    sort: any;
+  };
+  last: boolean;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  empty: boolean;
+}
 
 const bannerApi = {
-  // Admin APIs
-  search: async (params: BannerSearchRequest): Promise<BannerPageResponse> => {
-    const res = await axiosClient.get<ResponseObject<BannerPageResponse>>(ADMIN_BASE_URL, { params });
-    return res.data.data;
-  },
+    search: async (params: BannerSearchParams) => {
+        const res = await axiosClient.get<ResponseObject<SpringPage<BannerResponse>>>(ADMIN_BANNER_URL, { params });
+        const pageData = res.data.data;
+        // Map Spring Page to PageResponse format
+        return {
+            data: pageData.content,
+            totalElements: pageData.totalElements,
+            totalPages: pageData.totalPages,
+            size: pageData.size,
+            number: pageData.number,
+        };
+    },
 
-  getById: async (id: string): Promise<BannerResponse> => {
-    const res = await axiosClient.get<ResponseObject<BannerResponse>>(`${ADMIN_BASE_URL}/${id}`);
-    return res.data.data;
-  },
+    getById: async (id: string): Promise<BannerResponse> => {
+        const res = await axiosClient.get<ResponseObject<BannerResponse>>(`${ADMIN_BANNER_URL}/${id}`);
+        return res.data.data;
+    },
 
-  create: async (data: BannerRequest): Promise<BannerResponse> => {
-    const res = await axiosClient.post<ResponseObject<BannerResponse>>(ADMIN_BASE_URL, data);
-    return res.data.data;
-  },
+    create: async (data: BannerRequest): Promise<BannerResponse> => {
+        const res = await axiosClient.post<ResponseObject<BannerResponse>>(ADMIN_BANNER_URL, data);
+        return res.data.data;
+    },
 
-  update: async (id: string, data: BannerRequest): Promise<BannerResponse> => {
-    const res = await axiosClient.put<ResponseObject<BannerResponse>>(`${ADMIN_BASE_URL}/${id}`, data);
-    return res.data.data;
-  },
+    update: async (id: string, data: BannerRequest): Promise<BannerResponse> => {
+        const res = await axiosClient.put<ResponseObject<BannerResponse>>(`${ADMIN_BANNER_URL}/${id}`, data);
+        return res.data.data;
+    },
 
-  delete: async (id: string): Promise<void> => {
-    await axiosClient.delete(`${ADMIN_BASE_URL}/${id}`);
-  },
+    delete: async (id: string): Promise<void> => {
+        const res = await axiosClient.delete<ResponseObject<void>>(`${ADMIN_BANNER_URL}/${id}`);
+        return res.data;
+    },
 
-  changeStatus: async (id: string, status: string): Promise<BannerResponse> => {
-    const res = await axiosClient.patch<ResponseObject<BannerResponse>>(
-      `${ADMIN_BASE_URL}/${id}/status?status=${status}`
-    );
-    return res.data.data;
-  },
+    updateStatus: async (id: string, status: number): Promise<void> => {
+        const res = await axiosClient.patch<ResponseObject<void>>(`${ADMIN_BANNER_URL}/${id}/status?status=${status}`);
+        return res.data;
+    },
 
-  // Client APIs
-  getActiveBanners: async (position?: string): Promise<BannerResponse[]> => {
-    const url = position 
-      ? `${CLIENT_BASE_URL}/active?position=${position}` 
-      : `${CLIENT_BASE_URL}/active`;
-    const res = await axiosClient.get<ResponseObject<BannerResponse[]>>(url);
-    return res.data.data || [];
-  },
+    getBannersByPosition: async (position: string): Promise<BannerResponse[]> => {
+        const res = await axiosClient.get<ResponseObject<BannerResponse[]>>(`${PUBLIC_BANNER_URL}/position/${position}`);
+        return res.data.data;
+    },
 
-  getGroupedBanners: async (): Promise<BannerResponse[]> => {
-    const res = await axiosClient.get<ResponseObject<BannerResponse[]>>(`${CLIENT_BASE_URL}/grouped`);
-    return res.data.data || [];
-  },
+    getAllActiveBanners: async (): Promise<BannerResponse[]> => {
+        const res = await axiosClient.get<ResponseObject<BannerResponse[]>>(`${PUBLIC_BANNER_URL}`);
+        return res.data.data;
+    },
 };
 
 export default bannerApi;

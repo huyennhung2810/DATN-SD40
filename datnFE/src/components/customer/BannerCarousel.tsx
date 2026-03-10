@@ -1,44 +1,38 @@
 import React, { useEffect, useState } from "react";
-import { Carousel, Skeleton, Button } from "antd";
+import { Carousel } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import bannerApi from "../../api/bannerApi";
-import { BannerPosition } from "../../models/banner";
+import type { BannerResponse } from "../../models/banner";
 
 interface BannerCarouselProps {
   position?: string;
   autoPlay?: boolean;
-  onBannerClick?: (linkUrl: string | undefined) => void;
 }
 
-const BannerCarousel: React.FC<BannerCarouselProps> = ({
-  position = BannerPosition.HOME_HERO,
-  autoPlay = true,
-  onBannerClick,
-}) => {
-  const [banners, setBanners] = useState<any[]>([]);
+const BannerCarousel: React.FC<BannerCarouselProps> = ({ position = "HOME_HERO", autoPlay = true }) => {
+  const [banners, setBanners] = useState<BannerResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const data = await bannerApi.getBannersByPosition(position);
+        setBanners(data);
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchBanners();
   }, [position]);
 
-  const fetchBanners = async () => {
-    setLoading(true);
-    try {
-      const data = await bannerApi.getActiveBanners(position);
-      setBanners(data || []);
-    } catch (error) {
-      console.error("Error loading banners:", error);
-      setBanners([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading || banners.length === 0) {
+    return null;
+  }
 
-  const handleBannerClick = (banner: any) => {
-    if (onBannerClick) {
-      onBannerClick(banner.linkUrl);
-    } else if (banner.linkUrl) {
+  const handleLinkClick = (banner: BannerResponse) => {
+    if (banner.linkUrl) {
       if (banner.linkTarget === "NEW_TAB") {
         window.open(banner.linkUrl, "_blank");
       } else {
@@ -47,238 +41,226 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="banner-carousel-skeleton">
-        <Skeleton.Image active style={{ width: "100%", height: 400 }} />
-      </div>
-    );
-  }
-
-  if (!banners || banners.length === 0) {
-    return null;
-  }
-
-  if (banners.length === 1) {
-    const banner = banners[0];
-    return (
-      <div
-        className="banner-single"
-        onClick={() => handleBannerClick(banner)}
-        style={{ cursor: banner.linkUrl ? "pointer" : "default" }}
-      >
-        <img
-          src={banner.mobileImageUrl || banner.imageUrl}
-          alt={banner.title}
-          className="banner-single-image"
-        />
-        {(banner.title || banner.subtitle || banner.buttonText) && (
-          <div className="banner-single-content">
-            {banner.title && <h2 className="banner-title">{banner.title}</h2>}
-            {banner.subtitle && <p className="banner-subtitle">{banner.subtitle}</p>}
-            {banner.buttonText && (
-              <Button type="primary" className="banner-button">
-                {banner.buttonText}
-              </Button>
-            )}
-          </div>
-        )}
-        <style>{`
-          .banner-single {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
-          }
-          .banner-single-image {
-            width: 100%;
-            height: auto;
-            max-height: 500px;
-            object-fit: cover;
-            display: block;
-          }
-          .banner-single-content {
-            position: absolute;
-            bottom: 40px;
-            left: 40px;
-            color: #fff;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            z-index: 10;
-          }
-          .banner-title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #fff;
-          }
-          .banner-subtitle {
-            font-size: 18px;
-            margin-bottom: 16px;
-            color: rgba(255, 255, 255, 0.9);
-          }
-          .banner-button {
-            margin-top: 12px;
-          }
-          @media (max-width: 768px) {
-            .banner-single-content {
-              bottom: 20px;
-              left: 20px;
-              right: 20px;
-            }
-            .banner-title {
-              font-size: 24px;
-            }
-            .banner-subtitle {
-              font-size: 14px;
-            }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
   return (
-    <div className="banner-carousel-wrapper">
-      <Carousel
-        autoplay={autoPlay}
-        dots={{ className: "banner-dots" }}
-        arrows
-        prevArrow={<LeftOutlined />}
-        nextArrow={<RightOutlined />}
-      >
-        {banners.map((banner, index) => (
-          <div
-            key={banner.id || index}
-            className="banner-slide"
-            onClick={() => handleBannerClick(banner)}
-            style={{ cursor: banner.linkUrl ? "pointer" : "default" }}
-          >
-            <picture>
-              <source
-                media="(max-width: 768px)"
-                srcSet={banner.mobileImageUrl || banner.imageUrl}
-              />
-              <img
-                src={banner.imageUrl}
-                alt={banner.title}
-                className="banner-slide-image"
-              />
-            </picture>
-            {(banner.title || banner.subtitle || banner.buttonText) && (
-              <div className="banner-slide-content">
-                {banner.title && <h2 className="banner-title">{banner.title}</h2>}
-                {banner.subtitle && <p className="banner-subtitle">{banner.subtitle}</p>}
-                {banner.buttonText && (
-                  <Button type="primary" size="large" className="banner-button">
-                    {banner.buttonText}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </Carousel>
-
+    <div className="banner-carousel-wrapper" style={{ position: "relative", width: "100%", overflow: "hidden" }}>
       <style>{`
-        .banner-carousel-wrapper {
-          position: relative;
-          width: 100%;
+        .banner-carousel-wrapper .slick-slider {
+          height: 600px;
+        }
+        .banner-carousel-wrapper .slick-list {
+          height: 100%;
+        }
+        .banner-carousel-wrapper .slick-track,
+        .banner-carousel-wrapper .slick-slide > div {
+          height: 100%;
+        }
+        .banner-carousel-wrapper .slick-prev,
+        .banner-carousel-wrapper .slick-next {
+          z-index: 10;
+          width: 50px;
+          height: 50px;
+          background: rgba(255, 255, 255, 0.9) !important;
+          border-radius: 50%;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          transition: all 0.3s ease;
+        }
+        .banner-carousel-wrapper .slick-prev:hover,
+        .banner-carousel-wrapper .slick-next:hover {
+          background: #fff !important;
+          transform: scale(1.1);
+          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+        }
+        .banner-carousel-wrapper .slick-prev {
+          left: 30px !important;
+        }
+        .banner-carousel-wrapper .slick-next {
+          right: 30px !important;
+        }
+        .banner-carousel-wrapper .slick-prev:before,
+        .banner-carousel-wrapper .slick-next:before {
+          color: #333;
+          font-size: 18px;
+        }
+        .banner-carousel-wrapper .slick-dots {
+          bottom: 30px !important;
+        }
+        .banner-carousel-wrapper .slick-dots li button {
+          background: rgba(255, 255, 255, 0.6) !important;
+          width: 12px !important;
+          height: 12px !important;
+          border-radius: 50%;
+        }
+        .banner-carousel-wrapper .slick-dots li.slick-active button {
+          background: #fff !important;
+          transform: scale(1.2);
         }
         .banner-slide {
           position: relative;
-          width: 100%;
-          height: 400px;
+          height: 600px;
           overflow: hidden;
         }
-        .banner-slide-image {
+        .banner-image {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
+          transition: transform 0.8s ease;
         }
-        .banner-slide-content {
+        .banner-slide:hover .banner-image {
+          transform: scale(1.05);
+        }
+        .banner-overlay {
           position: absolute;
-          bottom: 60px;
-          left: 60px;
-          max-width: 500px;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.6) 0%,
+            rgba(0, 0, 0, 0.3) 50%,
+            rgba(0, 0, 0, 0.1) 100%
+          );
+        }
+        .banner-content {
+          position: absolute;
+          top: 50%;
+          left: 8%;
+          transform: translateY(-50%);
+          max-width: 600px;
           color: #fff;
-          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-          z-index: 10;
+          z-index: 5;
         }
         .banner-title {
-          font-size: 36px;
+          font-size: 56px;
           font-weight: 800;
-          margin-bottom: 12px;
-          color: #fff;
           line-height: 1.2;
+          margin-bottom: 20px;
+          text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.3);
+          animation: slideInLeft 0.8s ease-out;
         }
         .banner-subtitle {
-          font-size: 18px;
-          margin-bottom: 20px;
-          color: rgba(255, 255, 255, 0.95);
-          line-height: 1.5;
+          font-size: 24px;
+          font-weight: 500;
+          margin-bottom: 16px;
+          opacity: 0.95;
+          animation: slideInLeft 0.8s ease-out 0.2s both;
+        }
+        .banner-description {
+          font-size: 16px;
+          line-height: 1.6;
+          margin-bottom: 32px;
+          opacity: 0.9;
+          animation: slideInLeft 0.8s ease-out 0.4s both;
         }
         .banner-button {
-          background: #D32F2F !important;
-          border: none !important;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 16px 36px;
+          font-size: 16px;
           font-weight: 600;
-          height: 44px !important;
-          padding: 0 32px !important;
+          color: #fff;
+          background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+          animation: slideInLeft 0.8s ease-out 0.6s both;
         }
         .banner-button:hover {
-          background: #B71C1C !important;
+          transform: translateY(-3px);
+          box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
         }
-        .banner-carousel-wrapper :global(.slick-arrow) {
-          z-index: 20;
-          background: rgba(0, 0, 0, 0.5);
-          color: #fff;
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
+        .banner-button-arrow {
+          transition: transform 0.3s ease;
         }
-        .banner-carousel-wrapper :global(.slick-arrow:hover) {
-          background: rgba(0, 0, 0, 0.8);
+        .banner-button:hover .banner-button-arrow {
+          transform: translateX(5px);
         }
-        .banner-carousel-wrapper :global(.slick-prev) {
-          left: 20px;
-        }
-        .banner-carousel-wrapper :global(.slick-next) {
-          right: 20px;
-        }
-        .banner-carousel-wrapper :global(.slick-dots) {
-          bottom: 20px;
-        }
-        .banner-carousel-wrapper :global(.slick-dots li button) {
-          background: rgba(255, 255, 255, 0.6);
-        }
-        .banner-carousel-wrapper :global(.slick-dots li.slick-active button) {
-          background: #fff;
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
         @media (max-width: 768px) {
-          .banner-slide {
-            height: 250px;
+          .banner-carousel-wrapper .slick-slider {
+            height: 400px;
           }
-          .banner-slide-content {
-            bottom: 30px;
-            left: 20px;
-            right: 20px;
+          .banner-slide {
+            height: 400px;
+          }
+          .banner-content {
+            left: 5%;
+            right: 5%;
             max-width: none;
           }
           .banner-title {
-            font-size: 22px;
+            font-size: 32px;
           }
           .banner-subtitle {
+            font-size: 18px;
+          }
+          .banner-description {
             font-size: 14px;
-            margin-bottom: 12px;
+            margin-bottom: 20px;
           }
           .banner-button {
-            height: 36px !important;
-            padding: 0 20px !important;
+            padding: 12px 28px;
             font-size: 14px;
           }
         }
       `}</style>
+      <Carousel
+        autoplay={autoPlay}
+        arrows
+        prevArrow={<LeftOutlined />}
+        nextArrow={<RightOutlined />}
+        autoplaySpeed={5000}
+        speed={800}
+      >
+        {banners.map((banner, index) => (
+          <div key={banner.id}>
+            <div
+              className="banner-slide"
+              style={{
+                cursor: banner.linkUrl ? "pointer" : "default",
+                backgroundColor: banner.backgroundColor || "#1a1a1a",
+              }}
+              onClick={() => handleLinkClick(banner)}
+            >
+              <img
+                src={banner.imageUrl}
+                alt={banner.title}
+                className="banner-image"
+              />
+              <div className="banner-overlay" />
+              <div className="banner-content">
+                {banner.title && <h1 className="banner-title">{banner.title}</h1>}
+                {banner.subtitle && <p className="banner-subtitle">{banner.subtitle}</p>}
+                {banner.description && <p className="banner-description">{banner.description}</p>}
+                {banner.buttonText && (
+                  <button className="banner-button">
+                    {banner.buttonText}
+                    <span className="banner-button-arrow">→</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </Carousel>
     </div>
   );
 };

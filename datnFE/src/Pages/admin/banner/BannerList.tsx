@@ -1,80 +1,71 @@
 import React, { useEffect, useState } from "react";
 import {
-  Card,
   Table,
   Button,
+  Card,
+  Input,
   Space,
   Tag,
-  Input,
+  Tooltip,
   Select,
-  DatePicker,
   message,
   Popconfirm,
-  Image,
-  Typography,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  EyeOutlined,
+  StopOutlined,
+  CheckOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import bannerApi from "../../../api/bannerApi";
-import type { BannerResponse, BannerSearchRequest } from "../../../models/banner";
-import {
-  BannerPosition,
-  BannerPositionLabel,
-  EntityStatus,
-  EntityStatusLabel,
-} from "../../../models/banner";
+import type { BannerResponse, BannerSearchParams, CommonStatus } from "../../../models/banner";
+import { BANNER_POSITIONS, BANNER_TYPES } from "../../../models/banner";
 
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+const { Search } = Input;
 
 const BannerList: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BannerResponse[]>([]);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
-  const [filters, setFilters] = useState<BannerSearchRequest>({
+  const [loading, setLoading] = useState(false);
+  const [totalElements, setTotalElements] = useState(0);
+  const [params, setParams] = useState<BannerSearchParams>({
     page: 0,
     size: 10,
-    sortBy: "priority",
-    sortDirection: "ASC",
+    keyword: "",
+    status: undefined,
+    position: undefined,
+    type: undefined,
   });
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EntityStatus | undefined>();
-  const [positionFilter, setPositionFilter] = useState<BannerPosition | undefined>();
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const params: BannerSearchRequest = {
-        ...filters,
-        keyword: searchText || undefined,
-        status: statusFilter,
-        position: positionFilter,
-        startDateFrom: dateRange?.[0]?.toISOString(),
-        startDateTo: dateRange?.[1]?.toISOString(),
+      const searchParams: BannerSearchParams = {
+        page: params.page || 0,
+        size: params.size || 10,
       };
-      const response = await bannerApi.search(params);
-      setData(response.data);
-      setPagination({
-        current: response.currentPage + 1,
-        pageSize: response.totalElements / response.totalPages || 10,
-        total: response.totalElements,
-      });
+      
+      if (params.keyword && params.keyword.trim()) {
+        searchParams.keyword = params.keyword.trim();
+      }
+      if (params.status) {
+        searchParams.status = params.status;
+      }
+      if (params.position) {
+        searchParams.position = params.position;
+      }
+      if (params.type) {
+        searchParams.type = params.type;
+      }
+      
+      const response = await bannerApi.search(searchParams);
+      setData(response.data || []);
+      setTotalElements(response.totalElements || 0);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách banner");
+      console.error("Error fetching banners:", error);
     } finally {
       setLoading(false);
     }
@@ -82,31 +73,17 @@ const BannerList: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters]);
+  }, [params]);
 
-  const handleTableChange = (paginationConfig: any) => {
-    setFilters({
-      ...filters,
-      page: paginationConfig.current - 1,
-      size: paginationConfig.pageSize,
-    });
+  const handleSearch = (value: string) => {
+    setParams({ ...params, keyword: value, page: 0 });
   };
 
-  const handleSearch = () => {
-    setFilters({ ...filters, page: 0 });
-    fetchData();
-  };
-
-  const handleReset = () => {
-    setSearchText("");
-    setStatusFilter(undefined);
-    setPositionFilter(undefined);
-    setDateRange([null, null]);
-    setFilters({
-      page: 0,
-      size: 10,
-      sortBy: "priority",
-      sortDirection: "ASC",
+  const handleTableChange = (pagination: any) => {
+    setParams({
+      ...params,
+      page: pagination.current - 1,
+      size: pagination.pageSize,
     });
   };
 
@@ -116,142 +93,131 @@ const BannerList: React.FC = () => {
       message.success("Xóa banner thành công");
       fetchData();
     } catch (error) {
-      message.error("Lỗi khi xóa banner");
+      message.error("Xóa banner thất bại");
     }
   };
 
-  const handleChangeStatus = async (id: string, status: EntityStatus) => {
+  const handleStatusChange = async (id: string, status: number) => {
     try {
-      const newStatus = status === EntityStatus.ACTIVE ? EntityStatus.INACTIVE : EntityStatus.ACTIVE;
-      await bannerApi.changeStatus(id, newStatus);
-      message.success("Đổi trạng thái thành công");
+      await bannerApi.updateStatus(id, status);
+      message.success("Cập nhật trạng thái thành công");
       fetchData();
     } catch (error) {
-      message.error("Lỗi khi đổi trạng thái");
+      message.error("Cập nhật trạng thái thất bại");
     }
   };
 
-  const columns: ColumnsType<BannerResponse> = [
+  const getPositionLabel = (value: string) => {
+    const pos = BANNER_POSITIONS.find((p) => p.value === value);
+    return pos ? pos.label : value;
+  };
+
+  const getTypeLabel = (value: string) => {
+    const type = BANNER_TYPES.find((t) => t.value === value);
+    return type ? type.label : value;
+  };
+
+  const columns = [
     {
-      title: "Ảnh",
-      dataIndex: "imageUrl",
-      key: "imageUrl",
-      width: 100,
-      render: (imageUrl: string) => (
-        <Image
-          src={imageUrl}
-          alt="Banner"
-          width={80}
-          height={60}
-          style={{ objectFit: "cover", borderRadius: 4 }}
-          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        />
-      ),
+      title: "STT",
+      key: "index",
+      width: 60,
+      render: (_: any, __: any, index: number) => params.page! * params.size! + index + 1,
     },
     {
       title: "Tiêu đề",
       dataIndex: "title",
       key: "title",
-      width: 200,
       ellipsis: true,
     },
     {
       title: "Vị trí",
       dataIndex: "position",
       key: "position",
-      width: 150,
-      render: (position: BannerPosition) => (
-        <Tag color="blue">{BannerPositionLabel[position]}</Tag>
-      ),
+      render: (position: string) => getPositionLabel(position),
+    },
+    {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+      render: (type: string) => getTypeLabel(type),
+    },
+    {
+      title: "Ảnh",
+      dataIndex: "imageUrl",
+      key: "imageUrl",
+      width: 120,
+      render: (imageUrl: string) =>
+        imageUrl ? (
+          <img
+            src={imageUrl}
+            alt="Banner"
+            style={{ width: 100, height: 50, objectFit: "cover" }}
+          />
+        ) : (
+          "-"
+        ),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 120,
-      render: (status: EntityStatus) => (
-        <Tag color={status === EntityStatus.ACTIVE ? "green" : "red"}>
-          {EntityStatusLabel[status]}
-        </Tag>
-      ),
-    },
-    {
-      title: "Ưu tiên",
-      dataIndex: "priority",
-      key: "priority",
-      width: 80,
-      sorter: true,
-    },
-    {
-      title: "Thời gian hiển thị",
-      key: "displayTime",
-      width: 200,
-      render: (_: any, record: BannerResponse) => (
-        <div>
-          {record.startAt && (
-            <Text type="secondary">
-              {dayjs(record.startAt).format("DD/MM/YYYY")}
-            </Text>
-          )}
-          {record.startAt && record.endAt && " - "}
-          {record.endAt && (
-            <Text type="secondary">
-              {dayjs(record.endAt).format("DD/MM/YYYY")}
-            </Text>
-          )}
-          {!record.startAt && !record.endAt && (
-            <Text type="secondary">Luôn hiển thị</Text>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Link",
-      dataIndex: "linkUrl",
-      key: "linkUrl",
-      width: 150,
-      ellipsis: true,
-      render: (linkUrl: string) =>
-        linkUrl ? (
-          <a href={linkUrl} target="_blank" rel="noopener noreferrer">
-            {linkUrl}
-          </a>
+      render: (status: CommonStatus) =>
+        status === "ACTIVE" ? (
+          <Tag color="success">Hoạt động</Tag>
         ) : (
-          <Text type="secondary">-</Text>
+          <Tag color="default">Không hoạt động</Tag>
         ),
     },
     {
-      title: "Ngày cập nhật",
-      dataIndex: "lastModifiedDate",
-      key: "lastModifiedDate",
-      width: 150,
-      render: (date: string) =>
-        date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+      title: "Thứ tự ưu tiên",
+      dataIndex: "priority",
+      key: "priority",
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "createdDate",
+      key: "createdDate",
+      render: (createdDate: number) => dayjs(createdDate).format("DD/MM/YYYY HH:mm"),
     },
     {
       title: "Thao tác",
-      key: "actions",
-      width: 150,
-      fixed: "right",
+      key: "action",
+      width: 180,
       render: (_: any, record: BannerResponse) => (
         <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/admin/banners/${record.id}`)}
-          />
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/admin/banners/${record.id}/edit`)}
-          />
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/admin/banners/${record.id}/edit`)}
+            />
+          </Tooltip>
+          <Tooltip title={record.status === "ACTIVE" ? "Vô hiệu hóa" : "Kích hoạt"}>
+            {record.status === "ACTIVE" ? (
+              <Button
+                type="text"
+                danger
+                icon={<StopOutlined />}
+                onClick={() => handleStatusChange(record.id, 0)}
+              />
+            ) : (
+              <Button
+                type="text"
+                icon={<CheckOutlined />}
+                onClick={() => handleStatusChange(record.id, 1)}
+              />
+            )}
+          </Tooltip>
           <Popconfirm
-            title="Bạn có chắc chắn muốn xóa banner này?"
+            title="Bạn có chắc chắn muốn xóa?"
             onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
+            okText="Có"
+            cancelText="Không"
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Tooltip title="Xóa">
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -259,107 +225,87 @@ const BannerList: React.FC = () => {
   ];
 
   return (
-    <div className="banner-list-page">
-      <Card>
-        <div className="page-header">
-          <Title level={3}>Quản lý Banner</Title>
+    <div style={{ padding: "24px" }}>
+      <Card
+        title="Quản lý Banner"
+        extra={
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate("/admin/banners/create")}
           >
-            Thêm mới Banner
+            Thêm Banner
           </Button>
-        </div>
-
-        <div className="filter-section">
+        }
+      >
+        <Space
+          direction="vertical"
+          style={{ width: "100%", marginBottom: 16 }}
+          size="middle"
+        >
           <Space wrap>
-            <Input
-              placeholder="Tìm kiếm theo tiêu đề..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onPressEnter={handleSearch}
-              style={{ width: 250 }}
+            <Search
+              placeholder="Tìm kiếm banner..."
               allowClear
+              onSearch={handleSearch}
+              style={{ width: 300 }}
             />
             <Select
-              placeholder="Trạng thái"
-              value={statusFilter}
-              onChange={setStatusFilter}
+              placeholder="Lọc theo trạng thái"
               allowClear
               style={{ width: 150 }}
+              onChange={(value) =>
+                setParams({ ...params, status: value, page: 0 })
+              }
             >
-              <Select.Option value={EntityStatus.ACTIVE}>
-                Hoạt động
-              </Select.Option>
-              <Select.Option value={EntityStatus.INACTIVE}>
-                Không hoạt động
-              </Select.Option>
+              <Select.Option value="ACTIVE">Hoạt động</Select.Option>
+              <Select.Option value="INACTIVE">Không hoạt động</Select.Option>
             </Select>
             <Select
-              placeholder="Vị trí"
-              value={positionFilter}
-              onChange={setPositionFilter}
+              placeholder="Lọc theo vị trí"
               allowClear
-              style={{ width: 180 }}
+              style={{ width: 200 }}
+              onChange={(value) =>
+                setParams({ ...params, position: value, page: 0 })
+              }
             >
-              {Object.values(BannerPosition).map((pos) => (
-                <Select.Option key={pos} value={pos}>
-                  {BannerPositionLabel[pos]}
+              {BANNER_POSITIONS.map((pos) => (
+                <Select.Option key={pos.value} value={pos.value}>
+                  {pos.label}
                 </Select.Option>
               ))}
             </Select>
-            <RangePicker
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates as any)}
-              format="DD/MM/YYYY"
-            />
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleSearch}
+            <Select
+              placeholder="Lọc theo loại"
+              allowClear
+              style={{ width: 150 }}
+              onChange={(value) =>
+                setParams({ ...params, type: value, page: 0 })
+              }
             >
-              Tìm kiếm
-            </Button>
-            <Button onClick={handleReset}>Đặt lại</Button>
+              {BANNER_TYPES.map((type) => (
+                <Select.Option key={type.value} value={type.value}>
+                  {type.label}
+                </Select.Option>
+              ))}
+            </Select>
           </Space>
-        </div>
-
+        </Space>
         <Table
           columns={columns}
           dataSource={data}
-          rowKey="id"
           loading={loading}
+          rowKey="id"
           pagination={{
-            ...pagination,
+            current: params.page! + 1,
+            pageSize: params.size,
+            total: totalElements,
             showSizeChanger: true,
             showTotal: (total) => `Tổng ${total} banner`,
           }}
           onChange={handleTableChange}
-          scroll={{ x: 1200 }}
         />
       </Card>
-
-      <style>{`
-        .banner-list-page {
-          padding: 24px;
-        }
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-        }
-        .page-header h3 {
-          margin: 0 !important;
-        }
-        .filter-section {
-          margin-bottom: 24px;
-          padding: 16px;
-          background: #fafafa;
-          border-radius: 8px;
-        }
-      `}</style>
     </div>
   );
 };

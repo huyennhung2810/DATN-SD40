@@ -11,6 +11,7 @@ import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.ADProductService;
 import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
@@ -19,8 +20,10 @@ import com.example.datn.entity.Product;
 import com.example.datn.entity.ProductCategory;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
+import com.example.datn.entity.Serial;
 import com.example.datn.entity.TechSpec;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductCategoryRepository;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.repository.TechSpecRepository;
@@ -34,7 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -425,7 +430,28 @@ public class ADProductServiceImpl implements ADProductService {
             response.setStorageCapacityName(variant.getStorageCapacity().getName());
         }
 
+        // Map danh sách serial của biến thể
+        if (variant.getSerials() != null && !variant.getSerials().isEmpty()) {
+            List<ADSerialResponse> serialResponses = variant.getSerials().stream()
+                    .map(this::mapToSerialResponse)
+                    .collect(Collectors.toList());
+            response.setSerials(serialResponses);
+        }
+
         return response;
+    }
+
+    // Map Serial entity to ADSerialResponse
+    private ADSerialResponse mapToSerialResponse(Serial serial) {
+        return ADSerialResponse.builder()
+                .id(serial.getId())
+                .serialNumber(serial.getSerialNumber())
+                .code(serial.getCode())
+                .status(serial.getStatus())
+                .serialStatus(serial.getSerialStatus())
+                .productDetailId(serial.getProductDetail() != null ? serial.getProductDetail().getId() : null)
+                .createdDate(serial.getCreatedDate() != null ? serial.getCreatedDate().toString() : null)
+                .build();
     }
 
     @Override
@@ -556,6 +582,60 @@ public class ADProductServiceImpl implements ADProductService {
         if (request.getStorageCapacityId() != null && !request.getStorageCapacityId().isEmpty()) {
             variant.setStorageCapacity(storageCapacityRepository.findById(request.getStorageCapacityId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy dung lượng")));
+        }
+
+        // Xử lý thêm serial mới (chỉ append, không ghi đè serial cũ)
+        if (request.getNewSerials() != null && !request.getNewSerials().isEmpty()) {
+            // Loại bỏ các giá trị null/empty sau khi trim
+            List<String> newSerialList = request.getNewSerials().stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Lấy danh sách serial hiện tại của biến thể
+            List<String> existingSerials = serialRepository.findByProductDetailId(variantId)
+                    .stream()
+                    .map(Serial::getSerialNumber)
+                    .collect(Collectors.toList());
+
+            // Kiểm tra trùng lặp trong danh sách mới
+            Set<String> uniqueNewSerials = new HashSet<>(newSerialList);
+            if (uniqueNewSerials.size() != newSerialList.size()) {
+                throw new RuntimeException("Danh sách serial mới có chứa mã trùng lặp!");
+            }
+
+            // Kiểm tra trùng với serial hiện có của biến thể
+            List<String> duplicateWithExisting = newSerialList.stream()
+                    .filter(existingSerials::contains)
+                    .collect(Collectors.toList());
+
+            if (!duplicateWithExisting.isEmpty()) {
+                throw new RuntimeException("Các serial sau đã tồn tại trong biến thể: " + String.join(", ", duplicateWithExisting));
+            }
+
+            // Kiểm tra serial đã tồn tại trong toàn hệ thống (nếu có yêu cầu)
+            List<String> existingInSystem = serialRepository.findExistingSerialNumbers(newSerialList);
+            if (!existingInSystem.isEmpty()) {
+                throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+            }
+
+            // Thêm các serial mới vào biến thể
+            int addedCount = 0;
+            for (String serialNumber : newSerialList) {
+                Serial newSerial = new Serial();
+                newSerial.setSerialNumber(serialNumber);
+                newSerial.setCode(serialNumber);
+                newSerial.setSerialStatus(SerialStatus.AVAILABLE);
+                newSerial.setStatus(EntityStatus.ACTIVE);
+                newSerial.setProductDetail(variant);
+                serialRepository.save(newSerial);
+                addedCount++;
+            }
+
+            // Cập nhật lại quantity của biến thể
+            int currentQuantity = variant.getQuantity() != null ? variant.getQuantity() : 0;
+            variant.setQuantity(currentQuantity + addedCount);
         }
 
         variant = productDetailRepository.save(variant);
