@@ -10,6 +10,8 @@ export interface Discount {
   status: number;
   createdAt: number;
   updatedAt: number;
+  updatedBy: String;
+  createdBy: String;
   discountDetails?: any[];
 }
 

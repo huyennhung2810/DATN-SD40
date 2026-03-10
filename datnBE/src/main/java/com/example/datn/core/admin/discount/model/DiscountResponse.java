@@ -23,13 +23,14 @@ public class DiscountResponse {
     private Integer status;
     private Long createdAt;
     private Long updatedAt;
+    private String createdBy;
+    private String updatedBy;
     private List<DiscountDetailResponse> discountDetails;
 
     public DiscountResponse(Discount discount) {
         this.id = discount.getId();
         this.code = discount.getCode();
         this.name = discount.getName();
-
         this.discountPercent = discount.getDiscountPercent() != null ? discount.getDiscountPercent().doubleValue() : 0.0;
         this.startDate = discount.getStartDate();
         this.endDate = discount.getEndDate();
@@ -38,5 +39,7 @@ public class DiscountResponse {
         this.status = discount.getStatus();
         this.createdAt = discount.getCreatedAt();
         this.updatedAt = discount.getUpdatedAt();
+        this.createdBy = discount.getCreatedBy();
+        this.updatedBy = discount.getUpdatedBy();
     }
 }
