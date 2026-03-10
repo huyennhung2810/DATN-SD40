@@ -7,6 +7,7 @@ import employeeReducer from "./employee/employeeSlice";
 import serialReducer from "./serial/serialSlice";
 import colorReducer from "./color/colorSlice";
 import storageCapacityReducer from "./storage/storageSlice";
+import authReducer from "./auth/authSlice";
 
 import statisticsReducer from "./statistics/statisticsSlice";
 
@@ -29,6 +30,7 @@ import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     customer: customerReducer,
     employee: employeeReducer,
     statistics: statisticsReducer,

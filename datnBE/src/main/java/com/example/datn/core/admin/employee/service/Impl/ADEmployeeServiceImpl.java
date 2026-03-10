@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
+//import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,7 +37,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     private final ADEmployeeRepository employeeRepository;
     private final CloudinaryUtils cloudinaryUtils;
     private final AccountRepository accountRepository;
-    private final PasswordEncoder passwordEncoder;
+    //private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
     private void mapRequestToResponse(ADEmployeeRequest req, Employee employee) {

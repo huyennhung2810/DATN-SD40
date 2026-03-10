@@ -1,8 +1,8 @@
-
 // 1. Môi trường & Base URL
 const env = import.meta.env;
-export const DOMAIN_BACKEND = env.VITE_BASE_URL_SERVER as string;
-export const DOMAIN_FRONTEND = env.VITE_BASE_URL_CLIENT as string;
+const backendUrl = env.VITE_BASE_URL_SERVER || "http://localhost:8386";
+export const DOMAIN_BACKEND = backendUrl;
+export const DOMAIN_FRONTEND = env.VITE_BASE_URL_CLIENT || "http://localhost:6688";
 export const API_URL = `${DOMAIN_BACKEND}/api/v1`;
 
 // 2. OAUTH2 Redirect Config
@@ -30,6 +30,9 @@ export const AUTH_PATH = {
     REGISTER: `${API_ENDPOINTS.AUTH}/register`,
     REFRESH: `${API_ENDPOINTS.AUTH}/refresh`,
     CHANGE_PWD: `${API_ENDPOINTS.AUTH}/change-password`,
+    ME: `${API_ENDPOINTS.AUTH}/me`,
+    PROFILE: `${API_ENDPOINTS.AUTH}/profile`,
+    LOGOUT: `${API_ENDPOINTS.AUTH}/logout`,
 };
 
 export const ADMIN_PATH = {

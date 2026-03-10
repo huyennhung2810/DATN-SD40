@@ -4,7 +4,7 @@ import watchEmployeeFlow from "../redux/employee/employeeSaga";
 import statisticsSaga from "../redux/statistics/statisticsSaga";
 import shiftHandoverSaga from "../redux/shiftHandover/shiftHandoverSaga";
 import { voucherSaga } from "../redux/Voucher/voucherSaga";
-import { discountSaga } from "../redux/discount/discountSaga"; 
+import { discountSaga } from "../redux/discount/discountSaga";
 import shiftTemplateSaga from "../redux/shiftTemplate/ShiftTemplateSaga";
 import watchProductCategoryFlow from "../redux/productCategory/productCategorySaga";
 import watchTechSpecFlow from "../redux/techSpec/techSpecSaga";
@@ -20,10 +20,12 @@ import watchSerialFlow from "../redux/serial/serialSaga";
 import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 import watchColorFlow from "../redux/color/colorSaga";
 import watchStorageFlow from "../redux/storage/storageSaga";
+import watchAuthFlow from "../redux/auth/authSaga";
 
 
 export default function* rootSaga() {
   yield all([
+    fork(watchAuthFlow),
     fork(watchCustomerFlow),
     fork(watchEmployeeFlow),
     fork(watchSerialFlow),

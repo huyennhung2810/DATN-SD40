@@ -82,6 +82,26 @@ public class TokenProvider {
         return token;
     }
 
+    public String createTokenForEmployee(Employee staff, String screen) throws JsonProcessingException {
+        TokenInfoResponse tokenInfoResponse = getTokenSubjectResponse(staff);
+        tokenInfoResponse.setRoleScreen(screen);
+
+        String subject = new ObjectMapper().writeValueAsString(tokenInfoResponse);
+        Map<String, Object> claims = getBodyClaims(tokenInfoResponse);
+
+        String token = Jwts.builder()
+                .setSubject(subject)
+                .setClaims(claims)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(TOKEN_EXP))
+                .setIssuer("sd20201.datn")
+                .signWith(Keys.hmacShaKeyFor(tokenSecret.getBytes()))
+                .compact();
+
+        log.info("Created token for employee: {}", token);
+        return token;
+    }
+
     public String createToken(Authentication authentication) throws BadRequestException, JsonProcessingException {
         log.info("Creating new token: {}", authentication.toString());
 

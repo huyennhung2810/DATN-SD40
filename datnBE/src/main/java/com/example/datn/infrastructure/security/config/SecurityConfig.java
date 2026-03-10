@@ -3,6 +3,7 @@ package com.example.datn.infrastructure.security.config;
 import com.example.datn.infrastructure.constant.MappingConstants;
 import com.example.datn.infrastructure.constant.RoleConstant;
 import com.example.datn.infrastructure.security.exception.RestAuthenticationEntryPoint;
+import com.example.datn.infrastructure.security.auth.LocalAuthenticationProvider;
 import com.example.datn.infrastructure.security.filter.TokenAuthenticationFilter;
 import com.example.datn.infrastructure.security.oauth2.CustomOAuth2UserService;
 import com.example.datn.infrastructure.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
@@ -10,7 +11,6 @@ import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationFailu
 import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationSuccessHandler;
 
 import com.example.datn.infrastructure.security.service.CustomUserDetailsService;
-import com.example.datn.utils.Helper;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,14 +18,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -54,19 +51,8 @@ public class SecurityConfig {
     private String allowedOrigin;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean(BeanIds.AUTHENTICATION_MANAGER)
-    public AuthenticationManager authenticationManager(
-            PasswordEncoder passwordEncoder,
-            CustomUserDetailsService userDetailsService
-    ) {
-        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder);
-        daoAuthenticationProvider.setUserDetailsService(userDetailsService);
-        return new ProviderManager(daoAuthenticationProvider);
+    public AuthenticationManager authenticationManager(LocalAuthenticationProvider localAuthenticationProvider) {
+        return new ProviderManager(localAuthenticationProvider);
     }
 
     @Bean
@@ -101,11 +87,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/upload/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/**").permitAll()
                         .requestMatchers("/api/v1/admin/product-image/**").permitAll()
                         .requestMatchers(MappingConstants.API_LOGIN).permitAll()
-                        .anyRequest().permitAll() // test
+                        .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/login").permitAll()
+                        .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/refresh").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/api/v1/permitall/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").authenticated()
+                        .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").authenticated()
+                        .anyRequest().permitAll()
                 );
+
+        http.oauth2Login(
+                oauth2 -> oauth2.authorizationEndpoint(a -> a.baseUri("/oauth2/authorize"))
+                        .redirectionEndpoint(r -> r.baseUri("/oauth2/callback/**"))
+                        .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
+                        .authorizationEndpoint(a -> a.authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository))
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler(oAuth2AuthenticationFailureHandler)
+        );
 
         http.addFilterBefore(
                 tokenAuthenticationFilter,
