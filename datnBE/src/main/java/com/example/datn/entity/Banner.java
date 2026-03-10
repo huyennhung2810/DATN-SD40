@@ -1,10 +1,9 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
-import com.example.datn.infrastructure.constant.EntityProperties;
-import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.BannerPosition;
 import com.example.datn.infrastructure.constant.BannerType;
+import com.example.datn.infrastructure.constant.EntityProperties;
 import com.example.datn.infrastructure.constant.LinkTarget;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,9 +21,6 @@ import java.time.LocalDateTime;
 @Table(name = "banner")
 public class Banner extends PrimaryEntity {
 
-    @Column(name = "code", length = EntityProperties.LENGTH_NAME)
-    private String code;
-
     @Column(name = "title", length = EntityProperties.LENGTH_NAME, nullable = false)
     private String title;
 
@@ -34,13 +30,13 @@ public class Banner extends PrimaryEntity {
     @Column(name = "description", length = 500)
     private String description;
 
-    @Column(name = "image_url", length = 500, nullable = false)
+    @Column(name = "image_url", length = EntityProperties.LENGTH_PICTURE, nullable = false)
     private String imageUrl;
 
-    @Column(name = "mobile_image_url", length = 500)
+    @Column(name = "mobile_image_url", length = EntityProperties.LENGTH_PICTURE)
     private String mobileImageUrl;
 
-    @Column(name = "link_url", length = 500)
+    @Column(name = "link_url", length = EntityProperties.LENGTH_URL)
     private String linkUrl;
 
     @Enumerated(EnumType.STRING)
@@ -54,10 +50,6 @@ public class Banner extends PrimaryEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 20)
     private BannerType type = BannerType.IMAGE;
-
-    @Enumerated(EnumType.ORDINAL)
-    @Column(name = "status", nullable = false)
-    private EntityStatus status = EntityStatus.ACTIVE;
 
     @Column(name = "priority")
     private Integer priority = 0;

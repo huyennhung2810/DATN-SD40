@@ -1,6 +1,7 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
+import com.example.datn.infrastructure.constant.AuthProvider;
 import com.example.datn.infrastructure.constant.RoleConstant;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -37,4 +38,8 @@ public class Account extends PrimaryEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private RoleConstant role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider")
+    private AuthProvider provider;
 }

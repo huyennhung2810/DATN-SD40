@@ -42,6 +42,10 @@ public class ADProductDetailRequest {
     // ID của ảnh được chọn từ sản phẩm mẹ - dùng để liên kết với ProductImage
     private String selectedImageId;
 
+    // Danh sách serial khi tạo mới biến thể
     private List<ADSerialRequest> serials;
+
+    // Danh sách serial MỚI được thêm vào khi cập nhật biến thể (chỉ append, không ghi đè serial cũ)
+    private List<String> newSerials;
 
 }

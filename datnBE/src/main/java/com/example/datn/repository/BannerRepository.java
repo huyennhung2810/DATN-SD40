@@ -2,6 +2,7 @@ package com.example.datn.repository;
 
 import com.example.datn.entity.Banner;
 import com.example.datn.infrastructure.constant.BannerPosition;
+import com.example.datn.infrastructure.constant.BannerType;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,19 +14,15 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BannerRepository extends JpaRepository<Banner, String>, JpaSpecificationExecutor<Banner> {
 
-    /**
-     * Find all active banners for client by position
-     * Conditions:
-     * - status = ACTIVE
-     * - startAt is null OR startAt <= now
-     * - endAt is null OR endAt >= now
-     * - position = given position
-     * Order by priority ASC, createdDate DESC
-     */
+    boolean existsByCode(String code);
+
+    boolean existsByCodeAndIdNot(String code, String id);
+
     @Query("""
         SELECT b FROM Banner b
         WHERE b.status = :status
@@ -40,9 +37,22 @@ public interface BannerRepository extends JpaRepository<Banner, String>, JpaSpec
             @Param("now") LocalDateTime now
     );
 
-    /**
-     * Find all active banners for client (all positions)
-     */
+    @Query("""
+        SELECT b FROM Banner b
+        WHERE b.status = :status
+        AND b.position = :position
+        AND b.type = :type
+        AND (b.startAt IS NULL OR b.startAt <= :now)
+        AND (b.endAt IS NULL OR b.endAt >= :now)
+        ORDER BY b.priority ASC, b.createdDate DESC
+    """)
+    List<Banner> findActiveBannersByPositionAndType(
+            @Param("status") EntityStatus status,
+            @Param("position") BannerPosition position,
+            @Param("type") BannerType type,
+            @Param("now") LocalDateTime now
+    );
+
     @Query("""
         SELECT b FROM Banner b
         WHERE b.status = :status
@@ -55,9 +65,6 @@ public interface BannerRepository extends JpaRepository<Banner, String>, JpaSpec
             @Param("now") LocalDateTime now
     );
 
-    /**
-     * Find active banners grouped by position for client
-     */
     @Query("""
         SELECT b FROM Banner b
         WHERE b.status = :status
@@ -66,19 +73,22 @@ public interface BannerRepository extends JpaRepository<Banner, String>, JpaSpec
         AND (b.endAt IS NULL OR b.endAt >= :now)
         ORDER BY b.priority ASC, b.createdDate DESC
     """)
-    List<Banner> findActiveBannersByPositionNoParam(
+    Optional<Banner> findTopActiveBannerForPopup(
             @Param("status") EntityStatus status,
             @Param("position") BannerPosition position,
             @Param("now") LocalDateTime now
     );
 
-    /**
-     * Check if code exists (for unique validation)
-     */
-    boolean existsByCode(String code);
-
-    /**
-     * Check if code exists excluding current id (for update)
-     */
-    boolean existsByCodeAndIdNot(String code, String id);
+    @Query("SELECT b FROM Banner b WHERE " +
+            "(:status IS NULL OR b.status = :status) AND " +
+            "(:position IS NULL OR b.position = :position) AND " +
+            "(:type IS NULL OR b.type = :type) AND " +
+            "(:keyword IS NULL OR b.title LIKE %:keyword% OR b.subtitle LIKE %:keyword% OR b.description LIKE %:keyword%)")
+    Page<Banner> searchBanners(
+            @Param("status") EntityStatus status,
+            @Param("position") BannerPosition position,
+            @Param("type") BannerType type,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }

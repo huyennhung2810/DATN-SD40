@@ -17,6 +17,7 @@ import {
   BarcodeOutlined,
   PictureOutlined,
   SearchOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
@@ -101,6 +102,11 @@ const pageInfoMap: Record<
     title: "Quản lý Banner",
     desc: "Quản lý banner hiển thị trên trang khách hàng",
     icon: <PictureOutlined />,
+  },
+  "/admin/accounts": {
+    title: "Quản lý tài khoản",
+    desc: "Quản lý tài khoản admin và nhân viên",
+    icon: <KeyOutlined />,
   },
 };
 

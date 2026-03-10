@@ -7,6 +7,8 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import BannerCarousel from "../../components/customer/BannerCarousel";
+import BannerStrip from "../../components/customer/BannerStrip";
+import BannerPopup from "../../components/customer/BannerPopup";
 import ProductCard from "../../components/customer/ProductCard";
 import { customerProductApi } from "../../api/customerProductApi";
 import type { ProductResponse } from "../../models/product";
@@ -112,8 +114,16 @@ const HomePage: React.FC = () => {
 
   return (
     <>
+      {/* Popup Banner - Only shows once per session */}
+      <BannerPopup />
+
       {/* Hero Banner with Promo Strip */}
       <BannerCarousel position="HOME_HERO" autoPlay={true} />
+
+      {/* Banner Strip - Top */}
+      <div className="container mx-auto px-4" style={{ marginTop: 24 }}>
+        <BannerStrip position="HOME_TOP" columns={4} />
+      </div>
 
       {/* Category Shortcuts */}
       <section className="category-shortcuts">
@@ -313,6 +323,13 @@ const HomePage: React.FC = () => {
               </a>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Banner Strip - Bottom */}
+      <section className="products-section">
+        <div className="container mx-auto px-4">
+          <BannerStrip position="HOME_BOTTOM" columns={2} />
         </div>
       </section>
 

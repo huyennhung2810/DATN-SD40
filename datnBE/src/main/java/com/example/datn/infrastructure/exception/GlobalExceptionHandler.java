@@ -44,6 +44,27 @@ public class GlobalExceptionHandler extends RuntimeException {
         );
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ResponseObject<?>> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.error(HttpStatus.NOT_FOUND, ex.getMessage())
+        );
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ResponseObject<?>> handleValidationException(ValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ResponseObject.error(HttpStatus.BAD_REQUEST, ex.getMessage())
+        );
+    }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ResponseObject<?>> handleDuplicateResource(DuplicateResourceException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ResponseObject.error(HttpStatus.CONFLICT, ex.getMessage())
+        );
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ResponseObject<?>> handleRuntime(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
