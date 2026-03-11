@@ -37,4 +37,15 @@ public interface ADDiscountDetailRepository extends DiscountDetailRepository {
             @Param("startDate") Long startDate,
             @Param("endDate") Long endDate
     );
+    @Query("""
+    SELECT dd FROM DiscountDetail dd 
+    WHERE dd.productDetail.id = :productDetailId 
+    AND dd.discount.status = 2 
+    AND dd.discount.startDate <= :now 
+    AND dd.discount.endDate >= :now
+""")
+    java.util.Optional<com.example.datn.entity.DiscountDetail> findActiveByProductDetailId(
+            @Param("productDetailId") String productDetailId,
+            @Param("now") Long now
+    );
 }

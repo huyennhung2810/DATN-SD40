@@ -29,9 +29,9 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 
 // Import thêm action changeStatusDiscountRequest
-import { 
-  fetchDiscountsRequest, 
-  changeStatusDiscountRequest 
+import {
+  fetchDiscountsRequest,
+  changeStatusDiscountRequest
 } from "../../../redux/discount/discountSlice";
 
 import type { RootState, AppDispatch } from "../../../redux/store";
@@ -127,10 +127,10 @@ const DiscountList: React.FC = () => {
       render: (_: any, record: Discount) => (
         <Space direction="vertical" size={0}>
           <Text style={{ fontSize: "12px" }}>
-             BĐ: {record.startDate ? dayjs(record.startDate).format("DD/MM/YYYY") : ""}
+            BĐ: {record.startDate ? dayjs(record.startDate).format("DD/MM/YYYY") : ""}
           </Text>
           <Text style={{ fontSize: "12px" }} type="secondary">
-             KT: {record.endDate ? dayjs(record.endDate).format("DD/MM/YYYY") : ""}
+            KT: {record.endDate ? dayjs(record.endDate).format("DD/MM/YYYY") : ""}
           </Text>
         </Space>
       ),

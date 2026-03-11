@@ -29,11 +29,16 @@ public class ADProductDetailResponse {
     private String colorName;
 
     private String productId;
+
+    private String productCode;
+
     private String productName;
 
     private String storageCapacityId;
     private String storageCapacityName;
     private String creationDate;
+
+    private BigDecimal discountedPrice;
 
     // Thêm trường ảnh cho biến thể
     private String imageUrl;
