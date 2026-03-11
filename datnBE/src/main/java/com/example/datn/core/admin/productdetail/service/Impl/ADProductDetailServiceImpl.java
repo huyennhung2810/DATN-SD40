@@ -1,6 +1,7 @@
 package com.example.datn.core.admin.productDetail.service.Impl;
 
 import com.example.datn.core.admin.color.repository.ADColorRepository;
+
 import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
@@ -74,6 +75,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                 .colorId(entity.getColor() != null ? entity.getColor().getId() : null)
                 .colorName(entity.getColor() != null ? entity.getColor().getName() : "")
                 .productId(entity.getProduct() != null ? entity.getProduct().getId() : null)
+                .productCode(entity.getProduct() != null ? entity.getProduct().getCode() : null)
                 .productName(entity.getProduct() != null ? entity.getProduct().getName() : "")
                 .storageCapacityId(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getId() : null)
                 .storageCapacityName(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getName() : "")
@@ -179,10 +181,10 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         } else {
             response.setSerials(new ArrayList<>());
         }
-
         return response;
     }
 
+    @Override
     public ResponseObject<?> updateProductDetail(String id, ADProductDetailRequest request) {
         // 1. Kiểm tra sự tồn tại của SPCT
         ProductDetail productDetail = adProductDetailRepository.findById(id)
