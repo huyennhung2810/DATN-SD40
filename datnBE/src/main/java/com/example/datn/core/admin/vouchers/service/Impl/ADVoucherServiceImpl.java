@@ -4,6 +4,7 @@ import com.example.datn.core.admin.voucherDetail.repository.ADVoucherDetailRepos
 import com.example.datn.core.admin.voucherDetail.service.ADVoucherDetailService;
 import com.example.datn.core.admin.vouchers.model.PostOrPutVoucherDto;
 import com.example.datn.core.admin.vouchers.model.request.ADVoucherSearchRequest;
+import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
 import com.example.datn.core.admin.vouchers.service.ADVoucherService;
 import com.example.datn.core.common.base.PageableObject;
@@ -12,6 +13,7 @@ import com.example.datn.entity.Voucher;
 import com.example.datn.infrastructure.email.EmailService;
 import com.example.datn.utils.Helper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ADVoucherServiceImpl implements ADVoucherService {
     private final ADVouchersRepository  adVouchersRepository;
     private final ADVoucherDetailService adVoucherDetailService;
@@ -37,7 +40,6 @@ public class ADVoucherServiceImpl implements ADVoucherService {
         // 1. Tạo đối tượng phân trang từ Helper (lấy page và size từ request)
         Pageable pageable = Helper.createPageable(request);
 
-        // 2. Gọi Repository với đầy đủ 5 tham số lọc
         Page<Voucher> page = adVouchersRepository.getAllVouchers(
                 pageable,
                 request.getKeyword(),
@@ -88,7 +90,7 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                             v.setQuantity((int) availableCount);
                         }
                     }
-                    return ResponseObject.success(v, "Lấy chi tiết voucher thành công");
+                    return ResponseObject.success(new VoucherResponse(v), "Lấy chi tiết voucher thành công");
                 })
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy Voucher với ID: " + voucherId));
     }
@@ -245,5 +247,15 @@ public class ADVoucherServiceImpl implements ADVoucherService {
         return null;
     }
 
+//    @Scheduled(fixedRate = 60000) // chạy mỗi 1 phút
+//    @Transactional
+//    public void updateVoucherStatus() {
+//        log.info("=== [JOB] Bắt đầu cập nhật trạng thái Voucher ===");
+//        long now = System.currentTimeMillis();
+//        adVouchersRepository.updateSapDienRa(1, now);
+//        adVouchersRepository.updateDangDienRa(2, now);
+//        adVouchersRepository.updateDaKetThuc(3, now);
+//        log.info("=== [JOB] Kết thúc cập nhật trạng thái Voucher - time: {} ===", now);
+//    }
 
 }

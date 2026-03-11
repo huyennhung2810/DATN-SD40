@@ -6,7 +6,6 @@ import { posApi } from "../../../api/admin/posApi";
 import { productDetailApi } from "../../../api/productDetailApi";
 import { customerApi } from "../../../api/customerApi";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
-import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
 
 const { Title, Text } = Typography;
 

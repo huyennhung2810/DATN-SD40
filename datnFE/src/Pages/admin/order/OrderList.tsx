@@ -187,19 +187,24 @@ const OrderPage: React.FC = () => {
         {
             title: "Hành động (Serial)",
             render: (record: any) => {
-                // Trong thực tế, cần đếm xem đã có bao nhiêu serialize map với OrderDetail id này hiển thị để review
-                // Nhưng ở đây chỉ check quyền Assign Serial nếu đơn đang chuẩn bị Packing
+                const assigned = record.assignedSerialsCount || 0;
+                const req = record.quantity || 0;
+                const isComplete = assigned === req;
+
                 if (selectedOrder?.orderStatus === "CONFIRMED") {
                     return (
-                        <Button type="dashed" onClick={() => {
-                            setActiveDetailForSerial(record);
-                            setSerialModalOpen(true);
-                        }}>
-                            Xuất kho (Gán Serial)
-                        </Button>
+                        <Space>
+                            <Tag color={isComplete ? "green" : "warning"}>Đã gán {assigned}/{req}</Tag>
+                            <Button type={isComplete ? "dashed" : "primary"} onClick={() => {
+                                setActiveDetailForSerial(record);
+                                setSerialModalOpen(true);
+                            }}>
+                                {isComplete ? "Sửa Serial" : "Xuất kho (Gán)"}
+                            </Button>
+                        </Space>
                     );
                 }
-                return <Text type="secondary">Xong</Text>;
+                return <Tag color={isComplete ? "green" : "default"}>Đã gán {assigned}/{req}</Tag>;
             }
         }
     ];

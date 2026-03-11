@@ -43,8 +43,44 @@ public class ADOrderServiceImpl implements ADOrderService {
         if (order == null)
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy CĐH");
         List<OrderDetail> details = orderDetailRepository.findByOrderId(orderId);
-        // Có thể cần map thêm Serials vào DTO cho FE dễ hiển thị
-        return ResponseObject.success(details, "Lấy chi tiết đơn hàng thành công");
+        
+        List<java.util.Map<String, Object>> result = details.stream().map(d -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", d.getId());
+            map.put("quantity", d.getQuantity());
+            map.put("unitPrice", d.getUnitPrice());
+            map.put("totalPrice", d.getTotalPrice());
+
+            long assignedCount = serialRepository.findAll().stream()
+                    .filter(s -> s.getOrderDetail() != null && s.getOrderDetail().getId().equals(d.getId()))
+                    .count();
+            map.put("assignedSerialsCount", assignedCount);
+
+            java.util.Map<String, Object> pdMap = new java.util.HashMap<>();
+            if (d.getProductDetail() != null) {
+                pdMap.put("id", d.getProductDetail().getId());
+                pdMap.put("version", d.getProductDetail().getVersion());
+
+                java.util.Map<String, Object> productMap = new java.util.HashMap<>();
+                if (d.getProductDetail().getProduct() != null) {
+                    productMap.put("id", d.getProductDetail().getProduct().getId());
+                    productMap.put("name", d.getProductDetail().getProduct().getName());
+                }
+                pdMap.put("product", productMap);
+
+                java.util.Map<String, Object> colorMap = new java.util.HashMap<>();
+                if (d.getProductDetail().getColor() != null) {
+                    colorMap.put("id", d.getProductDetail().getColor().getId());
+                    colorMap.put("name", d.getProductDetail().getColor().getName());
+                }
+                pdMap.put("color", colorMap);
+            }
+            map.put("productDetail", pdMap);
+
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseObject.success(result, "Lấy chi tiết đơn hàng thành công");
     }
 
     @Override

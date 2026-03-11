@@ -7,7 +7,6 @@ import com.example.datn.core.admin.discount.service.DiscountService;
 import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.discountDetail.service.DiscountDetailService; // Service con chúng ta đã tạo
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.vouchers.model.request.ADVoucherSearchRequest;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;

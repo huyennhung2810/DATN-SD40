@@ -17,4 +17,6 @@ public interface SerialRepository extends JpaRepository<Serial, String> {
     boolean existsBySerialNumber(String serialNumber);
 
     java.util.Optional<Serial> findBySerialNumber(String serialNumber);
+
+    java.util.List<Serial> findBySerialNumberIn(Collection<String> serialNumbers);
 }

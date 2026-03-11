@@ -9,9 +9,11 @@ import com.example.datn.core.admin.product.model.response.ADProductVariantRespon
 import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.ADProductService;
+
 import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
+
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
