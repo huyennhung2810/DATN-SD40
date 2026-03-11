@@ -15,6 +15,7 @@ interface CustomerBase {
   email: string;
   phoneNumber: string;
   gender: boolean;
+  identityCard: string;
 }
 
 // Dữ liệu nhận về từ API

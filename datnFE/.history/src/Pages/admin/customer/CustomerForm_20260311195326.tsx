@@ -24,6 +24,7 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ScanOutlined,
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,
@@ -823,6 +824,20 @@ const CustomerForm: React.FC = () => {
             </Col>
           </Row>
         </Form>
+
+        <Modal
+          title="Quét QR CCCD Gắn Chip"
+          open={isScannerOpen}
+          onCancel={() => setIsScannerOpen(false)}
+          footer={null}
+          centered
+          width={600}
+        >
+          <div
+            id="reader"
+            style={{ width: "100%", borderRadius: 12, overflow: "hidden" }}
+          ></div>
+        </Modal>
       </div>
     </ConfigProvider>
   );

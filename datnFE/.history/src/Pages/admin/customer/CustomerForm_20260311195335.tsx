@@ -24,6 +24,7 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ScanOutlined,
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,
@@ -823,6 +824,7 @@ const CustomerForm: React.FC = () => {
             </Col>
           </Row>
         </Form>
+
       </div>
     </ConfigProvider>
   );

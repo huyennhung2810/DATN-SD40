@@ -15,6 +15,7 @@ interface CustomerBase {
   email: string;
   phoneNumber: string;
   gender: boolean;
+  identityCard: string;
 }
 
 // Dữ liệu nhận về từ API
@@ -53,6 +54,7 @@ export const initialCustomer: CustomerFormValues = {
   name: "",
   email: "",
   phoneNumber: "",
+  identityCard: "",
   gender: true,
   dateOfBirth: null,
   addresses: [{ ...initialAddress, isDefault: true }],

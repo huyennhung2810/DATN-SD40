@@ -24,6 +24,7 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ScanOutlined,
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,
@@ -139,7 +140,12 @@ const CustomerForm: React.FC = () => {
   );
 
   const duplicateValidator = useCallback(
-    (field: keyof Pick<CustomerFormValues, "email" | "phoneNumber">) => {
+    (
+      field: keyof Pick<
+        CustomerFormValues,
+         "email" | "phoneNumber"
+      >,
+    ) => {
       return async (_: RuleObject, value: string): Promise<void> => {
         if (!value || value.trim() === "") {
           return Promise.resolve();
@@ -185,7 +191,7 @@ const CustomerForm: React.FC = () => {
           return;
         }
 
-        const [fullName, dobStr, genderStr, address] = parts;
+        const [ fullName, dobStr, genderStr, address] = parts;
 
         const birthDate =
           dobStr && dobStr.length === 8 ? dayjs(dobStr, "DDMMYYYY") : null;
@@ -644,6 +650,18 @@ const CustomerForm: React.FC = () => {
                     )}
                   </Upload>
                 </div>
+              
+                  <Input
+                    size="large"
+                    maxLength={12}
+                    suffix={
+                      <ScanOutlined
+                        onClick={() => setIsScannerOpen(true)}
+                        style={{ color: "#1890ff", cursor: "pointer" }}
+                      />
+                    }
+                  />
+                </Form.Item>
                 <Form.Item
                   name="name"
                   label={<Text strong>Họ và tên</Text>}
@@ -823,6 +841,20 @@ const CustomerForm: React.FC = () => {
             </Col>
           </Row>
         </Form>
+
+        <Modal
+          title="Quét QR CCCD Gắn Chip"
+          open={isScannerOpen}
+          onCancel={() => setIsScannerOpen(false)}
+          footer={null}
+          centered
+          width={600}
+        >
+          <div
+            id="reader"
+            style={{ width: "100%", borderRadius: 12, overflow: "hidden" }}
+          ></div>
+        </Modal>
       </div>
     </ConfigProvider>
   );
