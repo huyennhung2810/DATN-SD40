@@ -24,6 +24,7 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ScanOutlined,
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,

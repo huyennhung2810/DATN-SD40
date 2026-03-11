@@ -24,8 +24,6 @@ public class ADCustomerRequest {
 
     private Long dateOfBirth;
 
-    private String identityCard;
-
     //image
     private MultipartFile image;
 

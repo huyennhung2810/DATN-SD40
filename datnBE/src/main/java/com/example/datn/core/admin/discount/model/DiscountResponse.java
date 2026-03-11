@@ -24,7 +24,8 @@ public class DiscountResponse {
     private Long createdAt;
     private Long updatedAt;
     private List<DiscountDetailResponse> discountDetails;
-
+    private String createdBy;
+    private String updatedBy;
     public DiscountResponse(Discount discount) {
         this.id = discount.getId();
         this.code = discount.getCode();
@@ -38,5 +39,7 @@ public class DiscountResponse {
         this.status = discount.getStatus();
         this.createdAt = discount.getCreatedAt();
         this.updatedAt = discount.getUpdatedAt();
+        this.createdBy = discount.getCreatedBy();
+        this.updatedBy = discount.getUpdatedBy();
     }
 }

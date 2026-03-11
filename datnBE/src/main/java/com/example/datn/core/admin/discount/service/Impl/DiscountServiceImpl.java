@@ -133,6 +133,7 @@ public class DiscountServiceImpl implements DiscountService {
             discount = new Discount();
             discount.setId(UUID.randomUUID().toString()); // Tạo ID ngay từ đầu
             discount.setCreatedAt(now);
+            discount.setCreatedBy(req.getCreatedBy());
         }
 
         // 3. Mapping dữ liệu từ Request vào Entity
@@ -144,6 +145,7 @@ public class DiscountServiceImpl implements DiscountService {
         discount.setQuantity(req.getQuantity());
         discount.setNote(req.getNote());
         discount.setUpdatedAt(now);
+        discount.setUpdatedBy(req.getUpdatedBy());
 
         // 4. Tính toán trạng thái dựa trên thời gian (Hoặc giữ nguyên nếu là Buộc dừng)
         if (req.getStatus() != null && req.getStatus() == 0) {
