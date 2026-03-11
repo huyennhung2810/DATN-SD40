@@ -83,7 +83,18 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                 .imageUrl(entity.getImageUrl())
                 .selectedImageId(entity.getSelectedImageId())
                 .selectedImage(selectedImage)
-                .build();
+                .serials(entity.getSerials() != null ? entity.getSerials().stream().map(s ->{
+                    ADSerialResponse sRes = new ADSerialResponse();
+                    sRes.setSerialNumber(s.getSerialNumber());
+
+                    // Lấy Trạng thái (ép kiểu Enum sang String nếu cần)
+                    sRes.setStatus(s.getStatus() != null ? s.getStatus() : null);
+
+                    // Lấy Ngày thêm và format
+                    sRes.setCreatedDate(s.getCreatedDate() != null ? Helper.formatDate(s.getCreatedDate()) : null);
+
+                    return sRes;
+                }).collect(Collectors.toList()) : new ArrayList<>()).build();
     }
 
     @Override
@@ -198,18 +209,6 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
             productDetail.setCode(request.getCode());
         }
 
-        // Validate selectedImageId - phải thuộc về sản phẩm mẹ
-        if (request.getSelectedImageId() != null && !request.getSelectedImageId().isEmpty()) {
-            ProductImage selectedImage = productImageRepository.findById(request.getSelectedImageId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với ID: " + request.getSelectedImageId()));
-
-            // Kiểm tra ảnh có thuộc sản phẩm mẹ không
-            String productId = productDetail.getProduct() != null ? productDetail.getProduct().getId() : null;
-            if (productId != null && (selectedImage.getProduct() == null || !selectedImage.getProduct().getId().equals(productId))) {
-                throw new RuntimeException("Ảnh được chọn không thuộc sản phẩm mẹ này!");
-            }
-        }
-
         // 3. Cập nhật các thông tin cơ bản
         productDetail.setVersion(request.getVersion());
         productDetail.setNote(request.getNote());
@@ -217,11 +216,11 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         productDetail.setStatus(request.getStatus());
         productDetail.setImageUrl(request.getImageUrl());
 
-        // Cập nhật selectedImageId - ảnh được chọn từ sản phẩm mẹ
+
         productDetail.setSelectedImageId(request.getSelectedImageId());
 
         // 4. Cập nhật các quan hệ (Sử dụng đúng ID từ Request)
-        //productDetail.setProduct(adProductRepository.findById(request.getProductId()).orElse(productDetail.getProduct()));
+        productDetail.setProduct(adProductRepository.findById(request.getProductId()).orElse(productDetail.getProduct()));
         productDetail.setColor(adColorRepository.findById(request.getColorId()).orElse(productDetail.getColor()));
         productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(productDetail.getStorageCapacity()));
 

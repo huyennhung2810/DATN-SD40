@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, Children } from "react";
 import {
   Table,
   Card,
@@ -40,6 +40,9 @@ import type { ProcessorResponse } from "../../../api/processorApi";
 import type { ImageFormatResponse } from "../../../api/imageFormatApi";
 import type { VideoFormatResponse } from "../../../api/videoFormatApi";
 import { App } from "antd";
+import { keyBy } from "lodash";
+import ColorPage from "../color/ColorList";
+import StorageCapacityPage from "../storage/StorageList";
 
 const { Title, Text } = Typography;
 
@@ -626,7 +629,15 @@ const TechSpecPage: React.FC = () => {
           descriptionField="description"
         />
       ),
-    },
+    },{
+      key: "color",
+      label: "Màu sắc",
+      children: <ColorPage/>
+    },{
+      key: "storage-capacity",
+      label: "Dung lượng",
+      children: <StorageCapacityPage/>
+    }
   ];
 
   return (

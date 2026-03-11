@@ -94,17 +94,7 @@ const Sidebar: React.FC = () => {
           key: "/products/product-detail",
           icon: <CameraOutlined />,
           label: "Sản phẩm chi tiết",
-        },
-        {
-          key: "/products/color",
-          icon: <BgColorsOutlined />,
-          label: "Màu sắc",
-        },
-        {
-          key: "/products/storage-capacity",
-          icon: <DatabaseOutlined />,
-          label: "Dung lượng",
-        },
+        }
       ],
     },
     {

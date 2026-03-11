@@ -24,7 +24,6 @@ const ProductDetailPage: React.FC = () => {
   const dispatch = useDispatch();
   const [formManager] = Form.useForm();
 
-  // --- STATE CHO MODAL XEM SERIAL ---
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [selectedSerials, setSelectedSerials] = useState<any[]>([]);
   const [viewingProductName, setViewingProductName] = useState("");
@@ -168,7 +167,7 @@ const handleImportExcel = (file: any) => {
 
   reader.readAsArrayBuffer(file);
 
-  return false; // chặn upload lên server
+  return false;
 };
 
   // Xử lý khi Submit Form
@@ -465,7 +464,7 @@ const handleImportExcel = (file: any) => {
         )}
       </Modal>
 
-    </div> /* <-- Dấu đóng div cuối cùng của component */
+    </div>
   );
 };
 
