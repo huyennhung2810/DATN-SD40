@@ -24,14 +24,27 @@ export interface ProductDetailResponse {
   productName: string;
   storageCapacityName: string;
   creationDate: string;
-  
+
   // BỔ SUNG 3 DÒNG NÀY: Để TypeScript hiểu được data.productId, colorId...
-  productId: string; 
+  productId: string;
   colorId: string;
   storageCapacityId: string;
 
+  // Thêm trường ảnh cho biến thể
+  imageUrl?: string;
+
+  // ID của ảnh được chọn từ sản phẩm mẹ
+  selectedImageId?: string;
+
+  // Thông tin ảnh đã chọn (để frontend hiển thị trực tiếp)
+  selectedImage?: {
+    id: string;
+    url: string;
+    displayOrder?: number;
+  };
+
   // Danh sách serials
-  serials?: SerialResponse[]; 
+  serials?: SerialResponse[];
 }
 
 export interface ProductDetailFormValues {
@@ -51,6 +64,9 @@ export interface ProductDetailFormValues {
     status: string;
   }[];
   serialList?: string;
+
+  // ID của ảnh được chọn từ sản phẩm mẹ
+  selectedImageId?: string;
 }
 
 export const initialProductDetail: ProductDetailFormValues = {
@@ -71,4 +87,30 @@ export interface ProductDetailPageParams {
   sortDir?: 'asc' | 'desc';
   minPrice?: number;
   maxPrice?: number;
+}
+
+// Request interface for creating/updating product detail (variant)
+export interface ProductDetailRequest {
+  code: string;
+  version?: string;
+  colorId: string;
+  storageCapacityId: string;
+  salePrice: number;
+  quantity?: number;
+  status?: CommonStatus;
+  imageUrl?: string;
+  note?: string;
+
+  // ID của ảnh được chọn từ sản phẩm mẹ
+  selectedImageId?: string;
+
+  // Danh sách serial khi thêm mới biến thể
+  serials?: {
+    serialNumber: string;
+    code: string;
+    status: string;
+  }[];
+
+  // Danh sách serial mới được thêm khi cập nhật biến thể (chỉ append, không ghi đè)
+  newSerials?: string[];
 }

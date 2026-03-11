@@ -2,11 +2,14 @@ package com.example.datn.core.admin.product.service.Impl;
 
 import com.example.datn.core.admin.product.model.request.CustomerProductSearchRequest;
 import com.example.datn.core.admin.product.model.response.ADProductResponse;
+import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.CustomerProductService;
+import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
+import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
 import com.example.datn.entity.TechSpec;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +29,7 @@ public class CustomerProductServiceImpl implements CustomerProductService {
     private final ADProductRepository productRepository;
     private final TechSpecRepository techSpecRepository;
     private final ADProductImageRepository productImageRepository;
+    private final ADProductDetailRepository productDetailRepository;
 
     @Override
     public PageableObject<ADProductResponse> search(CustomerProductSearchRequest request) {
@@ -159,5 +164,40 @@ public class CustomerProductServiceImpl implements CustomerProductService {
         response.setImageUrls(imageUrls);
 
         return response;
+    }
+
+    @Override
+    public List<ADProductVariantResponse> getVariantsByProductId(String productId) {
+        List<ProductDetail> productDetails = productDetailRepository.findByProductId(productId);
+        
+        if (productDetails == null || productDetails.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return productDetails.stream()
+                .map(this::mapToVariantResponse)
+                .collect(Collectors.toList());
+    }
+
+    private ADProductVariantResponse mapToVariantResponse(ProductDetail pd) {
+        ADProductVariantResponse variant = new ADProductVariantResponse();
+        variant.setId(pd.getId());
+        variant.setCode(pd.getCode());
+        variant.setVersion(pd.getVersion());
+        variant.setSalePrice(pd.getSalePrice());
+        variant.setQuantity(pd.getQuantity());
+        variant.setStatus(pd.getStatus());
+        variant.setImageUrl(pd.getImageUrl());
+
+        if (pd.getColor() != null) {
+            variant.setColorName(pd.getColor().getName());
+            variant.setColorCode(pd.getColor().getCode());
+        }
+
+        if (pd.getStorageCapacity() != null) {
+            variant.setStorageCapacityName(pd.getStorageCapacity().getName());
+        }
+
+        return variant;
     }
 }

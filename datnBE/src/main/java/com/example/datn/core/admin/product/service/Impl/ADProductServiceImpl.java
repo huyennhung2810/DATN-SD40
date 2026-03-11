@@ -1,17 +1,29 @@
 package com.example.datn.core.admin.product.service.Impl;
 
+import com.example.datn.core.admin.color.repository.ADColorRepository;
 import com.example.datn.core.admin.product.model.request.ADProductRequest;
 import com.example.datn.core.admin.product.model.request.ADProductSearchRequest;
+import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.product.model.response.ADProductResponse;
+import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
+import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.ADProductService;
+import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
+import com.example.datn.core.admin.serial.repository.ADSerialRepository;
+import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.entity.Product;
 import com.example.datn.entity.ProductCategory;
+import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
+import com.example.datn.entity.Serial;
 import com.example.datn.entity.TechSpec;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductCategoryRepository;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.repository.TechSpecRepository;
@@ -23,8 +35,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +50,10 @@ public class ADProductServiceImpl implements ADProductService {
     private final ProductCategoryRepository categoryRepository;
     private final TechSpecRepository techSpecRepository;
     private final ADProductImageRepository productImageRepository;
+    private final ADProductDetailRepository productDetailRepository;
+    private final ADColorRepository colorRepository;
+    private final ADStorageCapacityRepository storageCapacityRepository;
+    private final ADSerialRepository serialRepository;
 
     @Override
     public PageableObject<ADProductResponse> search(ADProductSearchRequest request) {
@@ -266,5 +285,393 @@ public class ADProductServiceImpl implements ADProductService {
                     return response;
                 })
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+    }
+
+    @Override
+    public ADProductWithVariantsResponse getProductWithVariants(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+
+        // Lấy danh sách biến thể của sản phẩm
+        List<ProductDetail> variants = productDetailRepository.findByProductId(id);
+
+        // Build response cho sản phẩm cha
+        ADProductWithVariantsResponse response = ADProductWithVariantsResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .description(product.getDescription())
+                .price(product.getPrice())
+                .status(product.getStatus())
+                .createdDate(product.getCreatedDate())
+                .lastModifiedDate(product.getLastModifiedDate())
+                .build();
+
+        if (product.getProductCategory() != null) {
+            response.setIdProductCategory(product.getProductCategory().getId());
+            response.setProductCategoryName(product.getProductCategory().getName());
+        }
+
+        if (product.getTechSpec() != null) {
+            response.setIdTechSpec(product.getTechSpec().getId());
+            response.setTechSpecName(product.getTechSpec().getSensorType());
+
+            ADTechSpecResponse techSpecResponse = new ADTechSpecResponse();
+            techSpecResponse.setId(product.getTechSpec().getId());
+            techSpecResponse.setSensorType(product.getTechSpec().getSensorType());
+            techSpecResponse.setLensMount(product.getTechSpec().getLensMount());
+            techSpecResponse.setResolution(product.getTechSpec().getResolution());
+            techSpecResponse.setIso(product.getTechSpec().getIso());
+            techSpecResponse.setProcessor(product.getTechSpec().getProcessor());
+            techSpecResponse.setImageFormat(product.getTechSpec().getImageFormat());
+            techSpecResponse.setVideoFormat(product.getTechSpec().getVideoFormat());
+            techSpecResponse.setStatus(product.getTechSpec().getStatus());
+            techSpecResponse.setCreatedAt(product.getTechSpec().getCreatedDate());
+            techSpecResponse.setUpdatedAt(product.getTechSpec().getLastModifiedDate());
+            response.setTechSpec(techSpecResponse);
+        }
+
+        // Lấy danh sách URL ảnh sản phẩm cha
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            List<String> imageUrls = product.getImages().stream()
+                    .sorted((a, b) -> Integer.compare(
+                            a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
+                            b.getDisplayOrder() != null ? b.getDisplayOrder() : 0))
+                    .map(ProductImage::getUrl)
+                    .collect(Collectors.toList());
+            response.setImageUrls(imageUrls);
+
+            // Lấy danh sách ảnh chi tiết (bao gồm id, url, displayOrder) để chọn cho biến thể
+            List<ADProductImageSimpleResponse> productImages = product.getImages().stream()
+                    .sorted((a, b) -> Integer.compare(
+                            a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
+                            b.getDisplayOrder() != null ? b.getDisplayOrder() : 0))
+                    .map(img -> ADProductImageSimpleResponse.builder()
+                            .id(img.getId())
+                            .url(img.getUrl())
+                            .displayOrder(img.getDisplayOrder())
+                            .build())
+                    .collect(Collectors.toList());
+            response.setProductImages(productImages);
+        }
+
+        // Map danh sách biến thể
+        List<ADProductVariantResponse> variantResponses = variants.stream()
+                .map(this::mapToVariantResponse)
+                .collect(Collectors.toList());
+
+        response.setVariants(variantResponses);
+
+        // Tính toán thông tin tổng hợp từ các biến thể
+        if (variants != null && !variants.isEmpty()) {
+            int totalQuantity = variants.stream()
+                    .filter(v -> v.getQuantity() != null)
+                    .mapToInt(ProductDetail::getQuantity)
+                    .sum();
+
+            BigDecimal minPrice = variants.stream()
+                    .filter(v -> v.getSalePrice() != null)
+                    .map(ProductDetail::getSalePrice)
+                    .min(BigDecimal::compareTo)
+                    .orElse(null);
+
+            BigDecimal maxPrice = variants.stream()
+                    .filter(v -> v.getSalePrice() != null)
+                    .map(ProductDetail::getSalePrice)
+                    .max(BigDecimal::compareTo)
+                    .orElse(null);
+
+            response.setTotalQuantity(totalQuantity);
+            response.setMinPrice(minPrice);
+            response.setMaxPrice(maxPrice);
+            response.setVariantCount(variants.size());
+        } else {
+            response.setTotalQuantity(0);
+            response.setVariantCount(0);
+        }
+
+        return response;
+    }
+
+    private ADProductVariantResponse mapToVariantResponse(ProductDetail variant) {
+        ADProductVariantResponse response = new ADProductVariantResponse();
+        response.setId(variant.getId());
+        response.setCode(variant.getCode());
+        response.setVersion(variant.getVersion());
+        response.setSalePrice(variant.getSalePrice());
+        response.setQuantity(variant.getQuantity());
+        response.setStatus(variant.getStatus());
+        response.setImageUrl(variant.getImageUrl());
+
+        // Set selected image info
+        response.setSelectedImageId(variant.getSelectedImageId());
+
+        // Nếu có selectedImageId, lấy URL từ ProductImage của sản phẩm mẹ
+        if (variant.getSelectedImageId() != null && !variant.getSelectedImageId().isEmpty() && variant.getProduct() != null) {
+            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+            productImages.stream()
+                    .filter(img -> img.getId().equals(variant.getSelectedImageId()))
+                    .findFirst()
+                    .ifPresent(img -> response.setSelectedImageUrl(img.getUrl()));
+        }
+
+        // Fallback: nếu không có selectedImageId nhưng có imageUrl cũ, dùng imageUrl
+        if (response.getSelectedImageUrl() == null && variant.getImageUrl() != null) {
+            response.setSelectedImageUrl(variant.getImageUrl());
+        }
+
+        if (variant.getColor() != null) {
+            response.setColorId(variant.getColor().getId());
+            response.setColorName(variant.getColor().getName());
+            response.setColorCode(variant.getColor().getCode());
+        }
+
+        if (variant.getStorageCapacity() != null) {
+            response.setStorageCapacityId(variant.getStorageCapacity().getId());
+            response.setStorageCapacityName(variant.getStorageCapacity().getName());
+        }
+
+        // Map danh sách serial của biến thể
+        if (variant.getSerials() != null && !variant.getSerials().isEmpty()) {
+            List<ADSerialResponse> serialResponses = variant.getSerials().stream()
+                    .map(this::mapToSerialResponse)
+                    .collect(Collectors.toList());
+            response.setSerials(serialResponses);
+        }
+
+        return response;
+    }
+
+    // Map Serial entity to ADSerialResponse
+    private ADSerialResponse mapToSerialResponse(Serial serial) {
+        return ADSerialResponse.builder()
+                .id(serial.getId())
+                .serialNumber(serial.getSerialNumber())
+                .code(serial.getCode())
+                .status(serial.getStatus())
+                .serialStatus(serial.getSerialStatus())
+                .productDetailId(serial.getProductDetail() != null ? serial.getProductDetail().getId() : null)
+                .createdDate(serial.getCreatedDate() != null ? serial.getCreatedDate().toString() : null)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public ADProductVariantResponse addVariant(String productId, ADProductDetailRequest request) {
+        // Kiểm tra sản phẩm tồn tại
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+
+        // Validate không cho tạo biến thể trùng
+        boolean exists = productDetailRepository.existsByProductIdAndColorIdAndStorageCapacityId(
+                productId,
+                request.getColorId(),
+                request.getStorageCapacityId()
+        );
+
+        if (exists) {
+            throw new RuntimeException("Biến thể với màu sắc và dung lượng này đã tồn tại trong sản phẩm!");
+        }
+
+        // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ
+        if (request.getSelectedImageId() != null && !request.getSelectedImageId().isEmpty()) {
+            List<ProductImage> productImages = productImageRepository.findImagesByProductId(productId);
+            boolean imageBelongsToProduct = productImages.stream()
+                    .anyMatch(img -> img.getId().equals(request.getSelectedImageId()));
+            if (!imageBelongsToProduct) {
+                throw new RuntimeException("Ảnh đại diện không thuộc sản phẩm này!");
+            }
+        }
+
+        ProductDetail variant = new ProductDetail();
+        variant.setCode(request.getCode());
+        variant.setVersion(request.getVersion());
+        variant.setSalePrice(request.getSalePrice());
+        variant.setStatus(request.getStatus() != null ? request.getStatus() : EntityStatus.ACTIVE);
+        variant.setNote(request.getNote());
+        variant.setImageUrl(request.getImageUrl());
+
+        // Lưu selectedImageId - ID của ảnh được chọn từ sản phẩm mẹ
+        variant.setSelectedImageId(request.getSelectedImageId());
+
+        // Gán sản phẩm cha
+        variant.setProduct(product);
+
+        // Gán color và storage capacity
+        if (request.getColorId() != null && !request.getColorId().isEmpty()) {
+            variant.setColor(colorRepository.findById(request.getColorId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy màu sắc")));
+        }
+
+        if (request.getStorageCapacityId() != null && !request.getStorageCapacityId().isEmpty()) {
+            variant.setStorageCapacity(storageCapacityRepository.findById(request.getStorageCapacityId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy dung lượng")));
+        }
+
+        // Số lượng tồn kho (có thể null)
+        variant.setQuantity(request.getQuantity() != null ? request.getQuantity() : 0);
+
+        variant = productDetailRepository.save(variant);
+
+        return mapToVariantResponse(variant);
+    }
+
+    @Override
+    @Transactional
+    public ADProductVariantResponse updateVariant(String variantId, ADProductDetailRequest request) {
+        ProductDetail variant = productDetailRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
+
+        // Validate không cho tạo biến thể trùng (ngoại trừ chính nó)
+        if (request.getColorId() != null && request.getStorageCapacityId() != null) {
+            boolean exists = productDetailRepository.existsByProductIdAndColorIdAndStorageCapacityIdAndIdNot(
+                    variant.getProduct().getId(),
+                    request.getColorId(),
+                    request.getStorageCapacityId(),
+                    variantId
+            );
+
+            if (exists) {
+                throw new RuntimeException("Biến thể với màu sắc và dung lượng này đã tồn tại trong sản phẩm!");
+            }
+        }
+
+        // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ
+        if (request.getSelectedImageId() != null && !request.getSelectedImageId().isEmpty()) {
+            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+            boolean imageBelongsToProduct = productImages.stream()
+                    .anyMatch(img -> img.getId().equals(request.getSelectedImageId()));
+            if (!imageBelongsToProduct) {
+                throw new RuntimeException("Ảnh đại diện không thuộc sản phẩm này!");
+            }
+        }
+
+        // Cập nhật thông tin
+        if (request.getCode() != null) {
+            variant.setCode(request.getCode());
+        }
+        if (request.getVersion() != null) {
+            variant.setVersion(request.getVersion());
+        }
+        if (request.getSalePrice() != null) {
+            variant.setSalePrice(request.getSalePrice());
+        }
+        if (request.getStatus() != null) {
+            variant.setStatus(request.getStatus());
+        }
+        if (request.getNote() != null) {
+            variant.setNote(request.getNote());
+        }
+        if (request.getImageUrl() != null) {
+            variant.setImageUrl(request.getImageUrl());
+        }
+        if (request.getQuantity() != null) {
+            variant.setQuantity(request.getQuantity());
+        }
+
+        // Cập nhật selectedImageId - ID của ảnh được chọn từ sản phẩm mẹ
+        if (request.getSelectedImageId() != null) {
+            variant.setSelectedImageId(request.getSelectedImageId());
+        }
+
+        // Cập nhật color và storage capacity
+        if (request.getColorId() != null && !request.getColorId().isEmpty()) {
+            variant.setColor(colorRepository.findById(request.getColorId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy màu sắc")));
+        }
+
+        if (request.getStorageCapacityId() != null && !request.getStorageCapacityId().isEmpty()) {
+            variant.setStorageCapacity(storageCapacityRepository.findById(request.getStorageCapacityId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy dung lượng")));
+        }
+
+        // Xử lý thêm serial mới (chỉ append, không ghi đè serial cũ)
+        if (request.getNewSerials() != null && !request.getNewSerials().isEmpty()) {
+            // Loại bỏ các giá trị null/empty sau khi trim
+            List<String> newSerialList = request.getNewSerials().stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Lấy danh sách serial hiện tại của biến thể
+            List<String> existingSerials = serialRepository.findByProductDetailId(variantId)
+                    .stream()
+                    .map(Serial::getSerialNumber)
+                    .collect(Collectors.toList());
+
+            // Kiểm tra trùng lặp trong danh sách mới
+            Set<String> uniqueNewSerials = new HashSet<>(newSerialList);
+            if (uniqueNewSerials.size() != newSerialList.size()) {
+                throw new RuntimeException("Danh sách serial mới có chứa mã trùng lặp!");
+            }
+
+            // Kiểm tra trùng với serial hiện có của biến thể
+            List<String> duplicateWithExisting = newSerialList.stream()
+                    .filter(existingSerials::contains)
+                    .collect(Collectors.toList());
+
+            if (!duplicateWithExisting.isEmpty()) {
+                throw new RuntimeException("Các serial sau đã tồn tại trong biến thể: " + String.join(", ", duplicateWithExisting));
+            }
+
+            // Kiểm tra serial đã tồn tại trong toàn hệ thống (nếu có yêu cầu)
+            List<String> existingInSystem = serialRepository.findExistingSerialNumbers(newSerialList);
+            if (!existingInSystem.isEmpty()) {
+                throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+            }
+
+            // Thêm các serial mới vào biến thể
+            int addedCount = 0;
+            for (String serialNumber : newSerialList) {
+                Serial newSerial = new Serial();
+                newSerial.setSerialNumber(serialNumber);
+                newSerial.setCode(serialNumber);
+                newSerial.setSerialStatus(SerialStatus.AVAILABLE);
+                newSerial.setStatus(EntityStatus.ACTIVE);
+                newSerial.setProductDetail(variant);
+                serialRepository.save(newSerial);
+                addedCount++;
+            }
+
+            // Cập nhật lại quantity của biến thể
+            int currentQuantity = variant.getQuantity() != null ? variant.getQuantity() : 0;
+            variant.setQuantity(currentQuantity + addedCount);
+        }
+
+        variant = productDetailRepository.save(variant);
+
+        return mapToVariantResponse(variant);
+    }
+
+    @Override
+    @Transactional
+    public ADProductVariantResponse updateVariantImage(String variantId, String selectedImageId) {
+        ProductDetail variant = productDetailRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
+
+        // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ
+        if (selectedImageId != null && !selectedImageId.isEmpty()) {
+            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+            boolean imageBelongsToProduct = productImages.stream()
+                    .anyMatch(img -> img.getId().equals(selectedImageId));
+            if (!imageBelongsToProduct) {
+                throw new RuntimeException("Ảnh đại diện không thuộc sản phẩm này!");
+            }
+        }
+
+        // Cập nhật selectedImageId
+        variant.setSelectedImageId(selectedImageId);
+        variant = productDetailRepository.save(variant);
+
+        return mapToVariantResponse(variant);
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariant(String variantId) {
+        ProductDetail variant = productDetailRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
+
+        productDetailRepository.delete(variant);
     }
 }

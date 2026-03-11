@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.productDetail.model.response;
 
+import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import lombok.AllArgsConstructor;
@@ -33,6 +34,15 @@ public class ADProductDetailResponse {
     private String storageCapacityId;
     private String storageCapacityName;
     private String creationDate;
+
+    // Thêm trường ảnh cho biến thể
+    private String imageUrl;
+
+    // ID của ảnh được chọn từ sản phẩm mẹ
+    private String selectedImageId;
+
+    // Thông tin ảnh đã chọn (để frontend hiển thị trực tiếp)
+    private ADProductImageSimpleResponse selectedImage;
 
     private List<ADSerialResponse> serials;
 }

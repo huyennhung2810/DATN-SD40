@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.productimage.service.Impl;
 
+import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productimage.model.request.ADProductImageRequest;
 import com.example.datn.core.admin.productimage.model.response.ADProductImageResponse;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
@@ -23,6 +24,7 @@ public class ADProductImageServiceImpl implements ADProductImageService {
     
     private final ADProductImageRepository imageRepository;
     private final ProductRepository productRepository;
+    private final ADProductDetailRepository productDetailRepository;
     private final CloudinaryUtils cloudinaryUtils;
 
     private static final String PRODUCT_IMAGE_FOLDER = "products";
@@ -84,10 +86,15 @@ public class ADProductImageServiceImpl implements ADProductImageService {
     public void delete(String id) {
         ProductImage image = imageRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh"));
-        
+
+        // Kiểm tra xem ảnh có đang được sử dụng bởi biến thể nào không
+        if (productDetailRepository.existsBySelectedImageId(id)) {
+            throw new RuntimeException("Không thể xóa ảnh này vì đang được sử dụng bởi một hoặc nhiều biến thể sản phẩm. Vui lòng cập nhật ảnh cho các biến thể trước khi xóa.");
+        }
+
         // Optional: Delete from Cloudinary
         // cloudinaryUtils.deleteImage(image.getUrl());
-        
+
         imageRepository.delete(image);
     }
     
