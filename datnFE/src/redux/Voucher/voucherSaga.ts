@@ -82,30 +82,8 @@ function* handleUpdateVoucher(action: any): any {
 function* handleGetVoucherById(action: any): any {
   try {
     const response = yield call(voucherApi.getById, action.payload);
-    const res = response.data;
-
-    // Lấy đối tượng voucher gốc từ Page.content, .data hoặc chính nó
-    let voucher = res?.content?.[0]?.voucher || res?.data || res;
-
-    // Nếu dữ liệu trả về dạng Page, thực hiện gộp details từ danh sách content
-    if (res?.content && Array.isArray(res.content)) {
-      voucher = {
-        ...voucher,
-        details: res.content.map((item: any) => ({
-          ...item,
-          createdDate: item.created_date // Đồng bộ với Interface của bạn
-        }))
-      };
-    }
-
-    if (voucher?.id) {
-      console.log("✅ Voucher Ready:", voucher);
-      yield put(getVoucherByIdSuccess(voucher));
-    } else {
-      yield put(fetchVouchersFailure());
-    }
+    yield put(getVoucherByIdSuccess(response.data.data));
   } catch (error) {
-    console.error("❌ Get Voucher Error:", error);
     yield put(fetchVouchersFailure());
   }
 }
