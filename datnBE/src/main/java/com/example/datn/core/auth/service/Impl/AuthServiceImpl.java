@@ -241,7 +241,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String otp = generateOtp();
-        long expiry = System.currentTimeMillis() + 5 * 60 * 1000; // OTP hết hạn sau 5 phút
+        long expiry = System.currentTimeMillis() + 5 * 60 * 1000;
 
         account.setOtpCode(otp);
         account.setOtpExpiryTime(expiry);
