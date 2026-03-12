@@ -10,17 +10,13 @@ import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationFailu
 import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationSuccessHandler;
 
 import com.example.datn.infrastructure.security.service.CustomUserDetailsService;
-import com.example.datn.utils.Helper;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
