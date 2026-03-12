@@ -1,11 +1,13 @@
 package com.example.datn.core.admin.vouchers.model.response;
 
 import com.example.datn.entity.Voucher;
+import com.example.datn.entity.VoucherDetail;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -26,6 +28,7 @@ public class VoucherResponse {
     private Integer status;
     private String lastModifiedBy;
     private Long lastModifiedDate;
+    private List<VoucherDetail> details;
 
     public VoucherResponse(Voucher v) {
         this.id = v.getId();
@@ -43,5 +46,6 @@ public class VoucherResponse {
         this.status = v.getStatus();
         this.lastModifiedBy = v.getLastModifiedBy();
         this.lastModifiedDate = v.getLastModifiedDate();
+        this.details = v.getDetails();
     }
 }
