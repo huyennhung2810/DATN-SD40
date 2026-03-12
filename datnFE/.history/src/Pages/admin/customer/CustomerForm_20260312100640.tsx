@@ -90,6 +90,7 @@ const CustomerForm: React.FC = () => {
   const [communesMap, setCommunesMap] = useState<
     Record<number, AdministrativeUnit[]>
   >({});
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   //  Tải danh sách Tỉnh/Thành phố khi khởi tạo
   const fetchedRef = React.useRef(false);
@@ -163,6 +164,98 @@ const CustomerForm: React.FC = () => {
     },
     [id],
   );
+
+  // // Logic Quét QR CCCD
+  // const onScanSuccess = useCallback(
+  //   async (decodedText: string): Promise<void> => {
+  //     try {
+  //       setIsScannerOpen(false);
+  //       const parts = decodedText.split("|");
+
+  //       if (provinces.length === 0) {
+  //         notification.warning({
+  //           message:
+  //             "Dữ liệu hành chính đang được tải, vui lòng thử lại sau giây lát!",
+  //         });
+  //         return;
+  //       }
+  //       if (parts.length < 6) {
+  //         notification.warning({ message: "Mã QR không đúng định dạng CCCD" });
+  //         return;
+  //       }
+
+  //       const [fullName, dobStr, genderStr, address] = parts;
+
+  //       const birthDate =
+  //         dobStr && dobStr.length === 8 ? dayjs(dobStr, "DDMMYYYY") : null;
+
+  //       form.setFieldsValue({
+  //         name: fullName,
+  //         gender: genderStr.toLowerCase() === "nam",
+  //         dateOfBirth: birthDate,
+  //       });
+
+  //       if (address) {
+  //         const index = 0;
+  //         const addrParts = address
+  //           .split(",")
+  //           .map((s) => s.trim())
+  //           .filter((s) => s);
+
+  //         const pNameInQR = addrParts[addrParts.length - 1] || "";
+  //         const normPName = normalizeString(pNameInQR);
+
+  //         const foundProv = provinces.find((p) => {
+  //           const normAPI = normalizeString(p.name);
+  //           return normAPI.includes(normPName) || normPName.includes(normAPI);
+  //         });
+
+  //         if (foundProv) {
+  //           const res = await axios.get<{ wards: AdministrativeUnit[] }>(
+  //             `https://provinces.open-api.vn/api/v2/p/${foundProv.code}?depth=2`,
+  //           );
+  //           const wardList = res.data.wards || [];
+
+  //           setCommunesMap((prev) => ({ ...prev, [index]: wardList }));
+
+  //           let foundComm: AdministrativeUnit | undefined = undefined;
+  //           const searchParts = addrParts.slice(0, -1).reverse();
+
+  //           for (const part of searchParts) {
+  //             const normPart = normalizeString(part);
+  //             foundComm = wardList.find((w) => {
+  //               const normWardAPI = normalizeString(w.name);
+  //               return (
+  //                 normPart === normWardAPI ||
+  //                 (normPart.length > 4 && normWardAPI.includes(normPart)) ||
+  //                 (normWardAPI.length > 4 && normPart.includes(normWardAPI))
+  //               );
+  //             });
+  //             if (foundComm) break;
+  //           }
+
+  //           const currentAddresses = form.getFieldValue("addresses") || [{}];
+  //           currentAddresses[index] = {
+  //             ...currentAddresses[index],
+  //             provinceCode: foundProv.code,
+  //             provinceCity: foundProv.name,
+  //             wardCode: foundComm?.code,
+  //             wardCommune: foundComm?.name || "",
+  //             addressDetail: address,
+  //             name: fullName,
+  //           };
+  //           form.setFieldsValue({ addresses: [...currentAddresses] });
+  //         }
+  //       }
+  //       notification.success({ message: "Đã quét thông tin CCCD thành công!" });
+  //     } catch (e) {
+  //       console.error(e);
+  //       notification.error({ message: "Lỗi khi xử lý dữ liệu QR" });
+  //     }
+  //   },
+  //   [form, provinces],
+  // );
+
   //Xử lý dữ liệu khi Chỉnh sửa (Edit Mode)
   useEffect(() => {
     if (isEdit && id) {
@@ -195,6 +288,21 @@ const CustomerForm: React.FC = () => {
       });
     }
   }, [id, isEdit, form, loadCommunes]);
+
+  // useEffect(() => {
+  //   let scanner: Html5QrcodeScanner | null = null;
+  //   if (isScannerOpen) {
+  //     scanner = new Html5QrcodeScanner(
+  //       "reader",
+  //       { fps: 10, qrbox: 250 },
+  //       false,
+  //     );
+  //     scanner.render(onScanSuccess, (err) => console.warn(err));
+  //   }
+  //   return () => {
+  //     if (scanner) scanner.clear().catch((e) => console.error(e));
+  //   };
+  // }, [isScannerOpen, onScanSuccess]);
 
   const validateAge = (
     _: RuleObject,

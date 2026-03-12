@@ -196,6 +196,21 @@ const CustomerForm: React.FC = () => {
     }
   }, [id, isEdit, form, loadCommunes]);
 
+  // useEffect(() => {
+  //   let scanner: Html5QrcodeScanner | null = null;
+  //   if (isScannerOpen) {
+  //     scanner = new Html5QrcodeScanner(
+  //       "reader",
+  //       { fps: 10, qrbox: 250 },
+  //       false,
+  //     );
+  //     scanner.render(onScanSuccess, (err) => console.warn(err));
+  //   }
+  //   return () => {
+  //     if (scanner) scanner.clear().catch((e) => console.error(e));
+  //   };
+  // }, [isScannerOpen, onScanSuccess]);
+
   const validateAge = (
     _: RuleObject,
     value: dayjs.Dayjs | null,
