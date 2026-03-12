@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/voucher-details")
+@RequestMapping("/api/v1/admin/voucher-details")
 @RequiredArgsConstructor
 @Slf4j
 public class ADVoucherDetailController {

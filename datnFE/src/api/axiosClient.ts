@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { AxiosError, type InternalAxiosRequestConfig} from "axios";
 import { AUTH_STORAGE_KEYS } from "../models/auth";
 import { store } from "../redux/store";
+import { authActions } from "../redux/auth/authSlice";
 
 const BASE_URL = "http://localhost:8386/api/v1";
 
@@ -9,7 +10,7 @@ const axiosClient = axios.create({
     headers: {
         "Content-Type": "application/json"
     },
-})
+});
 
 const AUTH_WHITELIST = [
     "/auth/login",
@@ -23,11 +24,11 @@ const AUTH_WHITELIST = [
 axiosClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-        // Kiểm tra whitelist chính xác hơn
-        const isAuthApi = AUTH_WHITELIST.some(url => config.url === url || config.url?.endsWith(url));
+        const isAuthApi = AUTH_WHITELIST.some(url => 
+            config.url === url || config.url?.endsWith(url)
+        );
 
         if (token && !isAuthApi) {
-            config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
@@ -36,30 +37,28 @@ axiosClient.interceptors.request.use(
 );
 
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: any) => void }> = [];
+let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
     failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve(token!);
-        }
+        if (error) prom.reject(error);
+        else prom.resolve(token);
     });
     failedQueue = [];
 };
 
 axiosClient.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
+    async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+        // 1. Xử lý lỗi 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
+            
             const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
 
             if (!refreshToken) {
-                clearAuthStorage();
-                store.dispatch(logoutAction()); // Cập nhật Redux ngay lập tức
+                handleGlobalLogout();
                 return Promise.reject(error);
             }
 
@@ -67,41 +66,38 @@ axiosClient.interceptors.response.use(
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 }).then((token) => {
-                    originalRequest.headers = originalRequest.headers || {};
                     originalRequest.headers.Authorization = `Bearer ${token}`;
                     return axiosClient(originalRequest);
-                });
+                }).catch(err => Promise.reject(err));
             }
 
             originalRequest._retry = true;
             isRefreshing = true;
 
             try {
-                // Lưu ý: khớp với @RequestBody RefreshTokenRequest ở Backend
+                // Dùng axios (global instance) để tránh interceptor của axiosClient gây loop
                 const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
-                const newAccessToken: string = response.data.data.accessToken;
+                const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
-                localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+                if (newRefreshToken) {
+                    localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+                }
 
-                processQueue(null, newAccessToken);
+                processQueue(null, accessToken);
+                
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return axiosClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                clearAuthStorage();
-                store.dispatch(logoutAction()); // Đăng xuất người dùng trên toàn hệ thống
-
-                const currentPath = window.location.pathname;
-                if (currentPath !== '/login' && currentPath !== '/register') {
-                    window.location.href = '/login';
-                }
+                handleGlobalLogout();
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;
             }
         }
         
-        // Trả về error.response.data để Frontend lấy được message lỗi từ GlobalExceptionHandler
+        // 2. Trả về data lỗi từ GlobalExceptionHandler của Backend
         if (error.response && error.response.data) {
             return Promise.reject(error.response.data);
         }
@@ -109,10 +105,13 @@ axiosClient.interceptors.response.use(
     }
 );
 
-function clearAuthStorage() {
-    localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-    localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+function handleGlobalLogout() {
+    // Dispatch action này sẽ xóa localStorage và reset Redux State cùng lúc
+    store.dispatch(authActions.logoutAction());
+    
+    if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+    }
 }
 
 export default axiosClient;

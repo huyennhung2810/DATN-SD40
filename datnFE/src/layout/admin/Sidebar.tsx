@@ -16,9 +16,6 @@ import {
   SwapOutlined,
   ClockCircleOutlined,
   SettingOutlined,
-  BgColorsOutlined,
-  DatabaseOutlined,
-  AppstoreOutlined,
   PictureOutlined,
   KeyOutlined,
 } from "@ant-design/icons";
