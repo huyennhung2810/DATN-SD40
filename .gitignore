@@ -1,4 +1,31 @@
-
-# IDE
+# IDE và Editor rác (Rất quan trọng)
+.history/
 .idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
+# OS rác
+.DS_Store
+Thumbs.db
+
+# Frontend (Node.js)
+datnFE/node_modules/
+datnFE/dist/
+datnFE/build/
+datnFE/.env
+datnFE/.env.local
+
+# Backend (Spring Boot/Java)
+datnBE/build/
+datnBE/target/
+datnBE/out/
+datnBE/.env
+datnBE/bin/
+datnBE/*.log
+
+# Docker
+.docker/
