@@ -15,6 +15,7 @@ public class ADWorkScheduleResponse {
     private String employeeName;
     private String employeeCode;
 
+    private String shiftTemplateId;
     private String shiftName;
     private LocalTime startTime;
     private LocalTime endTime;

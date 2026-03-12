@@ -19,9 +19,6 @@ import java.util.List;
 @Builder
 public class Customer extends NameEntity implements Serializable {
 
-    @Column(name = "identityCard")
-    private String identityCard; //Mã định danh (CCCD/CMND)
-
     @Column(name = "email")
     private String email;
 

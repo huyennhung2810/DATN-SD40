@@ -1,6 +1,7 @@
 package com.example.datn.core.admin.workSchedule.repository;
 
 import com.example.datn.entity.WorkSchedule;
+import com.example.datn.infrastructure.constant.ShiftStatus;
 import com.example.datn.repository.WorkScheduleRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ADWorkScheduleRepository extends WorkScheduleRepository {
@@ -27,9 +29,13 @@ public interface ADWorkScheduleRepository extends WorkScheduleRepository {
             @Param("toDate") LocalDate toDate
     );
 
-
-    //Lấy lịch của 1 nhân viên
-    List<WorkSchedule> findByEmployee_IdAndWorkDateBetween(
-            String employeeId, LocalDate fromDate, LocalDate toDate
+    Optional<WorkSchedule> findByEmployee_IdAndWorkDateAndShiftStatus(
+            String employeeId,
+            LocalDate workDate,
+            ShiftStatus shiftStatus
     );
+    boolean existsByEmployee_IdAndShiftTemplate_IdAndWorkDateAndIdNot(
+            String employeeId, String shiftTemplateId, LocalDate workDate, String id
+    );
+
 }

@@ -16,4 +16,9 @@ public interface ADWorkScheduleService {
     // Xóa ca làm việc
     @Transactional
     ResponseObject<?> deleteSchedule(String id);
+
+    //Sửa lịch
+    ResponseObject<?> updateSchedule(String id, ADCreateScheduleRequest request);
+
+    ResponseObject<?> getTodaySchedule(String employeeId);
 }
