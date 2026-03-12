@@ -103,25 +103,20 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private OAuth2User processAdmin(OAuth2UserInfo oAuth2UserInfo) {
-        Optional<Employee> optionalStaff = staffRepository.findByEmail(oAuth2UserInfo.getEmail());
+        Employee staff = staffRepository.findByEmail(oAuth2UserInfo.getEmail())
+                .orElseThrow(() -> new OAuth2AuthenticationProcessingException("Email nhân viên không tồn tại trong hệ thống"));
 
-        if(optionalStaff.isPresent()) {
-            List<String> rolesUser = roleRepository.getRoleCodeByUsername(optionalStaff.get().getAccount().getUsername());
-            if(rolesUser.contains(RoleConstant.ADMIN.name()) || rolesUser.contains(RoleConstant.STAFF.name())) {
-                String email = oAuth2UserInfo.getEmail();
-                Employee staff = optionalStaff.get();
-                staff.setCode(email.substring(0, email.indexOf("@")));
-                staff.setEmployeeImage(oAuth2UserInfo.getImageUrl());
-                staffRepository.save(staff);
-                return UserPrincipal.create(staff, oAuth2UserInfo.getAttributes(), rolesUser);
-            } else {
-                CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-                throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
-            }
-        } else {
-            CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-            throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
+        List<String> roles = roleRepository.getRoleCodeByUsername(staff.getAccount().getUsername());
+
+        if (!roles.contains(RoleConstant.ADMIN.name()) && !roles.contains(RoleConstant.STAFF.name())) {
+            throw new OAuth2AuthenticationProcessingException("Tài khoản này không có quyền truy cập Admin");
         }
+
+        // Chỉ cập nhật ảnh đại diện nếu có thay đổi từ Google
+        staff.setEmployeeImage(oAuth2UserInfo.getImageUrl());
+        staffRepository.save(staff);
+
+        return UserPrincipal.create(staff, oAuth2UserInfo.getAttributes(), roles);
     }
 
     private OAuth2User processCustomer(OAuth2UserInfo oAuth2UserInfo) {

@@ -62,5 +62,6 @@ public class Discount implements Serializable {
 
     @OneToMany(mappedBy = "discount", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("discount") // ✅ Bỏ tham chiếu ngược
+    @ToString.Exclude
     private List<DiscountDetail> details; // Đây chính là 'details' mà bạn đang thiếu
 }

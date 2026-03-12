@@ -239,7 +239,6 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 c.getDateOfBirth() != null
                         ? new SimpleDateFormat("dd/MM/yyyy").format(c.getDateOfBirth())
                         : "---",
-                Optional.ofNullable(c.getIdentityCard()).orElse(""),
                 EntityStatus.ACTIVE.equals(c.getStatus()) ? "Hoạt động" : "Ngừng",
                 getFormattedAddress(c)
         )).collect(Collectors.toList());

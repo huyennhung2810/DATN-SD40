@@ -74,5 +74,6 @@ public class Voucher implements Serializable {
 
     @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("voucher") // ✅ Bỏ tham chiếu ngược
+    @ToString.Exclude
     private List<VoucherDetail> details;
 }

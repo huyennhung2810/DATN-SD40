@@ -11,6 +11,7 @@ import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationSucce
 
 import com.example.datn.infrastructure.security.service.CustomUserDetailsService;
 import com.example.datn.utils.Helper;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -36,19 +38,14 @@ import java.util.Collections;
 import java.util.List;
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
+
 public class SecurityConfig {
 
-    @Setter(onMethod = @__({@Autowired}))
-    private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private CustomOAuth2UserService customOAuth2UserService;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Value("${frontend.url}")
     private String allowedOrigin;
@@ -58,29 +55,30 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
-    @Bean(BeanIds.AUTHENTICATION_MANAGER)
-    public AuthenticationManager authenticationManager(
-            PasswordEncoder passwordEncoder,
-            CustomUserDetailsService userDetailsService
-    ) {
-        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder);
-        daoAuthenticationProvider.setUserDetailsService(userDetailsService);
-        return new ProviderManager(daoAuthenticationProvider);
-    }
-
     @Bean
     public TokenAuthenticationFilter tokenAuthenticationFilter() {
         return new TokenAuthenticationFilter();
     }
 
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            PasswordEncoder passwordEncoder,
+            CustomUserDetailsService userDetailsService
+    ) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsService(userDetailsService);
+        return new ProviderManager(provider);
+    }
+
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
-        config.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "*"));
-        config.setAllowedOrigins(Collections.singletonList(allowedOrigin));
+        config.setAllowedOrigins(List.of(allowedOrigin));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
         config.setAllowCredentials(true);
         config.setExposedHeaders(List.of("Authorization"));
         source.registerCorsConfiguration("/**", config);
@@ -99,56 +97,46 @@ public class SecurityConfig {
                         e.authenticationEntryPoint(new RestAuthenticationEntryPoint())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/upload/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/**").permitAll()
-                        .requestMatchers("/api/v1/admin/product-image/**").permitAll()
-                        .requestMatchers(MappingConstants.API_LOGIN).permitAll()
-                        .anyRequest().permitAll() // test
+                        // 1. Static & Public Resources
+                        .requestMatchers("/api/upload/**", "/uploads/**").permitAll()
+                        .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").permitAll()
+                        .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
+                        .requestMatchers("/api/v1/product-image/**").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+
+                        // 2. Public Read-only (Sản phẩm máy ảnh)
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product-category/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/tech-spec/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/banner/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/products/**").permitAll()
+
+                        // 3. Role-based Authorization
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX + "/**")
+                        .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+                        .requestMatchers(MappingConstants.API_VERSION_PREFIX + "/customer/**")
+                        .hasAuthority(RoleConstant.CUSTOMER.name())
+
+                        // 4. Các request còn lại
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorize")
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/oauth2/callback/*")
+                        )
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler(oAuth2AuthenticationFailureHandler)
                 );
 
-        http.addFilterBefore(
-                tokenAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-        );
+        http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-
-
-
-//        http.csrf(AbstractHttpConfigurer::disable);
-//        http.cors(c -> c.configurationSource(corsConfigurationSource()));
-//        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//        http.formLogin(AbstractHttpConfigurer::disable);
-//        http.httpBasic(AbstractHttpConfigurer::disable);
-//        http.exceptionHandling(e -> e.authenticationEntryPoint(new RestAuthenticationEntryPoint()));
-//
-//        http.authorizeHttpRequests(
-//                authorizeRequests -> authorizeRequests.requestMatchers(MappingConstants.API_LOGIN).permitAll()
-//        );
-//
-//        http.authorizeHttpRequests(
-//                authorizeRequests -> authorizeRequests.requestMatchers(Helper.appendWildcard(MappingConstants.API_AUTH_PREFIX)).hasAnyAuthority(RoleConstant.ADMIN.name())
-//        );
-//
-//        http.oauth2Login(
-//                oauth2 -> oauth2.authorizationEndpoint(a -> a.baseUri("/oauth2/authorize"))
-//                        .redirectionEndpoint(r -> r.baseUri("/oauth2/callback/**"))
-//                        .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
-//                        .authorizationEndpoint(a -> a.authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository))
-//                        .successHandler(oAuth2AuthenticationSuccessHandler)
-//                        .failureHandler(oAuth2AuthenticationFailureHandler)
-//        );
-//
-//        http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-//        http.authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/api/upload/**").permitAll()  // Upload endpoint
-//                .requestMatchers("/uploads/**").permitAll()     // Static files
-//                .requestMatchers(MappingConstants
-//                        .API_LOGIN).permitAll()
-//                .anyRequest().permitAll() // Tạm thời cho phép tất cả để test
-//        );
-//        return http.build();
     }
 }

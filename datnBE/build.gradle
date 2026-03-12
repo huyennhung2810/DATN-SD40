@@ -18,6 +18,12 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    all {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+}
+
 dependencies {
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -35,27 +41,30 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
-    implementation 'org.apache.poi:poi-ooxml:5.2.3'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Excel
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
     // Jackson for Java 8 date/time support
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
-    // Other libs
+    // Cloudinary
     implementation 'com.cloudinary:cloudinary-http44:1.29.0'
-    implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
-    //jwt
+    // JWT (JJWT)
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
+    // OpenAPI / Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
 
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'}
 tasks.named('test') {
     useJUnitPlatform()
 }
