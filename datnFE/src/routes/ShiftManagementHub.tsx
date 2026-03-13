@@ -5,9 +5,9 @@ import {
   ClockCircleOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
-import WorkSchedulePage from "../../Pages/admin/workSchedule/WorkSchedulePage";
-import ShiftHistoryPage from "../../Pages/admin/shiftHandover/ShiftHistoryPage";
-import ShiftTemplatePage from "../../Pages/admin/shiftTemplate/ShiftTemplatePage";
+import WorkSchedulePage from "../Pages/admin/workSchedule/WorkSchedulePage";
+import ShiftHistoryPage from "../Pages/admin/shiftHandover/ShiftHistoryPage";
+import ShiftTemplatePage from "../Pages/admin/shiftTemplate/ShiftTemplatePage";
 
 const { Title, Text } = Typography;
 
