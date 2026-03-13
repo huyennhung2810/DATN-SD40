@@ -38,6 +38,7 @@ import "antd/dist/reset.css";
 import OAuth2RedirectPage from "./Pages/auth/0Auth2RedirectPage";
 import CustomerLoginPage from "./Pages/auth/CustomerLoginPage";
 import AdminLoginPage from "./Pages/auth/AdminLoginPage";
+import EmployeeChatPage from "./Pages/admin/chat/EmployeeChatPage";
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -68,6 +69,7 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/pos" element={<PosPage />} />
             <Route path="/orders" element={<OrderPage />} />
+            <Route path="/EChatAi" element={<EmployeeChatPage />} />
             {/* Khách hàng */}
             <Route path="/customer" element={<CustomerPage />} />
             <Route path="/customerAdd" element={<CustomerForm />} />

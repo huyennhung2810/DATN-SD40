@@ -99,6 +99,8 @@ public class SecurityConfig {
                         .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
                         .requestMatchers("/api/v1/product-image/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
+                        .requestMatchers("/api/v1/support/**").permitAll() // Cho phép khách vãng lai chat
+                        .requestMatchers("/ws-chat/**").permitAll()
 
                         // 2. Public Read-only (Sản phẩm máy ảnh)
                         .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product-category/**").permitAll()

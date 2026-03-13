@@ -24,6 +24,7 @@ import voucherReducer from "./Voucher/voucherSlice";
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
 import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
 import authReducer from "./auth/authSlice";
+import chatReducer from "./chat/chatSlice";
 
 
 export const store = configureStore({
@@ -51,6 +52,7 @@ export const store = configureStore({
     processor: processorReducer,
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
+    chat: chatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

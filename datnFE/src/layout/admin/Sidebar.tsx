@@ -18,6 +18,7 @@ import {
   SettingOutlined,
   PictureOutlined,
   KeyOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -91,7 +92,7 @@ const Sidebar: React.FC = () => {
           key: "/products/product-detail",
           icon: <CameraOutlined />,
           label: "Sản phẩm chi tiết",
-        }
+        },
       ],
     },
     {
@@ -101,7 +102,11 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/customer", icon: <TeamOutlined />, label: "Khách hàng" },
         { key: "/employee", icon: <UserOutlined />, label: "Nhân viên" },
-        { key: "/admin/accounts", icon: <KeyOutlined />, label: "Quản lý tài khoản" },
+        {
+          key: "/admin/accounts",
+          icon: <KeyOutlined />,
+          label: "Quản lý tài khoản",
+        },
       ],
     },
     {
@@ -144,6 +149,11 @@ const Sidebar: React.FC = () => {
         },
       ],
     },
+    {
+      key: "/EChatAi",
+      icon: <MessageOutlined />,
+      label: "Hỗ trợ KH",
+    },
   ];
 
   return (
@@ -154,7 +164,9 @@ const Sidebar: React.FC = () => {
           <CameraOutlined />
         </div>
         <div className="logo-text">
-          <Text strong className="logo-title">HIKARI</Text>
+          <Text strong className="logo-title">
+            HIKARI
+          </Text>
           <Text className="logo-subtitle">Camera Admin</Text>
         </div>
       </div>
