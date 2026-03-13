@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -43,6 +44,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final AuthRoleRepository roleRepository;
     private final AuthCustomerRepository customerRepository;
     private final AuthAccountRepository accountRepository; // Thêm Repo Account để tạo mới
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional // Đảm bảo lưu cả Account và Customer cùng lúc
@@ -129,10 +131,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         account.setUsername(oAuth2UserInfo.getEmail());
         account.setEmail(oAuth2UserInfo.getEmail());
         account.setFullName(oAuth2UserInfo.getName());
-        account.setPassword(""); // Mật khẩu trống cho tài khoản mạng xã hội
-
+        account.setPassword(passwordEncoder.encode("OAUTH2_USER_" + UUID.randomUUID().toString()));
         // 🔥 FIX LỖI: Gán Role mặc định là CUSTOMER
-        // Nhung lưu ý import đúng RoleConstant của dự án nhé
         account.setRole(com.example.datn.infrastructure.constant.RoleConstant.CUSTOMER);
 
         // Gán trạng thái hoạt động (thường là 1)

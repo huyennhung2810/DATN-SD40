@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,10 +31,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collections;
 import java.util.List;
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 
 public class SecurityConfig {
@@ -45,11 +46,6 @@ public class SecurityConfig {
 
     @Value("${frontend.url}")
     private String allowedOrigin;
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
 
     @Bean
     public TokenAuthenticationFilter tokenAuthenticationFilter() {
@@ -93,29 +89,43 @@ public class SecurityConfig {
                         e.authenticationEntryPoint(new RestAuthenticationEntryPoint())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Static & Public Resources
+                        // 1. Tài nguyên công khai (Ảnh, Auth, Common)
                         .requestMatchers("/api/upload/**", "/uploads/**").permitAll()
                         .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").permitAll()
                         .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
-                        .requestMatchers("/api/v1/product-image/**").permitAll()
+                        .requestMatchers(MappingConstants.API_LOGIN + "/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
-                        .requestMatchers("/api/v1/support/**").permitAll() // Cho phép khách vãng lai chat
-                        .requestMatchers("/ws-chat/**").permitAll()
+                        .requestMatchers("/api/v1/support/**", "/ws-chat/**").permitAll()
 
-                        // 2. Public Read-only (Sản phẩm máy ảnh)
-                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product-category/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/tech-spec/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/banner/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/products/**").permitAll()
+                        // 2. Quyền xem sản phẩm cho khách vãng lai (Public Read)
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_TECH_SPEC + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_BANNER + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX_PRODUCTS + "/**").permitAll()
 
-                        // 3. Role-based Authorization
-                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX + "/**")
-                        .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
-                        .requestMatchers(MappingConstants.API_VERSION_PREFIX + "/customer/**")
-                        .hasAuthority(RoleConstant.CUSTOMER.name())
+                        // 3. CHỈ ADMIN (Quyền nhạy cảm: Tiền bạc, Nhân sự, Tài khoản)
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_STATISTICS + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_SHIFT_TEMPLATE + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX + "/accounts/**").hasAuthority(RoleConstant.ADMIN.name())
 
-                        // 4. Các request còn lại
+                        // 4. ADMIN & STAFF (Nghiệp vụ: Bán hàng, Kho, Voucher, Giao ca)
+                        .requestMatchers(
+                                MappingConstants.API_ADMIN_PREFIX_PRODUCTS + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_DISCOUNT + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_SERIALS + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_SHIFT_HANDOVER + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_WORK_SCHEDULE + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_CUSTOMERS + "/**"
+                        ).hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+
+
+                        // 5. KHÁCH HÀNG (Mua hàng)
+                        .requestMatchers(MappingConstants.API_VERSION_PREFIX + "/customer/**").hasAuthority(RoleConstant.CUSTOMER.name())
+                        .requestMatchers("/api/v1/client/**").hasAuthority(RoleConstant.CUSTOMER.name())
+
+                        // 6. Các request còn lại
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
