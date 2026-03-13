@@ -14,7 +14,6 @@ import {
   UserOutlined,
   ScheduleOutlined,
   SwapOutlined,
-  ClockCircleOutlined,
   SettingOutlined,
   PictureOutlined,
   KeyOutlined,
@@ -133,7 +132,7 @@ const Sidebar: React.FC = () => {
       label: "Quản lý Lịch làm việc",
       children: [
         {
-          key: "/work-schedule",
+          key: "/shiftManagement",
           icon: <ScheduleOutlined />,
           label: "Lịch làm việc",
         },
@@ -141,11 +140,6 @@ const Sidebar: React.FC = () => {
           key: "/shift-handover",
           icon: <SwapOutlined />,
           label: "Giao ca",
-        },
-        {
-          key: "/shift-template",
-          icon: <ClockCircleOutlined />,
-          label: "Quản lý ca làm việc",
         },
       ],
     },

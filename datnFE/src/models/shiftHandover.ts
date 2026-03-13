@@ -9,7 +9,6 @@ export interface CheckOutRequest {
   actualCash: number;    
   withdrawAmount?: number;   
   note?: string;           
-  audits: ProductAuditRequest[];
 }
 
 // Thông tin kiểm kê 1 sản phẩm
@@ -22,6 +21,17 @@ export interface ProductAuditRequest {
 export interface ShiftHandoverStatsResponse {
   handoverId: string;
   initialCash: number;
+}
+
+export interface ShiftHistoryItem {
+    employeeName: string;
+    checkInTime: number;
+    checkOutTime?: number;
+    totalCashSales: number;
+    actualCashAtEnd: number;
+    differenceAmount: number;
+    status: string;
+    note?: string;
 }
 
 // Thông tin chi tiết của 1 Phiếu giao ca 
@@ -38,3 +48,5 @@ export interface ShiftHandoverResponse {
   handoverStatus: 'OPEN' | 'PENDING' | 'CLOSED';
   workScheduleId: string;
 }
+
+export type HandoverStatus = 'OPEN' | 'PENDING' | 'CLOSED';

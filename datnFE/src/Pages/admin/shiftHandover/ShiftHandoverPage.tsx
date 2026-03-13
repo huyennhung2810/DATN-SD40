@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Card,
   Button,
   Typography,
   Row,
   Col,
-  Divider,
   Space,
   Tag,
   Spin,
+  Alert,
+  Statistic,
 } from "antd";
 import {
   ContainerOutlined,
@@ -28,108 +29,115 @@ import CheckOutModal from "./CheckOutModal";
 const { Title, Text } = Typography;
 
 const ShiftHandoverPage: React.FC = () => {
-  // 1. Lấy trạng thái từ Redux với Type an toàn
+  // --- REDUX STATE ---
   const { currentShift, isLoading: isShiftLoading } = useSelector(
     (state: RootState) => state.shiftHandover,
   );
-
-  // Lấy thông tin user (Sử dụng fullName cho khớp với authSlice)
   const { user } = useSelector((state: RootState) => state.auth);
 
+  // --- LOCAL STATE ---
   const [isCheckInOpen, setIsCheckInOpen] = useState<boolean>(false);
   const [isCheckOutOpen, setIsCheckOutOpen] = useState<boolean>(false);
-
-  // Lưu lịch trực hôm nay
   const [todaySchedule, setTodaySchedule] = useState<{
     id: string;
     shiftName?: string;
   } | null>(null);
   const [fetchingSchedule, setFetchingSchedule] = useState<boolean>(false);
 
-  // 2. Tìm lịch làm việc của nhân viên trong ngày hôm nay
-  useEffect(() => {
+  // --- LOGIC: LẤY LỊCH TRỰC HÔM NAY ---
+  const fetchTodaySchedule = useCallback(async () => {
+    // Nếu đã trong ca thì không cần tìm lịch trực nữa
+    if (!user?.userId || !!currentShift) return;
 
-    const fetchTodaySchedule = async () => {
-      if (!user?.userId) return;
-      setFetchingSchedule(true);
-      try {
-        const res = await workScheduleApi.getTodaySchedule(user.userId);
-        // Nếu có dữ liệu trả về thành công
-        if (res && res.data) {
-          setTodaySchedule(res.data);
-        }
-      } catch (error: any) {
-        // 1. Xử lý lỗi 404 (Không có lịch) - Coi là bình thường
-        if (error?.status === "NOT_FOUND" || error?.response?.status === 404) {
-          setTodaySchedule(null);
-          return;
-        }
-
-        // 2. Xử lý lỗi 401/403 (Security)
-        if (
-          error?.response?.status === 401 ||
-          error?.response?.status === 403
-        ) {
-          console.warn("Bạn không có quyền truy cập lịch trực admin.");
-          return;
-        }
-
-        console.error("Lỗi hệ thống khác:", error);
-      } finally {
-        setFetchingSchedule(false);
+    setFetchingSchedule(true);
+    try {
+      const res = await workScheduleApi.getTodaySchedule(user.userId);
+      if (res && res.data) {
+        setTodaySchedule(res.data);
       }
-    };
-
-    // Chỉ tìm lịch trực nếu nhân viên chưa vào ca
-    if (!currentShift) {
-      fetchTodaySchedule();
+    } catch (error: any) {
+      // Xử lý lỗi 404 hoặc không có lịch trực
+      if (error?.response?.status === 404) {
+        setTodaySchedule(null);
+      }
+      console.error("Lỗi khi tải lịch trực:", error);
+    } finally {
+      setFetchingSchedule(false);
     }
   }, [user?.userId, currentShift]);
+
+  useEffect(() => {
+    fetchTodaySchedule();
+  }, [fetchTodaySchedule]);
 
   const hasStartedShift = !!currentShift;
 
   return (
     <div style={{ padding: "24px", minHeight: "85vh", background: "#f0f2f5" }}>
       <Row justify="center">
-        <Col xs={24} sm={22} md={18} lg={14} xl={12}>
+        <Col xs={24} sm={22} md={18} lg={14} xl={10}>
           <Spin
             spinning={isShiftLoading || fetchingSchedule}
-            tip="Đang xử lý dữ liệu..."
+            tip="Đang tải dữ liệu..."
           >
             <Card
-              variant="borderless"
+              bordered={false}
               style={{
-                borderRadius: 12,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                borderRadius: 16,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                overflow: "hidden",
               }}
               title={
                 <Space>
-                  <ContainerOutlined style={{ color: "#1890ff" }} />
+                  <ContainerOutlined
+                    style={{ color: "#1890ff", fontSize: 20 }}
+                  />
                   <Title level={4} style={{ margin: 0 }}>
-                    Quản Lý Ca Làm Việc
+                    Hệ Thống Giao Ca Hikari
                   </Title>
                 </Space>
               }
+              extra={
+                <Text type="secondary">{dayjs().format("DD/MM/YYYY")}</Text>
+              }
             >
               {!hasStartedShift ? (
-                /* --- GIAO DIỆN KHI CHƯA VÀO CA --- */
-                <div style={{ textAlign: "center", padding: "50px 0" }}>
-                  <div style={{ marginBottom: 24 }}>
-                    <PlayCircleOutlined
-                      style={{ fontSize: 64, color: "#d9d9d9" }}
-                    />
-                  </div>
+                /* ================= GIAO DIỆN KHI CHƯA VÀO CA ================= */
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <PlayCircleOutlined
+                    style={{ fontSize: 80, color: "#f0f0f0", marginBottom: 20 }}
+                  />
                   <Title level={3}>
-                    Chào {user?.fullName}, bạn chưa vào ca
+                    Chào buổi sáng, {user?.fullName || "Nhân viên"}
                   </Title>
-                  <Text
-                    type="secondary"
-                    style={{ display: "block", marginBottom: 32, fontSize: 16 }}
-                  >
-                    {todaySchedule
-                      ? `Bạn có lịch trực [${todaySchedule.shiftName}] hôm nay. Hãy bắt đầu ca làm việc!`
-                      : "Hệ thống chưa tìm thấy lịch trực của bạn trong hôm nay."}
-                  </Text>
+
+                  {todaySchedule ? (
+                    <Alert
+                      message={
+                        <b>Lịch trực hôm nay: {todaySchedule.shiftName}</b>
+                      }
+                      description="Bạn đã sẵn sàng? Vui lòng kiểm tra tiền mặt tại quầy và thực hiện Check-in để bắt đầu bán hàng."
+                      type="info"
+                      showIcon
+                      style={{
+                        marginBottom: 30,
+                        textAlign: "left",
+                        borderRadius: 8,
+                      }}
+                    />
+                  ) : (
+                    <Alert
+                      message="Không tìm thấy lịch trực"
+                      description="Hệ thống chưa ghi nhận lịch làm việc của bạn trong hôm nay. Vui lòng liên hệ quản lý nếu có sai sót."
+                      type="warning"
+                      showIcon
+                      style={{
+                        marginBottom: 30,
+                        textAlign: "left",
+                        borderRadius: 8,
+                      }}
+                    />
+                  )}
 
                   <Button
                     type="primary"
@@ -138,93 +146,119 @@ const ShiftHandoverPage: React.FC = () => {
                     disabled={!todaySchedule}
                     onClick={() => setIsCheckInOpen(true)}
                     style={{
-                      height: 50,
-                      padding: "0 40px",
-                      borderRadius: 25,
-                      fontWeight: 600,
+                      height: 55,
+                      padding: "0 60px",
+                      borderRadius: 30,
                       fontSize: 18,
+                      fontWeight: 700,
                       backgroundColor: todaySchedule ? "#20c997" : "#d9d9d9",
                       borderColor: todaySchedule ? "#20c997" : "#d9d9d9",
+                      boxShadow: todaySchedule
+                        ? "0 4px 15px rgba(32, 201, 151, 0.4)"
+                        : "none",
                     }}
                   >
-                    Bắt Đầu Ca Làm Việc
+                    BẮT ĐẦU CA LÀM VIỆC
                   </Button>
                 </div>
               ) : (
-                /* --- GIAO DIỆN KHI ĐANG TRONG CA --- */
+                /* ================= GIAO DIỆN KHI ĐANG TRONG CA ================= */
                 <>
-                  <div style={{ marginBottom: 30 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 20,
-                      }}
-                    >
-                      <Tag color="processing" icon={<InfoCircleOutlined />}>
-                        ĐANG TRONG CA LÀM VIỆC
-                      </Tag>
-                      <Text type="secondary">
-                        Mã ca: {currentShift.id?.substring(0, 8)}...
+                  <div
+                    style={{
+                      background: "#f0f5ff",
+                      padding: "16px",
+                      borderRadius: "12px",
+                      marginBottom: "25px",
+                      border: "1px solid #adc6ff",
+                    }}
+                  >
+                    <Row align="middle" justify="space-between">
+                      <Space>
+                        <Tag
+                          color="blue"
+                          style={{
+                            borderRadius: 10,
+                            padding: "2px 12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ONLINE
+                        </Tag>
+                        <Text strong style={{ color: "#003a8c" }}>
+                          CA LÀM VIỆC ĐANG HOẠT ĐỘNG
+                        </Text>
+                      </Space>
+                      <Text type="secondary" code>
+                        {currentShift.id?.substring(0, 12)}
                       </Text>
-                    </div>
-
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Card
-                          size="small"
-                          style={{ background: "#f9f9f9", border: "none" }}
-                        >
-                          <Space direction="vertical">
-                            <Text type="secondary">
-                              <CalendarOutlined /> Thời gian bắt đầu
-                            </Text>
-                            <Text strong>
-                              {currentShift.checkInTime
-                                ? dayjs(currentShift.checkInTime).format(
-                                    "HH:mm - DD/MM/YYYY",
-                                  )
-                                : "---"}
-                            </Text>
-                          </Space>
-                        </Card>
-                      </Col>
-                      <Col span={12}>
-                        <Card
-                          size="small"
-                          style={{ background: "#f9f9f9", border: "none" }}
-                        >
-                          <Space direction="vertical">
-                            <Text type="secondary">
-                              <DollarCircleOutlined /> Tiền mặt đầu ca
-                            </Text>
-                            <Text strong style={{ color: "#52c41a" }}>
-                              {currentShift.initialCash?.toLocaleString(
-                                "vi-VN",
-                              )}{" "}
-                              ₫
-                            </Text>
-                          </Space>
-                        </Card>
-                      </Col>
                     </Row>
                   </div>
 
-                  <Divider>
-                    <Text type="secondary">Thông tin bàn giao</Text>
-                  </Divider>
+                  <Row gutter={[16, 16]} style={{ marginBottom: 25 }}>
+                    <Col span={12}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
+                            <Text type="secondary">
+                              <CalendarOutlined /> Thời gian vào ca
+                            </Text>
+                          }
+                          value={dayjs(currentShift.checkInTime).format(
+                            "HH:mm",
+                          )}
+                          valueStyle={{ fontSize: "20px", fontWeight: 700 }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={12}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
+                            <Text type="secondary">
+                              <DollarCircleOutlined /> Tiền mặt đầu ca
+                            </Text>
+                          }
+                          value={currentShift.initialCash || 0}
+                          suffix="₫"
+                          valueStyle={{
+                            fontSize: "20px",
+                            fontWeight: 700,
+                            color: "#52c41a",
+                          }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
                   <div
                     style={{
-                      padding: 16,
+                      padding: "16px",
                       background: "#fffbe6",
                       border: "1px solid #ffe58f",
-                      borderRadius: 8,
-                      marginBottom: 30,
+                      borderRadius: "12px",
+                      marginBottom: "30px",
                     }}
                   >
-                    <Text italic>
-                      "{currentShift.note || "Không có ghi chú bàn giao."}"
-                    </Text>
+                    <Space align="start">
+                      <InfoCircleOutlined
+                        style={{ color: "#faad14", marginTop: 4 }}
+                      />
+                      <div>
+                        <Text strong>Ghi chú nhận ca:</Text>
+                        <br />
+                        <Text italic type="secondary">
+                          {currentShift.note ||
+                            "Không có ghi chú bàn giao từ ca trước."}
+                        </Text>
+                      </div>
+                    </Space>
                   </div>
 
                   <Button
@@ -234,9 +268,15 @@ const ShiftHandoverPage: React.FC = () => {
                     size="large"
                     icon={<LogoutOutlined />}
                     onClick={() => setIsCheckOutOpen(true)}
-                    style={{ height: 50, borderRadius: 8, fontWeight: 700 }}
+                    style={{
+                      height: 55,
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      fontSize: 17,
+                      boxShadow: "0 4px 15px rgba(255, 77, 79, 0.3)",
+                    }}
                   >
-                    KẾT THÚC CA & BÀN GIAO
+                    KẾT THÚC CA & BÀN GIAO TIỀN
                   </Button>
                 </>
               )}
@@ -245,12 +285,13 @@ const ShiftHandoverPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Modals */}
+      {/* --- CÁC MODAL CHỨC NĂNG --- */}
       <CheckInModal
         isOpen={isCheckInOpen}
         onClose={() => setIsCheckInOpen(false)}
         scheduleId={todaySchedule?.id || ""}
       />
+
       <CheckOutModal
         isOpen={isCheckOutOpen}
         onClose={() => setIsCheckOutOpen(false)}

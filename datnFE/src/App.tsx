@@ -16,12 +16,10 @@ import VoucherList from "./Pages/admin/voucher/VoucherList";
 import VoucherForm from "./Pages/admin/voucher/VoucherForm";
 import DiscountList from "./Pages/admin/discount/DiscountList";
 import DiscountForm from "./Pages/admin/discount/DiscountForm";
-import ShiftTemplatePage from "./Pages/admin/shiftTemplate/ShiftTemplatePage";
 import ProductDetailPage from "./Pages/admin/productdetail/productDetailList";
 import CustomerHomePage from "./Pages/customer/HomePage";
 import CustomerCatalogPage from "./Pages/customer/CatalogPage";
 import CustomerLayout from "./layout/customer/CustomerLayout";
-import WorkSchedulePage from "./Pages/admin/workSchedule/WorkSchedulePage";
 import ShiftHandoverPage from "./Pages/admin/shiftHandover/ShiftHandoverPage";
 import MainLayout from "./layout/admin/MainLayout";
 import PosPage from "./Pages/admin/pos/PosPage";
@@ -39,6 +37,7 @@ import OAuth2RedirectPage from "./Pages/auth/0Auth2RedirectPage";
 import CustomerLoginPage from "./Pages/auth/CustomerLoginPage";
 import AdminLoginPage from "./Pages/auth/AdminLoginPage";
 import EmployeeChatPage from "./Pages/admin/chat/EmployeeChatPage";
+import ShiftManagementHub from "./router/workScheduleAndShiftTemplate/ShiftManagementHub";
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -98,9 +97,9 @@ const App: React.FC = () => {
             {/* Thống kê */}
             <Route path="/statistics" element={<StatisticsPage />} />
             {/* Lịch làm việc */}
-            <Route path="/work-schedule" element={<WorkSchedulePage />} />
             <Route path="/shift-handover" element={<ShiftHandoverPage />} />
-            <Route path="/shift-template" element={<ShiftTemplatePage />} />
+            <Route path="/shiftManagement" element={<ShiftManagementHub />} />
+
             {/* Thay đổi mật khẩu */}
             {/* <Route
               path="/change-password/:username"

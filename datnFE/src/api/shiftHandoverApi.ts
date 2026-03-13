@@ -17,9 +17,10 @@ export const checkIn = async (data: CheckInRequest): Promise<ResponseObject<Shif
 
 //Lấy thông tin ban đầu của ca làm việc
 export const getShiftStats = async (scheduleId: string): Promise<ShiftHandoverStatsResponse> => {
-  const res = await axiosClient.get<ResponseObject<ShiftHandoverStatsResponse>>(`${BASE_URL}/stats`, { 
-    params: { scheduleId } 
-  });
+  const res = await axiosClient.get<ResponseObject<ShiftHandoverStatsResponse>>(
+    `${BASE_URL}/stats`, 
+    { params: { scheduleId } }
+  );
   return res.data.data; 
 };
 
@@ -29,10 +30,22 @@ export const checkOut = async (data: CheckOutRequest): Promise<ResponseObject<Sh
   return res.data;
 };
 
+export const getShiftHistory = async (params: any): Promise<ResponseObject<any>> => {
+    const res = await axiosClient.get(`${BASE_URL}/history`, { params });
+    return res.data;
+};
+
+export const confirmShift = async (data: { handoverId: string; adminNote: string }): Promise<ResponseObject<any>> => {
+    const res = await axiosClient.post(`${BASE_URL}/confirm`, data);
+    return res.data;
+};
+
 export const shiftHandoverApi = {
     checkIn,
     getShiftStats,
-    checkOut
+    checkOut,
+    getShiftHistory,
+    confirmShift,
 };
 
 export default shiftHandoverApi;
