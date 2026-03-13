@@ -26,6 +26,12 @@ public class Account extends PrimaryEntity implements Serializable {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "full_name")
+    private String fullName;
+
     @Column(name = "salt")
     private String salt;
 

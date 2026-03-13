@@ -56,7 +56,6 @@ const OAuth2RedirectPage: React.FC = () => {
         fullName: (claims.fullName as string) ?? "",
         email: (claims.email as string) ?? "",
         pictureUrl: (claims.pictureUrl as string) ?? undefined,
-        // OAuth2 tokens use "rolesCode"; regular tokens use "roles"
         roles: ((claims.rolesCode ?? claims.roles) as string[]) ?? [],
       };
 

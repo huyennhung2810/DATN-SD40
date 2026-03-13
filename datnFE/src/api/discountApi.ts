@@ -1,7 +1,6 @@
 import axiosClient from "./axiosClient";
 
-// Vì axiosClient đã có baseURL: http://localhost:8386/api/v1
-// Nên ở đây chúng ta chỉ cần viết đường dẫn tương đối thôi cho gọn.
+
 const DISCOUNT_BASE = '/admin/discounts';
 const PRODUCT_DETAIL_BASE = '/admin/product-details-discount';
 

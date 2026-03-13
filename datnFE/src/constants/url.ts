@@ -1,20 +1,21 @@
 
-// 1. Môi trường & Base URL
 const env = import.meta.env;
-export const DOMAIN_BACKEND = env.VITE_BASE_URL_SERVER as string;
-export const DOMAIN_FRONTEND = env.VITE_BASE_URL_CLIENT as string;
+export const DOMAIN_BACKEND = (env.VITE_BASE_URL_SERVER as string) || "http://localhost:8386";
+export const DOMAIN_FRONTEND = (env.VITE_BASE_URL_CLIENT as string) || "http://localhost:6688";
+
 export const API_URL = `${DOMAIN_BACKEND}/api/v1`;
 
 // 2. OAUTH2 Redirect Config
-const REDIRECT_URI = `${DOMAIN_FRONTEND}/redirect`;
-const G_AUTH = "/oauth2/authorize/google";
-const GH_AUTH = "/oauth2/authorize/github";
+export const REDIRECT_URI = `${DOMAIN_FRONTEND}/oauth2/redirect`;
+const G_AUTH = "/oauth2/authorization/google";
+const GH_AUTH = "/oauth2/authorization/github";
+
+
 
 // Hàm helper tạo URL Social Login cho 4 đối tượng
 export const getSocialLoginUrl = (provider: 'google' | 'github', role: string) => {
     const baseUrl = provider === 'google' ? G_AUTH : GH_AUTH;
-    return `${DOMAIN_BACKEND}${baseUrl}?redirect_uri=${REDIRECT_URI}&screen=${role}&register=false`;
-};
+return `${DOMAIN_BACKEND}${baseUrl}?redirect_uri=${REDIRECT_URI}&screen=${role}&register=false`;};
 
 // 3. API PREFIXES (Gom nhóm theo lớp bảo vệ của Spring Security)
 export const API_ENDPOINTS = {

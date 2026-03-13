@@ -102,7 +102,7 @@ public class SecurityConfig {
                         .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").permitAll()
                         .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
                         .requestMatchers("/api/v1/product-image/**").permitAll()
-                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
 
                         // 2. Public Read-only (Sản phẩm máy ảnh)
                         .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX + "/product-category/**").permitAll()
@@ -122,11 +122,11 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(authorization -> authorization
-                                .baseUri("/oauth2/authorize")
+                                .baseUri("/oauth2/authorization")
                                 .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
                         )
                         .redirectionEndpoint(redirection -> redirection
-                                .baseUri("/oauth2/callback/*")
+                                .baseUri("/login/oauth2/code/*")
                         )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)

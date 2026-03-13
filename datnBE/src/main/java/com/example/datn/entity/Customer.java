@@ -41,6 +41,7 @@ public class Customer extends NameEntity implements Serializable {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
     @ToString.Exclude
+    @Builder.Default
     private List<Address> addresses = new ArrayList<>();
 
 }

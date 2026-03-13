@@ -37,7 +37,6 @@ import PrivateRoute from "./components/PrivateRoute";
 import ForbiddenPage from "./Pages/403/Forbidden";
 import "antd/dist/reset.css";
 import OAuth2RedirectPage from "./Pages/auth/0Auth2RedirectPage";
-import RedirectHandler from "./Pages/auth/RedirectHandler";
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -54,9 +53,8 @@ const App: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/redirect" element={<OAuth2RedirectPage />} />
+        <Route path="/oauth2/redirect" element={<OAuth2RedirectPage />} />
         <Route path="/403" element={<ForbiddenPage />} />
-        <Route path="/redirect" element={<RedirectHandler />} />
         <Route
           path="/change-password/:username"
           element={<ChangePasswordPage />}

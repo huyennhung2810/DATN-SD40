@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Tabs, Divider, Typography, Space } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, GithubFilled } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { authActions } from "../../redux/auth/authSlice";
@@ -184,7 +184,7 @@ const LoginPage: React.FC = () => {
           </Button>
           <Button
             block
-            icon={<span style={{ marginRight: 6, fontSize: 16 }}>🐙</span>}
+            icon={<GithubFilled style={{ fontSize: 18 }} />}
             onClick={() => handleOAuth2("github")}
             style={{ height: 40 }}
           >

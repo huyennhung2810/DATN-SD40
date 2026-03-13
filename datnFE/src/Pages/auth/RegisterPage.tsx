@@ -29,7 +29,6 @@ const RegisterPage: React.FC = () => {
           password: values.password,
         },
         navigate: () => {
-          // Chỉ navigate khi đăng ký thành công (saga sẽ gọi)
           navigate("/login");
         },
       }),

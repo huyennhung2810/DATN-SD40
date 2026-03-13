@@ -52,7 +52,7 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 employee.getId(),
                 employee.getAccount().getUsername(),
                 employee.getAccount().getPassword(),
-                employee.getEmail(),
+                employee.getAccount().getEmail(),
                 authorities
         );
     }

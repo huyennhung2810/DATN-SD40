@@ -1,13 +1,13 @@
 package com.example.datn.infrastructure.security.oauth2;
 
+import com.example.datn.entity.Account;
 import com.example.datn.entity.Customer;
 import com.example.datn.entity.Employee;
-import com.example.datn.infrastructure.constant.CookieConstant;
 import com.example.datn.infrastructure.constant.OAuth2Constant;
-import com.example.datn.infrastructure.constant.RoleConstant;
 import com.example.datn.infrastructure.security.exception.OAuth2AuthenticationProcessingException;
 import com.example.datn.infrastructure.security.oauth2.user.OAuth2UserInfo;
 import com.example.datn.infrastructure.security.oauth2.user.OAuth2UserInfoFactory;
+import com.example.datn.infrastructure.security.repository.AuthAccountRepository;
 import com.example.datn.infrastructure.security.repository.AuthCustomerRepository;
 import com.example.datn.infrastructure.security.repository.AuthRoleRepository;
 import com.example.datn.infrastructure.security.repository.AuthStaffRepository;
@@ -19,125 +19,122 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.stereotype.Service;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final HttpServletRequest request;
-
     private final HttpServletResponse response;
-
     private final AuthStaffRepository staffRepository;
-
     private final AuthRoleRepository roleRepository;
-
     private final AuthCustomerRepository customerRepository;
+    private final AuthAccountRepository accountRepository; // Thêm Repo Account để tạo mới
 
     @Override
+    @Transactional // Đảm bảo lưu cả Account và Customer cùng lúc
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
-
-        log.info("OAuth2User loadUser: {}", oAuth2User.toString());
+        log.info("OAuth2User login attempt: {}", oAuth2User.getAttributes().get("email"));
 
         try {
             return processOAuth2User(userRequest, oAuth2User);
         } catch (AuthenticationException ex) {
             throw ex;
-        } catch(Exception ex) {
+        } catch (Exception ex) {
+            log.error("Internal OAuth2 Error: ", ex);
             throw new InternalAuthenticationServiceException(ex.getMessage(), ex.getCause());
         }
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
+        OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(
+                oAuth2UserRequest.getClientRegistration().getRegistrationId(),
+                oAuth2User.getAttributes()
+        );
 
-        OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory
-                .getOAuth2UserInfo(
-                        oAuth2UserRequest.getClientRegistration().getRegistrationId(),
-                        oAuth2User.getAttributes()
-                );
-
-        if(oAuth2UserInfo.getEmail() == null || oAuth2UserInfo.getEmail().isBlank()) {
-            log.warn("Email is null or blank, adding failure cookie and throwing exception.");
-            CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-            throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
+        if (oAuth2UserInfo.getEmail() == null || oAuth2UserInfo.getEmail().isBlank()) {
+            throw new OAuth2AuthenticationProcessingException("Không tìm thấy Email từ nhà cung cấp dịch vụ mạng xã hội.");
         }
 
-        Optional<Cookie> optionalCookieRole = CookieUtils.getCookie(request, OAuth2Constant.SCREEN_FOR_ROLE_COOKIE_NAME);
+        // Lấy role từ cookie. Nếu không có, mặc định là CUSTOMER
+        String roleValueScreen = CookieUtils.getCookie(request, OAuth2Constant.SCREEN_FOR_ROLE_COOKIE_NAME)
+                .map(Cookie::getValue)
+                .orElse(OAuth2Constant.ROLE_CUSTOMER);
 
-        if(optionalCookieRole.isPresent()) {
-            String roleValueScreen = optionalCookieRole.get().getValue();
+        log.info("Processing login for role: {}", roleValueScreen);
 
-            switch (roleValueScreen) {
-                case OAuth2Constant.ROLE_ADMIN -> {
-                    log.info("process role admin");
-                    return this.processAdmin(oAuth2UserInfo);
-                }
-
-                case OAuth2Constant.ROLE_CUSTOMER -> {
-                    log.info("process role customer");
-                    return this.processCustomer(oAuth2UserInfo);
-                }
-
-                default -> {
-                    log.info("unknown role : {}", roleValueScreen);
-                }
-            }
+        if (OAuth2Constant.ROLE_ADMIN.equalsIgnoreCase(roleValueScreen)) {
+            return this.processAdmin(oAuth2UserInfo);
         } else {
-            log.warn("Role cookie not found");
+            return this.processCustomer(oAuth2UserInfo);
         }
-
-        log.warn("Invalid login attempt, adding failure cookie and throwing exception.");
-        CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-        throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
     }
 
+    // Luồng ADMIN: Phải có sẵn trong DB mới cho vào
     private OAuth2User processAdmin(OAuth2UserInfo oAuth2UserInfo) {
         Employee staff = staffRepository.findByEmail(oAuth2UserInfo.getEmail())
-                .orElseThrow(() -> new OAuth2AuthenticationProcessingException("Email nhân viên không tồn tại trong hệ thống"));
+                .orElseThrow(() -> new OAuth2AuthenticationProcessingException("Email nhân viên [" + oAuth2UserInfo.getEmail() + "] không tồn tại trên hệ thống."));
 
         List<String> roles = roleRepository.getRoleCodeByUsername(staff.getAccount().getUsername());
 
-        if (!roles.contains(RoleConstant.ADMIN.name()) && !roles.contains(RoleConstant.STAFF.name())) {
-            throw new OAuth2AuthenticationProcessingException("Tài khoản này không có quyền truy cập Admin");
-        }
-
-        // Chỉ cập nhật ảnh đại diện nếu có thay đổi từ Google
+        // Cập nhật ảnh từ Google nếu có
         staff.setEmployeeImage(oAuth2UserInfo.getImageUrl());
         staffRepository.save(staff);
 
         return UserPrincipal.create(staff, oAuth2UserInfo.getAttributes(), roles);
     }
 
+    // Luồng CUSTOMER: Nếu chưa có thì tự động đăng ký
     private OAuth2User processCustomer(OAuth2UserInfo oAuth2UserInfo) {
         Optional<Customer> optionalCustomer = customerRepository.findByEmail(oAuth2UserInfo.getEmail());
+        Customer customer;
 
-        if(optionalCustomer.isPresent()) {
-            List<String> rolesUser = roleRepository.getRoleCodeByUsername(optionalCustomer.get().getAccount().getUsername());
-            if(rolesUser.contains(RoleConstant.CUSTOMER.name())) {
-                String email = oAuth2UserInfo.getEmail();
-                Customer customer = optionalCustomer.get();
-                customer.setCode(email.substring(0, email.indexOf("@")));
-                customer.setImage(oAuth2UserInfo.getImageUrl());
-                customerRepository.save(customer);
-                return UserPrincipal.create(customer, oAuth2UserInfo.getAttributes(), rolesUser);
-            } else {
-                CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-                throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
-            }
+        if (optionalCustomer.isPresent()) {
+            log.info("Existing customer logging in: {}", oAuth2UserInfo.getEmail());
+            customer = optionalCustomer.get();
+            customer.setImage(oAuth2UserInfo.getImageUrl());
+            customerRepository.save(customer);
         } else {
-            CookieUtils.addCookie(response, CookieConstant.ACCOUNT_NOT_EXIST, CookieConstant.ACCOUNT_NOT_EXIST);
-            throw new OAuth2AuthenticationProcessingException(CookieConstant.ACCOUNT_NOT_EXIST);
+            log.info("New customer! Registering via Social: {}", oAuth2UserInfo.getEmail());
+            customer = registerNewCustomer(oAuth2UserInfo);
         }
+
+        List<String> rolesUser = roleRepository.getRoleCodeByUsername(customer.getAccount().getUsername());
+        return UserPrincipal.create(customer, oAuth2UserInfo.getAttributes(), rolesUser);
+    }
+
+    // Hàm tạo mới tài khoản cho khách mua máy ảnh
+    private Customer registerNewCustomer(OAuth2UserInfo oAuth2UserInfo) {
+        // 1. Tạo Account
+        Account account = new Account();
+        account.setUsername(oAuth2UserInfo.getEmail()); // Dùng email làm username
+        account.setPassword("");
+        account.setEmail(oAuth2UserInfo.getEmail());
+        account.setFullName(oAuth2UserInfo.getName());
+
+        account = accountRepository.save(account);
+
+        // 2. Tạo Customer gắn với Account đó
+        Customer customer = new Customer();
+        customer.setAccount(account);
+        customer.setName(oAuth2UserInfo.getName());
+        customer.setEmail(oAuth2UserInfo.getEmail());
+        customer.setImage(oAuth2UserInfo.getImageUrl());
+        customer.setCode("KH_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+
+        return customerRepository.save(customer);
     }
 }
