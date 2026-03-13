@@ -30,13 +30,14 @@ import BannerList from "./Pages/admin/banner/BannerList";
 import BannerForm from "./Pages/admin/banner/BannerForm";
 import AccountList from "./Pages/admin/account/AccountList";
 import AccountForm from "./Pages/admin/account/AccountForm";
-import LoginPage from "./Pages/auth/LoginPage";
 import RegisterPage from "./Pages/auth/RegisterPage";
 import ForgotPasswordPage from "./Pages/auth/ForgotPasswordPage";
 import PrivateRoute from "./components/PrivateRoute";
 import ForbiddenPage from "./Pages/403/Forbidden";
 import "antd/dist/reset.css";
 import OAuth2RedirectPage from "./Pages/auth/0Auth2RedirectPage";
+import CustomerLoginPage from "./Pages/auth/CustomerLoginPage";
+import AdminLoginPage from "./Pages/auth/AdminLoginPage";
 // Admin Home Page
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -50,7 +51,8 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         {/* Public auth routes */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<CustomerLoginPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/oauth2/redirect" element={<OAuth2RedirectPage />} />

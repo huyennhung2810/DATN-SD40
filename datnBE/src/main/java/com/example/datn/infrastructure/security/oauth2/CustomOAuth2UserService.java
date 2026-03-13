@@ -3,6 +3,7 @@ package com.example.datn.infrastructure.security.oauth2;
 import com.example.datn.entity.Account;
 import com.example.datn.entity.Customer;
 import com.example.datn.entity.Employee;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.OAuth2Constant;
 import com.example.datn.infrastructure.security.exception.OAuth2AuthenticationProcessingException;
 import com.example.datn.infrastructure.security.oauth2.user.OAuth2UserInfo;
@@ -60,6 +61,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
+        // 1. Lấy thông tin user từ Factory
         OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(
                 oAuth2UserRequest.getClientRegistration().getRegistrationId(),
                 oAuth2User.getAttributes()
@@ -69,17 +71,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new OAuth2AuthenticationProcessingException("Không tìm thấy Email từ nhà cung cấp dịch vụ mạng xã hội.");
         }
 
-        // Lấy role từ cookie. Nếu không có, mặc định là CUSTOMER
+        // 2. Lấy role từ cookie (để biết đang đăng nhập ở trang Admin hay Khách)
         String roleValueScreen = CookieUtils.getCookie(request, OAuth2Constant.SCREEN_FOR_ROLE_COOKIE_NAME)
                 .map(Cookie::getValue)
                 .orElse(OAuth2Constant.ROLE_CUSTOMER);
 
         log.info("Processing login for role: {}", roleValueScreen);
 
+        // 3. Kiểm tra điều kiện Role
         if (OAuth2Constant.ROLE_ADMIN.equalsIgnoreCase(roleValueScreen)) {
             return this.processAdmin(oAuth2UserInfo);
         } else {
-            return this.processCustomer(oAuth2UserInfo);
+            // 🔥 ĐÂY LÀ DÒNG PHẢI SỬA: Thêm oAuth2UserRequest vào tham số đầu tiên
+            return this.processCustomer(oAuth2UserRequest, oAuth2UserInfo);
         }
     }
 
@@ -97,8 +101,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return UserPrincipal.create(staff, oAuth2UserInfo.getAttributes(), roles);
     }
 
-    // Luồng CUSTOMER: Nếu chưa có thì tự động đăng ký
-    private OAuth2User processCustomer(OAuth2UserInfo oAuth2UserInfo) {
+    // 1. Cập nhật hàm gọi để truyền thêm RegistrationId
+    private OAuth2User processCustomer(OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) {
         Optional<Customer> optionalCustomer = customerRepository.findByEmail(oAuth2UserInfo.getEmail());
         Customer customer;
 
@@ -108,26 +112,42 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             customer.setImage(oAuth2UserInfo.getImageUrl());
             customerRepository.save(customer);
         } else {
+            // Truyền thêm RegistrationId (google/github) vào đây
+            String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
             log.info("New customer! Registering via Social: {}", oAuth2UserInfo.getEmail());
-            customer = registerNewCustomer(oAuth2UserInfo);
+            customer = registerNewCustomer(oAuth2UserInfo, registrationId);
         }
 
         List<String> rolesUser = roleRepository.getRoleCodeByUsername(customer.getAccount().getUsername());
         return UserPrincipal.create(customer, oAuth2UserInfo.getAttributes(), rolesUser);
     }
 
-    // Hàm tạo mới tài khoản cho khách mua máy ảnh
-    private Customer registerNewCustomer(OAuth2UserInfo oAuth2UserInfo) {
-        // 1. Tạo Account
+    // 2. Hàm tạo mới tài khoản - ĐÃ FIX LỖI NULL ROLE
+    private Customer registerNewCustomer(OAuth2UserInfo oAuth2UserInfo, String registrationId) {
+        // Tạo Account (Dùng Setter để kiểm soát chặt chẽ các trường bắt buộc)
         Account account = new Account();
-        account.setUsername(oAuth2UserInfo.getEmail()); // Dùng email làm username
-        account.setPassword("");
+        account.setUsername(oAuth2UserInfo.getEmail());
         account.setEmail(oAuth2UserInfo.getEmail());
         account.setFullName(oAuth2UserInfo.getName());
+        account.setPassword(""); // Mật khẩu trống cho tài khoản mạng xã hội
+
+        // 🔥 FIX LỖI: Gán Role mặc định là CUSTOMER
+        // Nhung lưu ý import đúng RoleConstant của dự án nhé
+        account.setRole(com.example.datn.infrastructure.constant.RoleConstant.CUSTOMER);
+
+        // Gán trạng thái hoạt động (thường là 1)
+        account.setStatus(EntityStatus.ACTIVE);
+
+        // Gán Provider để biết tài khoản này từ Google hay GitHub
+        try {
+            account.setProvider(com.example.datn.infrastructure.constant.AuthProvider.valueOf(registrationId.toLowerCase()));
+        } catch (Exception e) {
+            log.warn("Lỗi gán provider, đang dùng mặc định");
+        }
 
         account = accountRepository.save(account);
 
-        // 2. Tạo Customer gắn với Account đó
+        // Tạo Customer gắn với Account vừa tạo
         Customer customer = new Customer();
         customer.setAccount(account);
         customer.setName(oAuth2UserInfo.getName());
