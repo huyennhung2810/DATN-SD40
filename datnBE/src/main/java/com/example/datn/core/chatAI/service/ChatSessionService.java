@@ -40,7 +40,6 @@ public class ChatSessionService {
                 .build();
         messageRepository.save(message);
 
-        // ✅ CHỈ lưu content (chữ thuần), không lưu Object tin nhắn vào đây
         session.setLastMessage(content);
         session.setUpdatedAt(LocalDateTime.now());
         sessionRepository.save(session);

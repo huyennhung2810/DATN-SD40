@@ -14,6 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.net.URI;
 @Service
 @RequiredArgsConstructor
 public class GeminiService {
@@ -24,10 +25,6 @@ public class GeminiService {
     private final ProductRepository productRepository;
     private final WebClient.Builder webClientBuilder;
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatSessionService sessionService; // 1. Inject Service này vào
-
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-
 
     public String getChatResponse(String userMsg, String sessionId) {
 
@@ -42,7 +39,7 @@ public class GeminiService {
                 .collect(Collectors.joining("\n"));
 
         String finalPrompt = String.format(
-                "Bạn là chuyên gia máy ảnh Canon tại cửa hàng Hikari. " +
+                "Bạn là chuyên gia máy ảnh Canon tại cửa hàng Canon Hikari. " +
                         "Hãy dùng thông tin sản phẩm sau: \n%s\n\n" +
                         "Ngữ cảnh hội thoại: \n%s\n\n" +
                         "Khách hàng hỏi: %s\n" +
@@ -50,7 +47,6 @@ public class GeminiService {
                 productContext, chatHistory, userMsg
         );
 
-        // Gọi API
         return callGeminiApi(finalPrompt);
     }
 
@@ -62,12 +58,10 @@ public class GeminiService {
                 .collect(Collectors.joining("\n"));
     }
 
-     // Thêm import này
 
     private String callGeminiApi(String prompt) {
         if (apiKey == null || apiKey.isEmpty() || apiKey.equals("${GEMINI_API_KEY}")) {
-            System.err.println("❌ LỖI: GEMINI_API_KEY chưa được nạp!");
-            return "Hikari AI chưa có chìa khóa để hoạt động.";
+            return "Canon Hikari AI: Lỗi cấu hình chìa khóa.";
         }
 
         try {
@@ -76,15 +70,12 @@ public class GeminiService {
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
             );
 
-            // ✅ CÁCH FIX 404: Dùng UriComponentsBuilder để tránh bị encode dấu ":"
-            String url = UriComponentsBuilder
-                    .fromHttpUrl("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent")
-                    .queryParam("key", apiKey)
-                    .build(false) // 'false' để không encode lại các ký tự đặc biệt
-                    .toUriString();
+            // Chú ý: Dùng gemini-flash-latest
+            String urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey.trim();
+            URI uri = new URI(urlString);
 
             JsonNode response = webClient.post()
-                    .uri(url)
+                    .uri(uri)
                     .bodyValue(body)
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -95,11 +86,11 @@ public class GeminiService {
                         .path("content").path("parts").get(0)
                         .path("text").asText();
             }
-            return "Hikari AI không tìm thấy câu trả lời phù hợp.";
+            return "Hikari AI đang suy nghĩ, vui lòng đợi trong giây lát.";
 
         } catch (Exception e) {
             System.err.println("--- LỖI GOOGLE GEMINI: " + e.getMessage());
-            return "Hikari AI đang bận một chút, nhân viên sẽ hỗ trợ bạn ngay nhé!";
+            return "Canon Hikari AI đang bận một chút, nhân viên sẽ hỗ trợ bạn ngay nhé!";
         }
     }
 }
