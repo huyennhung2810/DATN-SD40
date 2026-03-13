@@ -67,42 +67,27 @@ const StorageCapacityPage: React.FC = () => {
   };
 
   const submitForm = async (values: StorageCapacityFormValues) => {
-    setSubmitting(true);
-    try {
-      const api = "http://localhost:8386/api/v1/admin/products/storage-capacity";
-      const res = editingId
-        ? await fetch(`${api}/${editingId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(values),
-          })
-        : await fetch(api, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(values),
-          });
-
-      const data = await res.json();
-
-      if (data.success) {
-        notification.success({
-          message: "Thành công",
-          description: editingId
-            ? "Cập nhật dung lượng thành công"
-            : "Thêm dung lượng thành công",
-        });
-        fetchStorageCapacities();
-        setDrawerOpen(false);
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (e: any) {
-      notification.error({
-        message: "Lỗi",
-        description: e.message || "Không thể lưu dữ liệu",
-      });
-    } finally {
-      setSubmitting(false);
+    if(editingId){
+      dispatch(
+        storageCapacityActions.updateStorage({
+          id: editingId,
+          data: values,
+          navigate: () =>{
+            setDrawerOpen(false);
+            fetchStorageCapacities();
+          },
+        })
+      )
+    }else{
+      dispatch(
+        storageCapacityActions.addStorage({
+          data: values,
+          navigate: () =>{
+            setDrawerOpen(false);
+            fetchStorageCapacities();
+          },
+        })
+      )
     }
   };
 

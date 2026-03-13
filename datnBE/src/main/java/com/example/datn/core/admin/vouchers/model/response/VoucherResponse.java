@@ -28,6 +28,8 @@ public class VoucherResponse {
     private Integer status;
     private String lastModifiedBy;
     private Long lastModifiedDate;
+    private String createdBy;
+    private Long createdDate;
     private List<VoucherDetail> details;
 
     public VoucherResponse(Voucher v) {
@@ -46,6 +48,8 @@ public class VoucherResponse {
         this.status = v.getStatus();
         this.lastModifiedBy = v.getLastModifiedBy();
         this.lastModifiedDate = v.getLastModifiedDate();
+        this.createdBy = v.getCreatedBy();
+        this.createdDate = v.getCreatedDate();
         this.details = v.getDetails();
     }
 }

@@ -64,43 +64,30 @@ const ColorPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  const submitForm = async (values: ColorFormValues) => {
-    setSubmitting(true);
-    try {
-      const api = "http://localhost:8386/api/v1/admin/products/color";
-      const res = editingId
-        ? await fetch(`${api}/${editingId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(values),
-          })
-        : await fetch(api, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(values),
-          });
-
-      const data = await res.json();
-
-      if (data.success) {
-        notification.success({
-          message: "Thành công",
-          description: editingId ? "Cập nhật màu thành công" : "Thêm màu thành công",
-        });
-        fetchColors();
-        setDrawerOpen(false);
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (e: any) {
-      notification.error({
-        message: "Lỗi",
-        description: e.message || "Không thể lưu dữ liệu",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const submitForm = (values: ColorFormValues) => {
+  if (editingId) {
+    dispatch(
+      colorActions.updateColor({
+        id: editingId,
+        data: values,
+        navigate: () => {
+          setDrawerOpen(false);
+          fetchColors();
+        },
+      })
+    );
+  } else {
+    dispatch(
+      colorActions.addColor({
+        data: values,
+        navigate: () => {
+          setDrawerOpen(false);
+          fetchColors();
+        },
+      })
+    );
+  }
+};
 
   const columns: ColumnsType<ColorResponse> = [
     {

@@ -12,7 +12,7 @@ export interface Voucher {
     endDate: number;
     quantity: number;
     status: number;
-    createdBy: string;           // Người tạo ban đầu
+    createdBy: string;         
     createdDate: number;
     lastModifiedBy: string; // Thêm trường này
     lastModifiedDate: number; // Thêm dòng này vào Interface
