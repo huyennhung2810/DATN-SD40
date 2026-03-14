@@ -16,19 +16,21 @@ import {
   SettingOutlined,
   BarcodeOutlined,
   PictureOutlined,
-  SearchOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
   Avatar,
   Typography,
-  Space,
   Dropdown,
   Input,
   type MenuProps,
   Button,
 } from "antd";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../redux/store";
+import { authActions } from "../../redux/auth/authSlice";
 
 const { Text, Title } = Typography;
 const { Search } = Input;
@@ -102,30 +104,44 @@ const pageInfoMap: Record<
     desc: "Quản lý banner hiển thị trên trang khách hàng",
     icon: <PictureOutlined />,
   },
+  "/admin/accounts": {
+    title: "Quản lý tài khoản",
+    desc: "Quản lý tài khoản admin và nhân viên",
+    icon: <KeyOutlined />,
+  },
 };
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const currentPath = location.pathname;
 
-  const basePath = "/" + currentPath.split("/").slice(1, 2).join("/");
+  //Laấyn  tuống ttiser hiện tại
+  const { user } = useSelector((state: RootState) => state.auth);
 
-  const currentPage = pageInfoMap[basePath] || pageInfoMap[currentPath] || {
-    title: "Tổng quan",
-    desc: "Chào mừng bạn quay trở lại hệ thống quản lý",
-    icon: <ShopOutlined />,
+  //lấy tt trang hiện tại
+  const basePath = "/" + currentPath.split("/").slice(1, 2).join("/");
+  const currentPage = pageInfoMap[currentPath] ||
+    pageInfoMap[basePath] || {
+      title: "Hikari Admin",
+      desc: "Chào mừng bạn quay lại hệ thống quản lý máy ảnh",
+      icon: <ShopOutlined />,
+    };
+
+  //xử lý khi chọn menu
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "logout") {
+      dispatch(authActions.logout({ isAdmin: true }));
+    } else if (key === "profile") {
+      navigate("/profile");
+    }
   };
 
-  const items: MenuProps["items"] = [
+  const menuItems: MenuProps["items"] = [
     { key: "profile", label: "Hồ sơ cá nhân", icon: <UserOutlined /> },
-    {
-      key: "settings",
-      label: "Cài đặt tài khoản",
-      icon: <SettingOutlined />,
-    },
-    {
-      type: "divider",
-    },
+    { key: "settings", label: "Cài đặt tài khoản", icon: <SettingOutlined /> },
+    { type: "divider" },
     {
       key: "logout",
       label: "Đăng xuất",
@@ -136,11 +152,8 @@ const Header: React.FC = () => {
 
   return (
     <header className="admin-header">
-      {/* Page Info */}
       <div className="header-page-info">
-        <div className="page-icon">
-          {currentPage.icon}
-        </div>
+        <div className="page-icon">{currentPage.icon}</div>
         <div className="page-text">
           <Title level={5} className="page-title">
             {currentPage.title}
@@ -151,18 +164,16 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Search */}
       <div className="header-search">
         <Search
-          placeholder="Tìm kiếm..."
+          placeholder="Tìm sản phẩm, đơn hàng..."
           allowClear
           className="header-search-input"
         />
       </div>
 
-      {/* Actions */}
       <div className="header-actions">
-        <Badge count={3} size="small">
+        <Badge count={5} size="small" offset={[-2, 4]}>
           <Button
             type="text"
             icon={<BellOutlined />}
@@ -170,15 +181,24 @@ const Header: React.FC = () => {
           />
         </Badge>
 
-        <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+        <Dropdown
+          menu={{ items: menuItems, onClick: handleMenuClick }}
+          trigger={["click"]}
+          placement="bottomRight"
+        >
           <div className="header-user">
             <Avatar
-              icon={<UserOutlined />}
+              src={user?.pictureUrl}
+              icon={!user?.pictureUrl && <UserOutlined />}
               className="header-avatar"
             />
             <div className="header-user-info">
-              <div className="header-user-name">Admin</div>
-              <div className="header-user-role">Quản trị viên</div>
+              <div className="header-user-name">
+                {user?.fullName || "Admin"}
+              </div>
+              <div className="header-user-role">
+                {user?.roles?.[0] === "ADMIN" ? "Quản trị viên" : "Nhân viên"}
+              </div>
             </div>
           </div>
         </Dropdown>
@@ -186,142 +206,99 @@ const Header: React.FC = () => {
 
       <style>{`
         .admin-header {
-          height: var(--header-height);
+          height: 64px;
           padding: 0 24px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 1px solid var(--color-border-secondary);
+          border-bottom: 1px solid #f0f0f0;
           background: #fff;
           position: sticky;
           top: 0;
           z-index: 100;
-          flex-shrink: 0;
+          box-shadow: 0 1px 4px rgba(0,21,41,.08);
         }
 
-        /* Page Info */
         .header-page-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 250px;
+        }
+
+        .page-icon {
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+          border-radius: 8px;
+          color: #fff;
+          font-size: 18px;
+        }
+
+        .page-title {
+          margin: 0 !important;
+          font-size: 15px !important;
+          font-weight: 600 !important;
+        }
+
+        .page-desc {
+          font-size: 11px;
+          display: block;
+          margin-top: -2px;
+        }
+
+        .header-search {
+          flex: 1;
+          max-width: 350px;
+          margin: 0 20px;
+        }
+
+        .header-actions {
           display: flex;
           align-items: center;
           gap: 12px;
         }
 
-        .page-icon {
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
-          border-radius: 10px;
-          color: #fff;
-          font-size: 18px;
-        }
-
-        .page-text {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .page-title {
-          margin: 0 !important;
-          font-weight: 600 !important;
-          font-size: 15px !important;
-          color: var(--color-text-primary);
-          line-height: 1.3;
-        }
-
-        .page-desc {
-          font-size: 12px;
-          color: var(--color-text-secondary) !important;
-        }
-
-        /* Search */
-        .header-search {
-          flex: 1;
-          max-width: 400px;
-          margin: 0 24px;
-        }
-
-        .header-search-input {
-          width: 100%;
-        }
-
-        .header-search-input .ant-input {
-          border-radius: 8px;
-          background: var(--color-bg-spotlight);
-        }
-
-        .header-search-input .ant-input:hover,
-        .header-search-input .ant-input:focus {
-          border-color: #0A84FF;
-        }
-
-        /* Actions */
-        .header-actions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
         .header-action-btn {
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-          color: var(--color-text-secondary);
+          font-size: 18px;
+          color: #595959;
         }
 
-        .header-action-btn:hover {
-          background: var(--color-bg-spotlight);
-          color: #0A84FF;
-        }
-
-        /* User */
         .header-user {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 6px 12px;
-          border-radius: 8px;
+          gap: 8px;
+          padding: 4px 8px;
+          border-radius: 6px;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: background 0.3s;
         }
 
         .header-user:hover {
-          background: var(--color-bg-spotlight);
+          background: #f5f5f5;
         }
 
         .header-avatar {
-          background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
-        }
-
-        .header-user-info {
-          display: flex;
-          flex-direction: column;
+          border: 1px solid #e8e8e8;
+          background: #1890ff;
         }
 
         .header-user-name {
           font-weight: 600;
           font-size: 13px;
-          color: var(--color-text-primary);
-          line-height: 1.3;
+          color: #262626;
         }
 
         .header-user-role {
           font-size: 11px;
-          color: var(--color-text-secondary);
+          color: #8c8c8c;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-          .header-search {
-            display: none;
-          }
-
-          .header-user-info {
+        @media (max-width: 992px) {
+          .header-search, .page-desc {
             display: none;
           }
         }

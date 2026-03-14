@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Card,
   Button,
   Typography,
   Row,
   Col,
-  Divider,
   Space,
   Tag,
   Spin,
+  Alert,
+  Statistic,
 } from "antd";
 import {
   ContainerOutlined,
@@ -18,174 +19,248 @@ import {
   DollarCircleOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import dayjs from "dayjs";
 import type { RootState } from "../../../redux/store";
+import { workScheduleApi } from "../../../api/workScheduleApi";
 import CheckInModal from "./CheckInModal";
 import CheckOutModal from "./CheckOutModal";
 
 const { Title, Text } = Typography;
 
 const ShiftHandoverPage: React.FC = () => {
-  const _dispatch = useDispatch();
-
-  // 1. Lấy dữ liệu từ Redux Store
-  const { currentShift, isLoading } = useSelector(
+  // --- REDUX STATE ---
+  const { currentShift, isLoading: isShiftLoading } = useSelector(
     (state: RootState) => state.shiftHandover,
   );
+  const { user } = useSelector((state: RootState) => state.auth);
 
+  // --- LOCAL STATE ---
   const [isCheckInOpen, setIsCheckInOpen] = useState<boolean>(false);
   const [isCheckOutOpen, setIsCheckOutOpen] = useState<boolean>(false);
+  const [todaySchedule, setTodaySchedule] = useState<{
+    id: string;
+    shiftName?: string;
+  } | null>(null);
+  const [fetchingSchedule, setFetchingSchedule] = useState<boolean>(false);
 
-  // 2. Mock Schedule ID (Phần này Nhung sẽ thay bằng ID thật từ lịch làm việc sau này)
-  const currentScheduleId = "111"
+  // --- LOGIC: LẤY LỊCH TRỰC HÔM NAY ---
+  const fetchTodaySchedule = useCallback(async () => {
+    // Nếu đã trong ca thì không cần tìm lịch trực nữa
+    if (!user?.userId || !!currentShift) return;
 
-  // 3. Xác định trạng thái ca làm việc
+    setFetchingSchedule(true);
+    try {
+      const res = await workScheduleApi.getTodaySchedule(user.userId);
+      if (res && res.data) {
+        setTodaySchedule(res.data);
+      }
+    } catch (error: any) {
+      // Xử lý lỗi 404 hoặc không có lịch trực
+      if (error?.response?.status === 404) {
+        setTodaySchedule(null);
+      }
+      console.error("Lỗi khi tải lịch trực:", error);
+    } finally {
+      setFetchingSchedule(false);
+    }
+  }, [user?.userId, currentShift]);
+
+  useEffect(() => {
+    fetchTodaySchedule();
+  }, [fetchTodaySchedule]);
+
   const hasStartedShift = !!currentShift;
 
   return (
     <div style={{ padding: "24px", minHeight: "85vh", background: "#f0f2f5" }}>
       <Row justify="center">
-        <Col xs={24} sm={22} md={18} lg={14} xl={12}>
-          <Spin spinning={isLoading} description="Đang xử lý dữ liệu...">
+        <Col xs={24} sm={22} md={18} lg={14} xl={10}>
+          <Spin
+            spinning={isShiftLoading || fetchingSchedule}
+            tip="Đang tải dữ liệu..."
+          >
             <Card
-              variant="borderless"
+              bordered={false}
               style={{
-                borderRadius: 12,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                borderRadius: 16,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                overflow: "hidden",
               }}
               title={
                 <Space>
-                  <ContainerOutlined style={{ color: "#1890ff" }} />
+                  <ContainerOutlined
+                    style={{ color: "#1890ff", fontSize: 20 }}
+                  />
                   <Title level={4} style={{ margin: 0 }}>
-                    Quản Lý Ca Làm Việc
+                    Hệ Thống Giao Ca Hikari
                   </Title>
                 </Space>
               }
+              extra={
+                <Text type="secondary">{dayjs().format("DD/MM/YYYY")}</Text>
+              }
             >
               {!hasStartedShift ? (
-                <div style={{ textAlign: "center", padding: "50px 0" }}>
-                  <div style={{ marginBottom: 24 }}>
-                    <PlayCircleOutlined
-                      style={{ fontSize: 64, color: "#d9d9d9" }}
+                /* ================= GIAO DIỆN KHI CHƯA VÀO CA ================= */
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <PlayCircleOutlined
+                    style={{ fontSize: 80, color: "#f0f0f0", marginBottom: 20 }}
+                  />
+                  <Title level={3}>
+                    Chào buổi sáng, {user?.fullName || "Nhân viên"}
+                  </Title>
+
+                  {todaySchedule ? (
+                    <Alert
+                      message={
+                        <b>Lịch trực hôm nay: {todaySchedule.shiftName}</b>
+                      }
+                      description="Bạn đã sẵn sàng? Vui lòng kiểm tra tiền mặt tại quầy và thực hiện Check-in để bắt đầu bán hàng."
+                      type="info"
+                      showIcon
+                      style={{
+                        marginBottom: 30,
+                        textAlign: "left",
+                        borderRadius: 8,
+                      }}
                     />
-                  </div>
-                  <Title level={3}>Bạn chưa vào ca làm việc</Title>
-                  <Text
-                    type="secondary"
-                    style={{ display: "block", marginBottom: 32, fontSize: 16 }}
-                  >
-                    Vui lòng kiểm tra lại tiền mặt tại quầy và thực hiện
-                    Check-in để bắt đầu bán hàng.
-                  </Text>
+                  ) : (
+                    <Alert
+                      message="Không tìm thấy lịch trực"
+                      description="Hệ thống chưa ghi nhận lịch làm việc của bạn trong hôm nay. Vui lòng liên hệ quản lý nếu có sai sót."
+                      type="warning"
+                      showIcon
+                      style={{
+                        marginBottom: 30,
+                        textAlign: "left",
+                        borderRadius: 8,
+                      }}
+                    />
+                  )}
+
                   <Button
-                  type="primary"
-                  size="large"
-                  icon={<PlayCircleOutlined />}
-                  disabled={!currentScheduleId} // Vô hiệu hóa nút nếu biến đang là null
-                  onClick={() => setIsCheckInOpen(true)}
-                  style={{
-                    height: 50,
-                    padding: "0 40px",
-                    borderRadius: 25,
-                    backgroundColor: currentScheduleId ? "#20c997" : "#d9d9d9", // Đổi màu xám nếu bị disable
-                    borderColor: currentScheduleId ? "#20c997" : "#d9d9d9",
-                    fontSize: 18,
-                    fontWeight: 600,
-                  }}
-                >
-                  {currentScheduleId ? "Bắt Đầu Ca Ngay" : "Đang tải lịch làm việc..."}
+                    type="primary"
+                    size="large"
+                    icon={<PlayCircleOutlined />}
+                    disabled={!todaySchedule}
+                    onClick={() => setIsCheckInOpen(true)}
+                    style={{
+                      height: 55,
+                      padding: "0 60px",
+                      borderRadius: 30,
+                      fontSize: 18,
+                      fontWeight: 700,
+                      backgroundColor: todaySchedule ? "#20c997" : "#d9d9d9",
+                      borderColor: todaySchedule ? "#20c997" : "#d9d9d9",
+                      boxShadow: todaySchedule
+                        ? "0 4px 15px rgba(32, 201, 151, 0.4)"
+                        : "none",
+                    }}
+                  >
+                    BẮT ĐẦU CA LÀM VIỆC
                   </Button>
                 </div>
               ) : (
+                /* ================= GIAO DIỆN KHI ĐANG TRONG CA ================= */
                 <>
-                  <div style={{ marginBottom: 30 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 20,
-                      }}
-                    >
-                      <Tag
-                        color="processing"
-                        icon={<InfoCircleOutlined />}
-                        style={{ padding: "4px 12px", borderRadius: 4 }}
-                      >
-                        ĐANG TRONG CA LÀM VIỆC
-                      </Tag>
-                      <Text type="secondary">
-                        ID Ca: {currentShift.id?.substring(0, 8)}...
+                  <div
+                    style={{
+                      background: "#f0f5ff",
+                      padding: "16px",
+                      borderRadius: "12px",
+                      marginBottom: "25px",
+                      border: "1px solid #adc6ff",
+                    }}
+                  >
+                    <Row align="middle" justify="space-between">
+                      <Space>
+                        <Tag
+                          color="blue"
+                          style={{
+                            borderRadius: 10,
+                            padding: "2px 12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ONLINE
+                        </Tag>
+                        <Text strong style={{ color: "#003a8c" }}>
+                          CA LÀM VIỆC ĐANG HOẠT ĐỘNG
+                        </Text>
+                      </Space>
+                      <Text type="secondary" code>
+                        {currentShift.id?.substring(0, 12)}
                       </Text>
-                    </div>
+                    </Row>
+                  </div>
 
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Card
-                          size="small"
-                          bordered
-                          style={{ background: "#f9f9f9" }}
-                        >
-                          <Space direction="vertical">
+                  <Row gutter={[16, 16]} style={{ marginBottom: 25 }}>
+                    <Col span={12}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
                             <Text type="secondary">
-                              <CalendarOutlined /> Thời gian bắt đầu
+                              <CalendarOutlined /> Thời gian vào ca
                             </Text>
-                            <Text strong style={{ fontSize: 16 }}>
-                              {currentShift.checkInTime
-                                ? dayjs(currentShift.checkInTime).format(
-                                    "HH:mm - DD/MM/YYYY",
-                                  )
-                                : "---"}
-                            </Text>
-                          </Space>
-                        </Card>
-                      </Col>
-                      <Col span={12}>
-                        <Card
-                          size="small"
-                          bordered
-                          style={{ background: "#f9f9f9" }}
-                        >
-                          <Space direction="vertical">
+                          }
+                          value={dayjs(currentShift.checkInTime).format(
+                            "HH:mm",
+                          )}
+                          valueStyle={{ fontSize: "20px", fontWeight: 700 }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={12}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
                             <Text type="secondary">
                               <DollarCircleOutlined /> Tiền mặt đầu ca
                             </Text>
-                            <Text
-                              strong
-                              style={{ fontSize: 16, color: "#52c41a" }}
-                            >
-                              {currentShift.initialCash?.toLocaleString(
-                                "vi-VN",
-                              )}{" "}
-                              ₫
-                            </Text>
-                          </Space>
-                        </Card>
-                      </Col>
-                    </Row>
-                  </div>
-                  <Divider>
-                    <Text type="secondary">Thông tin bàn giao từ ca trước</Text>
-                  </Divider>
+                          }
+                          value={currentShift.initialCash || 0}
+                          suffix="₫"
+                          valueStyle={{
+                            fontSize: "20px",
+                            fontWeight: 700,
+                            color: "#52c41a",
+                          }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
                   <div
                     style={{
-                      padding: 16,
+                      padding: "16px",
                       background: "#fffbe6",
                       border: "1px solid #ffe58f",
-                      borderRadius: 8,
-                      marginBottom: 30,
+                      borderRadius: "12px",
+                      marginBottom: "30px",
                     }}
                   >
-                    <Text italic>
-                      "
-                      {currentShift.note ||
-                        "Không có ghi chú bàn giao đặc biệt từ ca trước."}
-                      "
-                    </Text>
+                    <Space align="start">
+                      <InfoCircleOutlined
+                        style={{ color: "#faad14", marginTop: 4 }}
+                      />
+                      <div>
+                        <Text strong>Ghi chú nhận ca:</Text>
+                        <br />
+                        <Text italic type="secondary">
+                          {currentShift.note ||
+                            "Không có ghi chú bàn giao từ ca trước."}
+                        </Text>
+                      </div>
+                    </Space>
                   </div>
-                  <AlertInfo />{" "}
-                  {/* Một component nhỏ thông báo nếu có hóa đơn chờ */}
+
                   <Button
                     type="primary"
                     danger
@@ -194,15 +269,14 @@ const ShiftHandoverPage: React.FC = () => {
                     icon={<LogoutOutlined />}
                     onClick={() => setIsCheckOutOpen(true)}
                     style={{
-                      height: 50,
-                      borderRadius: 8,
-                      fontSize: 18,
-                      fontWeight: 700,
-                      marginTop: 10,
-                      boxShadow: "0 4px 10px rgba(255, 77, 79, 0.3)",
+                      height: 55,
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      fontSize: 17,
+                      boxShadow: "0 4px 15px rgba(255, 77, 79, 0.3)",
                     }}
                   >
-                    KẾT THÚC CA & BÀN GIAO
+                    KẾT THÚC CA & BÀN GIAO TIỀN
                   </Button>
                 </>
               )}
@@ -211,30 +285,20 @@ const ShiftHandoverPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Modals điều khiển */}
+      {/* --- CÁC MODAL CHỨC NĂNG --- */}
       <CheckInModal
         isOpen={isCheckInOpen}
         onClose={() => setIsCheckInOpen(false)}
-        scheduleId={currentScheduleId}
+        scheduleId={todaySchedule?.id || ""}
       />
 
       <CheckOutModal
         isOpen={isCheckOutOpen}
         onClose={() => setIsCheckOutOpen(false)}
-        scheduleId={currentScheduleId}
+        scheduleId={currentShift?.workScheduleId || todaySchedule?.id || ""}
       />
     </div>
   );
 };
-
-// Component phụ trợ hiển thị nhắc nhở
-const AlertInfo = () => (
-  <div style={{ marginBottom: 20, textAlign: "center" }}>
-    <Text type="secondary" style={{ fontSize: 13 }}>
-      * Hệ thống sẽ tự động tính toán doanh thu tiền mặt dựa trên các hóa đơn
-      bạn đã hoàn thành trong ca.
-    </Text>
-  </div>
-);
 
 export default ShiftHandoverPage;

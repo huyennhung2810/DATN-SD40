@@ -7,7 +7,6 @@ import com.example.datn.core.admin.discount.service.DiscountService;
 import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.discountDetail.service.DiscountDetailService; // Service con chúng ta đã tạo
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.vouchers.model.request.ADVoucherSearchRequest;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;
@@ -134,6 +133,7 @@ public class DiscountServiceImpl implements DiscountService {
             discount = new Discount();
             discount.setId(UUID.randomUUID().toString()); // Tạo ID ngay từ đầu
             discount.setCreatedAt(now);
+            discount.setCreatedBy(req.getCreatedBy());
         }
 
         // 3. Mapping dữ liệu từ Request vào Entity
@@ -145,6 +145,7 @@ public class DiscountServiceImpl implements DiscountService {
         discount.setQuantity(req.getQuantity());
         discount.setNote(req.getNote());
         discount.setUpdatedAt(now);
+        discount.setUpdatedBy(req.getUpdatedBy());
 
         // 4. Tính toán trạng thái dựa trên thời gian (Hoặc giữ nguyên nếu là Buộc dừng)
         if (req.getStatus() != null && req.getStatus() == 0) {

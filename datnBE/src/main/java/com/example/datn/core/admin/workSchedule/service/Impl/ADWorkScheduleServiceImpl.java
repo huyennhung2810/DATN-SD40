@@ -11,7 +11,6 @@ import com.example.datn.entity.ShiftTemplate;
 import com.example.datn.entity.WorkSchedule;
 import com.example.datn.infrastructure.constant.ShiftStatus;
 import com.example.datn.repository.EmployeeRepository;
-import com.example.datn.repository.ProductRepository;
 import com.example.datn.repository.ShiftTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +38,7 @@ public class ADWorkScheduleServiceImpl implements ADWorkScheduleService {
                 .employeeId(entity.getEmployee().getId())
                 .employeeName(entity.getEmployee().getName())
                 .employeeCode(entity.getEmployee().getCode())
+                .shiftTemplateId(entity.getShiftTemplate().getId())
                 .shiftName(entity.getShiftTemplate().getName())
                 .startTime(entity.getShiftTemplate().getStartTime())
                 .endTime(entity.getShiftTemplate().getEndTime())
@@ -132,5 +134,62 @@ public class ADWorkScheduleServiceImpl implements ADWorkScheduleService {
             log.error("Lỗi xóa lịch: {}", e.getMessage());
             return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống khi xóa lịch");
         }
+    }
+
+
+    @Override
+    @Transactional
+    public ResponseObject<?> updateSchedule(String id, ADCreateScheduleRequest request) {
+        WorkSchedule schedule = adWorkScheduleRepository.findById(id).orElse(null);
+        if (schedule == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Lịch không tồn tại");
+
+        if (schedule.getShiftStatus() != ShiftStatus.REGISTERED) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Không thể sửa ca đã bắt đầu hoặc kết thúc");
+        }
+
+        // ktra trùng
+        boolean isDuplicate = adWorkScheduleRepository.existsByEmployee_IdAndShiftTemplate_IdAndWorkDateAndIdNot(
+                request.getEmployeeId(), request.getShiftTemplateId(), request.getWorkDate(), id
+        );
+
+        if (isDuplicate) {
+            return ResponseObject.error(HttpStatus.CONFLICT, "Lịch làm việc mới bị trùng với một lịch khác của nhân viên này");
+        }
+
+        // Cập nhật thông tin
+        Employee employee = employeeRepository.findById(request.getEmployeeId()).orElse(null);
+        ShiftTemplate template = shiftTemplateRepository.findById(request.getShiftTemplateId()).orElse(null);
+
+        if (employee == null || template == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Dữ liệu không hợp lệ");
+
+        schedule.setEmployee(employee);
+        schedule.setShiftTemplate(template);
+        schedule.setWorkDate(request.getWorkDate());
+
+        return ResponseObject.success(mapToResponse(adWorkScheduleRepository.save(schedule)), "Cập nhật thành công");
+    }
+
+    @Override
+    public ResponseObject<?> getTodaySchedule(String employeeId) {
+        Optional<WorkSchedule> scheduleOpt = adWorkScheduleRepository
+                .findByEmployee_IdAndWorkDateAndShiftStatus(
+                        employeeId,
+                        LocalDate.now(),
+                        ShiftStatus.REGISTERED
+                );
+
+        if (scheduleOpt.isEmpty()) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Hôm nay bạn không có lịch làm việc");
+        }
+
+        // Map sang Map hoặc DTO để tránh lỗi
+        WorkSchedule schedule = scheduleOpt.get();
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", schedule.getId());
+        result.put("workDate", schedule.getWorkDate());
+        result.put("shiftName", schedule.getShiftTemplate().getName());
+        result.put("startTime", schedule.getShiftTemplate().getStartTime());
+
+        return ResponseObject.success(result, "Thành công");
     }
 }

@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/product-details-discount") // Đường dẫn khớp với Frontend
+@RequestMapping("/api/v1/admin/product-details-discount") // Đường dẫn khớp với Frontend
 @CrossOrigin("*") // Cho phép FE gọi API
 public class ProductDetailForDiscountController {
 

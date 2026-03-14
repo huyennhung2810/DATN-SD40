@@ -29,9 +29,6 @@ public interface ADCustomerRepository extends CustomerRepository {
             @Param("gender") Boolean gender
     );
 
-    // Kiểm tra trùng CCCD
-    boolean existsByIdentityCardAndIdNot(String identityCard, String id);
-    boolean existsByIdentityCard(String identityCard);
 
     // Kiểm tra trùng Số điện thoại
     boolean existsByPhoneNumberAndIdNot(String phoneNumber, String id);

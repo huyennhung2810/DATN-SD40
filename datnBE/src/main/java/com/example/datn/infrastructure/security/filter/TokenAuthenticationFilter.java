@@ -32,42 +32,35 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     @Setter(onMethod = @__({@Autowired}))
     private CustomUserDetailsService customUserDetailsService;
 
-    @Setter(onMethod = @__({@Autowired}))
-    private GlobalVariables globalVariables;
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
-        try {
-            logger.info("request nhận vào trong doFilter");
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+        if (path.contains("/oauth2/") || path.contains("/login/oauth2/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
             String jwt = getJwtFromRequest(request);
 
-            log.info("doFilter internal ===> jwt = {}", jwt);
+            // Chỉ log mức DEBUG để tránh làm rác Console khi chạy thực tế
+            log.debug("Processing request for URI: {}", request.getRequestURI());
 
-            if(StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
-                String userId = tokenProvider.getUserIdFormToken(jwt);
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-                List<String> rolesCode = tokenProvider.getRolesFormToken(jwt);
 
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                // Đây là cách lưu trữ thông tin User AN TOÀN nhất (cô lập theo từng thread)
+                SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                globalVariables.setGlobalVariable(GlobalVariablesConstant.CURRENT_USER_ID, userId);
-                globalVariables.setGlobalVariable(GlobalVariablesConstant.CURRENT_ROLE_CODE, rolesCode);
-
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-
+                // Tuyệt đối KHÔNG dùng globalVariables.setGlobalVariable ở đây nữa
             }
-
         } catch (Exception e) {
             log.error("Could not set user authentication in security context", e);
         }

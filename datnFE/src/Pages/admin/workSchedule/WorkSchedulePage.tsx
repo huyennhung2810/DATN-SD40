@@ -7,9 +7,7 @@ import {
   Space,
   Popconfirm,
   Typography,
-  message,
   Select,
-  Card,
   Row,
   Col,
   Calendar,
@@ -33,16 +31,17 @@ import WorkScheduleModal from "./WorkScheduleModal";
 
 const { Text } = Typography;
 
-interface PageResponse<T> {
-  data: T[];
-  totalElements: number;
-}
+const STATUS_MAP = {
+  REGISTERED: { color: "blue", label: "Đã đăng ký" },
+  WORKING: { color: "orange", label: "Đang làm việc" },
+  COMPLETED: { color: "green", label: "Hoàn thành" },
+  ABSENT: { color: "red", label: "Vắng mặt" },
+};
 
 const WorkSchedulePage: React.FC = () => {
   const [schedules, setSchedules] = useState<WorkScheduleResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
   const [editingRecord, setEditingRecord] =
     useState<WorkScheduleResponse | null>(null);
@@ -53,32 +52,35 @@ const WorkSchedulePage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [filterDate, setFilterDate] = useState<Dayjs | null>(null);
 
-  const fetchEmployees = async (): Promise<void> => {
+  const fetchEmployees = async () => {
     try {
       const res = await employeeApi.getAll({ page: 0, size: 100 });
-      const resRaw = res as unknown as { data: PageResponse<EmployeeResponse> };
-      const empData = resRaw?.data?.data || [];
-
+      const resData = res as any;
+      const empList = resData?.data?.data || resData?.data || [];
       setEmployees([
-        { label: "Tất cả", value: "all" },
-        ...empData.map((e) => ({ label: e.name, value: e.id })),
+        { label: "Tất cả nhân viên", value: "all" },
+        ...empList.map((e: EmployeeResponse) => ({
+          label: e.name,
+          value: e.id,
+        })),
       ]);
-    } catch (error: unknown) {
-      console.error(error);
+    } catch (error) {
+      console.error("Lỗi fetch nhân viên:", error);
     }
   };
 
-  const fetchSchedules = async (): Promise<void> => {
+  const fetchSchedules = async () => {
     setLoading(true);
     try {
       const params = {
         fromDate: dayjs().startOf("month").format("YYYY-MM-DD"),
         toDate: dayjs().endOf("month").format("YYYY-MM-DD"),
       };
-      const data = await workScheduleApi.getSchedules(params);
-      setSchedules(data);
-    } catch (error: unknown) {
-      console.error(error);
+      const res = await workScheduleApi.getSchedules(params);
+      setSchedules(Array.isArray(res) ? res : []);
+    } catch (error) {
+      console.error("Lỗi fetch lịch làm việc:", error);
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -91,21 +93,13 @@ const WorkSchedulePage: React.FC = () => {
 
   const displayedSchedules = useMemo(() => {
     return schedules.filter((item) => {
-      const selectedEmp = employees.find((e) => e.value === selectedEmployee);
-      const empNameOnly = selectedEmp ? selectedEmp.label.split(" (")[0] : "";
-
       const matchEmp =
-        selectedEmployee === "all" ||
-        (item as unknown as { employeeId?: string }).employeeId ===
-          selectedEmployee ||
-        item.employeeName === empNameOnly;
-
+        selectedEmployee === "all" || item.employeeId === selectedEmployee;
       const matchDate =
         !filterDate || item.workDate === filterDate.format("YYYY-MM-DD");
-
       return matchEmp && matchDate;
     });
-  }, [schedules, selectedEmployee, filterDate, employees]);
+  }, [schedules, selectedEmployee, filterDate]);
 
   const handleRefresh = () => {
     setSelectedEmployee("all");
@@ -113,38 +107,28 @@ const WorkSchedulePage: React.FC = () => {
     fetchSchedules();
   };
 
-  const handleEdit = (record: WorkScheduleResponse) => {
-    setEditingRecord(record);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingRecord(null);
-  };
-
-  const handleDelete = async (id: string): Promise<void> => {
-    try {
-      await workScheduleApi.deleteSchedule(id);
-      message.success("Xóa lịch thành công");
-      fetchSchedules();
-    } catch (error: unknown) {
-      console.error(error);
-      message.error("Lỗi khi xóa lịch làm việc");
-    }
-  };
-
   const columns: ColumnsType<WorkScheduleResponse> = [
-    { title: "ID", width: 60, render: (_, __, index) => index + 1 },
-    { title: "Mã nhân viên", dataIndex: "employeeCode", key: "employeeCode" },
-    { title: "Tên nhân viên", dataIndex: "employeeName", key: "employeeName" },
     {
-      title: "Ca làm",
-      render: (_: string, record: WorkScheduleResponse) => {
-        const startH = parseInt(record.startTime.split(":")[0]);
-        const endH = parseInt(record.endTime.split(":")[0]);
-        return <Tag color="blue">{`${startH}h - ${endH}h`}</Tag>;
-      },
+      title: "STT",
+      width: 60,
+      align: "center",
+      render: (_, __, index) => index + 1,
+    },
+    { title: "Mã NV", dataIndex: "employeeCode", key: "employeeCode" },
+    {
+      title: "Tên nhân viên",
+      dataIndex: "employeeName",
+      key: "employeeName",
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Khung giờ",
+      align: "center",
+      render: (_, record) => (
+        <Tag color="blue" style={{ borderRadius: "4px" }}>
+          {`${record.startTime?.slice(0, 5)} - ${record.endTime?.slice(0, 5)}`}
+        </Tag>
+      ),
     },
     {
       title: "Ngày làm",
@@ -152,22 +136,52 @@ const WorkSchedulePage: React.FC = () => {
       render: (date) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
+      title: "Trạng thái",
+      dataIndex: "status",
+      align: "center",
+      render: (status: keyof typeof STATUS_MAP) => {
+        const config = STATUS_MAP[status] || {
+          color: "default",
+          label: status,
+        };
+        return (
+          <Tag color={config.color} style={{ minWidth: 90 }}>
+            {config.label.toUpperCase()}
+          </Tag>
+        );
+      },
+    },
+    {
       title: "Thao tác",
-      render: (_: string, record: WorkScheduleResponse) => (
-        <Space>
+      key: "action",
+      align: "center",
+      render: (_, record) => (
+        <Space size="small">
           <Button
-            type="link"
+            type="text"
             size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            Sửa
-          </Button>
+            icon={<EditOutlined style={{ color: "#1890ff" }} />}
+            disabled={record.status !== "REGISTERED"}
+            onClick={() => {
+              setEditingRecord(record);
+              setIsModalOpen(true);
+            }}
+          />
           <Popconfirm
-            title="Bạn có chắc muốn xóa lịch làm việc này?"
-            onConfirm={() => handleDelete(record.id)}
+            title="Xóa lịch làm việc?"
+            disabled={record.status !== "REGISTERED"}
+            onConfirm={() =>
+              workScheduleApi
+                .deleteSchedule(record.id)
+                .then(() => fetchSchedules())
+            }
           >
-            <Button type="link" danger size="small">
+            <Button
+              type="text"
+              danger
+              size="small"
+              disabled={record.status !== "REGISTERED"}
+            >
               Xóa
             </Button>
           </Popconfirm>
@@ -176,132 +190,122 @@ const WorkSchedulePage: React.FC = () => {
     },
   ];
 
-  const dateCellRender = (value: Dayjs) => {
-    const listData = displayedSchedules.filter(
-      (s) => s.workDate === value.format("YYYY-MM-DD"),
-    );
-    return (
-      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {listData.map((item) => (
-          <li key={item.id} style={{ marginBottom: 4 }}>
-            <Badge
-              status="success"
-              text={`${item.employeeName} (${parseInt(item.startTime)}h)`}
-              style={{ fontSize: 12 }}
-            />
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
   return (
-    <div style={{ background: "#f5f5f5", minHeight: "100vh" }}>
-      <Card style={{ marginBottom: 20, borderRadius: 8 }}>
-        <Row justify="space-between" align="bottom">
-          <Col>
+    <div style={{ padding: "10px 0" }}>
+      {/* Thanh công cụ và lọc */}
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Space size="middle">
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              style={{
-                background: "#20c997",
-                borderColor: "#20c997",
-                height: 40,
-              }}
               onClick={() => {
                 setEditingRecord(null);
                 setIsModalOpen(true);
               }}
+              style={{
+                background: "#20c997",
+                borderColor: "#20c997",
+                borderRadius: 6,
+              }}
             >
-              Thêm mới lịch làm việc
+              Thêm lịch trực
             </Button>
-          </Col>
-
-          <Col>
-            <Row gutter={16} align="bottom">
-              <Col>
-                <div style={{ marginBottom: 4 }}>
-                  <Text strong>Nhân viên:</Text>
-                </div>
-                <Select
-                  style={{ width: 200 }}
-                  options={employees}
-                  value={selectedEmployee}
-                  onChange={setSelectedEmployee}
-                  showSearch
-                />
-              </Col>
-              <Col>
-                <div style={{ marginBottom: 4 }}>
-                  <Text strong>Ngày làm:</Text>
-                </div>
-                <DatePicker
-                  style={{ width: 150 }}
-                  format="DD/MM/YYYY"
-                  value={filterDate}
-                  onChange={setFilterDate}
-                />
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card
-        title={
-          <Space>
-            <TableOutlined /> Danh Sách Lịch Làm Việc
-          </Space>
-        }
-        extra={
-          <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-              Làm mới
+              Tải lại
             </Button>
+          </Space>
+        </Col>
 
+        <Col>
+          <Space size="large">
+            <Space>
+              <Text strong>Nhân viên:</Text>
+              <Select
+                style={{ width: 180 }}
+                options={employees}
+                value={selectedEmployee}
+                onChange={setSelectedEmployee}
+                showSearch
+                placeholder="Chọn nhân viên"
+              />
+            </Space>
+            <Space>
+              <Text strong>Ngày:</Text>
+              <DatePicker
+                format="DD/MM/YYYY"
+                value={filterDate}
+                onChange={setFilterDate}
+                placeholder="Chọn ngày"
+              />
+            </Space>
             <Space.Compact>
               <Button
                 type={viewMode === "table" ? "primary" : "default"}
                 icon={<TableOutlined />}
                 onClick={() => setViewMode("table")}
-              >
-                Bảng
-              </Button>
+              />
               <Button
                 type={viewMode === "calendar" ? "primary" : "default"}
                 icon={<CalendarOutlined />}
                 onClick={() => setViewMode("calendar")}
-              >
-                Lịch
-              </Button>
+              />
             </Space.Compact>
           </Space>
-        }
-      >
-        {viewMode === "table" ? (
-          <Table
-            columns={columns}
-            dataSource={displayedSchedules}
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 10 }}
-          />
-        ) : (
-          <div
-            style={{
-              border: "1px solid #f0f0f0",
-              padding: 10,
-              borderRadius: 8,
+        </Col>
+      </Row>
+
+      {/* Hiển thị nội dung chính */}
+      {viewMode === "table" ? (
+        <Table
+          columns={columns}
+          dataSource={displayedSchedules}
+          rowKey="id"
+          loading={loading}
+          bordered
+          size="middle"
+          pagination={{
+            pageSize: 8,
+            showTotal: (total) => `Tổng cộng ${total} lịch trực`,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            background: "#fff",
+            padding: 16,
+            borderRadius: 8,
+            border: "1px solid #f0f0f0",
+          }}
+        >
+          <Calendar
+            cellRender={(value) => {
+              const listData = displayedSchedules.filter(
+                (s) => s.workDate === value.format("YYYY-MM-DD"),
+              );
+              return (
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {listData.map((item) => (
+                    <li key={item.id}>
+                      <Badge
+                        status="processing"
+                        text={`${item.employeeName} (${item.startTime?.slice(0, 5)})`}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              );
             }}
-          >
-            <Calendar cellRender={dateCellRender} />
-          </div>
-        )}
-      </Card>
+          />
+        </div>
+      )}
 
       <WorkScheduleModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingRecord(null);
+        }}
         onSuccess={fetchSchedules}
         initialData={editingRecord}
       />

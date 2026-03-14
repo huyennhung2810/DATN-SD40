@@ -47,13 +47,12 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
-        log.info("Creating user principal for staff. authorities staff : {}", employee.toString());
-
+        log.debug("Creating principal for staff: {}", employee.getAccount().getUsername()); // Đổi sang debug
         return new UserPrincipal(
                 employee.getId(),
                 employee.getAccount().getUsername(),
                 employee.getAccount().getPassword(),
-                employee.getEmail(),
+                employee.getAccount().getEmail(),
                 authorities
         );
     }

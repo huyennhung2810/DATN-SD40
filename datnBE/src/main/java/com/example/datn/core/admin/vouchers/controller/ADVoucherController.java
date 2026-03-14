@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/vouchers")
+@RequestMapping("/api/v1/admin/vouchers")
 @RequiredArgsConstructor
 @Slf4j
 

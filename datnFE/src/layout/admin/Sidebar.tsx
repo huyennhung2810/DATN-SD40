@@ -14,12 +14,10 @@ import {
   UserOutlined,
   ScheduleOutlined,
   SwapOutlined,
-  ClockCircleOutlined,
   SettingOutlined,
-  BgColorsOutlined,
-  DatabaseOutlined,
-  AppstoreOutlined,
   PictureOutlined,
+  KeyOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -27,6 +25,29 @@ const { Text } = Typography;
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Helper function to get selected key - matches parent path for nested routes
+  const getSelectedKey = () => {
+    const path = location.pathname;
+    // Check exact match first
+    if (items.some((item: any) => item.key === path)) {
+      return path;
+    }
+    // Check if path starts with any menu key
+    for (const item of items) {
+      if (item.children) {
+        for (const child of item.children) {
+          if (path.startsWith(child.key as string)) {
+            return child.key;
+          }
+        }
+      }
+      if (item.key && path.startsWith(item.key as string)) {
+        return item.key;
+      }
+    }
+    return path;
+  };
 
   const items = [
     {
@@ -71,16 +92,6 @@ const Sidebar: React.FC = () => {
           icon: <CameraOutlined />,
           label: "Sản phẩm chi tiết",
         },
-        {
-          key: "/products/color",
-          icon: <BgColorsOutlined />,
-          label: "Màu sắc",
-        },
-        {
-          key: "/products/storage-capacity",
-          icon: <DatabaseOutlined />,
-          label: "Dung lượng",
-        },
       ],
     },
     {
@@ -90,6 +101,11 @@ const Sidebar: React.FC = () => {
       children: [
         { key: "/customer", icon: <TeamOutlined />, label: "Khách hàng" },
         { key: "/employee", icon: <UserOutlined />, label: "Nhân viên" },
+        {
+          key: "/admin/accounts",
+          icon: <KeyOutlined />,
+          label: "Quản lý tài khoản",
+        },
       ],
     },
     {
@@ -116,7 +132,7 @@ const Sidebar: React.FC = () => {
       label: "Quản lý Lịch làm việc",
       children: [
         {
-          key: "/work-schedule",
+          key: "/shiftManagement",
           icon: <ScheduleOutlined />,
           label: "Lịch làm việc",
         },
@@ -125,12 +141,12 @@ const Sidebar: React.FC = () => {
           icon: <SwapOutlined />,
           label: "Giao ca",
         },
-        {
-          key: "/shift-template",
-          icon: <ClockCircleOutlined />,
-          label: "Quản lý ca làm việc",
-        },
       ],
+    },
+    {
+      key: "/EChatAi",
+      icon: <MessageOutlined />,
+      label: "Hỗ trợ KH",
     },
   ];
 
@@ -142,7 +158,9 @@ const Sidebar: React.FC = () => {
           <CameraOutlined />
         </div>
         <div className="logo-text">
-          <Text strong className="logo-title">HIKARI</Text>
+          <Text strong className="logo-title">
+            HIKARI
+          </Text>
           <Text className="logo-subtitle">Camera Admin</Text>
         </div>
       </div>
@@ -151,7 +169,7 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-menu">
         <Menu
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[getSelectedKey()]}
           style={{
             borderRight: 0,
             background: "transparent",

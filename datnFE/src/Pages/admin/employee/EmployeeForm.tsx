@@ -320,7 +320,6 @@ const EmployeeForm: React.FC = () => {
             ? employeeActions.updateEmployee({
                 data: payload,
                 navigate: () => {
-                  notification.success({ title: "Cập nhật thành công!" });
                   navigate("/employee");
                 },
               })

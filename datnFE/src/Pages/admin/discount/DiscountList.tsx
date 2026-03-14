@@ -11,7 +11,10 @@ import {
   DatePicker,
   Modal, // Thêm Modal
   Col,
-  Row
+  Row,
+  Popconfirm,
+  Tooltip,
+  
 } from "antd";
 import {
   PlusOutlined,
@@ -19,6 +22,7 @@ import {
   ReloadOutlined,
   StopOutlined, // Thêm icon Stop
   ExclamationCircleOutlined, // Thêm icon Cảnh báo
+  EditOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -136,54 +140,77 @@ const DiscountList: React.FC = () => {
       dataIndex: "quantity",
       key: "quantity",
       align: "center" as const,
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      align: "center" as const,
-      render: (status: number) => {
-        let color = "default";
-        let text = "Không xác định";
-        switch (status) {
-          case 1: color = "orange"; text = "Sắp diễn ra"; break;
-          case 2: color = "green"; text = "Đang diễn ra"; break;
-          case 3: color = "red"; text = "Đã kết thúc"; break;
-          case 0: color = "gray"; text = "Buộc dừng"; break;
-        }
-        return <Tag color={color}>{text}</Tag>;
       },
-    },
-    {
-      title: "Hành động",
-      key: "action",
-      align: "center" as const,
-      render: (_: any, record: Discount) => (
-        <Space>
-          {/* Sửa lại đường dẫn thành /edit/ cho chuẩn với App.tsx */}
-          <Button
-            type="primary"
-            ghost
-            size="small"
-            onClick={() => navigate(`/discount/edit/${record.id}`)}
-          >
-            Sửa
-          </Button>
 
-          {/* Nút Dừng chỉ hiện khi trạng thái là 0 hoặc 1 */}
-          {(record.status === 1 || record.status === 2) && (
+    {
+  title: "Trạng thái",
+  dataIndex: "status",
+  key: "status",
+  width: 250,
+  render: (status: number, record: Discount) => {
+    let color = "default";
+    let text = "Không xác định";
+
+    switch (status) {
+      case 1:
+        color = "orange";
+        text = "Sắp diễn ra";
+        break;
+      case 2:
+        color = "green";
+        text = "Đang diễn ra";
+        break;
+      case 3:
+        color = "red";
+        text = "Đã kết thúc";
+        break;
+      case 0:
+        color = "gray";
+        text = "Buộc dừng";
+        break;
+    }
+
+    return (
+      <Space size="small">
+        <Tag color={color}>{text}</Tag>
+
+        {(status === 1 || status === 2) && (
+          <Popconfirm
+            title="Buộc dừng đợt giảm giá này?"
+            onConfirm={() => confirmStop(record.id)}
+            okText="Dừng"
+            cancelText="Hủy"
+          >
             <Button
+              type="primary"
               danger
               size="small"
-              icon={<StopOutlined />} // Thêm icon cho đẹp
-              onClick={() => confirmStop(record.id)} // Gọi hàm đã khai báo ở trên
+              icon={<StopOutlined />}
             >
-              Dừng
+              Buộc dừng
             </Button>
-          )}
-        </Space>
-      ),
-    },
+          </Popconfirm>
+        )}
+      </Space>
+    );
+  },
+},
+
+{
+  title: "Hành động",
+  key: "action",
+  align: "center" as const,
+  render: (_: any, record: Discount) => (
+    <Tooltip title="Chỉnh sửa">
+      <Button
+        type="text"
+        icon={<EditOutlined style={{ color: "#1890ff" }} />}
+        onClick={() => navigate(`/discount/edit/${record.id}`)}
+      />
+    </Tooltip>
+  ),
+},
+
   ];
 
   return (

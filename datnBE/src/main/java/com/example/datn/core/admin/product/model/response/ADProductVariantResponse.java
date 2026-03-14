@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.product.model.response;
 
+import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -47,4 +48,7 @@ public class ADProductVariantResponse {
 
     // URL của ảnh đại diện (có thể từ selectedImageId hoặc imageUrl)
     private String selectedImageUrl;
+
+    // Danh sách serial của biến thể (dùng cho modal edit)
+    private List<ADSerialResponse> serials;
 }

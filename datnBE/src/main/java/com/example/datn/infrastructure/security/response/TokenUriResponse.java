@@ -1,11 +1,13 @@
 package com.example.datn.infrastructure.security.response;
 
-import com.example.datn.utils.SecurityUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Base64;
 
 @Setter
 @Getter
@@ -14,12 +16,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TokenUriResponse {
     private String accessToken;
-
     private String refreshToken;
 
     public String getTokenAuthorizationSimple() {
-        String tokenObject = "{" + "\"accessToken\":\"" + accessToken + "\",\"refreshToken\":\"" + refreshToken + "\"}";
-        return SecurityUtils.encodeBase64(tokenObject);
+        try {
+            String json = String.format("{\"accessToken\":\"%s\",\"refreshToken\":\"%s\"}",
+                    this.accessToken, this.refreshToken);
+
+            // Dùng thư viện chuẩn của Java để Base64 (Tránh phụ thuộc SecurityUtils cũ)
+            return Base64.getEncoder().encodeToString(json.getBytes());
+        } catch (Exception e) {
+            log.error("Lỗi đóng gói Token: {}", e.getMessage());
+            return "";
+        }
     }
 
     public static String getState(

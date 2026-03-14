@@ -50,10 +50,18 @@ public class Discount implements Serializable {
     @Column(name = "created_at")
     private Long createdAt;
 
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
     @Column(name = "updated_at")
     private Long updatedAt;
 
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+
     @OneToMany(mappedBy = "discount", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("discount") // ✅ Bỏ tham chiếu ngược
+    @ToString.Exclude
     private List<DiscountDetail> details; // Đây chính là 'details' mà bạn đang thiếu
 }

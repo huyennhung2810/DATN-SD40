@@ -103,4 +103,14 @@ export interface ProductDetailRequest {
 
   // ID của ảnh được chọn từ sản phẩm mẹ
   selectedImageId?: string;
+
+  // Danh sách serial khi thêm mới biến thể
+  serials?: {
+    serialNumber: string;
+    code: string;
+    status: string;
+  }[];
+
+  // Danh sách serial mới được thêm khi cập nhật biến thể (chỉ append, không ghi đè)
+  newSerials?: string[];
 }

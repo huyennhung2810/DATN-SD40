@@ -23,7 +23,7 @@ public class ADWorkScheduleController {
     private final ADWorkScheduleService workScheduleService;
 
     @GetMapping
-    public ResponseEntity<?> getSchedules(ADScheduleSearchRequest request) {
+    public ResponseEntity<?> getSchedules(@ModelAttribute ADScheduleSearchRequest request) {
         return Helper.createResponseEntity(workScheduleService.getSchedules(request));
     }
 
@@ -35,6 +35,17 @@ public class ADWorkScheduleController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteSchedule(@PathVariable("id") String id) {
         return Helper.createResponseEntity(workScheduleService.deleteSchedule(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateSchedule(@PathVariable("id") String id, @RequestBody @Valid ADCreateScheduleRequest request) {
+        return Helper.createResponseEntity(workScheduleService.updateSchedule(id, request));
+    }
+
+    @GetMapping("/today/{employeeId}")
+    public ResponseEntity<?> getTodaySchedule(@PathVariable("employeeId") String employeeId) {
+        log.info("Đang lấy lịch làm việc hôm nay cho nhân viên ID: {}", employeeId);
+        return Helper.createResponseEntity(workScheduleService.getTodaySchedule(employeeId));
     }
 
 }

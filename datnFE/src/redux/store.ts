@@ -7,10 +7,8 @@ import employeeReducer from "./employee/employeeSlice";
 import serialReducer from "./serial/serialSlice";
 import colorReducer from "./color/colorSlice";
 import storageCapacityReducer from "./storage/storageSlice";
-
 import statisticsReducer from "./statistics/statisticsSlice";
-
-import discountReducer from "../redux/discount/discountSlice"; // Kiểm tra lại đường dẫn này
+import discountReducer from "../redux/discount/discountSlice";
 import productDetailReducer from "./productdetail/productDetailSlice";
 import productCategoryReducer from "./productCategory/productCategorySlice";
 import techSpecReducer from "./techSpec/techSpecSlice";
@@ -25,10 +23,13 @@ import videoFormatReducer from "./techSpec/videoFormatSlice";
 import voucherReducer from "./Voucher/voucherSlice"; 
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
 import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
+import authReducer from "./auth/authSlice";
+import chatReducer from "./chat/chatSlice";
 
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     customer: customerReducer,
     employee: employeeReducer,
     statistics: statisticsReducer,
@@ -51,6 +52,7 @@ export const store = configureStore({
     processor: processorReducer,
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
+    chat: chatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

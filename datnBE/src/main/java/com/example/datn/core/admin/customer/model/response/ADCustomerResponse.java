@@ -14,7 +14,6 @@ public class ADCustomerResponse {
     private String phoneNumber;
     private Boolean gender;
     private Long dateOfBirth;
-    private String identityCard;
     private String image;
     private String status;
     private Long createdDate;

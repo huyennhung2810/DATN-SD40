@@ -1,5 +1,16 @@
 import type { CommonStatus } from "./base";
 
+export interface SerialResponse {
+  id: string;
+  serialNumber: string;
+  code: string;
+  status: string;
+  serialStatus?: string;
+  productName?: string;
+  productDetailId?: string;
+  createdDate?: string;
+}
+
 export interface ProductVariantResponse {
   id: string;
   code: string;
@@ -22,6 +33,9 @@ export interface ProductVariantResponse {
   
   // URL của ảnh đại diện
   selectedImageUrl?: string;
+
+  // Danh sách serial của biến thể (dùng cho modal edit)
+  serials?: SerialResponse[];
 }
 
 export interface ProductWithVariantsResponse {

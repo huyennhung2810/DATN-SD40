@@ -1,4 +1,5 @@
 import { all, fork } from "redux-saga/effects";
+import watchAuthFlow from "../redux/auth/authSaga";
 import watchCustomerFlow from "../redux/customer/customerSaga";
 import watchEmployeeFlow from "../redux/employee/employeeSaga";
 import statisticsSaga from "../redux/statistics/statisticsSaga";
@@ -20,10 +21,11 @@ import watchSerialFlow from "../redux/serial/serialSaga";
 import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 import watchColorFlow from "../redux/color/colorSaga";
 import watchStorageFlow from "../redux/storage/storageSaga";
-
+import { watchChatSaga } from "../redux/chat/chatSaga";
 
 export default function* rootSaga() {
   yield all([
+    fork(watchAuthFlow),
     fork(watchCustomerFlow),
     fork(watchEmployeeFlow),
     fork(watchSerialFlow),
@@ -45,5 +47,6 @@ export default function* rootSaga() {
     fork(watchProcessorFlow),
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
+    fork(watchChatSaga),
   ]);
 }

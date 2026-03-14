@@ -1,4 +1,4 @@
-import { call, put, takeLatest } from "redux-saga/effects";
+import { call, put, takeLatest, delay } from "redux-saga/effects";
 import { type PayloadAction } from "@reduxjs/toolkit";
 import { shiftActions } from "./shiftHandoverSlice";
 import { shiftHandoverApi } from "../../api/shiftHandoverApi";
@@ -10,53 +10,51 @@ import type {
 } from "../../models/shiftHandover";
 import type { ResponseObject } from "../../models/base";
 
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-  message?: string;
-}
-
 function* handleCheckIn(action: PayloadAction<CheckInRequest>) {
   try {
-    // CẢI TIẾN: Sử dụng 'as' để ép kiểu an toàn cho kết quả từ yield call
-    const response = (yield call(
+    const response: ResponseObject<ShiftHandoverResponse> = yield call(
       shiftHandoverApi.checkIn, 
       action.payload
-    )) as ResponseObject<ShiftHandoverResponse>;
+    );
     
-    // Gửi dữ liệu vào Store
     yield put(shiftActions.checkInSuccess(response.data));
     message.success("Check-in nhận ca thành công!");
     
-  } catch (error: unknown) {
-    const err = error as ApiError;
+  } catch (error: any) {
     yield put(shiftActions.checkInFailed());
-    message.error(err.response?.data?.message || err.message || "Lỗi Check-in");
+    const msg = error.response?.data?.message || "Lỗi Check-in hệ thống";
+    message.error(msg);
   }
 }
 
 function* handleCheckOut(action: PayloadAction<CheckOutRequest>) {
   try {
-    yield call(shiftHandoverApi.checkOut, action.payload);
-    yield put(shiftActions.checkOutSuccess());
-    message.success("Kết ca thành công. Hẹn gặp lại!");
+    const response: ResponseObject<ShiftHandoverResponse> = yield call(
+      shiftHandoverApi.checkOut, 
+      action.payload
+    );
     
-    // Đợi 1.5s để người dùng đọc thông báo rồi đẩy về trang Đăng nhập
-    setTimeout(() => {
-      window.location.href = '/login'; 
-    }, 1500);
+    const status = response.data.handoverStatus;
+    yield put(shiftActions.checkOutSuccess());
 
-  } catch (error: unknown) {
-    const err = error as ApiError;
+    // Thông báo dựa trên trạng thái chênh lệch tiền từ Backend
+    if (status === 'PENDING') {
+      message.warning("Kết ca thành công nhưng có chênh lệch tiền. Đang chờ duyệt!");
+    } else {
+      message.success("Kết ca thành công. Hệ thống đã đóng ca!");
+    }
+
+    yield delay(1500);
+    
+    window.location.href = "/admin/waiting-room"; 
+
+  } catch (error: any) {
     yield put(shiftActions.checkOutFailed());
-    message.error(err.response?.data?.message || err.message || "Lỗi khi kết ca");
+    const msg = error.response?.data?.message || "Lỗi khi kết ca";
+    message.error(msg);
   }
 }
 
-// Watcher
 export default function* shiftHandoverSaga() {
   yield takeLatest(shiftActions.checkInRequest.type, handleCheckIn);
   yield takeLatest(shiftActions.checkOutRequest.type, handleCheckOut);

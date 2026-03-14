@@ -123,14 +123,11 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
         }
 
         try {
-            String[] hashResult = SecurityUtils.hashPassword(plainPassword);
-            String salt = hashResult[0];
-            String hashedPassword = hashResult[1];
 
             Account account = new Account();
             account.setUsername(generatedCode);
-            account.setPassword(hashedPassword); // Lưu Hash
-            account.setSalt(salt);               // Lưu Salt
+            account.setPassword(passwordEncoder.encode(plainPassword));
+            account.setSalt(null);
 
             RoleConstant role = RoleConstant.STAFF;
             if (StringUtils.hasText(request.getRole())) {
@@ -191,9 +188,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
 
             if (StringUtils.hasText(request.getPassword())) {
                 try {
-                    String[] hashResult = SecurityUtils.hashPassword(request.getPassword());
-                    account.setSalt(hashResult[0]);
-                    account.setPassword(hashResult[1]);
+                    account.setSalt(null);
+                    account.setPassword(passwordEncoder.encode(request.getPassword()));
                 } catch (Exception e) {
                     log.error("Lỗi hash mật khẩu khi cập nhật: {}", e.getMessage());
                     throw new RuntimeException("Lỗi hệ thống khi mã hóa mật khẩu");
@@ -250,34 +246,25 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     @Transactional
     @Override
     public ResponseObject<?> resetPasswordWithOTP(String email, String otpInput, String newPassword) {
-        // 1. Tìm tài khoản dựa trên Email người dùng nhập
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Email không hợp lệ"));
-
         Account account = employee.getAccount();
 
-        // 2. Kiểm tra mã OTP trong DB
         if (account.getOtpCode() == null || !account.getOtpCode().equals(otpInput)) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã OTP không chính xác");
         }
-
-        // 3. Kiểm tra thời gian hết hạn
         if (System.currentTimeMillis() > account.getOtpExpiryTime()) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã OTP đã hết hạn hiệu lực");
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mã OTP đã hết hạn");
         }
 
         try {
-            // 4. Hash mật khẩu mới bằng PBKDF2 (SecurityUtils)
-            String[] hashResult = SecurityUtils.hashPassword(newPassword);
-            account.setSalt(hashResult[0]);
-            account.setPassword(hashResult[1]);
+            account.setPassword(passwordEncoder.encode(newPassword));
+            account.setSalt(null);
 
-            // 5. Xóa mã OTP sau khi đổi thành công để bảo mật
             account.setOtpCode(null);
             account.setOtpExpiryTime(null);
-
             accountRepository.save(account);
-            return ResponseObject.success(null, "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+            return ResponseObject.success(null, "Đổi mật khẩu thành công!");
         } catch (Exception e) {
             log.error("Lỗi xác thực PBKDF2: {}", e.getMessage());
             return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống khi đổi mật khẩu");
@@ -384,28 +371,16 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
         }
 
         try {
-            // Kiểm tra mật khẩu cũ (Mật khẩu gửi trong email)
-            boolean isMatch = SecurityUtils.verifyPassword(
-                    request.getOldPassword(),
-                    account.getSalt(),
-                    account.getPassword()
-            );
-
-            if (!isMatch) {
+            if (!passwordEncoder.matches(request.getOldPassword(), account.getPassword())) {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không chính xác");
             }
 
-            // Hash mật khẩu mới
-            String[] hashResult = SecurityUtils.hashPassword(request.getNewPassword());
-            account.setSalt(hashResult[0]);
-            account.setPassword(hashResult[1]);
+            account.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            account.setSalt(null);
 
-            //Lưu thay đổi
             accountRepository.save(account);
-
             log.info("Nhân viên {} đã đổi mật khẩu thành công", username);
             return ResponseObject.success(null, "Đổi mật khẩu thành công");
-
         } catch (Exception e) {
             log.error("Lỗi khi xác thực hoặc mã hóa mật khẩu: {}", e.getMessage());
             return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống khi xử lý mật khẩu");

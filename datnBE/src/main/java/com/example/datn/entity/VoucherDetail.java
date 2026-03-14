@@ -4,6 +4,7 @@ import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import net.minidev.json.annotate.JsonIgnore;
 
 import java.io.Serializable;
 
@@ -35,6 +36,7 @@ public class VoucherDetail implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "id_voucher", referencedColumnName = "id")
+    @JsonIgnore
     private Voucher voucher;
 
     @ManyToOne

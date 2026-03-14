@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-@Table(name = "order")
+@Table(name = "`order`")
 public class Order extends PrimaryEntity implements Serializable {
 
     @Enumerated(EnumType.STRING)

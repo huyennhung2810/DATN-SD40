@@ -46,7 +46,6 @@ public class ADCustomerServiceImpl implements ADCustomerService {
         customer.setPhoneNumber(req.getPhoneNumber());
         customer.setGender(req.getGender());
         customer.setDateOfBirth(req.getDateOfBirth());
-        customer.setIdentityCard(req.getIdentityCard());
     }
 
     private void handleUploadImage(ADCustomerRequest req, Customer customer) {
@@ -240,7 +239,6 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 c.getDateOfBirth() != null
                         ? new SimpleDateFormat("dd/MM/yyyy").format(c.getDateOfBirth())
                         : "---",
-                Optional.ofNullable(c.getIdentityCard()).orElse(""),
                 EntityStatus.ACTIVE.equals(c.getStatus()) ? "Hoạt động" : "Ngừng",
                 getFormattedAddress(c)
         )).collect(Collectors.toList());
@@ -252,14 +250,6 @@ public class ADCustomerServiceImpl implements ADCustomerService {
     public ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id) {
         // Nếu không có ID (thêm mới), gán ID thành một chuỗi rỗng để query không bị lỗi null
         String safeId = (id == null || id.equalsIgnoreCase("undefined") || id.equalsIgnoreCase("null")) ? "" : id;
-
-        // Kiểm tra trùng CCCD
-        if (StringUtils.hasText(identityCard)) {
-            boolean exists = StringUtils.hasText(safeId)
-                    ? adCustomerRepository.existsByIdentityCardAndIdNot(identityCard, safeId)
-                    : adCustomerRepository.existsByIdentityCard(identityCard);
-            if (exists) return ResponseObject.success(true, "Số CCCD đã tồn tại");
-        }
 
         // Kiểm tra trùng Số điện thoại
         if (StringUtils.hasText(phoneNumber)) {

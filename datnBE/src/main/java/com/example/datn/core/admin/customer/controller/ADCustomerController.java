@@ -73,9 +73,6 @@ public class ADCustomerController {
 
     //Hỗ trợ xóa các giá trị undefined hoặc null từ fe gửi qua formdata
     private void sanitizeRequest(ADCustomerRequest request) {
-        if ("undefined".equals(request.getIdentityCard()) || "null".equals(request.getIdentityCard())) {
-            request.setIdentityCard(null);
-        }
         if ("undefined".equals(request.getEmail()) || "null".equals(request.getEmail())) {
             request.setEmail(null);
         }

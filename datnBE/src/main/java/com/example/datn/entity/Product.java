@@ -34,6 +34,7 @@ public class Product extends NameEntity implements Serializable {
     private ProductCategory productCategory;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<ProductImage> images = new ArrayList<>();
 
 }

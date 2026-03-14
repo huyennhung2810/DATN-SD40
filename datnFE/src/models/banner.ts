@@ -1,62 +1,21 @@
-export const BannerPosition = {
-  HOME_HERO: "HOME_HERO",
-  HOME_TOP: "HOME_TOP",
-  HOME_MIDDLE: "HOME_MIDDLE",
-  HOME_BOTTOM: "HOME_BOTTOM",
-  SIDEBAR: "SIDEBAR",
-  POPUP: "POPUP",
-} as const;
-export type BannerPosition = typeof BannerPosition[keyof typeof BannerPosition];
+import type { CommonStatus } from "./base";
 
-export const BannerPositionLabel: Record<BannerPosition, string> = {
-  HOME_HERO: "Banner chính trang chủ",
-  HOME_TOP: "Banner phía trên trang chủ",
-  HOME_MIDDLE: "Banner giữa trang chủ",
-  HOME_BOTTOM: "Banner phía dưới trang chủ",
-  SIDEBAR: "Banner sidebar",
-  POPUP: "Banner popup",
-};
+export type BannerPosition =
+  | "HOME_HERO"
+  | "HOME_TOP"
+  | "HOME_MIDDLE"
+  | "HOME_BOTTOM"
+  | "SIDEBAR"
+  | "POPUP";
 
-export const BannerType = {
-  IMAGE: "IMAGE",
-  HERO: "HERO",
-  SLIDE: "SLIDE",
-} as const;
-export type BannerType = typeof BannerType[keyof typeof BannerType];
+export type BannerType = "HERO" | "IMAGE" | "SLIDE";
 
-export const BannerTypeLabel: Record<BannerType, string> = {
-  IMAGE: "Banner hình ảnh đơn",
-  HERO: "Banner dạng hero",
-  SLIDE: "Banner dạng slide/carousel",
-};
+export type LinkTarget = "NEW_TAB" | "SAME_TAB";
 
-export const LinkTarget = {
-  SAME_TAB: "SAME_TAB",
-  NEW_TAB: "NEW_TAB",
-} as const;
-export type LinkTarget = typeof LinkTarget[keyof typeof LinkTarget];
-
-export const LinkTargetLabel: Record<LinkTarget, string> = {
-  SAME_TAB: "Mở trong tab hiện tại",
-  NEW_TAB: "Mở trong tab mới",
-};
-
-export const EntityStatus = {
-  ACTIVE: "ACTIVE",
-  INACTIVE: "INACTIVE",
-  DELETED: "DELETED",
-} as const;
-export type EntityStatus = typeof EntityStatus[keyof typeof EntityStatus];
-
-export const EntityStatusLabel: Record<EntityStatus, string> = {
-  ACTIVE: "Hoạt động",
-  INACTIVE: "Không hoạt động",
-  DELETED: "Đã xóa",
-};
-
-export interface BannerRequest {
-  id?: string;
-  code?: string;
+export interface BannerResponse {
+  id: string;
+  code: string;
+  status: CommonStatus;
   title: string;
   subtitle?: string;
   description?: string;
@@ -65,8 +24,26 @@ export interface BannerRequest {
   linkUrl?: string;
   linkTarget?: LinkTarget;
   position: BannerPosition;
-  type?: BannerType;
-  status?: EntityStatus;
+  type: BannerType;
+  priority?: number;
+  startAt?: string;
+  endAt?: string;
+  buttonText?: string;
+  backgroundColor?: string;
+  createdDate: number;
+  lastModifiedDate: number;
+}
+
+export interface BannerRequest {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  imageUrl: string;
+  mobileImageUrl?: string;
+  linkUrl?: string;
+  linkTarget?: LinkTarget;
+  position: BannerPosition;
+  type: BannerType;
   priority?: number;
   startAt?: string;
   endAt?: string;
@@ -74,43 +51,48 @@ export interface BannerRequest {
   backgroundColor?: string;
 }
 
-export interface BannerResponse {
-  id: string;
-  code?: string;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  imageUrl: string;
-  mobileImageUrl?: string;
-  linkUrl?: string;
-  linkTarget?: LinkTarget;
-  position: BannerPosition;
-  type?: BannerType;
-  status: EntityStatus;
-  priority: number;
-  startAt?: string;
-  endAt?: string;
-  buttonText?: string;
-  backgroundColor?: string;
-  createdDate?: string;
-  lastModifiedDate?: string;
-}
-
-export interface BannerSearchRequest {
+export interface BannerSearchParams {
   page?: number;
   size?: number;
   keyword?: string;
-  status?: EntityStatus;
+  status?: CommonStatus;
   position?: BannerPosition;
-  startDateFrom?: string;
-  startDateTo?: string;
-  sortBy?: string;
-  sortDirection?: string;
+  type?: BannerType;
 }
 
-export interface BannerPageResponse {
-  data: BannerResponse[];
-  totalPages: number;
-  currentPage: number;
-  totalElements: number;
-}
+export const initialBannerRequest: BannerRequest = {
+  title: "",
+  subtitle: "",
+  description: "",
+  imageUrl: "",
+  mobileImageUrl: "",
+  linkUrl: "",
+  linkTarget: "SAME_TAB",
+  position: "HOME_HERO",
+  type: "IMAGE",
+  priority: 0,
+  startAt: undefined,
+  endAt: undefined,
+  buttonText: "",
+  backgroundColor: "",
+};
+
+export const BANNER_POSITIONS: { value: BannerPosition; label: string }[] = [
+  { value: "HOME_HERO", label: "Banner chính trang chủ" },
+  { value: "HOME_TOP", label: "Banner phía trên trang chủ" },
+  { value: "HOME_MIDDLE", label: "Banner giữa trang chủ" },
+  { value: "HOME_BOTTOM", label: "Banner phía dưới trang chủ" },
+  { value: "SIDEBAR", label: "Banner sidebar" },
+  { value: "POPUP", label: "Banner popup" },
+];
+
+export const BANNER_TYPES: { value: BannerType; label: string }[] = [
+  { value: "IMAGE", label: "Banner hình ảnh đơn" },
+  { value: "HERO", label: "Banner dạng hero" },
+  { value: "SLIDE", label: "Banner dạng slide/carousel" },
+];
+
+export const LINK_TARGETS: { value: LinkTarget; label: string }[] = [
+  { value: "SAME_TAB", label: "Mở trong tab hiện tại" },
+  { value: "NEW_TAB", label: "Mở trong tab mới" },
+];

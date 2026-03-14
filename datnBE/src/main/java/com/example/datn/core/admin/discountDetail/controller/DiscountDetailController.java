@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/discount-details")
+@RequestMapping("/api/v1/admin/discount-details")
 @CrossOrigin("*") // Cho phép FE gọi API không bị chặn CORS
 @Slf4j
 public class DiscountDetailController {

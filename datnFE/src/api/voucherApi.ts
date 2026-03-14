@@ -1,50 +1,36 @@
-import axios from 'axios';
+import axiosClient from '../api/axiosClient';
 
-// Cấu hình URL cơ sở trỏ đến Backend Spring Boot của bạn
-const BASE_URL = 'http://localhost:8386/api/admin/vouchers';
+const BASE_URL = '/admin/vouchers'; 
 
 export const voucherApi = {
-    /**
-     * Lấy danh sách voucher có phân trang và tìm kiếm
-     * @param params Bao gồm page, size, keyword, status...
-     */
     getAll: (params: any) => {
-        return axios.get(BASE_URL, { params });
-    },
+        return axiosClient.get(BASE_URL, { params });     },
 
-    /**
-     * Lấy chi tiết một voucher theo ID
-     */
     getById: (id: string) => {
-        return axios.get(`${BASE_URL}/${id}`);
+        return axiosClient.get(`${BASE_URL}/${id}`);
     },
 
-    /**
-     * Thêm mới một voucher
-     */
-  create: (data: any) => {
-        return axios.post(BASE_URL, data);
+    create: (data: any) => {
+        return axiosClient.post(BASE_URL, data);
     },
 
-    
     update: (id: string, data: any) => {
-        return axios.put(`${BASE_URL}/${id}`, data);
+        return axiosClient.put(`${BASE_URL}/${id}`, data);
     },
 
-    /**
-     * Xóa voucher (nếu backend hỗ trợ)
-     */
     delete: (id: string) => {
-        return axios.delete(`${BASE_URL}/${id}`);
+        return axiosClient.delete(`${BASE_URL}/${id}`);
     },
+
     stop: (id: string) => {
-    return axios.patch(`${BASE_URL}/${id}/stop`);
+        return axiosClient.patch(`${BASE_URL}/${id}/stop`);
     },
+
     checkCodeExists: (code: string) => {
-        return axios.get(`${BASE_URL}/check-code/${code.trim()}`);
+        return axiosClient.get(`${BASE_URL}/check-code/${code.trim()}`);
     },
-    // Thêm vào class voucherApi của bạn
-updateDetailStatus: (detailId: string, params: { status: number; reason: string }) => {
-    return axios.patch(`${BASE_URL}/detail/${detailId}/status`, params);
-},
+
+    updateDetailStatus: (detailId: string, params: { status: number; reason: string }) => {
+        return axiosClient.patch(`${BASE_URL}/detail/${detailId}/status`, params);
+    },
 };

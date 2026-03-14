@@ -13,9 +13,12 @@ import {
   Table,
   message,
   Radio,
-  
 } from "antd";
-import { SaveOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import {
+  SaveOutlined,
+  ArrowLeftOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs, { Dayjs } from "dayjs";
@@ -44,7 +47,7 @@ const DiscountForm: React.FC = () => {
   // 4. Giả lập dữ liệu sản phẩm (Bạn nên thay bằng dữ liệu từ Redux/API thực tế)
   const [allProductDetails, setAllProductDetails] = useState<any[]>([]);
   const disabledDate = (current: Dayjs) =>
-     current && current < dayjs().startOf("day");
+    current && current < dayjs().startOf("day");
   const { currentDiscount, loading } = useSelector(
     (state: RootState) => state.discount,
   );
@@ -145,7 +148,8 @@ const DiscountForm: React.FC = () => {
       // Chuyển Dayjs về số Long (Timestamp)
       startDate: values.timeRange ? values.timeRange[0].valueOf() : null,
       endDate: values.timeRange ? values.timeRange[1].valueOf() : null,
-
+      createdBy: localStorage.getItem("employeeCode") || "Nhung",
+      updatedBy: localStorage.getItem("employeeCode") || "Nhung",
       productDetailIds: selectedRowKeys, // Danh sách ID sản phẩm đã chọn
     };
 
@@ -243,11 +247,10 @@ const DiscountForm: React.FC = () => {
                   ]}
                 >
                   <RangePicker
-                  disabledDate={disabledDate}
+                    disabledDate={disabledDate}
                     showTime
                     format="DD/MM/YYYY HH:mm"
                     style={{ width: "100%" }}
-                    
                   />
                 </Form.Item>
               </Col>
@@ -272,23 +275,54 @@ const DiscountForm: React.FC = () => {
               {id && (
                 <Row gutter={16}>
                   <Col span={12}>
-                    <Form.Item label="Ngày tạo" name="createdAt">
+                    <Form.Item
+                      label={
+                        <Typography.Text strong>
+                          Thông tin người tạo
+                        </Typography.Text>
+                      }
+                    >
                       <Input
+                        size="large"
                         disabled
+                        prefix={<UserOutlined />}
+                        value={`${currentDiscount?.createdBy || "N/A"} - ${
+                          currentDiscount?.createdAt
+                            ? dayjs(currentDiscount.createdAt).format(
+                                "DD/MM/YYYY HH:mm",
+                              )
+                            : "N/A"
+                        }`}
                         style={{
                           backgroundColor: "#f5f5f5",
-                          color: "rgba(0,0,0,0.65)",
+                          color: "#595959",
                         }}
                       />
                     </Form.Item>
                   </Col>
+
                   <Col span={12}>
-                    <Form.Item label="Lần cập nhật cuối" name="updatedAt">
+                    <Form.Item
+                      label={
+                        <Typography.Text strong>
+                          Thông tin cập nhật cuối
+                        </Typography.Text>
+                      }
+                    >
                       <Input
+                        size="large"
                         disabled
+                        prefix={<UserOutlined />}
+                        value={`${currentDiscount?.updatedBy || "N/A"} - ${
+                          currentDiscount?.updatedAt
+                            ? dayjs(currentDiscount.updatedAt).format(
+                                "DD/MM/YYYY HH:mm",
+                              )
+                            : "N/A"
+                        }`}
                         style={{
                           backgroundColor: "#f5f5f5",
-                          color: "rgba(0,0,0,0.65)",
+                          color: "#595959",
                         }}
                       />
                     </Form.Item>

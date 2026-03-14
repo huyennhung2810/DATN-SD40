@@ -17,6 +17,7 @@ import org.springframework.security.core.AuthenticationException;import java.io.
 @Component
 @Slf4j
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
+
     @Value("${frontend.url}")
     private String urlFrontend;
 
@@ -25,6 +26,9 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+
+        log.error("🛑 OAUTH2 AUTHENTICATION FAILED: ", exception);
+
         String screen = CookieUtils.getCookie(request, OAuth2Constant.SCREEN_FOR_ROLE_COOKIE_NAME)
                 .map(Cookie::getValue)
                 .orElse("/");
@@ -33,6 +37,6 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
 
         httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequest(request, response);
 
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
-    }
+
+        getRedirectStrategy().sendRedirect(request, response, targetUrl);    }
 }

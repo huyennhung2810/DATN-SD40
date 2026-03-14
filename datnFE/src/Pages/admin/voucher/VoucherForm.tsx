@@ -257,40 +257,44 @@ const VoucherForm: React.FC = () => {
                 </Radio.Group>
               </Form.Item>
 
-              {/* THÊM MỚI: Nút chọn khách hàng hiển thị dựa trên Radio */}
+           
               {voucherTypeWatch === "INDIVIDUAL" && (
                 <div
                   style={{
                     marginBottom: 24,
-                    padding: "16px",
-                    background: "#f0f5ff",
+                    padding: "16px 20px",
+                    backgroundColor: "#fafafa", 
                     borderRadius: "8px",
-                    border: "1px dashed #adc6ff",
+                    border: "1px solid #d9d9d9", 
                   }}
                 >
-                  <Space direction="vertical" style={{ width: "100%" }}>
-                    <Text italic>
-                      Voucher này sẽ chỉ áp dụng cho danh sách khách hàng được
-                      chọn bên dưới.
+                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                    <Text type="secondary" italic>
+                      * Voucher này sẽ chỉ áp dụng cho danh sách khách hàng được chọn bên dưới.
                     </Text>
-                    <Button
-                      type="primary"
-                      ghost
-                      icon={<UsergroupAddOutlined />}
-                      onClick={() => setIsModalVisible(true)}
-                    >
-                      Chọn khách hàng ({selectedCustomerIds.length})
-                    </Button>
-                    {selectedCustomerIds.length > 0 && (
-                      <Badge
-                        status="success"
-                        text={`Đã chọn ${selectedCustomerIds.length} khách hàng`}
-                      />
-                    )}
+                    
+                    <Space size="middle" align="center">
+                      <Button
+                        type="primary"
+                    
+                        icon={<UsergroupAddOutlined />}
+                        onClick={() => setIsModalVisible(true)}
+                      >
+                        Chọn danh sách khách hàng
+                      </Button>
+
+                      {selectedCustomerIds.length > 0 && (
+                        <Tag 
+                          color="success" 
+                          style={{ margin: 0, padding: "4px 12px", fontSize: "14px", borderRadius: "4px" }}
+                        >
+                          Đã chọn: <b>{selectedCustomerIds.length}</b> khách hàng
+                        </Tag>
+                      )}
+                    </Space>
                   </Space>
                 </div>
               )}
-
               <Form.Item
                 name="code"
                 label={<Text strong>Mã Voucher</Text>}
