@@ -3,6 +3,7 @@ import { notification } from "antd";
 import { authActions } from "./authSlice";
 import type { AuthResponse } from "../../models/auth";
 import authApi from "../../api/auth/authApi";
+import type { PayloadAction } from "@reduxjs/toolkit";
 
 function* handleLoginFlow(
   apiFunc: any,
@@ -59,15 +60,22 @@ function* handleRegister(action: ReturnType<typeof authActions.register>) {
   }
 }
 
-function* handleLogout() {
+function* handleLogout(
+  action: PayloadAction<{ isAdmin?: boolean } | undefined>,
+) {
   try {
-    // Gọi API logout để backend thu hồi/xóa Refresh Token (nếu cần)
     yield call(authApi.logout);
   } catch (e) {
-    console.error("Lỗi khi gọi API logout:", e);
+    console.error("Lỗi logout API:", e);
   } finally {
     yield put(authActions.logoutAction());
-    window.location.href = "/login";
+
+    const isAdmin = action.payload?.isAdmin;
+    if (isAdmin) {
+      window.location.href = "/admin/login";
+    } else {
+      window.location.href = "/login";
+    }
   }
 }
 

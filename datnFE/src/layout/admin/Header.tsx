@@ -132,8 +132,7 @@ const Header: React.FC = () => {
   //xử lý khi chọn menu
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
-      // Gọi Saga xử lý logout: xóa token server -> xóa storage -> về trang login
-      dispatch(authActions.logout());
+      dispatch(authActions.logout({ isAdmin: true }));
     } else if (key === "profile") {
       navigate("/profile");
     }
@@ -153,7 +152,6 @@ const Header: React.FC = () => {
 
   return (
     <header className="admin-header">
-      {/* --- PHẦN TRÁI: THÔNG TIN TRANG ĐỘNG --- */}
       <div className="header-page-info">
         <div className="page-icon">{currentPage.icon}</div>
         <div className="page-text">
@@ -166,7 +164,6 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* --- PHẦN GIỮA: TÌM KIẾM --- */}
       <div className="header-search">
         <Search
           placeholder="Tìm sản phẩm, đơn hàng..."
@@ -175,7 +172,6 @@ const Header: React.FC = () => {
         />
       </div>
 
-      {/* --- PHẦN PHẢI: THÔNG BÁO & USER --- */}
       <div className="header-actions">
         <Badge count={5} size="small" offset={[-2, 4]}>
           <Button
@@ -191,14 +187,12 @@ const Header: React.FC = () => {
           placement="bottomRight"
         >
           <div className="header-user">
-            {/* Ảnh đại diện lấy từ token/auth state */}
             <Avatar
               src={user?.pictureUrl}
               icon={!user?.pictureUrl && <UserOutlined />}
               className="header-avatar"
             />
             <div className="header-user-info">
-              {/* Tên và quyền hạn thật của nhân viên */}
               <div className="header-user-name">
                 {user?.fullName || "Admin"}
               </div>

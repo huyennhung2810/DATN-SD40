@@ -56,7 +56,10 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    logout: (state) => {
+    logout: (
+      state,
+      _action: PayloadAction<{ isAdmin?: boolean } | undefined>,
+    ) => {
       state.loading = true;
     },
 
