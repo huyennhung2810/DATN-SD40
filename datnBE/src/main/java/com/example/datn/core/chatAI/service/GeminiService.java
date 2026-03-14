@@ -40,7 +40,8 @@ public class GeminiService {
 
         String finalPrompt = String.format(
                 "Bạn là chuyên gia máy ảnh Canon tại cửa hàng Canon Hikari. " +
-                        "Hãy dùng thông tin sản phẩm sau: \n%s\n\n" +
+                        "Hãy dùng thông tin" +
+                        " sản phẩm sau: \n%s\n\n" +
                         "Ngữ cảnh hội thoại: \n%s\n\n" +
                         "Khách hàng hỏi: %s\n" +
                         "Trả lời ngắn gọn, nhiệt tình. Nếu không có sản phẩm, hãy gợi ý khách để lại số điện thoại để nhân viên tư vấn.",
