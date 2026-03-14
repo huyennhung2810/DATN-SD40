@@ -5,6 +5,7 @@ import { AdminRoutes } from "./routes/AdminRoutes";
 import { CustomerRoutes } from "./routes/CustomerRoutes";
 import { PublicRoutes } from "./routes/PublicRoutes";
 import EmployeeRoutes from "./routes/EmployeeRoutes";
+import PrivateRoute from "./components/PrivateRoute";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -19,14 +20,19 @@ const App: React.FC = () => {
       <Routes>
         {/*Các trang Login/Register công khai */}
         {PublicRoutes()}
+
         <Route element={<MainLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route element={<PrivateRoute allowedRoles={["ADMIN", "STAFF"]} />}>
+            <Route path="/" element={<HomePage />} />
+          </Route>
 
           {AdminRoutes()}
           {EmployeeRoutes()}
         </Route>
+
         {/*Trang cho Khách hàng */}
         {CustomerRoutes()}
+
         {/* Điều hướng linh hoạt */}
         <Route path="/home" element={<Navigate to="/client" replace />} />
         <Route path="*" element={<Navigate to="/403" replace />} />
