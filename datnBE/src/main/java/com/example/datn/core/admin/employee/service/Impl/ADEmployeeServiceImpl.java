@@ -110,6 +110,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     }
 
     @Override
+    @Transactional
     public ResponseObject<?> addEmployee(ADEmployeeRequest request) {
 
         String plainPassword = DataGeneratorUtils.generateRandomPassword(10);
@@ -163,6 +164,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     }
 
     @Override
+    @Transactional
     public ResponseObject<?> updateEmployee(ADEmployeeRequest request) {
         //  Kiểm tra ID nhân viên
         if (!StringUtils.hasText(request.getId())) {

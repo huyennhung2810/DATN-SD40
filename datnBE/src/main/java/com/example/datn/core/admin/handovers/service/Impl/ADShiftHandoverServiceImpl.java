@@ -193,7 +193,9 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
 
         // Cập nhật trạng thái
         handover.setHandoverStatus(HandoverStatus.CLOSED);
-        handover.setNote(handover.getNote() + " | Admin Note: " + request.getAdminNote());
+        String existingNote = handover.getNote() != null ? handover.getNote() : "";
+        handover.setNote(existingNote + " | Admin Note: " + request.getAdminNote());
+
 
         shiftHandoverRepository.save(handover);
         return ResponseObject.success(null, "Duyệt ca thành công");

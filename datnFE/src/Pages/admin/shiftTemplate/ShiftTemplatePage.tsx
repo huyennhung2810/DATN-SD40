@@ -114,10 +114,13 @@ const ShiftTemplatePage: React.FC = () => {
     dispatch(shiftTemplateActions.changeStatusRequest(id));
   };
 
+  const [currentPage, _setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const columns: ColumnsType<ADShiftTemplateResponse> = [
     {
       title: "STT",
-      render: (_, __, index) => index + 1,
+      render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
       width: 70,
       align: "center",
     },

@@ -67,7 +67,11 @@ public class ADWorkScheduleServiceImpl implements ADWorkScheduleService {
         if(request.getEmployeeId() == null || request.getShiftTemplateId() == null || request.getWorkDate() == null) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Dữ liệu đầu vào không được để trống");
 
-        };
+        }
+
+        if (request.getWorkDate().isBefore(LocalDate.now())) {
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Không thể phân ca cho ngày đã qua");
+        }
 
         //Kiểm tra trùng lịch
         boolean isDuplicate = adWorkScheduleRepository.existsByEmployee_IdAndShiftTemplate_IdAndWorkDate(request.getEmployeeId(), request.getShiftTemplateId(), request.getWorkDate());
@@ -171,11 +175,15 @@ public class ADWorkScheduleServiceImpl implements ADWorkScheduleService {
 
     @Override
     public ResponseObject<?> getTodaySchedule(String employeeId) {
+
+        // Tìm ca có trạng thái REGISTERED hoặc WORKING
+        List<ShiftStatus> validStatus = java.util.Arrays.asList(ShiftStatus.REGISTERED, ShiftStatus.WORKING);
+
         Optional<WorkSchedule> scheduleOpt = adWorkScheduleRepository
-                .findByEmployee_IdAndWorkDateAndShiftStatus(
+                .findByEmployee_IdAndWorkDateAndShiftStatusIn(
                         employeeId,
                         LocalDate.now(),
-                        ShiftStatus.REGISTERED
+                        validStatus
                 );
 
         if (scheduleOpt.isEmpty()) {

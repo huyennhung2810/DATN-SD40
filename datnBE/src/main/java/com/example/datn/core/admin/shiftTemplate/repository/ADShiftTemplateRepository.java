@@ -14,6 +14,7 @@ import java.util.List;
 public interface ADShiftTemplateRepository extends ShiftTemplateRepository {
     List<ShiftTemplate> findAllByStatus(EntityStatus status);
 
+
     @Query("SELECT s FROM ShiftTemplate s WHERE " +
             "(:keyword IS NULL OR s.name LIKE %:keyword% OR s.code LIKE %:keyword%) AND " +
             "(:status IS NULL OR s.status = :status) AND " +
@@ -24,4 +25,6 @@ public interface ADShiftTemplateRepository extends ShiftTemplateRepository {
             @Param("status") EntityStatus status,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime);
+
+    ShiftTemplate findByName(String name);
 }

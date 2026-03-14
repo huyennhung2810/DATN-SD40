@@ -107,12 +107,15 @@ const WorkSchedulePage: React.FC = () => {
     fetchSchedules();
   };
 
+  const [currentPage, _setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const columns: ColumnsType<WorkScheduleResponse> = [
     {
       title: "STT",
       width: 60,
       align: "center",
-      render: (_, __, index) => index + 1,
+      render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
     },
     { title: "Mã NV", dataIndex: "employeeCode", key: "employeeCode" },
     {
