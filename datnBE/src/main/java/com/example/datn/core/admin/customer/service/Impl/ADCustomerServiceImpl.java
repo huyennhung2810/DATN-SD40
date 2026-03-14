@@ -17,6 +17,7 @@ import com.example.datn.repository.AccountRepository;
 import com.example.datn.utils.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.sl.draw.geom.GuideIf.Op;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -98,7 +99,11 @@ public class ADCustomerServiceImpl implements ADCustomerService {
             return address;
         }).collect(Collectors.toList());
 
-        adAddressRepository.saveAll(addresses);
+        try {
+            adAddressRepository.saveAll(addresses);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi lưu địa chỉ khách hàng, đã rollback toàn bộ thay đổi", e);
+        }
     }
 
     @Override
@@ -211,9 +216,15 @@ public class ADCustomerServiceImpl implements ADCustomerService {
         Customer customer = adCustomerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        customer.setStatus(
-                customer.getStatus() == EntityStatus.ACTIVE ? EntityStatus.INACTIVE : EntityStatus.ACTIVE
-        );
+        EntityStatus newStatus = (customer.getStatus() == EntityStatus.ACTIVE)
+                ? EntityStatus.INACTIVE : EntityStatus.ACTIVE;
+        customer.setStatus(newStatus);
+
+        // Đồng bộ trạng thái của Account đi kèm
+        if (customer.getAccount() != null) {
+            customer.getAccount().setStatus(newStatus);
+            accountRepository.save(customer.getAccount());
+        }
 
         adCustomerRepository.save(customer);
         return ResponseObject.success(customer, "Đổi trạng thái khách hàng thành công");
@@ -223,7 +234,7 @@ public class ADCustomerServiceImpl implements ADCustomerService {
     public byte[] exportAllCustomers() {
         List<String> headers = List.of(
                 "STT", "Mã KH", "Họ Tên", "Email", "Số điện thoại",
-                "Giới tính", "Ngày sinh", "Số CCCD", "Trạng thái", "Địa chỉ mặc định"
+                "Giới tính", "Ngày sinh",  "Trạng thái", "Địa chỉ mặc định"
         );
 
         List<Customer> customers = adCustomerRepository.findAll();

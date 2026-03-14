@@ -5,6 +5,7 @@ import type {
   RegisterRequest,
 } from "../../models/auth";
 import { AUTH_STORAGE_KEYS } from "../../models/auth";
+import { isTokenExpired } from "../../constants/jwt";
 
 interface AuthState {
   user: AuthUser | null;
@@ -18,14 +19,28 @@ const getInitialState = (): AuthState => {
   try {
     const accessToken = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
+
+    if (!accessToken) {
+      return { user: null, isLoggedIn: false, loading: false, error: null };
+    }
+
+    // check token expired
+    if (isTokenExpired(accessToken)) {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+
+      return { user: null, isLoggedIn: false, loading: false, error: null };
+    }
+
     return {
       user: storedUser ? JSON.parse(storedUser) : null,
-      isLoggedIn: !!accessToken,
+      isLoggedIn: true,
       loading: false,
       error: null,
     };
   } catch (e) {
-    console.error("Lỗi khôi phục trạng thái auth từ localStorage:", e);
+    console.error("Lỗi khôi phục trạng thái auth:", e);
     return { user: null, isLoggedIn: false, loading: false, error: null };
   }
 };

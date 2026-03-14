@@ -59,11 +59,12 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = authenticate(request.getUsername(), request.getPassword());
 
         List<String> roles = roleRepository.getRoleCodeByUsername(request.getUsername());
+
         if (roles.stream().noneMatch(r -> r.equals(RoleConstant.CUSTOMER.name()))) {
             throw new ServiceException("Tài khoản không có quyền truy cập");
         }
 
-        return buildResponse(request.getUsername(), authentication);
+        return buildResponse(request.getUsername(), authentication, roles);
     }
 
     //login admin-nv
@@ -80,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ServiceException("Tài khoản không có quyền truy cập hệ thống quản lý");
         }
 
-        return buildResponse(request.getUsername(), authentication);
+        return buildResponse(request.getUsername(), authentication, roles);
     }
 
 
@@ -300,8 +301,7 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private AuthResponse buildResponse(String username, Authentication authentication) {
-        List<String> roles = roleRepository.getRoleCodeByUsername(username);
+    private AuthResponse buildResponse(String username, Authentication authentication, List<String> roles) {
 
         Optional<Employee> optStaff = staffRepository.findByUsername(username);
         if (optStaff.isPresent()) {
@@ -310,6 +310,7 @@ public class AuthServiceImpl implements AuthService {
             try {
                 String accessToken = tokenProvider.generateToken(claims);
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(staff.getId());
+
                 return AuthResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(refreshToken.getRefreshToken())
@@ -320,6 +321,7 @@ public class AuthServiceImpl implements AuthService {
                         .pictureUrl(staff.getEmployeeImage())
                         .roles(roles)
                         .build();
+
             } catch (JsonProcessingException e) {
                 throw new ServiceException("Không thể tạo token");
             }
@@ -329,9 +331,11 @@ public class AuthServiceImpl implements AuthService {
         if (optCustomer.isPresent()) {
             Customer customer = optCustomer.get();
             Map<String, Object> claims = buildClaims(customer, roles);
+
             try {
                 String accessToken = tokenProvider.generateToken(claims);
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(customer.getId());
+
                 return AuthResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(refreshToken.getRefreshToken())
@@ -342,6 +346,7 @@ public class AuthServiceImpl implements AuthService {
                         .pictureUrl(customer.getImage())
                         .roles(roles)
                         .build();
+
             } catch (JsonProcessingException e) {
                 throw new ServiceException("Không thể tạo token");
             }

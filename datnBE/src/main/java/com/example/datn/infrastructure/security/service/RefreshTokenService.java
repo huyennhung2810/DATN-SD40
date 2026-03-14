@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class RefreshTokenService {
-    private final long REFRESH_EXPIRED_TIME = 6 * 60 * 60 * 1000;
+    private final long REFRESH_EXPIRED_TIME = 7L * 24 * 60 * 60 * 1000;
 
     private final AuthRefreshTokenRepository authRefreshTokenRepository;
 
@@ -28,6 +28,7 @@ public class RefreshTokenService {
     public Optional<RefreshToken> findByToken(String token) {
         return authRefreshTokenRepository.findByRefreshToken(token);
     }
+
 
     public RefreshToken createRefreshToken(Authentication authentication) {
 
@@ -41,18 +42,18 @@ public class RefreshTokenService {
             RefreshToken refreshToken = optionalRefreshToken.get();
             if (optionalRefreshToken.get().getRevokedAt() != null) {
                 refreshToken.setRevokedAt(null);
-                refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+                refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
                 refreshToken.setRefreshToken(UUID.randomUUID().toString());
                 return authRefreshTokenRepository.save(refreshToken);
             }
-            refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+            refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
             refreshToken.setRefreshToken(UUID.randomUUID().toString());
             return authRefreshTokenRepository.save(refreshToken);
         }
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUserId(principal.getId());
-        refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+        refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
         refreshToken.setRefreshToken(UUID.randomUUID().toString());
         return authRefreshTokenRepository.save(refreshToken);
     }
@@ -64,18 +65,18 @@ public class RefreshTokenService {
             RefreshToken refreshToken = optionalRefreshToken.get();
             if (optionalRefreshToken.get().getRevokedAt() != null) {
                 refreshToken.setRevokedAt(null);
-                refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+                refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
                 refreshToken.setRefreshToken(UUID.randomUUID().toString());
                 return authRefreshTokenRepository.save(refreshToken);
             }
-            refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+            refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
             refreshToken.setRefreshToken(UUID.randomUUID().toString());
             return authRefreshTokenRepository.save(refreshToken);
         }
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUserId(userID);
-        refreshToken.setExpiredAt(REFRESH_EXPIRED_TIME);
+        refreshToken.setExpiredAt(System.currentTimeMillis() + REFRESH_EXPIRED_TIME);
         refreshToken.setRefreshToken(UUID.randomUUID().toString());
         return authRefreshTokenRepository.save(refreshToken);
     }

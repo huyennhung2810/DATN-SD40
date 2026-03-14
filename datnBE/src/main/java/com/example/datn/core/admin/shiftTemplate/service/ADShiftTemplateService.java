@@ -29,6 +29,11 @@ public class ADShiftTemplateService {
             throw new RuntimeException("Giờ bắt đầu phải trước giờ kết thúc");
         }
 
+        ShiftTemplate existingShifts = repository.findByName(request.getName());
+        if (existingShifts != null) {
+            throw new RuntimeException("Tên ca làm việc đã tồn tại");
+        }
+
         ShiftTemplate shift = new ShiftTemplate();
         shift.setName(request.getName());
         shift.setStartTime(request.getStartTime());
@@ -46,6 +51,12 @@ public class ADShiftTemplateService {
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new RuntimeException("Giờ bắt đầu phải trước giờ kết thúc");
         }
+
+        ShiftTemplate existingShifts = repository.findByName(request.getName());
+        if (existingShifts != null && !existingShifts.getId().equals(id)) {
+            throw new RuntimeException("Tên ca làm việc đã tồn tại");
+        }
+
 
         shift.setName(request.getName());
         shift.setStartTime(request.getStartTime());
