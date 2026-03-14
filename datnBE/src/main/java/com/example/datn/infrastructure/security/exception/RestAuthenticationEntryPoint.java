@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import java.io.IOException;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Slf4j
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
@@ -34,6 +35,9 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         // Dùng ObjectMapper để ghi JSON ra response stream
         ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new JavaTimeModule());
+
         mapper.writeValue(response.getOutputStream(), errorResponse);
     }
 }

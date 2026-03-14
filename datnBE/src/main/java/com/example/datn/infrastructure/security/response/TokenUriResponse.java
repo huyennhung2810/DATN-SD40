@@ -16,14 +16,12 @@ import java.util.Base64;
 @Slf4j
 public class TokenUriResponse {
     private String accessToken;
-
     private String refreshToken;
 
     public String getTokenAuthorizationSimple() {
         try {
-            // Dùng ObjectMapper để tạo JSON chuẩn thay vì cộng chuỗi thủ công
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writeValueAsString(this);
+            String json = String.format("{\"accessToken\":\"%s\",\"refreshToken\":\"%s\"}",
+                    this.accessToken, this.refreshToken);
 
             // Dùng thư viện chuẩn của Java để Base64 (Tránh phụ thuộc SecurityUtils cũ)
             return Base64.getEncoder().encodeToString(json.getBytes());
