@@ -25,6 +25,7 @@ import type { RootState } from "../../../redux/store";
 import { workScheduleApi } from "../../../api/workScheduleApi";
 import CheckInModal from "./CheckInModal";
 import CheckOutModal from "./CheckOutModal";
+import { getGreeting } from "../../../constants/time";
 
 const { Title, Text } = Typography;
 
@@ -102,13 +103,12 @@ const ShiftHandoverPage: React.FC = () => {
               }
             >
               {!hasStartedShift ? (
-                /* ================= GIAO DIỆN KHI CHƯA VÀO CA ================= */
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
                   <PlayCircleOutlined
                     style={{ fontSize: 80, color: "#f0f0f0", marginBottom: 20 }}
                   />
-                  <Title level={3}>
-                    Chào buổi sáng, {user?.fullName || "Nhân viên"}
+                  <Title level={4} style={{ margin: 0 }}>
+                    {getGreeting()}, {user?.fullName || "bạn"}!
                   </Title>
 
                   {todaySchedule ? (
