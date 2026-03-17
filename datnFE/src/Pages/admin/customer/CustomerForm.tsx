@@ -42,7 +42,6 @@ import type { AppDispatch, RootState } from "../../../redux/store";
 import {
   mapResponseToFormValues,
   type CustomerRequest,
-  type CustomerResponse,
 } from "../../../models/customer";
 import type { AddressRequest } from "../../../models/address";
 import type { DefaultOptionType } from "antd/es/cascader";
@@ -167,55 +166,67 @@ const CustomerForm: React.FC = () => {
   );
   //Xử lý dữ liệu khi Chỉnh sửa (Edit Mode)
   useEffect(() => {
-    if (isEdit && id) {
+    if (!isEdit || !id) return;
+
+    let isMounted = true;
+
+    const loadCustomer = async () => {
       setIsLoadingEdit(true);
-      customerApi
-        .getCustomerById(id)
-        .then(async (res: CustomerResponse) => {
-          const sortedAddresses = res.addresses
-            ? [...res.addresses].sort((a, b) =>
-                a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1,
-              )
-            : [];
+      try {
+        const res = await customerApi.getCustomerById(id);
 
-          const formValues = mapResponseToFormValues({
-            ...res,
-            addresses: sortedAddresses,
-          });
+        const sortedAddresses = res.addresses
+          ? [...res.addresses].sort((a, b) =>
+              a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1,
+            )
+          : [];
 
-          if (res.image) setPreviewImage(res.image);
-
-          if (sortedAddresses.length > 0) {
-            const keys = sortedAddresses.map((_, i) => i.toString());
-            setActiveKeys(keys);
-
-            try {
-              await Promise.all(
-                sortedAddresses.map(async (addr, i) => {
-                  if (addr.provinceCode)
-                    await loadCommunes(Number(addr.provinceCode), i);
-                }),
-              );
-            } catch (error) {
-              console.error("Error loading communes for addresses:", error);
-              notification.error({
-                message: "Lỗi tải danh sách Phường/Xã cho địa chỉ hiện tại",
-              });
-            }
-          }
-
-          form.setFieldsValue(formValues);
-        })
-        .catch((error) => {
-          console.error("Error loading customer:", error);
-          notification.error({
-            message: "Lỗi tải thông tin khách hàng",
-          });
-        })
-        .finally(() => {
-          setIsLoadingEdit(false);
+        const formValues = mapResponseToFormValues({
+          ...res,
+          addresses: sortedAddresses,
         });
-    }
+
+        if (res.image) setPreviewImage(res.image);
+
+        if (sortedAddresses.length > 0) {
+          const keys = sortedAddresses.map((_, i) => i.toString());
+          setActiveKeys(keys);
+
+          try {
+            await Promise.all(
+              sortedAddresses.map(async (addr, i) => {
+                if (addr.provinceCode)
+                  await loadCommunes(Number(addr.provinceCode), i);
+              }),
+            );
+          } catch (error) {
+            console.error("Error loading communes for addresses:", error);
+            notification.error({
+              message: "Lỗi tải danh sách Phường/Xã cho địa chỉ hiện tại",
+            });
+          }
+        }
+
+        if (isMounted) {
+          form.setFieldsValue(formValues);
+        }
+      } catch (error) {
+        console.error("Error loading customer:", error);
+        notification.error({
+          message: "Lỗi tải thông tin khách hàng",
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingEdit(false);
+        }
+      }
+    };
+
+    loadCustomer();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id, isEdit, form, loadCommunes]);
 
   const validateAge = (
