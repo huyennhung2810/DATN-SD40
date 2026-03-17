@@ -16,16 +16,12 @@ public class ADAddressRequest {
     private String name;
 
     @NotBlank(message = "Số điện thoại không được để trống")
-    @Pattern(
-            regexp = "^0\\d{9}$",
-            message = "Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số"
-    )
+    @Pattern(regexp = "^0(3|5|7|8|9)\\d{8}$", message = "Số điện thoại phải bắt đầu bằng 0 và gồm 10 chữ số")
     private String phoneNumber;
 
     @NotBlank(message = "Tỉnh/Thành phố không được để trống")
     @Size(max = 100, message = "Tỉnh/Thành phố tối đa 100 ký tự")
     private String provinceCity;
-
 
     @NotBlank(message = "Phường/Xã không được để trống")
     @Size(max = 100, message = "Phường/Xã tối đa 100 ký tự")
@@ -38,7 +34,6 @@ public class ADAddressRequest {
     @NotBlank(message = "Địa chỉ chi tiết không được để trống")
     @Size(max = 255, message = "Địa chỉ chi tiết tối đa 255 ký tự")
     private String addressDetail;
-
 
     @NotNull(message = "Trạng thái địa chỉ mặc định không được để trống")
     private Boolean isDefault;

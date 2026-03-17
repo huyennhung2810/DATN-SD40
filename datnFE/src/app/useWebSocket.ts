@@ -11,7 +11,6 @@ export const useWebSocket = (sessionId: string) => {
   useEffect(() => {
     if (!sessionId) return;
 
-    // ✅ Kiểm tra kỹ hơn: nếu là chuỗi "undefined" hoặc rỗng thì lấy port 8386
     let serverUrl = import.meta.env.VITE_BASE_URL_SERVER;
     
     if (!serverUrl || serverUrl === "undefined" || serverUrl === "") {
@@ -24,10 +23,10 @@ export const useWebSocket = (sessionId: string) => {
     const socket = new SockJS(socketUrl);
     const client = over(socket);
     
-    client.debug = () => {}; // Tắt log linh tinh
+    client.debug = () => {};
 
     client.connect({}, () => {
-      console.log("✅ Kết nối thành công tới Backend!");
+      console.log(" Kết nối thành công tới Backend!");
       stompClientRef.current = client;
       client.subscribe(`/topic/messages/${sessionId}`, (payload) => {
         const message = JSON.parse(payload.body);
@@ -36,7 +35,7 @@ export const useWebSocket = (sessionId: string) => {
         }
       });
     }, (error) => {
-      console.error("❌ Lỗi kết nối Socket:", error);
+      console.error(" Lỗi kết nối Socket:", error);
     });
 
     return () => {

@@ -67,7 +67,7 @@ const customerSlice = createSlice ({
             state.loading = true;
         },
 
-        exportExcel: (state) => {
+        exportExcel: (state, _action: PayloadAction<CustomerPageParams | undefined>) => {
             state.loading = true;
         },
 

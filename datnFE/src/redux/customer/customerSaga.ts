@@ -98,7 +98,13 @@ function* handleChangeStatus(action: PayloadAction<string>) {
 
 function* handleExportExcel() {
     try {
-        const blob: Blob = yield call(customerApi.exportExcel);
+        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
+        const exportParams = {
+            keyword: currentFilter.keyword,
+            status: currentFilter.status,
+        };
+
+        const blob: Blob = yield call(customerApi.exportExcel, exportParams);
         const fileName = `DS_Khach_Hang_${dayjs().format("DDMMYYYY_HHmm")}.xlsx`;
         yield call(saveAs, blob, fileName);
         yield put(customerActions.actionSuccess());

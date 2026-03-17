@@ -90,6 +90,7 @@ const CustomerForm: React.FC = () => {
   const [communesMap, setCommunesMap] = useState<
     Record<number, AdministrativeUnit[]>
   >({});
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
   //  Tải danh sách Tỉnh/Thành phố khi khởi tạo
   const fetchedRef = React.useRef(false);
@@ -122,6 +123,7 @@ const CustomerForm: React.FC = () => {
     } catch (error) {
       console.error("Error loading communes:", error);
       notification.error({ message: "Lỗi tải danh sách Phường/Xã mới nhất" });
+      throw error; // Throw error để Promise.all có thể catch
     }
   }, []);
 
@@ -157,7 +159,7 @@ const CustomerForm: React.FC = () => {
           return Promise.resolve();
         } catch (error: unknown) {
           console.error("Duplicate check error:", error);
-          return Promise.resolve();
+          return Promise.reject(error);
         }
       };
     },
@@ -166,33 +168,53 @@ const CustomerForm: React.FC = () => {
   //Xử lý dữ liệu khi Chỉnh sửa (Edit Mode)
   useEffect(() => {
     if (isEdit && id) {
-      customerApi.getCustomerById(id).then(async (res: CustomerResponse) => {
-        const sortedAddresses = res.addresses
-          ? [...res.addresses].sort((a, b) =>
-              a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1,
-            )
-          : [];
+      setIsLoadingEdit(true);
+      customerApi
+        .getCustomerById(id)
+        .then(async (res: CustomerResponse) => {
+          const sortedAddresses = res.addresses
+            ? [...res.addresses].sort((a, b) =>
+                a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1,
+              )
+            : [];
 
-        const formValues = mapResponseToFormValues({
-          ...res,
-          addresses: sortedAddresses,
+          const formValues = mapResponseToFormValues({
+            ...res,
+            addresses: sortedAddresses,
+          });
+
+          if (res.image) setPreviewImage(res.image);
+
+          if (sortedAddresses.length > 0) {
+            const keys = sortedAddresses.map((_, i) => i.toString());
+            setActiveKeys(keys);
+
+            try {
+              await Promise.all(
+                sortedAddresses.map(async (addr, i) => {
+                  if (addr.provinceCode)
+                    await loadCommunes(Number(addr.provinceCode), i);
+                }),
+              );
+            } catch (error) {
+              console.error("Error loading communes for addresses:", error);
+              notification.error({
+                message: "Lỗi tải danh sách Phường/Xã cho địa chỉ hiện tại",
+              });
+            }
+          }
+
+          form.setFieldsValue(formValues);
+        })
+        .catch((error) => {
+          console.error("Error loading customer:", error);
+          notification.error({
+            message: "Lỗi tải thông tin khách hàng",
+          });
+        })
+        .finally(() => {
+          setIsLoadingEdit(false);
         });
-
-        if (res.image) setPreviewImage(res.image);
-
-        if (sortedAddresses.length > 0) {
-          const keys = sortedAddresses.map((_, i) => i.toString());
-          setActiveKeys(keys);
-
-          await Promise.all(
-            sortedAddresses.map(async (addr, i) => {
-              if (addr.provinceCode)
-                await loadCommunes(Number(addr.provinceCode), i);
-            }),
-          );
-        }
-        form.setFieldsValue(formValues);
-      });
     }
   }, [id, isEdit, form, loadCommunes]);
 
@@ -201,6 +223,12 @@ const CustomerForm: React.FC = () => {
     value: dayjs.Dayjs | null,
   ): Promise<void> => {
     if (value) {
+      if (value.isAfter(dayjs(), "day")) {
+        return Promise.reject(
+          new Error("Ngày sinh không được lớn hơn ngày hiện tại"),
+        );
+      }
+
       const age = dayjs().diff(value, "year");
       if (age < 15) {
         return Promise.reject(new Error("Khách hàng phải từ 15 tuổi trở lên"));
@@ -368,9 +396,7 @@ const CustomerForm: React.FC = () => {
               {...restField}
               name={[name, "phoneNumber"]}
               label="SĐT nhận"
-              rules={[
-                { required: true, pattern: /^(0|84)(3|5|7|8|9)([0-9]{8})$/ },
-              ]}
+              rules={[{ required: true, pattern: /^0(3|5|7|8|9)\d{8}$/ }]}
             >
               <Input size="large" maxLength={10} />
             </Form.Item>
@@ -601,7 +627,7 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="email"
                   label={<Text strong>Email</Text>}
-                  validateTrigger="onChange"
+                  validateTrigger="onBlur"
                   hasFeedback
                   rules={[
                     {
@@ -617,11 +643,11 @@ const CustomerForm: React.FC = () => {
                 <Form.Item
                   name="phoneNumber"
                   label={<Text strong>SĐT</Text>}
-                  validateTrigger="onChange"
+                  validateTrigger="onBlur"
                   rules={[
                     {
                       required: true,
-                      pattern: /^(0|84)(3|5|7|8|9)([0-9]{8})$/,
+                      pattern: /^0(3|5|7|8|9)\d{8}$/,
                       message: "SĐT không đúng định dạng",
                     },
                     { validator: duplicateValidator("phoneNumber") },
@@ -705,6 +731,7 @@ const CustomerForm: React.FC = () => {
                       size="large"
                       icon={<SaveOutlined />}
                       loading={loading}
+                      disabled={isLoadingEdit}
                     >
                       Lưu thông tin
                     </Button>
