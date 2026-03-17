@@ -400,18 +400,22 @@ const PosPage: React.FC = () => {
   const activeOrder = orders.find((o) => o.id === activeKey);
 
   // Synchronize appliedVoucher state with activeOrder when it changes
+  // Sửa lại đoạn useEffect đồng bộ voucher
   useEffect(() => {
-    if (activeOrder?.appliedVoucher) {
-      setAppliedVoucher(activeOrder.appliedVoucher);
-    } else if (activeOrder && !activeOrder.appliedVoucher) {
+    if (activeOrder?.voucher) {
+      setAppliedVoucher(activeOrder.voucher);
+    } else if (activeOrder && !activeOrder.voucher) {
       setAppliedVoucher(null);
     }
-  }, [activeOrder?.id, activeOrder?.appliedVoucher]);
+  }, [activeOrder?.id, activeOrder?.voucher]);
 
   // Helper: compute best voucher saving amount
   const calcVoucherSaving = (voucher: any, total: number): number => {
     if (!voucher) return 0;
-    if (voucher.discountUnit === "%") {
+    
+    const unit = voucher.discountUnit ? String(voucher.discountUnit).trim().toUpperCase() : "";
+    
+    if (unit === "%" || unit === "PERCENT") {
       const disc = (total * voucher.discountValue) / 100;
       return voucher.maxDiscountAmount
         ? Math.min(disc, voucher.maxDiscountAmount)
