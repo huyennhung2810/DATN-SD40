@@ -69,7 +69,17 @@ const OrderPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState("ALL");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+
+  // Initialize statusCounts với 0 cho tất cả statuses
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(
+    () => {
+      const initial: Record<string, number> = {};
+      OrderStatuses.filter((s) => s.key !== "ALL").forEach((s) => {
+        initial[s.key] = 0;
+      });
+      return initial;
+    },
+  );
 
   // Detail Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -82,18 +92,37 @@ const OrderPage: React.FC = () => {
 
   useEffect(() => {
     fetchStatusCounts();
+  }, []);
+
+  useEffect(() => {
+    // Reset to first page whenever we change tab (filter)
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, [activeTab]);
+
+  useEffect(() => {
     fetchOrders();
   }, [activeTab, pagination.current, pagination.pageSize]);
 
   const fetchStatusCounts = async () => {
     try {
+      const statusKeys = OrderStatuses.filter((s) => s.key !== "ALL").map(
+        (s) => s.key,
+      );
+
+      const results = await Promise.all(
+        statusKeys.map((key) =>
+          orderApi
+            .searchOrders({ page: 0, size: 1, status: key })
+            .then((res) => ({ key, total: res.data?.data?.totalElements || 0 }))
+            .catch(() => ({ key, total: 0 })),
+        ),
+      );
+
       const counts: Record<string, number> = {};
-      for (const status of OrderStatuses) {
-        if (status.key === "ALL") continue;
-        const params = { page: 0, size: 1, status: status.key };
-        const res = await orderApi.searchOrders(params);
-        counts[status.key] = res.data?.data?.totalElements || 0;
-      }
+      results.forEach((item) => {
+        counts[item.key] = item.total;
+      });
+
       setStatusCounts(counts);
     } catch (e) {
       console.error(e);
@@ -142,7 +171,9 @@ const OrderPage: React.FC = () => {
       await orderApi.updateOrderStatus(selectedOrder.id, newStatus);
       message.success("Cập nhật trạng thái thành công");
       setDrawerOpen(false);
+      // Refresh cả orders và status counts
       fetchOrders();
+      fetchStatusCounts();
     } catch (e) {
       console.error(e);
       message.error("Lỗi cập nhật trạng thái");
