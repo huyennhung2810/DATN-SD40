@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.model.response;
+package com.example.datn.core.admin.productdetail.model.response;
 
 import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;

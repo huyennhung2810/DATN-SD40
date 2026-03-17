@@ -1,13 +1,13 @@
-package com.example.datn.core.admin.productDetail.service.Impl;
+package com.example.datn.core.admin.productdetail.service.Impl;
 
 import com.example.datn.core.admin.color.repository.ADColorRepository;
 
 import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
-import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
@@ -45,9 +45,15 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     public ResponseObject<?> getAllProductDetails(String keyword, EntityStatus status) {
         List<ProductDetail> list = adProductDetailRepository.searchProductDetail(keyword, status);
 
-        List<ADProductDetailResponse> dtoList = list.stream().map(entity ->
-                mapToResponse(entity)
-        ).toList();
+        // Re-fetch each entity with serials to avoid lazy loading issues
+        List<ADProductDetailResponse> dtoList = list.stream()
+                .map(entity -> {
+                    // Re-fetch with serials
+                    ProductDetail pdWithSerials = adProductDetailRepository.findByIdWithSerials(entity.getId())
+                            .orElse(entity);
+                    return mapToResponse(pdWithSerials);
+                })
+                .toList();
         return ResponseObject.success(dtoList,"Hiển thị danh sách sản phẩm chi tiết thành công");
     }
 
@@ -99,7 +105,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
 
     @Override
     public ResponseObject<?> getById(String id) {
-        ProductDetail pd = adProductDetailRepository.findById(id)
+        ProductDetail pd = adProductDetailRepository.findByIdWithSerials(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy SPCT"));
 
         // Convert sang Response DTO
@@ -166,8 +172,18 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
             List<Serial> serialEntities = request.getSerials().stream().map(sReq -> {
                 Serial serial = new Serial();
                 serial.setSerialNumber(sReq.getSerialNumber());
+
+                // Generate code nếu không có
+                if (sReq.getCode() == null || sReq.getCode().isEmpty()) {
+                    serial.setCode("SERIAL" + System.currentTimeMillis() + (int)(Math.random() * 1000));
+                } else {
+                    serial.setCode(sReq.getCode());
+                }
+
                 serial.setCreatedDate(System.currentTimeMillis());
-                serial.setStatus(sReq.getStatus());
+
+                // Default status to ACTIVE if not provided
+                serial.setStatus(sReq.getStatus() != null ? sReq.getStatus() : EntityStatus.ACTIVE);
                 serial.setProductDetail(spct);
                 serial.setProductDetail(savedSpct);
                 return serial;
@@ -198,7 +214,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
     @Override
     public ResponseObject<?> updateProductDetail(String id, ADProductDetailRequest request) {
         // 1. Kiểm tra sự tồn tại của SPCT
-        ProductDetail productDetail = adProductDetailRepository.findById(id)
+        ProductDetail productDetail = adProductDetailRepository.findByIdWithSerials(id)
                 .orElseThrow(() -> new RuntimeException("Sản phẩm chi tiết không tồn tại"));
 
         // 2. Kiểm tra mã Code (Nếu đổi mã code, phải đảm bảo không trùng với SPCT khác)
@@ -224,11 +240,46 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         productDetail.setColor(adColorRepository.findById(request.getColorId()).orElse(productDetail.getColor()));
         productDetail.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElse(productDetail.getStorageCapacity()));
 
-        // 5. Lưu cập nhật
+        // 5. Xử lý cập nhật Serial (nếu có serials mới được gửi lên)
+        if (request.getSerials() != null && !request.getSerials().isEmpty()) {
+            // Validate serials mới không trùng với serial đã tồn tại trong hệ thống
+            List<String> newSerialNumbers = request.getSerials().stream()
+                    .map(ADSerialRequest::getSerialNumber)
+                    .collect(Collectors.toList());
+
+            // Kiểm tra serial mới có trùng với serial của biến thể khác không
+            for (String serialNum : newSerialNumbers) {
+                boolean existsOther = adSerialRepository.existsBySerialNumberAndProductDetailIdNot(serialNum, id);
+                if (existsOther) {
+                    return ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial " + serialNum + " đã tồn tại trong biến thể khác!");
+                }
+            }
+
+            // Xóa các serial cũ của biến thể này
+            adSerialRepository.deleteByProductDetailId(id);
+
+            // Thêm các serial mới
+            List<Serial> newSerials = request.getSerials().stream().map(sReq -> {
+                Serial serial = new Serial();
+                serial.setSerialNumber(sReq.getSerialNumber());
+                serial.setCreatedDate(System.currentTimeMillis());
+                serial.setStatus(sReq.getStatus() != null ? sReq.getStatus() : EntityStatus.ACTIVE);
+                serial.setProductDetail(productDetail);
+                return serial;
+            }).collect(Collectors.toList());
+
+            adSerialRepository.saveAll(newSerials);
+
+            // Cập nhật quantity theo số lượng serial mới
+            productDetail.setQuantity(newSerialNumbers.size());
+        }
+
+        // 6. Lưu cập nhật
         adProductDetailRepository.save(productDetail);
 
-        // 6. Map sang response và trả về
-        ADProductDetailResponse response = mapToResponse(productDetail);
+        // 7. Map sang response và trả về (fetch lại để lấy serials)
+        ProductDetail updatedPd = adProductDetailRepository.findByIdWithSerials(id).orElse(productDetail);
+        ADProductDetailResponse response = mapToResponse(updatedPd);
 
         return ResponseObject.success(response, "Cập nhật sản phẩm chi tiết thành công");
     }

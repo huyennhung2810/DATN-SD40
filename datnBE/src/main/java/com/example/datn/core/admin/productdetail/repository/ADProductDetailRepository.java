@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.repository;
+package com.example.datn.core.admin.productdetail.repository;
 
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ADProductDetailRepository extends ProductDetailRepository {
@@ -20,6 +21,12 @@ public interface ADProductDetailRepository extends ProductDetailRepository {
 
     List<ProductDetail> findByProductId(String productId);
 
+    // Lấy product detail kèm theo serials (eager load)
+    @Query("SELECT pd FROM ProductDetail pd " +
+            "LEFT JOIN FETCH pd.serials " +
+            "WHERE pd.product.id = :productId")
+    List<ProductDetail> findByProductIdWithSerials(@Param("productId") String productId);
+
     @Query("SELECT pd FROM ProductDetail pd WHERE " +
             "(:kw IS NULL OR :kw = '' OR pd.code LIKE %:kw% OR pd.product.name LIKE %:kw%) " +
             "AND (:sts IS NULL OR pd.status = :sts) " +
@@ -29,11 +36,10 @@ public interface ADProductDetailRepository extends ProductDetailRepository {
             @Param("sts") EntityStatus status
     );
 
-    @Query("SELECT pd FROM ProductDetail pd WHERE " +
-            "(:keyword IS NULL OR :keyword = '' OR " +
-            "lower(pd.product.name) LIKE lower(concat('%', :keyword, '%')) OR " +
-            "lower(pd.code) LIKE lower(concat('%', :keyword, '%')))")
-    Page<ProductDetail> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    @Query("SELECT pd FROM ProductDetail pd " +
+            "LEFT JOIN FETCH pd.serials " +
+            "WHERE pd.id = :id")
+    Optional<ProductDetail> findByIdWithSerials(@Param("id") String id);
 
     // Kiểm tra biến thể trùng: trùng productId, colorId, storageCapacityId
     boolean existsByProductIdAndColorIdAndStorageCapacityId(

@@ -29,7 +29,6 @@ import {
 } from "antd";
 import {
     PlusOutlined,
-    SearchOutlined,
     EditOutlined,
     DeleteOutlined,
     ReloadOutlined,
@@ -38,7 +37,6 @@ import {
     CloseOutlined,
     SettingOutlined,
     CheckCircleOutlined,
-    AppstoreOutlined,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
@@ -65,6 +63,10 @@ import type { ProductDetailResponse } from "../../../models/productdetail";
 import type { ProductWithVariantsResponse, ProductVariantResponse } from "../../../models/productVariant";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import QuickAddCategoryModal from "../../../components/QuickAddCategoryModal";
+import QuickAddTechSpecModal, { type TechSpecType } from "../../../components/QuickAddTechSpecModal";
+import QuickAddColorModal from "../../../components/QuickAddColorModal";
+import QuickAddStorageModal from "../../../components/QuickAddStorageModal";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -130,6 +132,13 @@ const ProductPage: React.FC = () => {
     const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
     const [drawerPendingImages, setDrawerPendingImages] = useState<{ file: File; preview: string }[]>([]);
     const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+
+    // Quick Add modal states
+    const [quickAddCategoryOpen, setQuickAddCategoryOpen] = useState(false);
+    const [quickAddTechSpecOpen, setQuickAddTechSpecOpen] = useState(false);
+    const [quickAddTechSpecType, setQuickAddTechSpecType] = useState<TechSpecType | null>(null);
+    const [quickAddColorOpen, setQuickAddColorOpen] = useState(false);
+    const [quickAddStorageOpen, setQuickAddStorageOpen] = useState(false);
 
     // load ảnh
     useEffect(() => {
@@ -217,35 +226,6 @@ const ProductPage: React.FC = () => {
         notification.success({
             message: "Làm mới thành công",
             description: "Dữ liệu đã được cập nhật",
-        });
-    };
-
-    const handleReset = () => {
-        form.resetFields();
-        setKeyword("");
-        setSelectedCategory(undefined);
-        setSelectedStatus(undefined);
-        setSelectedSensorType(undefined);
-        setSelectedLensMount(undefined);
-        setSelectedResolution(undefined);
-        setSelectedProcessor(undefined);
-        setSelectedImageFormat(undefined);
-        setSelectedVideoFormat(undefined);
-        setSelectedIso(undefined);
-        setFilter({
-            page: 0,
-            size: 12,
-            name: "",
-            idProductCategory: undefined,
-            idTechSpec: undefined,
-            status: undefined,
-            sensorType: undefined,
-            lensMount: undefined,
-            resolution: undefined,
-            processor: undefined,
-            imageFormat: undefined,
-            videoFormat: undefined,
-            iso: undefined,
         });
     };
 
@@ -1472,6 +1452,23 @@ const ProductPage: React.FC = () => {
                                         label: cat.name,
                                         value: cat.id,
                                     }))}
+                                    dropdownRender={(menu) => (
+                                        <>
+                                            {menu}
+                                            <Divider style={{ margin: "8px 0" }} />
+                                            <Button
+                                                type="link"
+                                                icon={<PlusOutlined />}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setQuickAddCategoryOpen(true);
+                                                }}
+                                                style={{ padding: "4px 12px", height: "auto" }}
+                                            >
+                                                + Thêm mới loại sản phẩm
+                                            </Button>
+                                        </>
+                                    )}
                                 />
                             </Form.Item>
 
@@ -1508,6 +1505,24 @@ const ProductPage: React.FC = () => {
                                                 label: item.name,
                                                 value: item.name,
                                             }))}
+                                            dropdownRender={(menu) => (
+                                                <>
+                                                    {menu}
+                                                    <Divider style={{ margin: "8px 0" }} />
+                                                    <Button
+                                                        type="link"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setQuickAddTechSpecType("sensorType");
+                                                            setQuickAddTechSpecOpen(true);
+                                                        }}
+                                                        style={{ padding: "4px 12px", height: "auto" }}
+                                                    >
+                                                        + Thêm mới
+                                                    </Button>
+                                                </>
+                                            )}
                                         />
                                     </Form.Item>
                                 </Col>
@@ -1523,6 +1538,24 @@ const ProductPage: React.FC = () => {
                                                 label: item.name,
                                                 value: item.name,
                                             }))}
+                                            dropdownRender={(menu) => (
+                                                <>
+                                                    {menu}
+                                                    <Divider style={{ margin: "8px 0" }} />
+                                                    <Button
+                                                        type="link"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setQuickAddTechSpecType("lensMount");
+                                                            setQuickAddTechSpecOpen(true);
+                                                        }}
+                                                        style={{ padding: "4px 12px", height: "auto" }}
+                                                    >
+                                                        + Thêm mới
+                                                    </Button>
+                                                </>
+                                            )}
                                         />
                                     </Form.Item>
                                 </Col>
@@ -1541,6 +1574,24 @@ const ProductPage: React.FC = () => {
                                                 label: item.name,
                                                 value: item.name,
                                             }))}
+                                            dropdownRender={(menu) => (
+                                                <>
+                                                    {menu}
+                                                    <Divider style={{ margin: "8px 0" }} />
+                                                    <Button
+                                                        type="link"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setQuickAddTechSpecType("resolution");
+                                                            setQuickAddTechSpecOpen(true);
+                                                        }}
+                                                        style={{ padding: "4px 12px", height: "auto" }}
+                                                    >
+                                                        + Thêm mới
+                                                    </Button>
+                                                </>
+                                            )}
                                         />
                                     </Form.Item>
                                 </Col>
@@ -1564,6 +1615,24 @@ const ProductPage: React.FC = () => {
                                                 label: item.name,
                                                 value: item.name,
                                             }))}
+                                            dropdownRender={(menu) => (
+                                                <>
+                                                    {menu}
+                                                    <Divider style={{ margin: "8px 0" }} />
+                                                    <Button
+                                                        type="link"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setQuickAddTechSpecType("processor");
+                                                            setQuickAddTechSpecOpen(true);
+                                                        }}
+                                                        style={{ padding: "4px 12px", height: "auto" }}
+                                                    >
+                                                        + Thêm mới
+                                                    </Button>
+                                                </>
+                                            )}
                                         />
                                     </Form.Item>
                                 </Col>
@@ -1579,6 +1648,24 @@ const ProductPage: React.FC = () => {
                                                 label: item.name,
                                                 value: item.name,
                                             }))}
+                                            dropdownRender={(menu) => (
+                                                <>
+                                                    {menu}
+                                                    <Divider style={{ margin: "8px 0" }} />
+                                                    <Button
+                                                        type="link"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setQuickAddTechSpecType("imageFormat");
+                                                            setQuickAddTechSpecOpen(true);
+                                                        }}
+                                                        style={{ padding: "4px 12px", height: "auto" }}
+                                                    >
+                                                        + Thêm mới
+                                                    </Button>
+                                                </>
+                                            )}
                                         />
                                     </Form.Item>
                                 </Col>
@@ -1595,6 +1682,24 @@ const ProductPage: React.FC = () => {
                                         label: item.name,
                                         value: item.name,
                                     }))}
+                                    dropdownRender={(menu) => (
+                                        <>
+                                            {menu}
+                                            <Divider style={{ margin: "8px 0" }} />
+                                            <Button
+                                                type="link"
+                                                icon={<PlusOutlined />}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setQuickAddTechSpecType("videoFormat");
+                                                    setQuickAddTechSpecOpen(true);
+                                                }}
+                                                style={{ padding: "4px 12px", height: "auto" }}
+                                            >
+                                                + Thêm mới
+                                            </Button>
+                                        </>
+                                    )}
                                 />
                             </Form.Item>
 
@@ -2289,6 +2394,23 @@ const ProductPage: React.FC = () => {
                                         label: c.name,
                                         value: c.id,
                                     }))}
+                                    dropdownRender={(menu) => (
+                                        <>
+                                            {menu}
+                                            <Divider style={{ margin: "8px 0" }} />
+                                            <Button
+                                                type="link"
+                                                icon={<PlusOutlined />}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setQuickAddColorOpen(true);
+                                                }}
+                                                style={{ padding: "4px 12px", height: "auto" }}
+                                            >
+                                                + Thêm mới màu
+                                            </Button>
+                                        </>
+                                    )}
                                 />
                             </Form.Item>
                         </Col>
@@ -2306,6 +2428,23 @@ const ProductPage: React.FC = () => {
                                         label: s.name,
                                         value: s.id,
                                     }))}
+                                    dropdownRender={(menu) => (
+                                        <>
+                                            {menu}
+                                            <Divider style={{ margin: "8px 0" }} />
+                                            <Button
+                                                type="link"
+                                                icon={<PlusOutlined />}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setQuickAddStorageOpen(true);
+                                                }}
+                                                style={{ padding: "4px 12px", height: "auto" }}
+                                            >
+                                                + Thêm mới dung lượng
+                                            </Button>
+                                        </>
+                                    )}
                                 />
                             </Form.Item>
                         </Col>
@@ -2566,6 +2705,68 @@ const ProductPage: React.FC = () => {
                     </Form.Item>
                 </Form>
             </Modal>
+
+            {/* Quick Add Modals */}
+            <QuickAddCategoryModal
+                open={quickAddCategoryOpen}
+                onClose={() => setQuickAddCategoryOpen(false)}
+                onCreated={(categoryId, label) => {
+                    dispatch(productCategoryActions.getAll({ page: 0, size: 1000 }));
+                    modalForm.setFieldsValue({ idProductCategory: categoryId });
+                    notification.success({ message: `Đã chọn: ${label}` });
+                }}
+            />
+
+            <QuickAddTechSpecModal
+                open={quickAddTechSpecOpen}
+                onClose={() => {
+                    setQuickAddTechSpecOpen(false);
+                    setQuickAddTechSpecType(null);
+                }}
+                onCreated={(value, label) => {
+                    if (quickAddTechSpecType === "sensorType") {
+                        dispatch(sensorTypeActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), sensorType: value } });
+                    } else if (quickAddTechSpecType === "lensMount") {
+                        dispatch(lensMountActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), lensMount: value } });
+                    } else if (quickAddTechSpecType === "resolution") {
+                        dispatch(resolutionActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), resolution: value } });
+                    } else if (quickAddTechSpecType === "processor") {
+                        dispatch(processorActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), processor: value } });
+                    } else if (quickAddTechSpecType === "imageFormat") {
+                        dispatch(imageFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), imageFormat: value } });
+                    } else if (quickAddTechSpecType === "videoFormat") {
+                        dispatch(videoFormatActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                        modalForm.setFieldsValue({ techSpec: { ...modalForm.getFieldValue("techSpec"), videoFormat: value } });
+                    }
+                    notification.success({ message: `Đã chọn: ${label}` });
+                }}
+                type={quickAddTechSpecType || "sensorType"}
+            />
+
+            <QuickAddColorModal
+                open={quickAddColorOpen}
+                onClose={() => setQuickAddColorOpen(false)}
+                onCreated={(colorId, label) => {
+                    dispatch(colorActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                    variantForm.setFieldsValue({ colorId });
+                    notification.success({ message: `Đã chọn: ${label}` });
+                }}
+            />
+
+            <QuickAddStorageModal
+                open={quickAddStorageOpen}
+                onClose={() => setQuickAddStorageOpen(false)}
+                onCreated={(storageId, label) => {
+                    dispatch(storageCapacityActions.getAll({ page: 0, size: 1000, keyword: "" }));
+                    variantForm.setFieldsValue({ storageCapacityId: storageId });
+                    notification.success({ message: `Đã chọn: ${label}` });
+                }}
+            />
         </div>
     );
 };
