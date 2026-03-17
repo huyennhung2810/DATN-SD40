@@ -114,7 +114,7 @@ const ShiftTemplatePage: React.FC = () => {
     dispatch(shiftTemplateActions.changeStatusRequest(id));
   };
 
-  const [currentPage, _setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   const columns: ColumnsType<ADShiftTemplateResponse> = [
@@ -287,10 +287,14 @@ const ShiftTemplatePage: React.FC = () => {
           loading={isLoading}
           bordered
           pagination={{
+            current: currentPage,
             total: totalElements,
-            pageSize: 10,
+            pageSize,
             showSizeChanger: false,
-            onChange: (page) => fetchShifts(page - 1, 10), // Trừ 1 vì Backend Java thường tính từ page 0
+            onChange: (page) => {
+              setCurrentPage(page);
+              fetchShifts(page - 1, pageSize); // Trừ 1 vì Backend Java thường tính từ page 0
+            },
           }}
         />
       </Card>

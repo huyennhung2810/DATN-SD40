@@ -45,12 +45,11 @@ const WorkScheduleModal: React.FC<Props> = ({
         shiftTemplateApi.getAll({ page: 0, size: 100 }),
       ]);
 
-      const empList =
-        (empRes as any)?.data?.data ||
-        (empRes as any)?.data ||
-        (Array.isArray(empRes) ? empRes : []);
+      const empList: EmployeeResponse[] = Array.isArray(empRes)
+        ? empRes
+        : (empRes as any)?.data || [];
       setEmployees(
-        empList.map((emp: EmployeeResponse) => ({
+        empList.map((emp) => ({
           label: `${emp.name} (${emp.code || "N/A"})`,
           value: emp.id,
         })),
