@@ -46,7 +46,7 @@ const Sidebar: React.FC = () => {
         return item.key;
       }
     }
-    return path;
+    return undefined;
   };
 
   const items = [
@@ -127,14 +127,14 @@ const Sidebar: React.FC = () => {
       label: "Quản lý Banner",
     },
     {
-      key: "/schedule",
+      key: "sub-schedule",
       icon: <CalendarOutlined />,
       label: "Quản lý Lịch làm việc",
       children: [
         {
           key: "/shiftManagement",
           icon: <ScheduleOutlined />,
-          label: "Lịch làm việc",
+          label: "Trung tâm quản lý ca",
         },
         {
           key: "/shift-handover",
@@ -149,6 +149,8 @@ const Sidebar: React.FC = () => {
       label: "Hỗ trợ KH",
     },
   ];
+
+  const selectedKey = getSelectedKey();
 
   return (
     <div className="admin-sidebar">
@@ -169,13 +171,17 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-menu">
         <Menu
           mode="inline"
-          selectedKeys={[getSelectedKey()]}
+          selectedKeys={selectedKey ? [selectedKey] : []}
           style={{
             borderRight: 0,
             background: "transparent",
           }}
           items={items}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => {
+            if (typeof key === "string" && key.startsWith("/")) {
+              navigate(key);
+            }
+          }}
         />
       </div>
 
