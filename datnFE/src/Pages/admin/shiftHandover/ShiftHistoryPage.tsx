@@ -64,8 +64,13 @@ const ShiftHistoryPage: React.FC = () => {
       loadHistory();
     }, 500); // Đợi 500ms sau khi người dùng ngừng gõ mới gọi API
     return () => clearTimeout(handler);
-  }, [filter.staffId, filter.fromDate, filter.toDate, filter.page, filter.size]);
-
+  }, [
+    filter.staffId,
+    filter.fromDate,
+    filter.toDate,
+    filter.page,
+    filter.size,
+  ]);
   // Tính năng Xuất Excel dành cho Admin
   const handleExportExcel = () => {
     // Thêm check an toàn trước khi xuất
@@ -233,8 +238,8 @@ const ShiftHistoryPage: React.FC = () => {
               onChange={(dates: any) => {
                 setFilter({
                   ...filter,
-                  fromDate: dates ? dates[0].format("YYYY-MM-DD") : null,
-                  toDate: dates ? dates[1].format("YYYY-MM-DD") : null,
+                  fromDate: dates ? dates[0].startOf("day").valueOf() : null,
+                  toDate: dates ? dates[1].endOf("day").valueOf() : null,
                   page: 0,
                 });
               }}
@@ -274,18 +279,12 @@ const ShiftHistoryPage: React.FC = () => {
             });
             message.success("Duyệt thành công");
             setIsConfirmModalOpen(false);
-            setSelectedId("");
-            setAdminNote("");
             loadHistory();
           } catch (e) {
             console.error("Lỗi khi duyệt ca trực:", e);
           }
         }}
-        onCancel={() => {
-          setIsConfirmModalOpen(false);
-          setSelectedId("");
-          setAdminNote("");
-        }}
+        onCancel={() => setIsConfirmModalOpen(false)}
       >
         <Alert
           message="Lưu ý: Hành động này sẽ chuyển trạng thái ca trực thành CLOSED"
