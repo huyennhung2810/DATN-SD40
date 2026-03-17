@@ -99,7 +99,7 @@ const WorkSchedulePage: React.FC = () => {
       const matchEmp =
         selectedEmployee === "all" || item.employeeId === selectedEmployee;
       const matchDate =
-        !filterDate || item.workDate === filterDate.format("YYYY-MM-DD");
+        !filterDate || dayjs(item.workDate).isSame(filterDate, "day");
       return matchEmp && matchDate;
     });
   }, [schedules, selectedEmployee, filterDate]);

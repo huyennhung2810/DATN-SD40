@@ -233,8 +233,8 @@ const ShiftHistoryPage: React.FC = () => {
               onChange={(dates: any) => {
                 setFilter({
                   ...filter,
-                  fromDate: dates ? dates[0].startOf("day").valueOf() : null,
-                  toDate: dates ? dates[1].endOf("day").valueOf() : null,
+                  fromDate: dates ? dates[0].format("YYYY-MM-DD") : null,
+                  toDate: dates ? dates[1].format("YYYY-MM-DD") : null,
                   page: 0,
                 });
               }}
