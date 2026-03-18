@@ -4,6 +4,8 @@ package com.example.datn.entity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -32,11 +34,10 @@ public class DiscountDetail implements Serializable {
     @Column(name = "price_after")
     private BigDecimal priceAfter;
 
-    @Column(name = "note")
-    private String note;
 
     @Column(name = "created_at")
     private Long createdAt;
+
 
     @Column(name = "updated_at")
     private Long updatedAt;

@@ -19,7 +19,7 @@ export const adminTheme: ThemeConfig = {
     colorPrimaryActive: "#0052A3",
     colorPrimaryBg: "#F0F7FF",
     colorPrimaryBgHover: "#E5F0FF",
-    colorPrimaryBgActive: "#CCE5FF",
+   
     
     // Success - Muted green
     colorSuccess: "#34C759",

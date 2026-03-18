@@ -41,7 +41,7 @@ const DiscountForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
   const isSubmittingRef = useRef(false);
-
+  const { user } = useSelector((state: RootState) => state.auth);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 4. Giả lập dữ liệu sản phẩm (Bạn nên thay bằng dữ liệu từ Redux/API thực tế)
@@ -148,8 +148,8 @@ const DiscountForm: React.FC = () => {
       // Chuyển Dayjs về số Long (Timestamp)
       startDate: values.timeRange ? values.timeRange[0].valueOf() : null,
       endDate: values.timeRange ? values.timeRange[1].valueOf() : null,
-      createdBy: localStorage.getItem("employeeCode") || "Nhung",
-      updatedBy: localStorage.getItem("employeeCode") || "Nhung",
+      createdBy: user?.username || "Nhung",
+      updatedBy: user?.username || "Nhung",
       productDetailIds: selectedRowKeys, // Danh sách ID sản phẩm đã chọn
     };
 
@@ -197,9 +197,11 @@ const DiscountForm: React.FC = () => {
                 <Form.Item
                   label="Mã giảm giá"
                   name="code"
-                  rules={[{ required: true, message: "Vui lòng nhập mã!" }]}
                 >
-                  <Input placeholder="Ví dụ: DIS2026" disabled={!!id} />
+                  <Input
+                    placeholder="Hệ thống tự động tạo mã..."
+                    disabled={true} 
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
