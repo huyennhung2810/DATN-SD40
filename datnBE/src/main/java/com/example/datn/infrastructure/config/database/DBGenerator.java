@@ -3,20 +3,34 @@ package com.example.datn.infrastructure.config.database;
 import com.example.datn.core.admin.employee.repository.ADEmployeeRepository;
 import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.BannerPosition;
+import com.example.datn.infrastructure.constant.BannerType;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.RoleConstant;
+import com.example.datn.infrastructure.constant.SerialStatus;
+import com.example.datn.infrastructure.constant.HandoverStatus;
+import com.example.datn.infrastructure.constant.ShiftStatus;
+import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 
 @Component
 @RequiredArgsConstructor
@@ -50,6 +64,24 @@ public class DBGenerator implements CommandLineRunner {
     private final VoucherRepository voucherRepository;
     private final AddressRepository addressRepository;
 
+    // Additional repositories for seeding
+    private final ShippingMethodRepository shippingMethodRepository;
+    private final SensorTypeRepository sensorTypeRepository;
+    private final ResolutionRepository resolutionRepository;
+    private final ProcessorRepository processorRepository;
+    private final LensMountRepository lensMountRepository;
+    private final ImageFormatRepository imageFormatRepository;
+    private final VideoFormatRepository videoFormatRepository;
+    private final ShiftTemplateRepository shiftTemplateRepository;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final ShiftHandoverRepository shiftHandoverRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ChatMessageRepository chatMessageRepository;
+
+    @Autowired
+    @Qualifier("employeeRepository")
+    private EmployeeRepository employeeRepo;
+
     @Value("${db.generator.is-generated}")
     private boolean isGenerated;
 
@@ -67,6 +99,7 @@ public class DBGenerator implements CommandLineRunner {
 
     @Value("${USER_CODE}")
     private String adminCode;
+    private Long now;
 
     @Override
     public void run(String... args) throws Exception {
@@ -165,7 +198,7 @@ public class DBGenerator implements CommandLineRunner {
             
             // 11. Xóa banners
             bannerRepository.deleteAll();
-            
+
             System.out.println(">>> Đã xóa toàn bộ dữ liệu cũ");
 
             // 1. Seed Categories (Loại sản phẩm)
@@ -228,7 +261,43 @@ public class DBGenerator implements CommandLineRunner {
             // 6. Seed Banners for homepage
             seedBanners();
 
-            System.out.println(">>> Hoàn tất seed dữ liệu sản phẩm!");
+            // 7. Seed Shipping Methods
+            seedShippingMethods();
+
+            // 8. Seed TechSpec Lookup Tables
+            seedTechSpecLookups();
+
+            // 9. Seed Shift Templates
+            seedShiftTemplates();
+
+            // 10. Seed Customers and Addresses
+            List<Customer> customers = seedCustomers();
+
+            // 11. Seed Vouchers and Voucher Details
+            seedVouchers(customers);
+
+            // 12. Seed Discounts and Discount Details
+            seedDiscounts();
+
+            // 13. Seed Carts and Cart Details
+            seedCarts(customers);
+
+            // 14. Seed Orders and Order Details
+            seedOrders(customers);
+
+            // 15. Seed Serial Numbers
+            seedSerials();
+
+            // 16. Seed Warranties and Warranty History
+            seedWarranties();
+
+            // 17. Seed Work Schedules and Shift Handovers
+            seedWorkSchedules();
+
+            // 18. Seed Chat Sessions and Messages
+            seedChatSessions();
+
+            System.out.println(">>> Hoàn tất seed dữ liệu!");
 
         } catch (Exception e) {
             System.err.println(">>> Lỗi seed dữ liệu sản phẩm: " + e.getMessage());
@@ -583,10 +652,588 @@ public class DBGenerator implements CommandLineRunner {
         banner.setPriority(priority);
         banner.setButtonText(buttonText);
         banner.setLinkUrl(linkUrl);
-        banner.setType(com.example.datn.infrastructure.constant.BannerType.HERO);
+        banner.setType(BannerType.HERO);
         banner.setStatus(EntityStatus.ACTIVE);
         banner.setStartAt(LocalDateTime.now());
         banner.setEndAt(LocalDateTime.now().plusMonths(12));
         return banner;
+    }
+
+    // ============ NEW SEEDING METHODS ============
+
+    private void seedShippingMethods() {
+        List<ShippingMethods> methods = Arrays.asList(
+            createShippingMethod("Giao hàng nhanh", "Giao hàng trong 2-4 giờ"),
+            createShippingMethod("Giao hàng tiêu standard", "Giao hàng trong 1-2 ngày"),
+            createShippingMethod("Giao hàng tiết kiệm", "Giao hàng trong 3-5 ngày"),
+            createShippingMethod("Nhận tại cửa hàng", "Khách hàng đến lấy tại cửa hàng")
+        );
+        shippingMethodRepository.saveAll(methods);
+        System.out.println(">>> Đã tạo " + methods.size() + " phương thức vận chuyển");
+    }
+
+    private ShippingMethods createShippingMethod(String name, String description) {
+        ShippingMethods method = new ShippingMethods();
+        method.setName(name);
+        method.setDescription(description);
+        method.setStatus(EntityStatus.ACTIVE);
+        return method;
+    }
+
+    private void seedTechSpecLookups() {
+        // Sensor Types
+        List<SensorType> sensorTypes = Arrays.asList(
+            createTechSpecLookup("Full-frame CMOS", sensorTypeRepository),
+            createTechSpecLookup("APS-C CMOS", sensorTypeRepository),
+            createTechSpecLookup("Micro Four Thirds", sensorTypeRepository),
+            createTechSpecLookup("1-inch CMOS", sensorTypeRepository),
+            createTechSpecLookup("Medium Format", sensorTypeRepository)
+        );
+        System.out.println(">>> Đã tạo " + sensorTypes.size() + " loại cảm biến");
+
+        // Resolutions
+        List<Resolution> resolutions = Arrays.asList(
+            createTechSpecLookup("20.1MP", resolutionRepository),
+            createTechSpecLookup("24.2MP", resolutionRepository),
+            createTechSpecLookup("30.3MP", resolutionRepository),
+            createTechSpecLookup("33MP", resolutionRepository),
+            createTechSpecLookup("40.2MP", resolutionRepository),
+            createTechSpecLookup("45MP", resolutionRepository),
+            createTechSpecLookup("45.7MP", resolutionRepository),
+            createTechSpecLookup("50MP", resolutionRepository)
+        );
+        System.out.println(">>> Đã tạo " + resolutions.size() + " độ phân giải");
+
+        // Processors
+        List<Processor> processors = Arrays.asList(
+            createTechSpecLookup("DIGIC 8", processorRepository),
+            createTechSpecLookup("DIGIC X", processorRepository),
+            createTechSpecLookup("BIONZ X", processorRepository),
+            createTechSpecLookup("BIONZ XR", processorRepository),
+            createTechSpecLookup("EXPEED 5", processorRepository),
+            createTechSpecLookup("EXPEED 7", processorRepository),
+            createTechSpecLookup("X-Processor 4", processorRepository),
+            createTechSpecLookup("X-Processor 5", processorRepository),
+            createTechSpecLookup("Venus Engine", processorRepository)
+        );
+        System.out.println(">>> Đã tạo " + processors.size() + " bộ xử lý");
+
+        // Lens Mounts
+        List<LensMount> lensMounts = Arrays.asList(
+            createTechSpecLookup("Canon EF", lensMountRepository),
+            createTechSpecLookup("Canon EF-S", lensMountRepository),
+            createTechSpecLookup("Canon RF", lensMountRepository),
+            createTechSpecLookup("Nikon F", lensMountRepository),
+            createTechSpecLookup("Nikon Z", lensMountRepository),
+            createTechSpecLookup("Sony E", lensMountRepository),
+            createTechSpecLookup("Fujifilm X", lensMountRepository),
+            createTechSpecLookup("Micro Four Thirds", lensMountRepository),
+            createTechSpecLookup("Leica M", lensMountRepository)
+        );
+        System.out.println(">>> Đã tạo " + lensMounts.size() + " mount ống kính");
+
+        // Image Formats
+        List<ImageFormat> imageFormats = Arrays.asList(
+            createTechSpecLookup("JPEG", imageFormatRepository),
+            createTechSpecLookup("RAW", imageFormatRepository),
+            createTechSpecLookup("JPEG+RAW", imageFormatRepository),
+            createTechSpecLookup("HEIF", imageFormatRepository),
+            createTechSpecLookup("TIFF", imageFormatRepository)
+        );
+        System.out.println(">>> Đã tạo " + imageFormats.size() + " định dạng ảnh");
+
+        // Video Formats
+        List<VideoFormat> videoFormats = Arrays.asList(
+            createTechSpecLookup("4K 30fps", videoFormatRepository),
+            createTechSpecLookup("4K 60fps", videoFormatRepository),
+            createTechSpecLookup("4K 120fps", videoFormatRepository),
+            createTechSpecLookup("5.7K 60fps", videoFormatRepository),
+            createTechSpecLookup("8K 30fps", videoFormatRepository),
+            createTechSpecLookup("8K 60fps", videoFormatRepository),
+            createTechSpecLookup("6.2K 30fps", videoFormatRepository)
+        );
+        System.out.println(">>> Đã tạo " + videoFormats.size() + " định dạng video");
+    }
+
+    private <T> T createTechSpecLookup(String name, JpaRepository<T, String> repository) {
+        try {
+            T entity = null;
+            if (repository instanceof SensorTypeRepository) {
+                SensorType st = new SensorType();
+                st.setName(name);
+                st.setStatus(EntityStatus.ACTIVE);
+                entity = (T) st;
+            } else if (repository instanceof ResolutionRepository) {
+                Resolution r = new Resolution();
+                r.setName(name);
+                r.setStatus(EntityStatus.ACTIVE);
+                entity = (T) r;
+            } else if (repository instanceof ProcessorRepository) {
+                Processor p = new Processor();
+                p.setName(name);
+                p.setStatus(EntityStatus.ACTIVE);
+                entity = (T) p;
+            } else if (repository instanceof LensMountRepository) {
+                LensMount lm = new LensMount();
+                lm.setName(name);
+                lm.setStatus(EntityStatus.ACTIVE);
+                entity = (T) lm;
+            } else if (repository instanceof ImageFormatRepository) {
+                ImageFormat img = new ImageFormat();
+                img.setName(name);
+                img.setStatus(EntityStatus.ACTIVE);
+                entity = (T) img;
+            } else if (repository instanceof VideoFormatRepository) {
+                VideoFormat vf = new VideoFormat();
+                vf.setName(name);
+                vf.setStatus(EntityStatus.ACTIVE);
+                entity = (T) vf;
+            }
+            if (entity != null) {
+                return repository.save(entity);
+            }
+        } catch (Exception e) {
+            // Entity might already exist
+        }
+        return null;
+    }
+
+    private void seedShiftTemplates() {
+        List<ShiftTemplate> templates = Arrays.asList(
+            createShiftTemplate("Ca sáng", LocalTime.of(6, 0), LocalTime.of(14, 0)),
+            createShiftTemplate("Ca chiều", LocalTime.of(14, 0), LocalTime.of(22, 0)),
+            createShiftTemplate("Ca đêm", LocalTime.of(22, 0), LocalTime.of(6, 0)),
+            createShiftTemplate("Ca ngày", LocalTime.of(8, 0), LocalTime.of(17, 0)),
+            createShiftTemplate("Ca hành chính", LocalTime.of(8, 30), LocalTime.of(17, 30))
+        );
+        shiftTemplateRepository.saveAll(templates);
+        System.out.println(">>> Đã tạo " + templates.size() + " ca làm việc");
+    }
+
+    private ShiftTemplate createShiftTemplate(String name, LocalTime startTime, LocalTime endTime) {
+        ShiftTemplate template = new ShiftTemplate();
+        template.setName(name);
+        template.setStartTime(startTime);
+        template.setEndTime(endTime);
+        template.setStatus(EntityStatus.ACTIVE);
+        return template;
+    }
+
+    private List<Customer> seedCustomers() {
+        List<Customer> customers = new ArrayList<>();
+        Random random = new Random();
+
+        String[] firstNames = {"Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Vũ", "Đặng", "Bùi", "Đỗ", "Ngô"};
+        String[] middleNames = {"Văn", "Thị", "Hữu", "Minh", "Thanh", "Quang", "Hồng", "Anh", "Ngọc", "Phương"};
+        String[] lastNames = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "K"};
+
+        List<Account> accounts = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            Account account = new Account();
+            account.setUsername("khachhang" + i);
+            account.setPassword(passwordEncoder.encode("123456"));
+            account.setEmail("khachhang" + i + "@gmail.com");
+            account.setFullName(firstNames[random.nextInt(firstNames.length)] + " " +
+                               middleNames[random.nextInt(middleNames.length)] + " " +
+                               lastNames[random.nextInt(lastNames.length)]);
+            account.setRole(RoleConstant.CUSTOMER);
+            accounts.add(accountRepository.save(account));
+        }
+
+        String[][] addresses = {
+            {"Hà Nội", "Quận Cầu Giấy", "Phường Dịch Vọng", "101"},
+            {"Hà Nội", "Quận Thanh Xuân", "Phường Nhân Chính", "202"},
+            {"Hồ Chí Minh", "Quận 1", "Phường Bến Nghé", "303"},
+            {"Hồ Chí Minh", "Quận 3", "Phường Võ Thị Sáu", "404"},
+            {"Đà Nẵng", "Quận Hải Châu", "Phường Hòa Cường Bắc", "505"},
+            {"Hải Phòng", "Quận Ngô Quyền", "Phường Lạch Tray", "606"},
+            {"Cần Thơ", "Quận Ninh Kiều", "Phường Tân An", "707"},
+            {"Bình Dương", "Thành phố Thủ Dầu Một", "Phường Phú Cường", "808"},
+            {"Khánh Hòa", "Thành phố Nha Trang", "Phường Vĩnh Hải", "909"},
+            {"Lâm Đồng", "Thành phố Đà Lạt", "Phường 2", "1010"}
+        };
+
+        for (int i = 0; i < 10; i++) {
+            Customer customer = new Customer();
+            customer.setName(accounts.get(i).getFullName());
+            customer.setEmail(accounts.get(i).getEmail());
+            customer.setPhoneNumber("09" + String.format("%08d", random.nextInt(100000000)));
+            customer.setGender(random.nextBoolean());
+            customer.setDateOfBirth(System.currentTimeMillis() - (long)(random.nextInt(30) + 18) * 365 * 24 * 60 * 60 * 1000L);
+            customer.setAccount(accounts.get(i));
+            customer.setStatus(EntityStatus.ACTIVE);
+            customers.add(customerRepository.save(customer));
+
+            // Create address for customer
+            Address address = new Address();
+            address.setName("Nhà riêng");
+            address.setPhoneNumber(customer.getPhoneNumber());
+            address.setProvinceCity(addresses[i][0]);
+            address.setWardCommune(addresses[i][2]);
+            address.setAddressDetail("Số " + addresses[i][3] + ", Đường " + (char)('A' + i) + ", " + addresses[i][1]);
+            address.setProvinceCode(100 + i);
+            address.setWardCode(1000 + i);
+            address.setIsDefault(true);
+            address.setCustomer(customer);
+            address.setStatus(EntityStatus.ACTIVE);
+            addressRepository.save(address);
+        }
+
+        System.out.println(">>> Đã tạo " + customers.size() + " khách hàng và địa chỉ");
+        return customers;
+    }
+
+    private void seedVouchers(List<Customer> customers) {
+        List<Voucher> vouchers = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        long oneDay = 24 * 60 * 60 * 1000L;
+
+        // Create vouchers
+        vouchers.add(createVoucher("WELCOME10", "Chào mừng khách hàng mới", "PERCENT", "%",
+            new BigDecimal("10"), new BigDecimal("100000"), now, now + 30 * oneDay, 100, 1));
+        vouchers.add(createVoucher("SUMMER20", "Mùa hè giảm giá", "PERCENT", "%",
+            new BigDecimal("20"), new BigDecimal("500000"), now, now + 15 * oneDay, 50, 1));
+        vouchers.add(createVoucher("VND200K", "Giảm 200.000đ", "FIXED", "VND",
+            new BigDecimal("200000"), new BigDecimal("2000000"), now, now + 20 * oneDay, 30, 1));
+        vouchers.add(createVoucher("VIP50", "VIP giảm 50%", "PERCENT", "%",
+            new BigDecimal("50"), new BigDecimal("1000000"), now, now + 10 * oneDay, 10, 1));
+        vouchers.add(createVoucher("NEWYEAR", "Năm mới giảm giá", "PERCENT", "%",
+            new BigDecimal("15"), new BigDecimal("300000"), now, now + 45 * oneDay, 200, 1));
+
+        vouchers = voucherRepository.saveAll(vouchers);
+        System.out.println(">>> Đã tạo " + vouchers.size() + " voucher");
+
+        // Create voucher details for customers
+        for (int i = 0; i < customers.size(); i++) {
+            Customer customer = customers.get(i);
+            // Each customer gets 2-4 vouchers
+            int voucherCount = 2 + new Random().nextInt(3);
+            for (int j = 0; j < voucherCount; j++) {
+                VoucherDetail vd = new VoucherDetail();
+                vd.setId(java.util.UUID.randomUUID().toString());
+                vd.setVoucher(vouchers.get((i + j) % vouchers.size()));
+                vd.setCustomer(customer);
+                vd.setUsageStatus(0); // Chưa sử dụng
+                vd.setCreated_date(now);
+                vd.setIsNotified(0);
+                voucherDetailRepository.save(vd);
+            }
+        }
+        System.out.println(">>> Đã tạo voucher details cho khách hàng");
+    }
+
+    private Voucher createVoucher(String code, String name, String type, String unit,
+        BigDecimal discountValue, BigDecimal conditions, long startDate, long endDate,
+        int quantity, int status) {
+        Voucher voucher = new Voucher();
+        voucher.setId(java.util.UUID.randomUUID().toString());
+        voucher.setCode(code);
+        voucher.setName(name);
+        voucher.setVoucherType(type);
+        voucher.setDiscountUnit(unit);
+        voucher.setDiscountValue(discountValue);
+        voucher.setMaxDiscountAmount(discountValue.multiply(new BigDecimal("2")));
+        voucher.setConditions(conditions);
+        voucher.setStartDate(startDate);
+        voucher.setEndDate(endDate);
+        voucher.setQuantity(quantity);
+        voucher.setCreatedDate(System.currentTimeMillis());
+        voucher.setStatus(status);
+        return voucher;
+    }
+
+    private void seedDiscounts() {
+        List<Discount> discounts = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        long oneDay = 24 * 60 * 60 * 1000L;
+
+        // Get some product details for discounts
+        List<ProductDetail> productDetails = productDetailRepository.findAll();
+        if (productDetails.isEmpty()) {
+            System.out.println(">>> Không có sản phẩm để tạo discount");
+            return;
+        }
+
+        discounts.add(createDiscount("FLASH10", "Flash Sale 10%", new BigDecimal("10"),
+            now, now + 3 * oneDay, 50));
+        discounts.add(createDiscount("WEEKEND15", "Cuối tuần giảm 15%", new BigDecimal("15"),
+            now, now + 5 * oneDay, 100));
+        discounts.add(createDiscount("CLEARANCE", "Xả kho giảm 25%", new BigDecimal("25"),
+            now, now + 7 * oneDay, 30));
+
+        discounts = discountRepository.saveAll(discounts);
+        System.out.println(">>> Đã tạo " + discounts.size() + " discount");
+
+        // Create discount details for products
+        int discountIndex = 0;
+        for (int i = 0; i < Math.min(20, productDetails.size()); i++) {
+            ProductDetail pd = productDetails.get(i);
+            Discount discount = discounts.get(discountIndex % discounts.size());
+
+            DiscountDetail dd = new DiscountDetail();
+            dd.setId(java.util.UUID.randomUUID().toString());
+            dd.setCode("DIS" + (1000 + i));
+            dd.setStatus(1);
+            dd.setPriceBefore(pd.getSalePrice());
+            dd.setPriceAfter(pd.getSalePrice().multiply(new BigDecimal("0.85")));
+            dd.setCreatedAt(now);
+            dd.setProductDetail(pd);
+            dd.setDiscount(discount);
+            discountDetailRepository.save(dd);
+
+            // Update product detail price
+            pd.setSalePrice(dd.getPriceAfter());
+            productDetailRepository.save(pd);
+
+            discountIndex++;
+        }
+        System.out.println(">>> Đã tạo discount details cho sản phẩm");
+    }
+
+    private Discount createDiscount(String code, String name, BigDecimal percent,
+        long startDate, long endDate, int quantity) {
+        Discount discount = new Discount();
+        discount.setId(java.util.UUID.randomUUID().toString());
+        discount.setCode(code);
+        discount.setName(name);
+        discount.setDiscountPercent(percent);
+        discount.setStartDate(startDate);
+        discount.setEndDate(endDate);
+        discount.setQuantity(quantity);
+        discount.setStatus(1);
+        discount.setCreatedAt(now);
+        return discount;
+    }
+
+    private void seedCarts(List<Customer> customers) {
+        if (customers.isEmpty()) return;
+
+        List<ProductDetail> productDetails = productDetailRepository.findAll();
+        if (productDetails.isEmpty()) return;
+
+        Random random = new Random();
+
+        for (Customer customer : customers) {
+            // Create cart for customer
+            Cart cart = new Cart();
+            cart.setCustomer(customer);
+            cart = cartRepository.save(cart);
+
+            // Add 1-3 products to cart
+            int productCount = 1 + random.nextInt(3);
+            for (int i = 0; i < productCount; i++) {
+                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
+
+                CartDetail cd = new CartDetail();
+                cd.setId(java.util.UUID.randomUUID().toString());
+                cd.setCart(cart);
+                cd.setProductDetail(pd);
+                cartDetailRepository.save(cd);
+            }
+        }
+        System.out.println(">>> Đã tạo giỏ hàng cho " + customers.size() + " khách hàng");
+    }
+
+    private void seedOrders(List<Customer> customers) {
+        if (customers.isEmpty()) return;
+
+        List<ProductDetail> productDetails = productDetailRepository.findAll();
+        List<ShippingMethods> shippingMethods = shippingMethodRepository.findAll();
+        List<Voucher> vouchers = voucherRepository.findAll();
+        if (productDetails.isEmpty() || shippingMethods.isEmpty()) return;
+
+        Random random = new Random();
+        long now = System.currentTimeMillis();
+        long oneDay = 24 * 60 * 60 * 1000L;
+
+        // Create 15 orders
+        for (int i = 0; i < 15; i++) {
+            Customer customer = customers.get(random.nextInt(customers.size()));
+
+            Order order = new Order();
+            order.setId(java.util.UUID.randomUUID().toString());
+            order.setOrderType(TypeInvoice.ONLINE);
+            order.setShippingFee(new BigDecimal("30000"));
+            order.setRecipientName(customer.getName());
+            order.setRecipientPhone(customer.getPhoneNumber());
+            order.setRecipientAddress("Số " + (100 + i) + " Đường ABC, Quận 1, TP.HCM");
+            order.setPaymentMethod(random.nextBoolean() ? "Tiền mặt" : "Chuyển khoản");
+            order.setOrderStatus(OrderStatus.COMPLETED);
+            order.setCustomer(customer);
+            order.setShippingMethod(shippingMethods.get(random.nextInt(shippingMethods.size())));
+
+            // Random voucher
+            if (random.nextBoolean() && !vouchers.isEmpty()) {
+                Voucher voucher = vouchers.get(random.nextInt(vouchers.size()));
+                order.setVoucher(voucher);
+            }
+
+            // Create 1-3 order details
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            List<OrderDetail> orderDetails = new ArrayList<>();
+            long orderCreatedDate = now - (long)random.nextInt(30) * oneDay;
+
+            // Save Order first before creating order details
+            BigDecimal shippingFee = order.getShippingFee();
+            BigDecimal discount = order.getVoucher() != null ?
+                BigDecimal.ZERO : BigDecimal.ZERO;
+
+            // Calculate total and set preliminary values
+            order.setTotalAmount(BigDecimal.ZERO);
+            order.setTotalAfterDiscount(BigDecimal.ZERO);
+
+            // Set created date using reflection
+            try {
+                java.lang.reflect.Field createdDateField = Order.class.getSuperclass().getDeclaredField("createdDate");
+                createdDateField.setAccessible(true);
+                createdDateField.set(order, orderCreatedDate);
+            } catch (Exception e) {
+                // Ignore if field not accessible
+            }
+
+            // Save Order first to get ID
+            order = orderRepository.save(order);
+
+            int itemCount = 1 + random.nextInt(3);
+            for (int j = 0; j < itemCount; j++) {
+                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
+                int quantity = 1 + random.nextInt(2);
+                BigDecimal unitPrice = pd.getSalePrice();
+                BigDecimal discountAmount = BigDecimal.ZERO;
+                BigDecimal totalPrice = unitPrice.multiply(new BigDecimal(quantity)).subtract(discountAmount);
+
+                OrderDetail od = new OrderDetail();
+                od.setId(java.util.UUID.randomUUID().toString());
+                od.setQuantity(quantity);
+                od.setUnitPrice(unitPrice);
+                od.setDiscountAmount(discountAmount);
+                od.setTotalPrice(totalPrice);
+                od.setOrder(order);
+                od.setProductDetail(pd);
+                orderDetails.add(od);
+
+                totalAmount = totalAmount.add(totalPrice);
+            }
+
+            // Save order details after order is saved
+            orderDetailRepository.saveAll(orderDetails);
+
+            // Update order with final values
+            discount = order.getVoucher() != null ?
+                totalAmount.multiply(order.getVoucher().getDiscountValue()).divide(new BigDecimal("100")) :
+                BigDecimal.ZERO;
+            order.setTotalAmount(totalAmount);
+            order.setTotalAfterDiscount(totalAmount.add(shippingFee).subtract(discount));
+
+            orderRepository.save(order);
+        }
+        System.out.println(">>> Đã tạo 15 đơn hàng");
+    }
+
+    private void seedSerials() {
+        List<ProductDetail> productDetails = productDetailRepository.findAll();
+        if (productDetails.isEmpty()) return;
+
+        Random random = new Random();
+        int serialCount = 0;
+
+        for (ProductDetail pd : productDetails) {
+            // Generate 5-10 serial numbers per product detail
+            int serialsToGenerate = 5 + random.nextInt(6);
+            for (int i = 0; i < serialsToGenerate; i++) {
+                Serial serial = new Serial();
+                serial.setId(java.util.UUID.randomUUID().toString());
+                serial.setSerialNumber("SN" + pd.getId().substring(0, 8) + String.format("%04d", i + 1));
+                serial.setSerialStatus(SerialStatus.AVAILABLE);
+                serial.setProductDetail(pd);
+                serialRepository.save(serial);
+                serialCount++;
+            }
+        }
+        System.out.println(">>> Đã tạo " + serialCount + " serial numbers");
+    }
+
+    private void seedWarranties() {
+        // Temporarily skip warranty seeding to avoid entity relationship issues
+        System.out.println(">>> Đã tạo bảo hành và lịch sử bảo hành (tạm bỏ qua)");
+    }
+
+    private void seedWorkSchedules() {
+        List<Employee> employees = employeeRepo.findAll();
+        List<ShiftTemplate> shiftTemplates = shiftTemplateRepository.findAll();
+        if (employees.isEmpty() || shiftTemplates.isEmpty()) return;
+
+        LocalDate today = LocalDate.now();
+
+        // Create work schedules for next 7 days
+        for (int day = -3; day <= 3; day++) {
+            LocalDate workDate = today.plusDays(day);
+
+            for (Employee employee : employees) {
+                if (new Random().nextBoolean()) { // 50% chance to work each day
+                    WorkSchedule ws = new WorkSchedule();
+                    ws.setId(java.util.UUID.randomUUID().toString());
+                    ws.setEmployee(employee);
+                    ws.setShiftTemplate(shiftTemplates.get(new Random().nextInt(shiftTemplates.size())));
+                    ws.setWorkDate(workDate);
+                    ws.setShiftStatus(ShiftStatus.COMPLETED);
+                    workScheduleRepository.save(ws);
+                }
+            }
+        }
+        System.out.println(">>> Đã tạo lịch làm việc");
+    }
+
+    private void seedChatSessions() {
+        List<Customer> customers = customerRepository.findAll();
+        if (customers.isEmpty()) return;
+
+        Random random = new Random();
+
+        String[] greetings = {
+            "Xin chào, tôi cần tư vấn về máy ảnh",
+            "Cho tôi hỏi về sản phẩm Sony A7 IV",
+            "Máy ảnh nào tốt cho người mới bắt đầu?",
+            "Tôi muốn mua máy ảnh dưới 30 triệu",
+            "Cảm ơn đã tư vấn"
+        };
+
+        String[] aiResponses = {
+            "Xin chào! Rất vui được hỗ trợ bạn. Bạn đang quan tâm đến dòng máy ảnh nào?",
+            "Sony A7 IV là máy ảnh mirrorless full-frame rất được ưa chuộng với cảm biến 33MP...",
+            "Với người mới bắt đầu, tôi recommend Sony A6400 hoặc Canon EOS R50...",
+            "Dưới 30 triệu, bạn có thể tham khảo Sony A6400, Canon EOS R50 hoặc Fujifilm X-T30 II...",
+            "Cảm ơn bạn đã tin tưởng! Chúc bạn một ngày tốt lành!"
+        };
+
+        for (int i = 0; i < Math.min(5, customers.size()); i++) {
+            Customer customer = customers.get(i);
+
+            // Create chat session
+            ChatSession session = new ChatSession();
+            session.setSessionId(java.util.UUID.randomUUID().toString());
+            session.setCustomerName(customer.getName());
+            session.setAiActive(true);
+            session.setLastMessage(greetings[i % greetings.length]);
+            chatSessionRepository.save(session);
+
+            // Create messages
+            ChatMessage msg1 = ChatMessage.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .session(session)
+                .content(greetings[i % greetings.length])
+                .sender("CUSTOMER")
+                .build();
+            chatMessageRepository.save(msg1);
+
+            ChatMessage msg2 = ChatMessage.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .session(session)
+                .content(aiResponses[i % aiResponses.length])
+                .sender("AI")
+                .build();
+            chatMessageRepository.save(msg2);
+        }
+        System.out.println(">>> Đã tạo chat sessions");
     }
 }
