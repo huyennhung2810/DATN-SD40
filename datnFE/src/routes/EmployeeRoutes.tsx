@@ -7,6 +7,7 @@ import CustomerPage from "../Pages/admin/customer/CustomerList";
 import CustomerForm from "../Pages/admin/customer/CustomerForm";
 import ProductPage from "../Pages/admin/product/ProductList";
 import ProductCategoryPage from "../Pages/admin/product-category/ProductCategoryList";
+import BrandPage from "../Pages/admin/brand/BrandList";
 import SerialPage from "../Pages/admin/serial/SerialList";
 import ShiftHandoverPage from "../Pages/admin/shiftHandover/ShiftHandoverPage";
 import VoucherList from "../Pages/admin/voucher/VoucherList";
@@ -39,6 +40,7 @@ export const EmployeeRoutes = () => [
     {/* Quản lý Sản phẩm & Thuộc tính  */}
     <Route path="/admin/products" element={<ProductPage />} />
     <Route path="/admin/product-categories" element={<ProductCategoryPage />} />
+    <Route path="/admin/brands" element={<BrandPage />} />
     <Route path="/admin/tech-spec" element={<TechSpecPage />} />
     <Route path="/serial" element={<SerialPage />} />
     <Route path="/products/color" element={<ColorPage />} />

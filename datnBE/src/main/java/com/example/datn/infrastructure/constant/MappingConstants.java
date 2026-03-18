@@ -54,6 +54,7 @@ public class MappingConstants {
 
     // Admin endpoints - dau api cua khanh khoi nham
     public static final String ADMIN_PRODUCT_CATEGORY = API + ADMIN + "/product-category";
+    public static final String ADMIN_BRAND = API + ADMIN + "/brand";
     public static final String ADMIN_PRODUCT = API + ADMIN + "/product";
     public static final String ADMIN_TECH_SPEC = API + ADMIN + "/tech-spec";
     public static final String ADMIN_PRODUCT_IMAGE = API + ADMIN + "/product-image";

@@ -44,6 +44,7 @@ public class CustomerProductServiceImpl implements CustomerProductService {
         List<Object[]> results = productRepository.searchForCustomer(
                 request.getName(),
                 request.getIdProductCategory(),
+                request.getIdBrand(),
                 request.getIdTechSpec(),
                 request.getStatus(),
                 request.getSensorType(),
@@ -89,6 +90,11 @@ public class CustomerProductServiceImpl implements CustomerProductService {
                         response.setProductCategoryName(product.getProductCategory().getName());
                     }
 
+                    if (product.getBrand() != null) {
+                        response.setIdBrand(product.getBrand().getId());
+                        response.setBrandName(product.getBrand().getName());
+                    }
+
                     if (product.getTechSpec() != null) {
                         response.setIdTechSpec(product.getTechSpec().getId());
                         response.setTechSpecName(product.getTechSpec().getSensorType());
@@ -129,15 +135,17 @@ public class CustomerProductServiceImpl implements CustomerProductService {
         response.setDescription((String) row[2]);
         response.setIdProductCategory((String) row[3]);
         response.setProductCategoryName((String) row[4]);
-        response.setIdTechSpec((String) row[5]);
-        response.setTechSpecName((String) row[6]);
-        response.setPrice(row[7] != null ? (java.math.BigDecimal) row[7] : null);
-        response.setStatus((EntityStatus) row[8]);
-        response.setCreatedDate((Long) row[9]);
-        response.setLastModifiedDate((Long) row[10]);
+        response.setIdBrand((String) row[5]);
+        response.setBrandName((String) row[6]);
+        response.setIdTechSpec((String) row[7]);
+        response.setTechSpecName((String) row[8]);
+        response.setPrice(row[9] != null ? (java.math.BigDecimal) row[9] : null);
+        response.setStatus((EntityStatus) row[10]);
+        response.setCreatedDate((Long) row[11]);
+        response.setLastModifiedDate((Long) row[12]);
 
         // Get TechSpec details
-        String techSpecId = (String) row[5];
+        String techSpecId = (String) row[7];
         if (techSpecId != null && !techSpecId.isEmpty()) {
             TechSpec techSpec = techSpecRepository.findById(techSpecId).orElse(null);
             if (techSpec != null) {

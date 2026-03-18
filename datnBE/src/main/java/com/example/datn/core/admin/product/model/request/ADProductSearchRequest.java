@@ -13,6 +13,8 @@ public class ADProductSearchRequest extends PageableRequest {
     
     private String idProductCategory;
     
+    private String idBrand;
+    
     private String idTechSpec;
     
     private EntityStatus status;

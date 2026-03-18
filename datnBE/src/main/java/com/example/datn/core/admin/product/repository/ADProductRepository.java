@@ -23,6 +23,8 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             p.description,
             COALESCE(pc.id, ''),
             COALESCE(pc.name, ''),
+            COALESCE(b.id, ''),
+            COALESCE(b.name, ''),
             COALESCE(ts.id, ''),
             COALESCE(ts.sensorType, ''),
             COALESCE(p.price, 0),
@@ -31,9 +33,11 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             p.lastModifiedDate
         FROM Product p
         LEFT JOIN p.productCategory pc
+        LEFT JOIN p.brand b
         LEFT JOIN p.techSpec ts
         WHERE (:name IS NULL OR p.name LIKE %:name%)
         AND (:idProductCategory IS NULL OR (p.productCategory IS NOT NULL AND p.productCategory.id = :idProductCategory))
+        AND (:idBrand IS NULL OR (p.brand IS NOT NULL AND p.brand.id = :idBrand))
         AND (:idTechSpec IS NULL OR (p.techSpec IS NOT NULL AND p.techSpec.id = :idTechSpec))
         AND (:status IS NULL OR p.status = :status)
         AND (:sensorType IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.sensorType) LIKE LOWER(CONCAT('%', :sensorType, '%'))))
@@ -48,6 +52,7 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
     List<Object[]> searchBasic(
             @Param("name") String name,
             @Param("idProductCategory") String idProductCategory,
+            @Param("idBrand") String idBrand,
             @Param("idTechSpec") String idTechSpec,
             @Param("status") EntityStatus status,
             @Param("sensorType") String sensorType,
@@ -73,6 +78,8 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             p.description,
             COALESCE(pc.id, ''),
             COALESCE(pc.name, ''),
+            COALESCE(b.id, ''),
+            COALESCE(b.name, ''),
             COALESCE(ts.id, ''),
             COALESCE(ts.sensorType, ''),
             COALESCE(p.price, 0),
@@ -81,9 +88,11 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             p.lastModifiedDate
         FROM Product p
         LEFT JOIN p.productCategory pc
+        LEFT JOIN p.brand b
         LEFT JOIN p.techSpec ts
         WHERE (:name IS NULL OR p.name LIKE %:name%)
         AND (:idProductCategory IS NULL OR (p.productCategory IS NOT NULL AND p.productCategory.id = :idProductCategory))
+        AND (:idBrand IS NULL OR (p.brand IS NOT NULL AND p.brand.id = :idBrand))
         AND (:idTechSpec IS NULL OR (p.techSpec IS NOT NULL AND p.techSpec.id = :idTechSpec))
         AND (:status IS NULL OR p.status = :status)
         AND (:sensorType IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.sensorType) LIKE LOWER(CONCAT('%', :sensorType, '%'))))
@@ -106,9 +115,11 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
         countQuery = """
         SELECT COUNT(p) FROM Product p
         LEFT JOIN p.productCategory pc
+        LEFT JOIN p.brand b
         LEFT JOIN p.techSpec ts
         WHERE (:name IS NULL OR p.name LIKE %:name%)
         AND (:idProductCategory IS NULL OR (p.productCategory IS NOT NULL AND p.productCategory.id = :idProductCategory))
+        AND (:idBrand IS NULL OR (p.brand IS NOT NULL AND p.brand.id = :idBrand))
         AND (:idTechSpec IS NULL OR (p.techSpec IS NOT NULL AND p.techSpec.id = :idTechSpec))
         AND (:status IS NULL OR p.status = :status)
         AND (:sensorType IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.sensorType) LIKE LOWER(CONCAT('%', :sensorType, '%'))))
@@ -125,6 +136,7 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
     List<Object[]> searchForCustomer(
             @Param("name") String name,
             @Param("idProductCategory") String idProductCategory,
+            @Param("idBrand") String idBrand,
             @Param("idTechSpec") String idTechSpec,
             @Param("status") EntityStatus status,
             @Param("sensorType") String sensorType,

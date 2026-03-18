@@ -99,6 +99,7 @@ public class SecurityConfig {
 
                         // 2. Quyền xem sản phẩm cho khách vãng lai (Public Read)
                         .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_BRAND + "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT + "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_TECH_SPEC + "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_BANNER + "/**").permitAll()
@@ -117,7 +118,9 @@ public class SecurityConfig {
                                 MappingConstants.API_ADMIN_PREFIX_SERIALS + "/**",
                                 MappingConstants.API_ADMIN_PREFIX_SHIFT_HANDOVER + "/**",
                                 MappingConstants.API_ADMIN_PREFIX_WORK_SCHEDULE + "/**",
-                                MappingConstants.API_ADMIN_PREFIX_CUSTOMERS + "/**"
+                                MappingConstants.API_ADMIN_PREFIX_CUSTOMERS + "/**",
+                                MappingConstants.ADMIN_BRAND + "/**",
+                                MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**"
                         ).hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
 
 

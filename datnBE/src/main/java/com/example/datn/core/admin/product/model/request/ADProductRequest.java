@@ -22,6 +22,8 @@ public class ADProductRequest {
     // null cũng được :_))
     private String idProductCategory;
 
+    private String idBrand;
+
     private String idTechSpec;
 
     private BigDecimal price;
