@@ -9,28 +9,20 @@ import com.example.datn.core.admin.product.model.response.ADProductVariantRespon
 import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.ADProductService;
-
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
-
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
-import com.example.datn.entity.Product;
-import com.example.datn.entity.ProductCategory;
-import com.example.datn.entity.ProductDetail;
-import com.example.datn.entity.ProductImage;
-import com.example.datn.entity.Serial;
-import com.example.datn.entity.TechSpec;
+import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductCategoryRepository;
-import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.repository.TechSpecRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -294,8 +286,8 @@ public class ADProductServiceImpl implements ADProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
 
-        // Lấy danh sách biến thể của sản phẩm
-        List<ProductDetail> variants = productDetailRepository.findByProductId(id);
+        // Lấy danh sách biến thể của sản phẩm (kèm theo serials)
+        List<ProductDetail> variants = productDetailRepository.findByProductIdWithSerials(id);
 
         // Build response cho sản phẩm cha
         ADProductWithVariantsResponse response = ADProductWithVariantsResponse.builder()
@@ -512,7 +504,42 @@ public class ADProductServiceImpl implements ADProductService {
         // Số lượng tồn kho (có thể null)
         variant.setQuantity(request.getQuantity() != null ? request.getQuantity() : 0);
 
+        // Xử lý serial nếu có
+        if (request.getSerials() != null && !request.getSerials().isEmpty()) {
+            List<String> serialNumbers = request.getSerials().stream()
+                    .map(s -> s.getSerialNumber())
+                    .filter(s -> s != null && !s.trim().isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Kiểm tra serial đã tồn tại trong hệ thống chưa
+            if (!serialNumbers.isEmpty()) {
+                List<String> existingInSystem = serialRepository.findExistingSerialNumbers(serialNumbers);
+                if (!existingInSystem.isEmpty()) {
+                    throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+                }
+
+                // Lưu các serial mới
+                for (String serialNumber : serialNumbers) {
+                    Serial newSerial = new Serial();
+                    newSerial.setSerialNumber(serialNumber);
+                    newSerial.setCode(serialNumber);
+                    newSerial.setSerialStatus(SerialStatus.AVAILABLE);
+                    newSerial.setStatus(EntityStatus.ACTIVE);
+                    newSerial.setProductDetail(variant);
+                    serialRepository.save(newSerial);
+                }
+
+                // Cập nhật số lượng theo số serial
+                variant.setQuantity(serialNumbers.size());
+            }
+        }
+
         variant = productDetailRepository.save(variant);
+
+        // Re-fetch để lấy serial đã lưu
+        variant = productDetailRepository.findByIdWithSerials(variant.getId())
+                .orElse(variant);
 
         return mapToVariantResponse(variant);
     }
@@ -520,7 +547,7 @@ public class ADProductServiceImpl implements ADProductService {
     @Override
     @Transactional
     public ADProductVariantResponse updateVariant(String variantId, ADProductDetailRequest request) {
-        ProductDetail variant = productDetailRepository.findById(variantId)
+        ProductDetail variant = productDetailRepository.findByIdWithSerials(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
 
         // Validate không cho tạo biến thể trùng (ngoại trừ chính nó)
@@ -648,7 +675,7 @@ public class ADProductServiceImpl implements ADProductService {
     @Override
     @Transactional
     public ADProductVariantResponse updateVariantImage(String variantId, String selectedImageId) {
-        ProductDetail variant = productDetailRepository.findById(variantId)
+        ProductDetail variant = productDetailRepository.findByIdWithSerials(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
 
         // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ

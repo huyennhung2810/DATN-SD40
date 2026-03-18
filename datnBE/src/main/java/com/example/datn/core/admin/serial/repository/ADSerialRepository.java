@@ -34,4 +34,11 @@ public interface ADSerialRepository extends SerialRepository {
             @Param("kw") String keyword,
             @Param("sts") EntityStatus status
     );
+
+    // Kiểm tra serial đã tồn tại trong biến thể khác (dùng cho update)
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM Serial s WHERE s.serialNumber = :serialNumber AND s.productDetail.id <> :productDetailId")
+    boolean existsBySerialNumberAndProductDetailIdNot(@Param("serialNumber") String serialNumber, @Param("productDetailId") String productDetailId);
+
+    // Xóa tất cả serial của một product detail
+    void deleteByProductDetailId(String productDetailId);
 }

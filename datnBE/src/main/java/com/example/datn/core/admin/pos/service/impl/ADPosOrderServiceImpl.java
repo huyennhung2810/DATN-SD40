@@ -195,10 +195,39 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     public ResponseObject<?> getPendingOrders() {
-        List<Order> list = posOrderRepository.findAll().stream()
-                .filter(o -> o.getOrderStatus() == OrderStatus.PENDING && o.getOrderType() == TypeInvoice.OFFLINE)
-                .toList();
-        return ResponseObject.success(list, "Lấy danh sách hóa đơn chờ thành công");
+        List<Order> list = posOrderRepository.findByOrderStatusAndOrderType(OrderStatus.PENDING, TypeInvoice.OFFLINE);
+
+        List<Map<String, Object>> result = list.stream().map(o -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", o.getId());
+            map.put("code", o.getCode());
+            map.put("totalAmount", o.getTotalAmount());
+            map.put("totalAfterDiscount", o.getTotalAfterDiscount());
+            map.put("orderStatus", o.getOrderStatus());
+
+            if (o.getVoucher() != null) {
+                Map<String, Object> vMap = new HashMap<>();
+                vMap.put("id", o.getVoucher().getId());
+                vMap.put("code", o.getVoucher().getCode());
+                vMap.put("discountValue", o.getVoucher().getDiscountValue());
+                vMap.put("discountUnit", o.getVoucher().getDiscountUnit());
+                vMap.put("maxDiscountAmount", o.getVoucher().getMaxDiscountAmount());
+                map.put("voucher", vMap);
+            } else {
+                map.put("voucher", null);
+            }
+
+            if(o.getCustomer() != null){
+                Map<String, Object> cMap = new HashMap<>();
+                cMap.put("id", o.getCustomer().getId());
+                cMap.put("name", o.getCustomer().getName());
+                cMap.put("phoneNumber", o.getCustomer().getPhoneNumber());
+                map.put("customer", cMap);
+            }
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseObject.success(result, "Lấy danh sách hóa đơn chờ thành công");
     }
 
     @Override
@@ -404,7 +433,6 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 Warranty warranty = new Warranty();
                 warranty.setSerial(serial);
                 warranty.setStartDate(new Date().getTime());
-                // default 1 year warranty
                 warranty.setEndDate(new Date().getTime() + 31536000000L);
                 warranty.setNote("Bảo hành tự động khi mua tại quầy");
                 warrantyRepository.save(warranty);
@@ -467,18 +495,25 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         return ResponseObject.success(result, "Lấy danh sách Serial khả dụng thành công");
     }
 
-    // ----- Helper: Calculate totalAfterDiscount with voucher -----
     private BigDecimal calculateTotalAfterVoucher(BigDecimal total, Voucher voucher) {
         if (voucher == null) return total;
         BigDecimal discount = BigDecimal.ZERO;
-        if ("%".equalsIgnoreCase(voucher.getDiscountUnit())) {
+
+        //Lấy đơn vị giảm giá, cắt bỏ mọi khoảng trắng thừa và kiểm tra an toàn
+        String unit = voucher.getDiscountUnit() != null ? voucher.getDiscountUnit().trim() : "";
+
+        if ("%".equalsIgnoreCase(unit) || "PERCENT".equalsIgnoreCase(unit)) {
+            // Trường hợp giảm theo %
             discount = total.multiply(voucher.getDiscountValue()).divide(new BigDecimal("100"));
+            // So sánh với số tiền giảm tối đa (nếu có)
             if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
                 discount = voucher.getMaxDiscountAmount();
             }
-        } else { // VND
+        } else {
+            // Trường hợp giảm theo VND
             discount = voucher.getDiscountValue() != null ? voucher.getDiscountValue() : BigDecimal.ZERO;
         }
+
         BigDecimal result = total.subtract(discount);
         return result.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : result;
     }
@@ -487,13 +522,14 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     public ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal) {
         long now = System.currentTimeMillis();
         List<VoucherResponse> applicable = adVouchersRepository.findAll().stream()
-                .filter(v -> v.getStatus() != null && v.getStatus() == 1
+                .filter(v -> v.getStatus() != null && (v.getStatus() == 1 || v.getStatus() == 2)
                         && v.getQuantity() != null && v.getQuantity() > 0
                         && v.getStartDate() != null && v.getStartDate() <= now
                         && v.getEndDate() != null && v.getEndDate() >= now
                         && (v.getConditions() == null || v.getConditions().compareTo(orderTotal) <= 0))
                 .map(VoucherResponse::new)
                 .collect(Collectors.toList());
+
         return ResponseObject.success(applicable, "Lấy danh sách voucher áp dụng được");
     }
 

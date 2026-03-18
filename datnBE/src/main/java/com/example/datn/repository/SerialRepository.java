@@ -1,11 +1,13 @@
 package com.example.datn.repository;
 
 import com.example.datn.entity.Serial;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -19,4 +21,7 @@ public interface SerialRepository extends JpaRepository<Serial, String> {
     java.util.Optional<Serial> findBySerialNumber(String serialNumber);
 
     java.util.List<Serial> findBySerialNumberIn(Collection<String> serialNumbers);
+
+
+    List<Serial> findByProductDetailIdAndSerialStatus(String productDetailId, SerialStatus serialStatus);
 }

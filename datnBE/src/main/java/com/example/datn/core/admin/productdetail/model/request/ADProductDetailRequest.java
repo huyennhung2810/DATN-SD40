@@ -1,4 +1,4 @@
-package com.example.datn.core.admin.productDetail.model.request;
+package com.example.datn.core.admin.productdetail.model.request;
 
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.infrastructure.constant.EntityStatus;

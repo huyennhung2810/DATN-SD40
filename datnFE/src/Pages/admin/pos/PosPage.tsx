@@ -1,5 +1,5 @@
 import * as React from "react";
-const { useEffect, useState } = React;
+const { useEffect, useState, useRef } = React;
 import {
   Card,
   Button,
@@ -36,6 +36,8 @@ import { productDetailApi } from "../../../api/productDetailApi";
 import { customerApi } from "../../../api/customerApi";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
 import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
+import { useReactToPrint } from "react-to-print";
+import ReceiptTemplate from "../../../Pages/admin/pos/ReceiptTemplate";
 
 const { Title, Text } = Typography;
 
@@ -58,7 +60,19 @@ const PosPage: React.FC = () => {
     orderCode: string;
     totalAmount: number;
     change: number;
-  }>({ open: false, orderCode: "", totalAmount: 0, change: 0 });
+    cartItems: any[];
+    customerCash: number;
+    voucherSaving: number;
+    customerName?: string;
+  }>({
+    open: false,
+    orderCode: "",
+    totalAmount: 0,
+    change: 0,
+    cartItems: [],
+    customerCash: 0,
+    voucherSaving: 0,
+  });
 
   // Customer Selection State
   const [customerOptions, setCustomerOptions] = useState<
@@ -93,6 +107,12 @@ const PosPage: React.FC = () => {
   const [applicableVouchers, setApplicableVouchers] = useState<any[]>([]);
   const [loadingVouchers, setLoadingVouchers] = useState(false);
   const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: `HoaDon_${checkoutSuccessModal.orderCode}`,
+  });
 
   useEffect(() => {
     fetchPendingOrders();
@@ -400,18 +420,24 @@ const PosPage: React.FC = () => {
   const activeOrder = orders.find((o) => o.id === activeKey);
 
   // Synchronize appliedVoucher state with activeOrder when it changes
+  // Sửa lại đoạn useEffect đồng bộ voucher
   useEffect(() => {
-    if (activeOrder?.appliedVoucher) {
-      setAppliedVoucher(activeOrder.appliedVoucher);
-    } else if (activeOrder && !activeOrder.appliedVoucher) {
+    if (activeOrder?.voucher) {
+      setAppliedVoucher(activeOrder.voucher);
+    } else if (activeOrder && !activeOrder.voucher) {
       setAppliedVoucher(null);
     }
-  }, [activeOrder?.id, activeOrder?.appliedVoucher]);
+  }, [activeOrder?.id, activeOrder?.voucher]);
 
   // Helper: compute best voucher saving amount
   const calcVoucherSaving = (voucher: any, total: number): number => {
     if (!voucher) return 0;
-    if (voucher.discountUnit === "%") {
+
+    const unit = voucher.discountUnit
+      ? String(voucher.discountUnit).trim().toUpperCase()
+      : "";
+
+    if (unit === "%" || unit === "PERCENT") {
       const disc = (total * voucher.discountValue) / 100;
       return voucher.maxDiscountAmount
         ? Math.min(disc, voucher.maxDiscountAmount)
@@ -473,11 +499,19 @@ const PosPage: React.FC = () => {
       if (res.data?.data) {
         const changeAmount =
           customerCash !== null ? customerCash - totalToPay : 0;
+
         setCheckoutSuccessModal({
           open: true,
           orderCode: activeOrder.code,
           totalAmount: totalToPay,
           change: changeAmount > 0 ? changeAmount : 0,
+          cartItems: [...cartDetails],
+          customerCash: customerCash || 0,
+          voucherSaving: calcVoucherSaving(
+            appliedVoucher,
+            activeOrder.totalAmount || 0,
+          ),
+          customerName: activeOrder?.customer?.name,
         });
 
         fetchPendingOrders();
@@ -1170,6 +1204,17 @@ const PosPage: React.FC = () => {
         )}
       </Modal>
 
+      <ReceiptTemplate
+        ref={receiptRef}
+        orderCode={checkoutSuccessModal.orderCode}
+        cartItems={checkoutSuccessModal.cartItems || []}
+        totalAmount={checkoutSuccessModal.totalAmount}
+        customerCash={checkoutSuccessModal.customerCash || 0}
+        change={checkoutSuccessModal.change}
+        voucherSaving={checkoutSuccessModal.voucherSaving}
+        customerName={checkoutSuccessModal.customerName}
+      />
+
       {/* Thanh toán thành công Modal */}
       <Modal
         title={null}
@@ -1216,9 +1261,7 @@ const PosPage: React.FC = () => {
             <Button
               icon={<PrinterOutlined />}
               size="large"
-              onClick={() =>
-                message.info("Tính năng in hóa đơn đang phát triển")
-              }
+              onClick={handlePrint}
             >
               In hóa đơn
             </Button>
