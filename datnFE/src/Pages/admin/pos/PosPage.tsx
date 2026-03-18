@@ -21,10 +21,14 @@ const PosPage: React.FC = () => {
     const [products, setProducts] = useState<any[]>([]);
     const [searchKeyword, setSearchKeyword] = useState("");
     const [loadingProducts, setLoadingProducts] = useState(false);
+    
+    // Barcode State
+    const [barcodeInput, setBarcodeInput] = useState("");
 
     // Payment State
     const [customerCash, setCustomerCash] = useState<number | null>(null);
-    const [checkoutSuccessModal, setCheckoutSuccessModal] = useState<{ open: boolean; orderCode: string; totalAmount: number; change: number }>({ open: false, orderCode: "", totalAmount: 0, change: 0 });
+    const [paymentMethod, setPaymentMethod] = useState<string>("TIEN_MAT");
+    const [checkoutSuccessModal, setCheckoutSuccessModal] = useState<{ open: boolean; orderId: string; orderCode: string; totalAmount: number; change: number }>({ open: false, orderId: "", orderCode: "", totalAmount: 0, change: 0 });
 
     // Customer Selection State
     const [customerOptions, setCustomerOptions] = useState<{ value: string; label: string }[]>([]);
@@ -108,6 +112,7 @@ const PosPage: React.FC = () => {
         setActiveKey(key);
         fetchOrderDetails(key);
         setCustomerCash(null); // Reset cash input when switching tabs
+        setPaymentMethod("TIEN_MAT"); // Reset payment method
     };
 
     const handleTabEdit = (targetKey: any, action: 'add' | 'remove') => {
@@ -173,6 +178,30 @@ const PosPage: React.FC = () => {
         }
     };
 
+    const handleBarcodeScan = async (barcode: string) => {
+        if (!barcode.trim()) return;
+        if (!activeKey) {
+            message.warning("Vui lòng chọn hoặc tạo hóa đơn trước khi quét mã vạch.");
+            setBarcodeInput("");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await posApi.addProductByBarcode(activeKey, barcode.trim());
+            message.success(`Thêm thành công sản phẩm từ mã: ${barcode}`);
+            setBarcodeInput("");
+            fetchOrderDetails(activeKey);
+            fetchPendingOrders();
+        } catch (error: any) {
+            console.error(error);
+            message.error(error.response?.data?.message || "Lỗi khi quét mã vạch / mã sản phẩm không tồn tại");
+            setBarcodeInput("");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSearchCustomer = async (value: string) => {
         if (!value) {
             setCustomerOptions([]);
@@ -180,9 +209,10 @@ const PosPage: React.FC = () => {
         }
         setFetchingCustomer(true);
         try {
-            const res = await customerApi.getAll({ keyword: value, page: 0, size: 20 });
-            if (res && res.data) {
-                const opts = res.data.map((c: any) => ({
+            const res: any = await customerApi.getAll({ keyword: value, page: 0, size: 20 } as any);
+            const customerList = res?.content || res?.data || res || [];
+            if (Array.isArray(customerList)) {
+                const opts = customerList.map((c: any) => ({
                     value: c.id,
                     label: `${c.name || "Khách"} - ${c.phoneNumber || "N/A"}`
                 }));
@@ -288,13 +318,15 @@ const PosPage: React.FC = () => {
         }
 
         const totalToPay = activeOrder?.totalAfterDiscount || 0;
-        if (customerCash === null) {
-            message.error("Vui lòng nhập số tiền khách đưa trước khi thanh toán!");
-            return;
-        }
-        if (customerCash < totalToPay) {
-            message.error("Số tiền khách đưa không đủ!");
-            return;
+        if (paymentMethod === "TIEN_MAT") {
+            if (customerCash === null) {
+                message.error("Vui lòng nhập số tiền khách đưa trước khi thanh toán tiền mặt!");
+                return;
+            }
+            if (customerCash < totalToPay) {
+                message.error("Số tiền khách đưa không đủ!");
+                return;
+            }
         }
 
         const isMissingSerials = cartDetails.some(d => (d.assignedSerialsCount || 0) < d.quantity);
@@ -304,11 +336,13 @@ const PosPage: React.FC = () => {
         }
 
         try {
-            const res = await posApi.checkout(activeKey);
+            setLoading(true);
+            const res = await posApi.checkout(activeKey, paymentMethod);
             if (res.data?.data) {
-                const changeAmount = customerCash !== null ? customerCash - totalToPay : 0;
+                const changeAmount = (customerCash !== null && paymentMethod === "TIEN_MAT") ? customerCash - totalToPay : 0;
                 setCheckoutSuccessModal({
                     open: true,
+                    orderId: activeKey,
                     orderCode: activeOrder.code,
                     totalAmount: totalToPay,
                     change: changeAmount > 0 ? changeAmount : 0
@@ -319,6 +353,26 @@ const PosPage: React.FC = () => {
         } catch (error: any) {
             console.error(error);
             message.error(error.response?.data?.message || "Thanh toán lỗi. Hãy kiểm tra lại.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePrintInvoice = async (orderId: string) => {
+        try {
+            message.loading({ content: 'Đang tạo Hóa đơn PDF...', key: 'printInvoice' });
+            const res = await posApi.exportInvoice(orderId);
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `HoaDon_${orderId.substring(0, 8)}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            message.success({ content: 'Tải PDF thành công!', key: 'printInvoice' });
+        } catch (error) {
+            console.error(error);
+            message.error({ content: 'Lỗi khi tạo định dạng xuất PDF', key: 'printInvoice' });
         }
     };
 
@@ -536,6 +590,18 @@ const PosPage: React.FC = () => {
 
                     {/* KHU VỰC 2: GIỎ HÀNG */}
                     <Card title="Giỏ Hàng (Các Hóa đơn)" bordered={false} style={{ flex: 1, minHeight: '350px' }}>
+                        <div style={{ marginBottom: 16 }}>
+                            <Input
+                                autoFocus
+                                placeholder="Quét Barcode / QR Code / Serial ở đây..."
+                                size="large"
+                                prefix={<ScanOutlined />}
+                                value={barcodeInput}
+                                onChange={(e) => setBarcodeInput(e.target.value)}
+                                onPressEnter={(e: any) => handleBarcodeScan(e.target.value)}
+                                disabled={!activeKey}
+                            />
+                        </div>
                         {orders.length > 0 ? (
                             <Tabs
                                 activeKey={activeKey}
@@ -678,30 +744,49 @@ const PosPage: React.FC = () => {
                                         </Title>
                                     </div>
                                     <div style={{ marginBottom: 16 }}>
-                                        <Text strong>Tiền khách đưa:</Text>
-                                        <InputNumber
+                                        <Text strong>Hình thức thanh toán:</Text>
+                                        <Select
                                             style={{ width: '100%', marginTop: 8 }}
                                             size="large"
-                                            value={customerCash}
-                                            onChange={(val) => setCustomerCash(val as number)}
-                                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                            parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
-                                            addonAfter="đ"
-                                            placeholder="Nhập số tiền..."
+                                            value={paymentMethod}
+                                            onChange={setPaymentMethod}
+                                            options={[
+                                                { value: 'TIEN_MAT', label: 'Tiền mặt' },
+                                                { value: 'CHUYEN_KHOAN', label: 'Chuyển khoản' },
+                                                { value: 'VNPAY', label: 'VNPay' }
+                                            ]}
                                         />
                                     </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-                                        <Text>Tiền thối lại:</Text>
-                                        {(customerCash !== null && customerCash >= (activeOrder.totalAfterDiscount || 0)) ? (
-                                            <Text strong type="success">
-                                                {(customerCash - (activeOrder.totalAfterDiscount || 0)).toLocaleString("vi-VN")} đ
-                                            </Text>
-                                        ) : (
-                                            <Text strong type={customerCash !== null ? "danger" : "secondary"}>
-                                                {customerCash !== null ? "Khách đưa thiếu tiền" : "0 đ"}
-                                            </Text>
-                                        )}
-                                    </div>
+                                    
+                                    {paymentMethod === 'TIEN_MAT' && (
+                                        <>
+                                            <div style={{ marginBottom: 16 }}>
+                                                <Text strong>Tiền khách đưa:</Text>
+                                                <InputNumber
+                                                    style={{ width: '100%', marginTop: 8 }}
+                                                    size="large"
+                                                    value={customerCash}
+                                                    onChange={(val) => setCustomerCash(val as number)}
+                                                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                    parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                                                    addonAfter="đ"
+                                                    placeholder="Nhập số tiền..."
+                                                />
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+                                                <Text>Tiền thối lại:</Text>
+                                                {(customerCash !== null && customerCash >= (activeOrder.totalAfterDiscount || 0)) ? (
+                                                    <Text strong type="success">
+                                                        {(customerCash - (activeOrder.totalAfterDiscount || 0)).toLocaleString("vi-VN")} đ
+                                                    </Text>
+                                                ) : (
+                                                    <Text strong type={customerCash !== null ? "danger" : "secondary"}>
+                                                        {customerCash !== null ? "Khách đưa thiếu tiền" : "0 đ"}
+                                                    </Text>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <Text type="secondary">Chọn hóa đơn để xem thông tin thanh toán</Text>
@@ -718,8 +803,7 @@ const PosPage: React.FC = () => {
                                 !activeOrder ||
                                 cartDetails.length === 0 ||
                                 cartDetails.some(d => (d.assignedSerialsCount || 0) < d.quantity) ||
-                                customerCash === null ||
-                                customerCash < (activeOrder.totalAfterDiscount || 0)
+                                (paymentMethod === 'TIEN_MAT' && (customerCash === null || customerCash < (activeOrder.totalAfterDiscount || 0)))
                             }
                         >
                             Xác nhận Thanh toán
@@ -849,7 +933,7 @@ const PosPage: React.FC = () => {
                         <Button
                             icon={<PrinterOutlined />}
                             size="large"
-                            onClick={() => message.info('Tính năng in hóa đơn đang phát triển')}
+                            onClick={() => handlePrintInvoice(checkoutSuccessModal.orderId)}
                         >
                             In hóa đơn
                         </Button>
@@ -859,6 +943,7 @@ const PosPage: React.FC = () => {
                             onClick={() => {
                                 setCheckoutSuccessModal({ ...checkoutSuccessModal, open: false });
                                 setCustomerCash(null);
+                                setPaymentMethod("TIEN_MAT");
                             }}
                         >
                             Đóng & Bắt đầu đơn mới

@@ -16,10 +16,8 @@ export const adminTheme: ThemeConfig = {
     // Primary - Refined slate blue (Apple-like)
     colorPrimary: "#0A84FF",
     colorPrimaryHover: "#0066CC",
-    colorPrimaryActive: "#0052A3",
     colorPrimaryBg: "#F0F7FF",
     colorPrimaryBgHover: "#E5F0FF",
-    colorPrimaryBgActive: "#CCE5FF",
     
     // Success - Muted green
     colorSuccess: "#34C759",
@@ -99,9 +97,7 @@ export const adminTheme: ThemeConfig = {
       headerBg: "#FFFFFF",
       siderBg: "#FFFFFF",
       triggerBg: "#FFFFFF",
-      headerHeight: 56,
       headerPadding: "0 20px",
-      siderPadding: "0 0",
     },
     
     // Cards
@@ -135,8 +131,6 @@ export const adminTheme: ThemeConfig = {
     Input: {
       colorBgContainer: "#FFFFFF",
       colorBorder: "#E5E5EA",
-      colorBorderHover: "#0A84FF",
-      colorBorderFocus: "#0A84FF",
       activeBorderColor: "#0A84FF",
       hoverBorderColor: "#0A84FF",
       borderRadius: 8,
@@ -148,7 +142,6 @@ export const adminTheme: ThemeConfig = {
     Select: {
       colorBgContainer: "#FFFFFF",
       colorBorder: "#E5E5EA",
-      colorBorderHover: "#0A84FF",
       borderRadius: 8,
       controlHeight: 36,
       optionSelectedBg: "#F0F7FF",
@@ -172,12 +165,9 @@ export const adminTheme: ThemeConfig = {
     Pagination: {
       colorBgContainer: "#FFFFFF",
       colorBorder: "#E5E5EA",
-      colorPrimary: "#0A84FF",
       colorPrimaryHover: "#0066CC",
       itemActiveBg: "#0A84FF",
       itemActiveColor: "#FFFFFF",
-      itemHoverColor: "#0066CC",
-      itemHoverBg: "#F0F7FF",
     },
     
     // Menu
@@ -238,7 +228,6 @@ export const adminTheme: ThemeConfig = {
     // Badge
     Badge: {
       colorBgContainer: "#FF3B30",
-      colorTextLabelLight: "#FFFFFF",
     },
     
     // Tooltip
@@ -289,7 +278,6 @@ export const adminTheme: ThemeConfig = {
     // Steps
     Steps: {
       colorPrimary: "#0A84FF",
-      finishIconColor: "#0A84FF",
     },
     
     // Progress

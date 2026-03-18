@@ -25,6 +25,11 @@ public class POSOrderController {
         return ResponseEntity.ok(posOrderService.addProductToOrder(orderId, productDetailId, quantity));
     }
 
+    @PostMapping("/{orderId}/add-by-barcode")
+    public ResponseEntity<?> addProductByBarcode(@PathVariable String orderId, @RequestParam String barcode) {
+        return ResponseEntity.ok(posOrderService.addProductByBarcode(orderId, barcode));
+    }
+
     @PostMapping("/{orderId}/details/{detailId}/assign-serials")
     public ResponseEntity<?> assignSerialsToOrderDetail(@PathVariable String orderId,
             @PathVariable String detailId,
@@ -62,8 +67,9 @@ public class POSOrderController {
     }
 
     @PostMapping("/{orderId}/checkout")
-    public ResponseEntity<?> checkoutOrder(@PathVariable String orderId) {
-        return ResponseEntity.ok(posOrderService.checkoutOrder(orderId));
+    public ResponseEntity<?> checkoutOrder(@PathVariable String orderId,
+                                           @RequestParam(defaultValue = "TIEN_MAT") String paymentMethod) {
+        return ResponseEntity.ok(posOrderService.checkoutOrder(orderId, paymentMethod));
     }
 
     @DeleteMapping("/{orderId}")
@@ -89,5 +95,15 @@ public class POSOrderController {
     @DeleteMapping("/{orderId}/remove-voucher")
     public ResponseEntity<?> removeVoucher(@PathVariable String orderId) {
         return ResponseEntity.ok(posOrderService.removeVoucher(orderId));
+    }
+
+    @GetMapping("/{orderId}/export-invoice")
+    public ResponseEntity<byte[]> exportInvoice(@PathVariable String orderId) {
+        byte[] pdfBytes = posOrderService.exportInvoiceToPdf(orderId);
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "invoice_" + orderId + ".pdf");
+        
+        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
     }
 }

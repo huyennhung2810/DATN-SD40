@@ -66,6 +66,12 @@ dependencies {
     // Thư viện hỗ trợ xử lý JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    // PDF Generation
+    implementation 'com.itextpdf:itext7-core:7.2.5'
+
+    // Dotenv
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

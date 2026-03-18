@@ -7,6 +7,8 @@ public interface ADPosOrderService {
 
     ResponseObject<?> addProductToOrder(String orderId, String productDetailId, int quantity);
 
+    ResponseObject<?> addProductByBarcode(String orderId, String barcode);
+
     ResponseObject<?> assignSerialsToOrderDetail(String orderId, String detailId, java.util.List<String> serialNumbers);
 
     ResponseObject<?> getPendingOrders();
@@ -19,7 +21,9 @@ public interface ADPosOrderService {
 
     ResponseObject<?> setCustomerForOrder(String orderId, String customerId);
 
-    ResponseObject<?> checkoutOrder(String orderId);
+    ResponseObject<?> checkoutOrder(String orderId, String paymentMethod);
+
+    byte[] exportInvoiceToPdf(String orderId);
 
     ResponseObject<?> cancelOrder(String orderId);
 

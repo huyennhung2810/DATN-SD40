@@ -36,6 +36,21 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
+// iTextPDF imports
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.io.font.PdfEncodings;
+import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
+
 @Service
 @RequiredArgsConstructor
 public class ADPosOrderServiceImpl implements ADPosOrderService {
@@ -133,6 +148,54 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         posOrderRepository.save(order);
 
         return ResponseObject.success(targetDetail, "Thêm sản phẩm vào hóa đơn thành công");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> addProductByBarcode(String orderId, String barcode) {
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn: " + orderId);
+        }
+
+        // 1. Try to find by Serial Number
+        Serial serial = serialRepository.findBySerialNumber(barcode).orElse(null);
+        if (serial != null) {
+            if (serial.getSerialStatus() != SerialStatus.AVAILABLE) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial " + barcode + " không ở trạng thái sẵn sàng để bán.");
+            }
+            ProductDetail productDetail = serial.getProductDetail();
+            if (productDetail == null) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Serial không được liên kết với sản phẩm nào.");
+            }
+
+            // Reuse the core logic by recursively calling addProductToOrder for 1 quantity
+            ResponseObject<?> addRes = addProductToOrder(orderId, productDetail.getId(), 1);
+            if (addRes.getStatus() != HttpStatus.OK) {
+                return addRes;
+            }
+
+            // Now automatically assign the scanned serial to the newly added (or existing) order detail
+            OrderDetail targetDetail = (OrderDetail) addRes.getData();
+            serial.setOrderDetail(targetDetail);
+            serial.setSerialStatus(SerialStatus.RESERVED);
+            serialRepository.save(serial);
+
+            return ResponseObject.success(targetDetail, "Thêm sản phẩm qua số Serial thành công");
+        }
+
+        // 2. Try to find by Product Detail Code directly or Master Product Code
+        ProductDetail productDetail = productDetailRepository.findAll().stream()
+                .filter(p -> (p.getCode() != null && p.getCode().equalsIgnoreCase(barcode)) 
+                          || (p.getProduct() != null && p.getProduct().getCode() != null && p.getProduct().getCode().equalsIgnoreCase(barcode)))
+                .findFirst().orElse(null);
+
+        if (productDetail != null) {
+            return addProductToOrder(orderId, productDetail.getId(), 1);
+        }
+
+        // 3. Not found anywhere
+        return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm hoặc Serial khớp với mã: " + barcode);
     }
 
     @Override
@@ -349,7 +412,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     @Transactional
-    public ResponseObject<?> checkoutOrder(String orderId) {
+    public ResponseObject<?> checkoutOrder(String orderId, String paymentMethod) {
         Order order = posOrderRepository.findById(orderId).orElse(null);
         if (order == null)
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
@@ -360,7 +423,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         // Update Order status
         order.setOrderStatus(OrderStatus.COMPLETED);
         order.setPaymentDate(new Date().getTime());
-        order.setPaymentMethod("TIEN_MAT"); // Hardcode for now
+        order.setPaymentMethod(paymentMethod != null && !paymentMethod.isBlank() ? paymentMethod : "TIEN_MAT");
 
         List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
         if (details.isEmpty()) {
@@ -527,5 +590,107 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         order.setTotalAfterDiscount(order.getTotalAmount());
         posOrderRepository.save(order);
         return ResponseObject.success(null, "Đã bỏ voucher");
+    }
+
+    @Override
+    public byte[] exportInvoiceToPdf(String orderId) {
+        Order order = posOrderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+
+            // Tùy chọn: Nhúng font Tahoma/Arial để hỗ trợ Tiếng Việt (nếu chạy trên Win thì trỏ vào C:\Windows\Fonts)
+            // Nếu không có font hỗ trợ, tiếng việt có dấu sẽ bị mất chữ.
+            PdfFont font = null;
+            try {
+                font = PdfFontFactory.createFont("C:\\Windows\\Fonts\\arial.ttf", PdfEncodings.IDENTITY_H);
+            } catch (Exception e) {
+                // Ignore font error and use default if arial not found
+            }
+
+            // Header
+            Paragraph title = new Paragraph("HOA DON BAN HANG")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setFontSize(20);
+            if (font != null) title.setFont(font);
+            document.add(title);
+
+            document.add(new Paragraph("\n"));
+
+            // Customer Info
+            String customerName = order.getCustomer() != null ? order.getCustomer().getName() : "Khach le";
+            Paragraph cusPara = new Paragraph("Khach hang: " + customerName);
+            if (font != null) cusPara.setFont(font);
+            document.add(cusPara);
+
+            String dateStr = new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date());
+            Paragraph datePara = new Paragraph("Ngay in: " + dateStr);
+            if (font != null) datePara.setFont(font);
+            document.add(datePara);
+
+            document.add(new Paragraph("\n"));
+
+            // Table
+            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 1, 2, 2})).useAllAvailableWidth();
+            
+            Cell cell1 = new Cell().add(new Paragraph("San pham"));
+            if (font != null) cell1.setFont(font);
+            table.addHeaderCell(cell1);
+            
+            Cell cell2 = new Cell().add(new Paragraph("SL"));
+            if (font != null) cell2.setFont(font);
+            table.addHeaderCell(cell2);
+            
+            Cell cell3 = new Cell().add(new Paragraph("Don gia"));
+            if (font != null) cell3.setFont(font);
+            table.addHeaderCell(cell3);
+            
+            Cell cell4 = new Cell().add(new Paragraph("Thanh tien"));
+            if (font != null) cell4.setFont(font);
+            table.addHeaderCell(cell4);
+
+            List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
+            for (OrderDetail detail : details) {
+                String pName = detail.getProductDetail() != null && detail.getProductDetail().getProduct() != null 
+                        ? detail.getProductDetail().getProduct().getName() : "N/A";
+                
+                Cell pnCell = new Cell().add(new Paragraph(pName));
+                if (font != null) pnCell.setFont(font);
+                table.addCell(pnCell);
+                
+                table.addCell(new Cell().add(new Paragraph(String.valueOf(detail.getQuantity()))));
+                table.addCell(new Cell().add(new Paragraph(detail.getUnitPrice() != null ? detail.getUnitPrice().toString() : "0")));
+                table.addCell(new Cell().add(new Paragraph(detail.getTotalPrice() != null ? detail.getTotalPrice().toString() : "0")));
+            }
+            document.add(table);
+
+            document.add(new Paragraph("\n"));
+
+            // Total
+            Paragraph totalPara = new Paragraph("Tong tien: " + (order.getTotalAmount() != null ? order.getTotalAmount().toString() : "0") + " VND")
+                    .setTextAlignment(TextAlignment.RIGHT);
+            if (font != null) totalPara.setFont(font);
+            document.add(totalPara);
+
+            if (order.getVoucher() != null) {
+                Paragraph voucherPara = new Paragraph("Giam gia (Voucher): " + order.getVoucher().getCode())
+                        .setTextAlignment(TextAlignment.RIGHT);
+                if (font != null) voucherPara.setFont(font);
+                document.add(voucherPara);
+            }
+
+            Paragraph discountPara = new Paragraph("Khach phai tra: " + (order.getTotalAfterDiscount() != null ? order.getTotalAfterDiscount().toString() : "0") + " VND")
+                    .setTextAlignment(TextAlignment.RIGHT).setBold();
+            if (font != null) discountPara.setFont(font);
+            document.add(discountPara);
+
+            document.close();
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tạo file PDF hóa đơn: " + e.getMessage(), e);
+        }
     }
 }

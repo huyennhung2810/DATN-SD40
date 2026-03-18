@@ -12,9 +12,14 @@ export const posApi = {
         axiosInstance.delete(`/admin/pos/orders/${orderId}/details/${detailId}/remove-product`),
     removeSerialFromOrderDetail: (orderId: string, detailId: string, serialNumber: string) =>
         axiosInstance.delete(`/admin/pos/orders/${orderId}/details/${detailId}/remove-serial`, { params: { serialNumber } }),
+    addProductByBarcode: (orderId: string, barcode: string) =>
+        axiosInstance.post(`/admin/pos/orders/${orderId}/add-by-barcode`, null, { params: { barcode } }),
     setCustomer: (orderId: string, customerId: string) =>
         axiosInstance.put(`/admin/pos/orders/${orderId}/customer`, null, { params: { customerId } }),
-    checkout: (orderId: string) => axiosInstance.post(`/admin/pos/orders/${orderId}/checkout`),
+    checkout: (orderId: string, paymentMethod: string) => 
+        axiosInstance.post(`/admin/pos/orders/${orderId}/checkout`, null, { params: { paymentMethod } }),
+    exportInvoice: (orderId: string) =>
+        axiosInstance.get(`/admin/pos/orders/${orderId}/export-invoice`, { responseType: 'blob' as import('axios').ResponseType }),
     cancelOrder: (orderId: string) => axiosInstance.delete(`/admin/pos/orders/${orderId}`),
     getAvailableSerials: (productDetailId: string) =>
         axiosInstance.get(`/admin/pos/orders/available-serials`, { params: { productDetailId } }),
