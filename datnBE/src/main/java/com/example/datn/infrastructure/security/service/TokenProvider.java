@@ -35,8 +35,6 @@ public class TokenProvider {
     @Value("${jwt.secret}")
     private String tokenSecret;
 
-    private final long TOKEN_EXP = System.currentTimeMillis() + 2 * 60 * 60 * 100000;
-
     private final AuthStaffRepository staffRepository;
 
     private final HttpServletRequest request;
@@ -73,8 +71,7 @@ public class TokenProvider {
                 .setSubject(subject)
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(TOKEN_EXP))
-                .setIssuer("sd20201.datn")
+                .setExpiration(new Date(System.currentTimeMillis() + 2 * 60 * 60 * 1000L))                .setIssuer("sd20201.datn")
                 .signWith(Keys.hmacShaKeyFor(tokenSecret.getBytes()))
                 .compact();
 
@@ -116,7 +113,7 @@ public class TokenProvider {
                 .setSubject(subject)
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(TOKEN_EXP))
+                .setExpiration(new Date(System.currentTimeMillis() + 2 * 60 * 60 * 1000L))
                 .setIssuer("sd20201.datn")
                 .signWith(Keys.hmacShaKeyFor(tokenSecret.getBytes()))
                 .compact();
@@ -131,7 +128,7 @@ public class TokenProvider {
                 .setSubject(subject)
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(TOKEN_EXP))
+                .setExpiration(new Date(System.currentTimeMillis() + 2 * 60 * 60 * 1000L))
                 .setIssuer("sd20201.datn")
                 .signWith(Keys.hmacShaKeyFor(tokenSecret.getBytes()))
                 .compact();

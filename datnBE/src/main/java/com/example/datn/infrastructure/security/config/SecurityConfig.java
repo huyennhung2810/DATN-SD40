@@ -10,77 +10,67 @@ import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationFailu
 import com.example.datn.infrastructure.security.oauth2.OAuth2AuthenticationSuccessHandler;
 
 import com.example.datn.infrastructure.security.service.CustomUserDetailsService;
-import com.example.datn.utils.Helper;
-import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.BeanIds;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collections;
 import java.util.List;
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+
 public class SecurityConfig {
 
-    @Setter(onMethod = @__({@Autowired}))
-    private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private CustomOAuth2UserService customOAuth2UserService;
-
-    @Setter(onMethod = @__({@Autowired}))
-    private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Value("${frontend.url}")
     private String allowedOrigin;
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean(BeanIds.AUTHENTICATION_MANAGER)
-    public AuthenticationManager authenticationManager(
-            PasswordEncoder passwordEncoder,
-            CustomUserDetailsService userDetailsService
-    ) {
-        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder);
-        daoAuthenticationProvider.setUserDetailsService(userDetailsService);
-        return new ProviderManager(daoAuthenticationProvider);
-    }
 
     @Bean
     public TokenAuthenticationFilter tokenAuthenticationFilter() {
         return new TokenAuthenticationFilter();
     }
 
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            PasswordEncoder passwordEncoder,
+            CustomUserDetailsService userDetailsService
+    ) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsService(userDetailsService);
+        return new ProviderManager(provider);
+    }
+
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
-        config.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "*"));
-        config.setAllowedOrigins(Collections.singletonList(allowedOrigin));
+        config.setAllowedOrigins(List.of(allowedOrigin));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
         config.setAllowCredentials(true);
         config.setExposedHeaders(List.of("Authorization"));
         source.registerCorsConfiguration("/**", config);
@@ -99,54 +89,65 @@ public class SecurityConfig {
                         e.authenticationEntryPoint(new RestAuthenticationEntryPoint())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/upload/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers(MappingConstants.API_LOGIN).permitAll()
-                        .anyRequest().permitAll() // test
+                        // 1. Tài nguyên công khai (Ảnh, Auth, Common)
+                        .requestMatchers("/api/upload/**", "/uploads/**").permitAll()
+                        .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").permitAll()
+                        .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
+                        .requestMatchers(MappingConstants.API_LOGIN + "/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
+                        .requestMatchers("/api/v1/support/**", "/ws-chat/**").permitAll()
+
+                        // 2. Quyền xem sản phẩm cho khách vãng lai (Public Read)
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_BRAND + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_TECH_SPEC + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_BANNER + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, MappingConstants.API_ADMIN_PREFIX_PRODUCTS + "/**").permitAll()
+
+                        // 3. CHỈ ADMIN (Quyền nhạy cảm: Tiền bạc, Nhân sự, Tài khoản)
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_STATISTICS + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX_SHIFT_TEMPLATE + "/**").hasAuthority(RoleConstant.ADMIN.name())
+                        .requestMatchers(MappingConstants.API_ADMIN_PREFIX + "/accounts/**").hasAuthority(RoleConstant.ADMIN.name())
+
+                        // 4. ADMIN & STAFF (Nghiệp vụ: Bán hàng, Kho, Voucher, Giao ca)
+                        .requestMatchers(
+                                MappingConstants.API_ADMIN_PREFIX_PRODUCTS + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_DISCOUNT + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_SERIALS + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_SHIFT_HANDOVER + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_WORK_SCHEDULE + "/**",
+                                MappingConstants.API_ADMIN_PREFIX_CUSTOMERS + "/**",
+                                MappingConstants.ADMIN_BRAND + "/**",
+                                MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**"
+                        ).hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+
+
+                        // 5. KHÁCH HÀNG (Mua hàng)
+                        .requestMatchers(MappingConstants.API_VERSION_PREFIX + "/customer/**").hasAuthority(RoleConstant.CUSTOMER.name())
+                        .requestMatchers("/api/v1/client/**").hasAuthority(RoleConstant.CUSTOMER.name())
+
+                        // 6. Các request còn lại
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorization")
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
+                        )
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler(oAuth2AuthenticationFailureHandler)
                 );
 
-        http.addFilterBefore(
-                tokenAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-        );
+        http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-
-
-
-//        http.csrf(AbstractHttpConfigurer::disable);
-//        http.cors(c -> c.configurationSource(corsConfigurationSource()));
-//        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//        http.formLogin(AbstractHttpConfigurer::disable);
-//        http.httpBasic(AbstractHttpConfigurer::disable);
-//        http.exceptionHandling(e -> e.authenticationEntryPoint(new RestAuthenticationEntryPoint()));
-//
-//        http.authorizeHttpRequests(
-//                authorizeRequests -> authorizeRequests.requestMatchers(MappingConstants.API_LOGIN).permitAll()
-//        );
-//
-//        http.authorizeHttpRequests(
-//                authorizeRequests -> authorizeRequests.requestMatchers(Helper.appendWildcard(MappingConstants.API_AUTH_PREFIX)).hasAnyAuthority(RoleConstant.ADMIN.name())
-//        );
-//
-//        http.oauth2Login(
-//                oauth2 -> oauth2.authorizationEndpoint(a -> a.baseUri("/oauth2/authorize"))
-//                        .redirectionEndpoint(r -> r.baseUri("/oauth2/callback/**"))
-//                        .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
-//                        .authorizationEndpoint(a -> a.authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository))
-//                        .successHandler(oAuth2AuthenticationSuccessHandler)
-//                        .failureHandler(oAuth2AuthenticationFailureHandler)
-//        );
-//
-//        http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-//        http.authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/api/upload/**").permitAll()  // Upload endpoint
-//                .requestMatchers("/uploads/**").permitAll()     // Static files
-//                .requestMatchers(MappingConstants
-//                        .API_LOGIN).permitAll()
-//                .anyRequest().permitAll() // Tạm thời cho phép tất cả để test
-//        );
-//        return http.build();
     }
 }

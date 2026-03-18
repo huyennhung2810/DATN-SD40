@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,4 +41,16 @@ public class ProductDetail extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_storage_capacity", referencedColumnName = "id")
     private StorageCapacity storageCapacity;
+
+    @OneToMany(mappedBy = "productDetail", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<Serial> serials;
+
+    // Ảnh cũ của biến thể (url trực tiếp)
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    // Liên kết tới ảnh của sản phẩm mẹ - dùng cho client hiển thị ảnh theo màu/biến thể
+    @Column(name = "selected_image_id")
+    private String selectedImageId;
 }

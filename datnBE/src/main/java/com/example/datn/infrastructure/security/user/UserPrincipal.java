@@ -29,58 +29,76 @@ public class UserPrincipal implements UserDetails, OAuth2User {
 
     private String password;
 
+    private final boolean active;
+
+
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Setter
     private Map<String, Object> attributes;
 
-    public UserPrincipal(String id,String username,String password, String email, Collection<? extends GrantedAuthority> authorities) {
+    public UserPrincipal(
+            String id,
+            String username,
+            String password,
+            String email,
+            boolean active,
+            Collection<? extends GrantedAuthority> authorities
+    ) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.email = email;
+        this.active = active;
         this.authorities = authorities;
     }
 
     public static UserPrincipal create(Employee employee, List<String> roles) {
+
         List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
-        log.info("Creating user principal for staff. authorities staff : {}", employee.toString());
+        log.debug("Creating principal for employee: {}", employee.getAccount().getUsername());
 
         return new UserPrincipal(
                 employee.getId(),
                 employee.getAccount().getUsername(),
                 employee.getAccount().getPassword(),
-                employee.getEmail(),
+                employee.getAccount().getEmail(),
+                employee.getStatus().name().equals("ACTIVE"),
                 authorities
         );
     }
 
+
     public static UserPrincipal create(Customer customer, List<String> roles) {
+
         List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
-        log.info("Creating user principal for customer. authorities customer : {}", customer.toString());
+        log.debug("Creating principal for customer: {}", customer.getAccount().getUsername());
 
         return new UserPrincipal(
                 customer.getId(),
                 customer.getAccount().getUsername(),
                 customer.getAccount().getPassword(),
                 customer.getEmail(),
+                customer.getStatus().name().equals("ACTIVE"),
                 authorities
         );
     }
 
-    public static UserPrincipal create(Employee employee,Map<String, Object> attributes, List<String> roles) {
+    public static UserPrincipal create(Employee employee, Map<String, Object> attributes, List<String> roles) {
+
         UserPrincipal userPrincipal = UserPrincipal.create(employee, roles);
         userPrincipal.setAttributes(attributes);
         return userPrincipal;
     }
 
     public static UserPrincipal create(Customer customer, Map<String, Object> attributes, List<String> roles) {
+
         UserPrincipal userPrincipal = UserPrincipal.create(customer, roles);
         userPrincipal.setAttributes(attributes);
         return userPrincipal;
@@ -89,6 +107,11 @@ public class UserPrincipal implements UserDetails, OAuth2User {
     @Override
     public String getName() {
         return String.valueOf(id);
+    }
+
+    @Override
+    public Map<String, Object> getAttributes() {
+        return attributes;
     }
 
     @Override
@@ -107,7 +130,22 @@ public class UserPrincipal implements UserDetails, OAuth2User {
     }
 
     @Override
-    public Map<String, Object> getAttributes() {
-        return attributes;
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return active;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return active;
     }
 }

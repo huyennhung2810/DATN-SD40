@@ -39,4 +39,11 @@ public enum EntityStatus {
                 .findFirst()
                 .orElse("Không xác định");
     }
+
+    public static EntityStatus fromValue(Integer value) {
+        if (value == null) {
+            return ACTIVE;
+        }
+        return value == 1 ? ACTIVE : INACTIVE;
+    }
 }

@@ -2,6 +2,7 @@ package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
+import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-@Table(name = "order")
+@Table(name = "`order`")
 public class Order extends PrimaryEntity implements Serializable {
 
     @Enumerated(EnumType.STRING)
@@ -53,6 +54,10 @@ public class Order extends PrimaryEntity implements Serializable {
     @JoinColumn(name = "id_customer", referencedColumnName = "id")
     private Customer customer;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_status")
+    private OrderStatus orderStatus;
+
     @ManyToOne
     @JoinColumn(name = "id_employee", referencedColumnName = "id")
     private Employee employee;
@@ -64,4 +69,8 @@ public class Order extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_voucher", referencedColumnName = "id")
     private Voucher voucher;
+
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
 }

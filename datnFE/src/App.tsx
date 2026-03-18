@@ -1,14 +1,15 @@
 import React from "react";
-import { Routes, Route, BrowserRouter } from "react-router-dom";
-import MainLayout from "./layout/MainLayout";
-import CustomerPage from "./Pages/admin/customer/CustomerList";
-import CustomerForm from "./Pages/admin/customer/CustomerForm";
-import EmployeePage from "./Pages/admin/employee/EmployeeList";
-import EmployeeForm from "./Pages/admin/employee/EmployeeForm";
+import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
+import MainLayout from "./layout/admin/MainLayout";
+import { AdminRoutes } from "./routes/AdminRoutes";
+import { CustomerRoutes } from "./routes/CustomerRoutes";
+import { PublicRoutes } from "./routes/PublicRoutes";
+import EmployeeRoutes from "./routes/EmployeeRoutes";
+import PrivateRoute from "./components/PrivateRoute";
 
 const HomePage = () => (
   <div style={{ textAlign: "center", marginTop: "50px" }}>
-    <h1>Hệ thống Quản lý Hikari Camera</h1>{" "}
+    <h1>Hệ thống Quản lý Hikari Camera</h1>
     <p>Chọn chức năng trên thanh menu để bắt đầu.</p>
   </div>
 );
@@ -16,17 +17,26 @@ const HomePage = () => (
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/customer" element={<CustomerPage />} />
-          <Route path="/customerAdd" element={<CustomerForm />} />
-          <Route path="/admin/customers/:id" element={<CustomerForm />} />
-          <Route path="/employee" element={<EmployeePage />} />
-          <Route path="/employeeAdd" element={<EmployeeForm />} />
-          <Route path="/admin/employees/:id" element={<EmployeeForm />} />
-        </Routes>
-      </MainLayout>
+      <Routes>
+        {/*Các trang Login/Register công khai */}
+        {PublicRoutes()}
+
+        <Route element={<MainLayout />}>
+          <Route element={<PrivateRoute allowedRoles={["ADMIN", "STAFF"]} />}>
+            <Route path="/" element={<HomePage />} />
+          </Route>
+
+          {AdminRoutes()}
+          {EmployeeRoutes()}
+        </Route>
+
+        {/*Trang cho Khách hàng */}
+        {CustomerRoutes()}
+
+        {/* Điều hướng linh hoạt */}
+        <Route path="/home" element={<Navigate to="/client" replace />} />
+        <Route path="*" element={<Navigate to="/403" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 };

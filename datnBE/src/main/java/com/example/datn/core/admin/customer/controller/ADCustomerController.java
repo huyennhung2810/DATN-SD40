@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.customer.controller;
 
-
 import com.example.datn.core.admin.customer.model.request.ADCustomerRequest;
 import com.example.datn.core.admin.customer.model.request.ADCustomerSearchRequest;
 import com.example.datn.core.admin.customer.service.ADCustomerService;
@@ -51,8 +50,7 @@ public class ADCustomerController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateCustomer(
             @PathVariable String id,
-            @Valid @ModelAttribute ADCustomerRequest request
-    ) {
+            @Valid @ModelAttribute ADCustomerRequest request) {
         request.setId(id);
         sanitizeRequest(request);
         return Helper.createResponseEntity(adCustomerService.updateCustomer(request));
@@ -64,18 +62,16 @@ public class ADCustomerController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<byte[]> export() {
+    public ResponseEntity<byte[]> export(ADCustomerSearchRequest request) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customers.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(adCustomerService.exportAllCustomers());
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(adCustomerService.exportAllCustomers(request));
     }
 
-    //Hỗ trợ xóa các giá trị undefined hoặc null từ fe gửi qua formdata
+    // Hỗ trợ xóa các giá trị undefined hoặc null từ fe gửi qua formdata
     private void sanitizeRequest(ADCustomerRequest request) {
-        if ("undefined".equals(request.getIdentityCard()) || "null".equals(request.getIdentityCard())) {
-            request.setIdentityCard(null);
-        }
         if ("undefined".equals(request.getEmail()) || "null".equals(request.getEmail())) {
             request.setEmail(null);
         }

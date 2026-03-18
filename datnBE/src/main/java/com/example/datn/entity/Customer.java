@@ -19,9 +19,6 @@ import java.util.List;
 @Builder
 public class Customer extends NameEntity implements Serializable {
 
-    @Column(name = "identityCard")
-    private String identityCard; //Mã định danh (CCCD/CMND)
-
     @Column(name = "email")
     private String email;
 
@@ -43,6 +40,8 @@ public class Customer extends NameEntity implements Serializable {
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
+    @ToString.Exclude
+    @Builder.Default
     private List<Address> addresses = new ArrayList<>();
 
 }

@@ -4,9 +4,13 @@ import { customerActions } from "./customerSlice";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { saveAs } from 'file-saver';
 import dayjs from "dayjs";
-import { call, put, takeLatest } from "redux-saga/effects";
+import { call, put, select, takeLatest } from "redux-saga/effects";
 import type { PageResponse, ResponseObject } from "../../models/base";
 import { notification } from "antd";
+import type { RootState } from "../store";
+
+const selectCustomerFilter = (state: RootState) => state.customer.filter;
+
 
 // Helper lấy message lỗi an toàn
 function getErrorMessage(error: unknown): string {
@@ -60,7 +64,10 @@ function* handleCustomerAction(action: PayloadAction<CustomerActionPayload>) {
         });
 
         if (navigate) yield call(navigate); 
-        yield put(customerActions.getAll({ page: 0, size: 10 }));
+        
+        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
+
+        yield put(customerActions.getAll(currentFilter));
     } catch (error: unknown) {
         const errorMsg = getErrorMessage(error);
         yield put(customerActions.actionFailed(errorMsg));
@@ -80,7 +87,10 @@ function* handleChangeStatus(action: PayloadAction<string>) {
             title: "Cập nhật",
             description: "Đã thay đổi trạng thái khách hàng thành công" 
         });
-        yield put(customerActions.getAll({ page: 0, size: 10 }));
+
+        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
+
+        yield put(customerActions.getAll( currentFilter ));
     } catch (error: unknown) {
         yield put(customerActions.actionFailed(getErrorMessage(error)));
     }
@@ -88,7 +98,13 @@ function* handleChangeStatus(action: PayloadAction<string>) {
 
 function* handleExportExcel() {
     try {
-        const blob: Blob = yield call(customerApi.exportExcel);
+        const currentFilter: CustomerPageParams = yield select(selectCustomerFilter);
+        const exportParams = {
+            keyword: currentFilter.keyword,
+            status: currentFilter.status,
+        };
+
+        const blob: Blob = yield call(customerApi.exportExcel, exportParams);
         const fileName = `DS_Khach_Hang_${dayjs().format("DDMMYYYY_HHmm")}.xlsx`;
         yield call(saveAs, blob, fileName);
         yield put(customerActions.actionSuccess());
@@ -102,7 +118,7 @@ function* handleExportExcel() {
 
 export default function* watchCustomerFlow() {
     yield takeLatest(customerActions.getAll.type, handleFetch);
-    yield takeLatest(customerActions.getCustomerById.type, handleGetById); // Watcher mới
+    yield takeLatest(customerActions.getCustomerById.type, handleGetById);
     yield takeLatest(
         [customerActions.addCustomer.type, customerActions.updateCustomer.type], 
         handleCustomerAction

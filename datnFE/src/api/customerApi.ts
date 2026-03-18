@@ -1,8 +1,8 @@
 import type { PageResponse, ResponseObject } from "../models/base";
-import type { 
-    CustomerPageParams, 
-    CustomerRequest, 
-    CustomerResponse, 
+import type {
+    CustomerPageParams,
+    CustomerRequest,
+    CustomerResponse,
 } from "../models/customer";
 import axiosClient from "./axiosClient";
 
@@ -18,7 +18,6 @@ const convertToFormData = (data: CustomerRequest): FormData => {
   formData.append("name", data.name || "");
   formData.append("email", data.email || "");
   formData.append("phoneNumber", data.phoneNumber || "");
-  formData.append("identityCard", data.identityCard || "");
   formData.append("gender", String(data.gender ?? true));
 
 
@@ -61,7 +60,6 @@ if (data.addresses && data.addresses.length > 0) {
   return formData;
 }
 
-
 export const addCustomer = async (data: CustomerRequest): Promise<ResponseObject<CustomerResponse>> => {
   const formData = convertToFormData(data);
   const res = await axiosClient.post<ResponseObject<CustomerResponse>>(BASE_URL, formData, {
@@ -93,8 +91,11 @@ export const changeStatusCustomer = async (id: string): Promise<ResponseObject<v
   return res.data;
 };
 
-export const exportExcel = async (): Promise<Blob> => {
-  const res = await axiosClient.get(`${BASE_URL}/export`, { responseType: 'blob' });
+export const exportExcel = async (params?: CustomerPageParams): Promise<Blob> => {
+  const res = await axiosClient.get(`${BASE_URL}/export`, {
+    params,
+    responseType: "blob",
+  });
   return res.data;
 };
 
@@ -118,4 +119,6 @@ export const customerApi = {
     checkDuplicate,
 };
 
-export default customerApi;
+export default {
+  customer: customerApi,
+};
