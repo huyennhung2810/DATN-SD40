@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.customer.service;
 
-
 import com.example.datn.core.admin.customer.model.request.ADCustomerRequest;
 import com.example.datn.core.admin.customer.model.request.ADCustomerSearchRequest;
 import com.example.datn.core.common.base.ResponseObject;
@@ -20,7 +19,7 @@ public interface ADCustomerService {
 
     ResponseObject<?> changeCustomerStatus(String id);
 
-    byte[] exportAllCustomers();
+    byte[] exportAllCustomers(ADCustomerSearchRequest request);
 
     ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id);
 }

@@ -117,17 +117,24 @@ const Header: React.FC = () => {
   const dispatch = useDispatch();
   const currentPath = location.pathname;
 
-  //Laấyn  tuống ttiser hiện tại
+  // Lấy thông tin người dùng hiện tại
   const { user } = useSelector((state: RootState) => state.auth);
 
-  //lấy tt trang hiện tại
-  const basePath = "/" + currentPath.split("/").slice(1, 2).join("/");
-  const currentPage = pageInfoMap[currentPath] ||
-    pageInfoMap[basePath] || {
-      title: "Hikari Admin",
-      desc: "Chào mừng bạn quay lại hệ thống quản lý máy ảnh",
-      icon: <ShopOutlined />,
-    };
+  const defaultPageInfo = {
+    title: "Hikari Admin",
+    desc: "Chào mừng bạn quay lại hệ thống quản lý máy ảnh",
+    icon: <ShopOutlined />,
+  };
+
+  const getCurrentPageInfo = (path: string) => {
+    const matchKey = Object.keys(pageInfoMap)
+      .sort((a, b) => b.length - a.length)
+      .find((key) => path === key || path.startsWith(`${key}/`));
+
+    return matchKey ? pageInfoMap[matchKey] : defaultPageInfo;
+  };
+
+  const currentPage = getCurrentPageInfo(currentPath);
 
   //xử lý khi chọn menu
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
@@ -136,6 +143,11 @@ const Header: React.FC = () => {
     } else if (key === "profile") {
       navigate("/profile");
     }
+  };
+
+  const handleSearch = (value: string) => {
+    // TODO: implement search navigation or filtering
+    console.log("Header search:", value);
   };
 
   const menuItems: MenuProps["items"] = [
@@ -169,6 +181,7 @@ const Header: React.FC = () => {
           placeholder="Tìm sản phẩm, đơn hàng..."
           allowClear
           className="header-search-input"
+          onSearch={handleSearch}
         />
       </div>
 

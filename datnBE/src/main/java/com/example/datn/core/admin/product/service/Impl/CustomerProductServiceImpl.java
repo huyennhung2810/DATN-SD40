@@ -5,12 +5,14 @@ import com.example.datn.core.admin.product.model.response.ADProductResponse;
 import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.CustomerProductService;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
+import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
+import com.example.datn.entity.Serial;
 import com.example.datn.entity.TechSpec;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.repository.TechSpecRepository;
@@ -42,6 +44,7 @@ public class CustomerProductServiceImpl implements CustomerProductService {
         List<Object[]> results = productRepository.searchForCustomer(
                 request.getName(),
                 request.getIdProductCategory(),
+                request.getIdBrand(),
                 request.getIdTechSpec(),
                 request.getStatus(),
                 request.getSensorType(),
@@ -87,6 +90,11 @@ public class CustomerProductServiceImpl implements CustomerProductService {
                         response.setProductCategoryName(product.getProductCategory().getName());
                     }
 
+                    if (product.getBrand() != null) {
+                        response.setIdBrand(product.getBrand().getId());
+                        response.setBrandName(product.getBrand().getName());
+                    }
+
                     if (product.getTechSpec() != null) {
                         response.setIdTechSpec(product.getTechSpec().getId());
                         response.setTechSpecName(product.getTechSpec().getSensorType());
@@ -127,15 +135,17 @@ public class CustomerProductServiceImpl implements CustomerProductService {
         response.setDescription((String) row[2]);
         response.setIdProductCategory((String) row[3]);
         response.setProductCategoryName((String) row[4]);
-        response.setIdTechSpec((String) row[5]);
-        response.setTechSpecName((String) row[6]);
-        response.setPrice(row[7] != null ? (java.math.BigDecimal) row[7] : null);
-        response.setStatus((EntityStatus) row[8]);
-        response.setCreatedDate((Long) row[9]);
-        response.setLastModifiedDate((Long) row[10]);
+        response.setIdBrand((String) row[5]);
+        response.setBrandName((String) row[6]);
+        response.setIdTechSpec((String) row[7]);
+        response.setTechSpecName((String) row[8]);
+        response.setPrice(row[9] != null ? (java.math.BigDecimal) row[9] : null);
+        response.setStatus((EntityStatus) row[10]);
+        response.setCreatedDate((Long) row[11]);
+        response.setLastModifiedDate((Long) row[12]);
 
         // Get TechSpec details
-        String techSpecId = (String) row[5];
+        String techSpecId = (String) row[7];
         if (techSpecId != null && !techSpecId.isEmpty()) {
             TechSpec techSpec = techSpecRepository.findById(techSpecId).orElse(null);
             if (techSpec != null) {
@@ -168,7 +178,7 @@ public class CustomerProductServiceImpl implements CustomerProductService {
 
     @Override
     public List<ADProductVariantResponse> getVariantsByProductId(String productId) {
-        List<ProductDetail> productDetails = productDetailRepository.findByProductId(productId);
+        List<ProductDetail> productDetails = productDetailRepository.findByProductIdWithSerials(productId);
         
         if (productDetails == null || productDetails.isEmpty()) {
             return Collections.emptyList();
@@ -198,6 +208,27 @@ public class CustomerProductServiceImpl implements CustomerProductService {
             variant.setStorageCapacityName(pd.getStorageCapacity().getName());
         }
 
+        // Map danh sách serial của biến thể
+        if (pd.getSerials() != null && !pd.getSerials().isEmpty()) {
+            List<ADSerialResponse> serialResponses = pd.getSerials().stream()
+                    .map(this::mapToSerialResponse)
+                    .collect(Collectors.toList());
+            variant.setSerials(serialResponses);
+        }
+
         return variant;
+    }
+
+    // Map Serial entity to ADSerialResponse
+    private ADSerialResponse mapToSerialResponse(Serial serial) {
+        return ADSerialResponse.builder()
+                .id(serial.getId())
+                .serialNumber(serial.getSerialNumber())
+                .code(serial.getCode())
+                .status(serial.getStatus())
+                .serialStatus(serial.getSerialStatus())
+                .productDetailId(serial.getProductDetail() != null ? serial.getProductDetail().getId() : null)
+                .createdDate(serial.getCreatedDate() != null ? serial.getCreatedDate().toString() : null)
+                .build();
     }
 }

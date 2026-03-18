@@ -41,7 +41,7 @@ function* handleAddDiscount(action: any): any {
       if (navigate) navigate();
     }
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || "Lỗi khi thêm mới";
+    const errorMessage = error.message || "Lỗi khi thêm mới";
     yield put(addDiscountFailure(errorMessage));
     message.error(errorMessage);
   }
@@ -78,10 +78,8 @@ function* handleUpdateDiscount(action: any): any {
    
     if (navigate) navigate();
   } catch (error: any) {
-    const errorMsg = error.response?.data?.message || "Lỗi cập nhật đợt giảm giá!";
+    const errorMsg = error.message || "Lỗi cập nhật đợt giảm giá!";
     message.error(errorMsg);
-    
-    // SỬA DÒNG NÀY: Phải gọi đúng action Failure của Update
     yield put({ type: "discount/updateDiscountFailure", payload: errorMsg }); 
   }
 }

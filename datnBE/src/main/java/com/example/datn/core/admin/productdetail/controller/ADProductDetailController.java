@@ -1,8 +1,8 @@
-package com.example.datn.core.admin.productDetail.controller;
+package com.example.datn.core.admin.productdetail.controller;
 
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.model.response.ADProductDetailResponse;
-import com.example.datn.core.admin.productDetail.service.ADProductDetailService;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -34,8 +34,6 @@ public class ADProductDetailController {
 
     @PostMapping
     public ResponseEntity<ResponseObject<ADProductDetailResponse>> add(@RequestBody ADProductDetailRequest request) {
-
-
         ResponseObject<ADProductDetailResponse> res = new ResponseObject<>();
         try {
             ADProductDetailResponse response = adProductDetailService.addProductDetail(request);
@@ -43,8 +41,16 @@ public class ADProductDetailController {
             res.setMessage("Thêm mới sản phẩm chi tiết thành công!");
             res.setData(response);
             res.setSuccess(true);
-        }catch (Exception e) {
-            System.out.println("===LỖI RỒI");
+        } catch (RuntimeException e) {
+            res.setStatus(HttpStatus.BAD_REQUEST);
+            res.setMessage(e.getMessage());
+            res.setSuccess(false);
+            return ResponseEntity.badRequest().body(res);
+        } catch (Exception e) {
+            res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+            res.setMessage("Lỗi khi thêm sản phẩm chi tiết: " + e.getMessage());
+            res.setSuccess(false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
         }
 
         return ResponseEntity.ok(res);

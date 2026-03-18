@@ -6,7 +6,7 @@ export interface AddressBase {
     name: string;
     phoneNumber: string;
     provinceCity: string;
-    wardCommune: string; 
+    wardCommune: string;
     addressDetail: string;
     isDefault: boolean;
 }

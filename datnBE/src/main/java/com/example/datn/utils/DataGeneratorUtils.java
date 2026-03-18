@@ -3,6 +3,7 @@ package com.example.datn.utils;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 public class DataGeneratorUtils {
@@ -51,5 +52,18 @@ public class DataGeneratorUtils {
         SecureRandom random = new SecureRandom();
         int otp = 100000 + random.nextInt(900000); // Sinh số từ 100000 đến 999999
         return String.valueOf(otp);
+    }
+    // Hàm này sẽ tạo mã có dạng: [Tiền_tố] + [6 ký tự ngẫu nhiên]
+    public static String generateRandomCode(String prefix) {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder(prefix);
+        Random random = new Random();
+
+        // Sinh ra 6 ký tự ngẫu nhiên
+        for (int i = 0; i < 6; i++) {
+            code.append(characters.charAt(random.nextInt(characters.length())));
+        }
+
+        return code.toString();
     }
 }

@@ -17,8 +17,6 @@ import java.util.List;
 @NoArgsConstructor // Cần thiết để các thư viện khác hoạt động
 @AllArgsConstructor
 public class DiscountRequest {
-    @NotBlank(message = "Mã không được để trống")
-    private String code;
 
     @NotBlank(message = "Tên không được để trống")
     private String name;

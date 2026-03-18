@@ -14,10 +14,6 @@ import java.util.List;
 public class PostOrPutVoucherDto {
     private String id;
 
-    @NotBlank(message = "Mã voucher không được để trống")
-    @Size(max = 50, message = "Mã voucher không được quá 50 ký tự")
-    private String code;
-
     @NotBlank(message = "Tên voucher không được để trống")
     @Size(max = 255, message = "Tên voucher không được quá 255 ký tự")
     private String name;

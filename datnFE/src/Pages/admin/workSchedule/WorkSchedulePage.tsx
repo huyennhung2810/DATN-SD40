@@ -55,11 +55,14 @@ const WorkSchedulePage: React.FC = () => {
   const fetchEmployees = async () => {
     try {
       const res = await employeeApi.getAll({ page: 0, size: 100 });
-      const resData = res as any;
-      const empList = resData?.data?.data || resData?.data || [];
+      // employeeApi.getAll trả về PageResponse { data: EmployeeResponse[]; ... }
+      const empList: EmployeeResponse[] = Array.isArray(res)
+        ? res
+        : (res as any)?.data || [];
+
       setEmployees([
         { label: "Tất cả nhân viên", value: "all" },
-        ...empList.map((e: EmployeeResponse) => ({
+        ...empList.map((e) => ({
           label: e.name,
           value: e.id,
         })),
@@ -96,19 +99,23 @@ const WorkSchedulePage: React.FC = () => {
       const matchEmp =
         selectedEmployee === "all" || item.employeeId === selectedEmployee;
       const matchDate =
-        !filterDate || item.workDate === filterDate.format("YYYY-MM-DD");
+        !filterDate || dayjs(item.workDate).isSame(filterDate, "day");
       return matchEmp && matchDate;
     });
   }, [schedules, selectedEmployee, filterDate]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEmployee, filterDate]);
 
   const handleRefresh = () => {
     setSelectedEmployee("all");
     setFilterDate(null);
     fetchSchedules();
   };
-
-  const [currentPage, _setCurrentPage] = useState(1);
-  const pageSize = 10;
 
   const columns: ColumnsType<WorkScheduleResponse> = [
     {
@@ -268,8 +275,10 @@ const WorkSchedulePage: React.FC = () => {
           bordered
           size="middle"
           pagination={{
-            pageSize: 8,
+            current: currentPage,
+            pageSize,
             showTotal: (total) => `Tổng cộng ${total} lịch trực`,
+            onChange: (page) => setCurrentPage(page),
           }}
         />
       ) : (

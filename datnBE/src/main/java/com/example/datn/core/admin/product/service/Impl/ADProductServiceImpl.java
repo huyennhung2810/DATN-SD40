@@ -9,28 +9,21 @@ import com.example.datn.core.admin.product.model.response.ADProductVariantRespon
 import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.product.service.ADProductService;
-
-import com.example.datn.core.admin.productDetail.model.request.ADProductDetailRequest;
-import com.example.datn.core.admin.productDetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
+import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
-
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
-import com.example.datn.entity.Product;
-import com.example.datn.entity.ProductCategory;
-import com.example.datn.entity.ProductDetail;
-import com.example.datn.entity.ProductImage;
-import com.example.datn.entity.Serial;
-import com.example.datn.entity.TechSpec;
+import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductCategoryRepository;
-import com.example.datn.core.admin.productimage.repository.ADProductImageRepository;
 import com.example.datn.repository.TechSpecRepository;
+import com.example.datn.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +43,7 @@ public class ADProductServiceImpl implements ADProductService {
 
     private final ADProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
+    private final BrandRepository brandRepository;
     private final TechSpecRepository techSpecRepository;
     private final ADProductImageRepository productImageRepository;
     private final ADProductDetailRepository productDetailRepository;
@@ -66,6 +60,7 @@ public class ADProductServiceImpl implements ADProductService {
         List<Object[]> results = productRepository.searchBasic(
                 request.getName(),
                 request.getIdProductCategory(),
+                request.getIdBrand(),
                 request.getIdTechSpec(),
                 request.getStatus(),
                 request.getSensorType(),
@@ -87,12 +82,14 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setDescription((String) row[2]);
                     response.setIdProductCategory((String) row[3]);
                     response.setProductCategoryName((String) row[4]);
-                    response.setIdTechSpec((String) row[5]);
-                    response.setTechSpecName((String) row[6]);
-                    response.setPrice(row[7] != null ? (java.math.BigDecimal) row[7] : null);
-                    response.setStatus((EntityStatus) row[8]);
-                    response.setCreatedDate((Long) row[9]);
-                    response.setLastModifiedDate((Long) row[10]);
+                    response.setIdBrand((String) row[5]);
+                    response.setBrandName((String) row[6]);
+                    response.setIdTechSpec((String) row[7]);
+                    response.setTechSpecName((String) row[8]);
+                    response.setPrice(row[9] != null ? (java.math.BigDecimal) row[9] : null);
+                    response.setStatus((EntityStatus) row[10]);
+                    response.setCreatedDate((Long) row[11]);
+                    response.setLastModifiedDate((Long) row[12]);
                     
                     // Lấy thông số kỹ thuật
                     String techSpecId = (String) row[5];
@@ -142,6 +139,12 @@ public class ADProductServiceImpl implements ADProductService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
         }
 
+        Brand brand = null;
+        if (request.getIdBrand() != null && !request.getIdBrand().isEmpty()) {
+            brand = brandRepository.findById(request.getIdBrand())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
+        }
+
         TechSpec techSpec = null;
         if (request.getIdTechSpec() != null && !request.getIdTechSpec().isEmpty()) {
             techSpec = techSpecRepository.findById(request.getIdTechSpec())
@@ -153,6 +156,7 @@ public class ADProductServiceImpl implements ADProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setProductCategory(category);
+        product.setBrand(brand);
         product.setTechSpec(techSpec);
         product.setStatus(request.getStatus());
 
@@ -188,6 +192,13 @@ public class ADProductServiceImpl implements ADProductService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
         }
 
+        // Xử lý brand
+        Brand brand = null;
+        if (request.getIdBrand() != null && !request.getIdBrand().isEmpty()) {
+            brand = brandRepository.findById(request.getIdBrand())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
+        }
+
         // Xử lý techSpec
         TechSpec techSpec = null;
         if (request.getIdTechSpec() != null && !request.getIdTechSpec().isEmpty()) {
@@ -199,6 +210,7 @@ public class ADProductServiceImpl implements ADProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setProductCategory(category);
+        product.setBrand(brand);
         product.setTechSpec(techSpec);
         if (request.getStatus() != null) {
             product.setStatus(request.getStatus());
@@ -254,6 +266,11 @@ public class ADProductServiceImpl implements ADProductService {
                         response.setProductCategoryName(product.getProductCategory().getName());
                     }
 
+                    if (product.getBrand() != null) {
+                        response.setIdBrand(product.getBrand().getId());
+                        response.setBrandName(product.getBrand().getName());
+                    }
+
                     if (product.getTechSpec() != null) {
                         response.setIdTechSpec(product.getTechSpec().getId());
                         response.setTechSpecName(product.getTechSpec().getSensorType());
@@ -294,8 +311,8 @@ public class ADProductServiceImpl implements ADProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
 
-        // Lấy danh sách biến thể của sản phẩm
-        List<ProductDetail> variants = productDetailRepository.findByProductId(id);
+        // Lấy danh sách biến thể của sản phẩm (kèm theo serials)
+        List<ProductDetail> variants = productDetailRepository.findByProductIdWithSerials(id);
 
         // Build response cho sản phẩm cha
         ADProductWithVariantsResponse response = ADProductWithVariantsResponse.builder()
@@ -512,7 +529,42 @@ public class ADProductServiceImpl implements ADProductService {
         // Số lượng tồn kho (có thể null)
         variant.setQuantity(request.getQuantity() != null ? request.getQuantity() : 0);
 
+        // Xử lý serial nếu có
+        if (request.getSerials() != null && !request.getSerials().isEmpty()) {
+            List<String> serialNumbers = request.getSerials().stream()
+                    .map(s -> s.getSerialNumber())
+                    .filter(s -> s != null && !s.trim().isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            // Kiểm tra serial đã tồn tại trong hệ thống chưa
+            if (!serialNumbers.isEmpty()) {
+                List<String> existingInSystem = serialRepository.findExistingSerialNumbers(serialNumbers);
+                if (!existingInSystem.isEmpty()) {
+                    throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+                }
+
+                // Lưu các serial mới
+                for (String serialNumber : serialNumbers) {
+                    Serial newSerial = new Serial();
+                    newSerial.setSerialNumber(serialNumber);
+                    newSerial.setCode(serialNumber);
+                    newSerial.setSerialStatus(SerialStatus.AVAILABLE);
+                    newSerial.setStatus(EntityStatus.ACTIVE);
+                    newSerial.setProductDetail(variant);
+                    serialRepository.save(newSerial);
+                }
+
+                // Cập nhật số lượng theo số serial
+                variant.setQuantity(serialNumbers.size());
+            }
+        }
+
         variant = productDetailRepository.save(variant);
+
+        // Re-fetch để lấy serial đã lưu
+        variant = productDetailRepository.findByIdWithSerials(variant.getId())
+                .orElse(variant);
 
         return mapToVariantResponse(variant);
     }
@@ -520,7 +572,7 @@ public class ADProductServiceImpl implements ADProductService {
     @Override
     @Transactional
     public ADProductVariantResponse updateVariant(String variantId, ADProductDetailRequest request) {
-        ProductDetail variant = productDetailRepository.findById(variantId)
+        ProductDetail variant = productDetailRepository.findByIdWithSerials(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
 
         // Validate không cho tạo biến thể trùng (ngoại trừ chính nó)
@@ -648,7 +700,7 @@ public class ADProductServiceImpl implements ADProductService {
     @Override
     @Transactional
     public ADProductVariantResponse updateVariantImage(String variantId, String selectedImageId) {
-        ProductDetail variant = productDetailRepository.findById(variantId)
+        ProductDetail variant = productDetailRepository.findByIdWithSerials(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
 
         // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ

@@ -66,6 +66,7 @@ const VoucherForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const { loading, currentVoucher } = useSelector(
     (state: RootState) => state.voucher,
@@ -159,8 +160,8 @@ const VoucherForm: React.FC = () => {
       id: id,
       customerIds:
         values.voucherType === "INDIVIDUAL" ? selectedCustomerIds : [],
-      lastModifiedBy: localStorage.getItem("employeeCode") || "Nhung",
-      createdBy: localStorage.getItem("employeeCode") || "Nhung",
+      lastModifiedBy: user?.username || "Nhung",
+      createdBy: user?.username || "Nhung",
     };
 
     const action = isEdit ? updateVoucherRequest : addVoucherRequest;
@@ -296,45 +297,17 @@ const VoucherForm: React.FC = () => {
                 </div>
               )}
               <Form.Item
-                name="code"
-                label={<Text strong>Mã Voucher</Text>}
-                rules={[
-                  { required: true, message: "Vui lòng nhập mã" },
-                  {
-                    validator: async (_, value) => {
-                      // Chỉ kiểm tra khi tạo mới và có nhập giá trị
-                      if (isEdit || !value || value.trim() === "")
-                        return Promise.resolve();
-
-                      try {
-                        // Gọi hàm bạn vừa đồng bộ vào class api
-                        const response =
-                          await voucherApi.checkCodeExists(value);
-
-                        // Kiểm tra kết quả trả về từ Backend (thường là true/false)
-                        if (response.data === true) {
-                          return Promise.reject(
-                            new Error(
-                              "Mã voucher này đã tồn tại trên hệ thống!",
-                            ),
-                          );
-                        }
-                        return Promise.resolve();
-                      } catch (error) {
-                        // Nếu lỗi API (404, 500...), tạm thời cho qua hoặc log lỗi
-                        return Promise.resolve();
-                      }
-                    },
-                  },
-                ]}
-                validateTrigger="onBlur" // Tối ưu: Chỉ check khi người dùng rời khỏi ô nhập
-              >
-                <Input
-                  size="large"
-                  placeholder="Ví dụ: TET2026"
-                  disabled={isEdit}
-                />
-              </Form.Item>
+  name="code"
+  label={<Text strong>Mã Voucher</Text>}
+  // TÀI LIỆU: Đã xóa bỏ mảng 'rules' chứa API checkCodeExists 
+  // vì hệ thống tự sinh mã, người dùng không thể nhập sai được nữa.
+>
+  <Input
+    size="large"
+    disabled={true} // TÀI LIỆU: Luôn luôn khóa ô nhập (true) bất kể là Thêm mới hay Sửa
+    placeholder="Hệ thống đang tự động tạo mã..." 
+  />
+</Form.Item>
 
               <Form.Item
                 name="name"

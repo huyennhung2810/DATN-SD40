@@ -372,6 +372,9 @@ public class AuthServiceImpl implements AuthService {
     private Map<String, Object> buildClaims(Customer customer, List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", customer.getId());
+
+
+
         claims.put("userCode", customer.getCode());
         claims.put("username", customer.getAccount().getUsername());
         claims.put("fullName", customer.getName());

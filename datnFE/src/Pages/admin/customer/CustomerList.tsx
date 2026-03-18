@@ -101,7 +101,7 @@ const CustomerPage: React.FC = () => {
 
     Modal.confirm({
       title: "Xác nhận xuất file",
-      content: `Bạn có chắc chắn muốn xuất danh sách ${totalElements} nhân viên ra file Excel không?`,
+      content: `Bạn có chắc chắn muốn xuất danh sách ${totalElements} khách hàng ra file Excel không?`,
       okText: "Đồng ý",
       cancelText: "Hủy",
       onOk: () => {
@@ -109,7 +109,7 @@ const CustomerPage: React.FC = () => {
         notification.info({
           message: "Đang xử lý ",
           description:
-            "Hệ thống đang khởi tạo tệp Excel cho toàn bộ danh sách nhân viên...",
+            "Hệ thống đang khởi tạo tệp Excel cho toàn bộ danh sách khách hàng...",
         });
       },
       onCancel: () => {

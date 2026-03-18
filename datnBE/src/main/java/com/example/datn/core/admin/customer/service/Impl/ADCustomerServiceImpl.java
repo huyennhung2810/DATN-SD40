@@ -17,7 +17,6 @@ import com.example.datn.repository.AccountRepository;
 import com.example.datn.utils.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.sl.draw.geom.GuideIf.Op;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -50,34 +49,33 @@ public class ADCustomerServiceImpl implements ADCustomerService {
     }
 
     private void handleUploadImage(ADCustomerRequest req, Customer customer) {
-        if (req.getImage() == null || req.getImage().isEmpty()) return;
+        if (req.getImage() != null && !req.getImage().isEmpty()) {
+            FileUploadUtils.assertAllowed(req.getImage(), FileUploadUtils.IMAGE_PATTERN);
+            try {
+                if (StringUtils.hasText(customer.getImage())) {
+                    cloudinaryUtils.deleteImage(customer.getImage());
+                }
 
-        FileUploadUtils.assertAllowed(req.getImage(), FileUploadUtils.IMAGE_PATTERN);
-        try {
-            if (StringUtils.hasText(customer.getImage())) {
-                cloudinaryUtils.deleteImage(customer.getImage());
+                String imageUrl = cloudinaryUtils.uploadImage(
+                        req.getImage().getBytes(),
+                        "customers/" + customer.getId());
+                customer.setImage(imageUrl);
+            } catch (IOException e) {
+                log.error("Lỗi Cloudinary: ", e);
+                throw new RuntimeException("Lỗi upload ảnh khách hàng");
             }
-
-            String imageUrl = cloudinaryUtils.uploadImage(
-                    req.getImage().getBytes(),
-                    "customers/" + customer.getId()
-            );
-            customer.setImage(imageUrl);
-        } catch (IOException e) {
-            log.error("Lỗi Cloudinary: ", e);
-            throw new RuntimeException("Lỗi upload ảnh khách hàng");
+        } else if (StringUtils.hasText(req.getImageUrl())) {
+            customer.setImage(req.getImageUrl());
         }
     }
 
-    // SỬA: Đổi String thành List<ADAddressRequest>
     private void processAddresses(List<ADAddressRequest> addressRequests, Customer customer, boolean isUpdate) {
         if (addressRequests == null || addressRequests.isEmpty()) {
             return;
         }
 
-        // Nếu là cập nhật (Edit), bạn có thể cần xóa địa chỉ cũ hoặc xử lý ghi đè
         if (isUpdate) {
-            adAddressRepository.deleteAllByCustomerId(customer.getId()); // Tùy vào logic của bạn
+            adAddressRepository.deleteAllByCustomerId(customer.getId());
         }
 
         List<Address> addresses = addressRequests.stream().map(req -> {
@@ -114,8 +112,7 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 pageable,
                 request.getKeyword(),
                 request.getStatus(),
-                request.getGender()
-        );
+                request.getGender());
 
         return ResponseObject.success(PageableObject.of(page), "Lấy danh sách khách hàng thành công");
     }
@@ -150,7 +147,7 @@ public class ADCustomerServiceImpl implements ADCustomerService {
         // Save lần 2 để cập nhật URL ảnh
         Customer savedCustomer = adCustomerRepository.save(customer);
 
-        //Lưu địa chỉ
+        // Lưu địa chỉ
         try {
             processAddresses(request.getAddresses(), savedCustomer, false);
         } catch (Exception e) {
@@ -160,7 +157,6 @@ public class ADCustomerServiceImpl implements ADCustomerService {
 
         return ResponseObject.success(savedCustomer, "Thêm mới khách hàng thành công");
     }
-
 
     @Override
     @Transactional
@@ -198,13 +194,16 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                 .orElse(customer.getAddresses().get(0));
 
         StringBuilder sb = new StringBuilder();
-        if (StringUtils.hasText(address.getAddressDetail())) sb.append(address.getAddressDetail());
+        if (StringUtils.hasText(address.getAddressDetail()))
+            sb.append(address.getAddressDetail());
         if (StringUtils.hasText(address.getWardCommune())) {
-            if (sb.length() > 0) sb.append(", ");
+            if (sb.length() > 0)
+                sb.append(", ");
             sb.append(address.getWardCommune());
         }
         if (StringUtils.hasText(address.getProvinceCity())) {
-            if (sb.length() > 0) sb.append(", ");
+            if (sb.length() > 0)
+                sb.append(", ");
             sb.append(address.getProvinceCity());
         }
 
@@ -212,12 +211,14 @@ public class ADCustomerServiceImpl implements ADCustomerService {
     }
 
     @Override
+    @Transactional
     public ResponseObject<?> changeCustomerStatus(String id) {
         Customer customer = adCustomerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
         EntityStatus newStatus = (customer.getStatus() == EntityStatus.ACTIVE)
-                ? EntityStatus.INACTIVE : EntityStatus.ACTIVE;
+                ? EntityStatus.INACTIVE
+                : EntityStatus.ACTIVE;
         customer.setStatus(newStatus);
 
         // Đồng bộ trạng thái của Account đi kèm
@@ -231,13 +232,15 @@ public class ADCustomerServiceImpl implements ADCustomerService {
     }
 
     @Override
-    public byte[] exportAllCustomers() {
+    public byte[] exportAllCustomers(ADCustomerSearchRequest request) {
         List<String> headers = List.of(
                 "STT", "Mã KH", "Họ Tên", "Email", "Số điện thoại",
-                "Giới tính", "Ngày sinh",  "Trạng thái", "Địa chỉ mặc định"
-        );
+                "Giới tính", "Ngày sinh", "Trạng thái", "Địa chỉ mặc định");
 
-        List<Customer> customers = adCustomerRepository.findAll();
+        List<Customer> customers = adCustomerRepository.getAllCustomerForExport(
+                request.getKeyword(),
+                request.getStatus(),
+                request.getGender());
         AtomicInteger index = new AtomicInteger(1);
 
         List<List<Object>> data = customers.stream().map(c -> List.<Object>of(
@@ -251,31 +254,39 @@ public class ADCustomerServiceImpl implements ADCustomerService {
                         ? new SimpleDateFormat("dd/MM/yyyy").format(c.getDateOfBirth())
                         : "---",
                 EntityStatus.ACTIVE.equals(c.getStatus()) ? "Hoạt động" : "Ngừng",
-                getFormattedAddress(c)
-        )).collect(Collectors.toList());
+                getFormattedAddress(c))).collect(Collectors.toList());
 
         return ExcelHelper.createExcelStream("Danh sách khách hàng", headers, data);
     }
 
     @Override
     public ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id) {
-        // Nếu không có ID (thêm mới), gán ID thành một chuỗi rỗng để query không bị lỗi null
-        String safeId = (id == null || id.equalsIgnoreCase("undefined") || id.equalsIgnoreCase("null")) ? "" : id;
-
         // Kiểm tra trùng Số điện thoại
         if (StringUtils.hasText(phoneNumber)) {
-            boolean exists = StringUtils.hasText(safeId)
-                    ? adCustomerRepository.existsByPhoneNumberAndIdNot(phoneNumber, safeId)
-                    : adCustomerRepository.existsByPhoneNumber(phoneNumber);
-            if (exists) return ResponseObject.success(true, "Số điện thoại đã tồn tại");
+            boolean exists;
+            if (StringUtils.hasText(id) && !id.equalsIgnoreCase("undefined") && !id.equalsIgnoreCase("null")) {
+                // Update: kiểm tra trùng với các bản ghi khác
+                exists = adCustomerRepository.existsByPhoneNumberAndIdNot(phoneNumber, id);
+            } else {
+                // Create: kiểm tra trùng với tất cả
+                exists = adCustomerRepository.existsByPhoneNumber(phoneNumber);
+            }
+            if (exists)
+                return ResponseObject.success(true, "Số điện thoại đã tồn tại");
         }
 
-        //Kiểm tra trùng Email
+        // Kiểm tra trùng Email
         if (StringUtils.hasText(email)) {
-            boolean exists = StringUtils.hasText(safeId)
-                    ? adCustomerRepository.existsByEmailAndIdNot(email, safeId)
-                    : adCustomerRepository.existsByEmail(email);
-            if (exists) return ResponseObject.success(true, "Email đã tồn tại");
+            boolean exists;
+            if (StringUtils.hasText(id) && !id.equalsIgnoreCase("undefined") && !id.equalsIgnoreCase("null")) {
+                // Update: kiểm tra trùng với các bản ghi khác
+                exists = adCustomerRepository.existsByEmailAndIdNot(email, id);
+            } else {
+                // Create: kiểm tra trùng với tất cả
+                exists = adCustomerRepository.existsByEmail(email);
+            }
+            if (exists)
+                return ResponseObject.success(true, "Email đã tồn tại");
         }
 
         // Không trùng trường nào

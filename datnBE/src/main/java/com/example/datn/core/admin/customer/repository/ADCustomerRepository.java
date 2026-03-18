@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface ADCustomerRepository extends CustomerRepository {
     @Query("""
@@ -30,11 +32,28 @@ public interface ADCustomerRepository extends CustomerRepository {
     );
 
 
-    // Kiểm tra trùng Số điện thoại
-    boolean existsByPhoneNumberAndIdNot(String phoneNumber, String id);
+    @Query("""
+        SELECT c FROM Customer c
+        WHERE (:keyword IS NULL OR :keyword = ''
+               OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR c.phoneNumber LIKE CONCAT('%', :keyword, '%'))
+        AND (:status IS NULL OR c.status = :status)
+        AND (:gender IS NULL OR c.gender = :gender)
+        ORDER BY c.createdDate DESC 
+    """)
+    List<Customer> getAllCustomerForExport(
+            @Param("keyword") String keyword,
+            @Param("status") EntityStatus status,
+            @Param("gender") Boolean gender
+    );
+
     boolean existsByPhoneNumber(String phoneNumber);
 
-    // Kiểm tra trùng Email
-    boolean existsByEmailAndIdNot(String email, String id);
+    boolean existsByPhoneNumberAndIdNot(String phoneNumber, String id);
+
     boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, String id);
 }

@@ -14,6 +14,7 @@ public class CustomerProductSearchRequest extends PageableRequest {
     // Basic filters
     private String name;
     private String idProductCategory;
+    private String idBrand;
     private String idTechSpec;
     private EntityStatus status = EntityStatus.ACTIVE;
     

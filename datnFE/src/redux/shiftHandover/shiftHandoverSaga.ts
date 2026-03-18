@@ -46,7 +46,8 @@ function* handleCheckOut(action: PayloadAction<CheckOutRequest>) {
 
     yield delay(1500);
     
-    window.location.href = "/admin/waiting-room"; 
+    // Điều hướng về trang quản lý giao ca (nếu đang ở nơi khác)
+    window.location.href = "/shift-handover"; 
 
   } catch (error: any) {
     yield put(shiftActions.checkOutFailed());

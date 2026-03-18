@@ -64,8 +64,13 @@ const ShiftHistoryPage: React.FC = () => {
       loadHistory();
     }, 500); // Đợi 500ms sau khi người dùng ngừng gõ mới gọi API
     return () => clearTimeout(handler);
-  }, [filter.staffId, filter.fromDate, filter.toDate, filter.page]);
-
+  }, [
+    filter.staffId,
+    filter.fromDate,
+    filter.toDate,
+    filter.page,
+    filter.size,
+  ]);
   // Tính năng Xuất Excel dành cho Admin
   const handleExportExcel = () => {
     // Thêm check an toàn trước khi xuất

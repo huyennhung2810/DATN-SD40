@@ -27,6 +27,10 @@ public class ADProductResponse implements IsIdentify {
     
     private String productCategoryName;
     
+    private String idBrand;
+    
+    private String brandName;
+    
     private String idTechSpec;
     
     private String techSpecName;

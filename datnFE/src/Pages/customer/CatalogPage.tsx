@@ -19,11 +19,16 @@ const CatalogPage: React.FC = () => {
   // Filter states from URL
   const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const initialSize = parseInt(searchParams.get("size") || "12", 10);
-  const initialSort = searchParams.get("sort") || "createdDate-desc";
-  const initialMinPrice = searchParams.get("minPrice") ? parseInt(searchParams.get("minPrice")!, 10) : undefined;
-  const initialMaxPrice = searchParams.get("maxPrice") ? parseInt(searchParams.get("maxPrice")!, 10) : undefined;
-  const initialCategory = searchParams.get("category") || undefined;
-  const initialSearch = searchParams.get("q") || undefined;
+  const initialSort = searchParams.get("sort") || searchParams.get("sortBy") ? 
+    `${searchParams.get("sort") || searchParams.get("sortBy")}-${searchParams.get("orderBy") || "desc"}` : 
+    "createdDate-desc";
+  const initialMinPrice = searchParams.get("minPrice") || searchParams.get("min_price") ? 
+    parseInt(searchParams.get("minPrice") || searchParams.get("min_price")!, 10) : undefined;
+  const initialMaxPrice = searchParams.get("maxPrice") || searchParams.get("max_price") ? 
+    parseInt(searchParams.get("maxPrice") || searchParams.get("max_price")!, 10) : undefined;
+  const initialCategory = searchParams.get("category") || searchParams.get("idProductCategory") || undefined;
+  const initialBrand = searchParams.get("idBrand") || undefined;
+  const initialSearch = searchParams.get("q") || searchParams.get("search") || undefined;
 
   // State
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -42,6 +47,7 @@ const CatalogPage: React.FC = () => {
   const [minPrice, setMinPrice] = useState<number | undefined>(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(initialMaxPrice);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(initialBrand ? [initialBrand] : []);
   const [selectedSensorTypes, setSelectedSensorTypes] = useState<string[]>([]);
   const [selectedLensMounts, setSelectedLensMounts] = useState<string[]>([]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>([]);
@@ -72,6 +78,11 @@ const CatalogPage: React.FC = () => {
     // Category filter
     if (selectedCategories.length > 0) {
       params.idProductCategory = selectedCategories[0];
+    }
+
+    // Brand filter
+    if (selectedBrands.length > 0) {
+      params.idBrand = selectedBrands[0];
     }
 
     // Search

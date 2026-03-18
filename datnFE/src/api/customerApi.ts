@@ -91,8 +91,11 @@ export const changeStatusCustomer = async (id: string): Promise<ResponseObject<v
   return res.data;
 };
 
-export const exportExcel = async (): Promise<Blob> => {
-  const res = await axiosClient.get(`${BASE_URL}/export`, { responseType: 'blob' });
+export const exportExcel = async (params?: CustomerPageParams): Promise<Blob> => {
+  const res = await axiosClient.get(`${BASE_URL}/export`, {
+    params,
+    responseType: "blob",
+  });
   return res.data;
 };
 

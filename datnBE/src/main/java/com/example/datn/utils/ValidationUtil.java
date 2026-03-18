@@ -9,7 +9,7 @@ public class ValidationUtil {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
 
-    private static final String PHONE_REGEX = "^0\\d{9}$";
+    private static final String PHONE_REGEX = "^0(3|5|7|8|9)\\d{8}$";
     private static final Pattern PHONE_PATTERN = Pattern.compile(PHONE_REGEX);
 
     public static boolean isValidEmail(String email) {

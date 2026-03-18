@@ -324,12 +324,16 @@ const EmployeePage: React.FC = () => {
           form={form}
           layout="vertical"
           onValuesChange={(_, vals) => {
-            setKeyword(vals.keyword || "");
+            const keywordValue = vals.keyword || "";
+            const statusValue = vals.status === "" ? undefined : vals.status;
+            const roleValue = vals.role === "" ? undefined : vals.role;
+
+            setKeyword(keywordValue);
             setFilter((prev) => ({
               ...prev,
-              keyword: vals.keyword,
-              status: vals.status,
-              role: vals.role,
+              keyword: keywordValue,
+              status: statusValue,
+              role: roleValue,
               page: 0,
             }));
           }}
@@ -358,7 +362,7 @@ const EmployeePage: React.FC = () => {
 
             <Form.Item name="status" label="Trạng thái">
               <Radio.Group buttonStyle="solid">
-                <Radio value={undefined}>Tất cả</Radio>
+                <Radio value="">Tất cả</Radio>
                 <Radio value="ACTIVE">Đang làm việc</Radio>
                 <Radio value="INACTIVE">Đã nghỉ</Radio>
               </Radio.Group>
@@ -424,7 +428,7 @@ const EmployeePage: React.FC = () => {
             emptyText: (
               <div style={{ padding: "20px" }}>
                 <Text type="secondary">
-                  Không tìm thấy khách hàng nào khớp với bộ lọc
+                  Không tìm thấy nhân viên nào khớp với bộ lọc
                 </Text>
                 <br />
                 <Button type="link" onClick={handleReset}>

@@ -1,4 +1,5 @@
 import axiosClient from "./axiosClient";
+import dayjs from "dayjs";
 import type { ResponseObject } from "../models/base";
 import type { 
     CheckInRequest, 
@@ -31,8 +32,20 @@ export const checkOut = async (data: CheckOutRequest): Promise<ResponseObject<Sh
 };
 
 export const getShiftHistory = async (params: any): Promise<ResponseObject<any>> => {
-    const res = await axiosClient.get(`${BASE_URL}/history`, { params });
-    return res.data;
+  const formattedParams = {
+    ...params,
+    fromDate: params.fromDate
+      ? dayjs(params.fromDate).format("YYYY-MM-DD")
+      : undefined,
+    toDate: params.toDate
+      ? dayjs(params.toDate).format("YYYY-MM-DD")
+      : undefined,
+  };
+
+  const res = await axiosClient.get(`${BASE_URL}/history`, {
+    params: formattedParams,
+  });
+  return res.data;
 };
 
 export const confirmShift = async (data: { handoverId: string; adminNote: string }): Promise<ResponseObject<any>> => {

@@ -16,16 +16,15 @@ public class ADCustomerRequest {
 
     private String email;
 
-
     private String phoneNumber;
 
     private Boolean gender;
 
-
     private Long dateOfBirth;
 
-    //image
+    // image
     private MultipartFile image;
+    private String imageUrl;
 
     private List<ADAddressRequest> addresses;
 }

@@ -33,6 +33,10 @@ public class Product extends NameEntity implements Serializable {
     @JoinColumn(name = "id_product_category", referencedColumnName = "id")
     private ProductCategory productCategory;
 
+    @ManyToOne
+    @JoinColumn(name = "id_brand", referencedColumnName = "id")
+    private Brand brand;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<ProductImage> images = new ArrayList<>();
