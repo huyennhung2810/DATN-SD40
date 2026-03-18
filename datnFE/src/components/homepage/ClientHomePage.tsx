@@ -8,7 +8,6 @@ import {
   FeaturedCategories,
   ProductSection,
   PromotionSection,
-  FeaturedBrands,
   BlogPreview,
   Footer,
 } from "./index";
@@ -121,8 +120,6 @@ const ClientHomePage: React.FC = () => {
           viewAllLink="/client/catalog?sortBy=price&orderBy=asc"
           backgroundColor="#fff"
         />
-        
-        <FeaturedBrands />
         
         <ProductSection
           title="Khuyến mãi hot"

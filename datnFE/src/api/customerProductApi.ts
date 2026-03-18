@@ -1,7 +1,6 @@
 import axiosClient from "./axiosClient";
 import type { ProductResponse, ProductPageParams } from "../models/product";
 import type { ProductCategoryResponse } from "../models/productCategory";
-import type { BrandResponse } from "../models/brand";
 import type { PageResponse, ResponseObject } from "../models/base";
 import type { ProductVariantResponse } from "../models/productVariant";
 
@@ -26,18 +25,6 @@ export const customerProductApi = {
   // Get all active categories for filter
   getCategories: async (): Promise<ProductCategoryResponse[]> => {
     const res = await axiosClient.get<ResponseObject<PageResponse<ProductCategoryResponse>>>("/admin/product-category", {
-      params: {
-        page: 1,
-        size: 100,
-        status: "ACTIVE",
-      },
-    });
-    return res.data.data?.data || [];
-  },
-
-  // Get all active brands for filter
-  getBrands: async (): Promise<BrandResponse[]> => {
-    const res = await axiosClient.get<ResponseObject<PageResponse<BrandResponse>>>("/admin/brand", {
       params: {
         page: 1,
         size: 100,
