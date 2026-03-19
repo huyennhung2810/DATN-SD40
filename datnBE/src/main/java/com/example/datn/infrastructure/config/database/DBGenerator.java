@@ -6,6 +6,7 @@ import com.example.datn.infrastructure.constant.BannerPosition;
 import com.example.datn.infrastructure.constant.BannerType;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.OrderStatus;
+import com.example.datn.infrastructure.constant.ProductVersion;
 import com.example.datn.infrastructure.constant.RoleConstant;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.HandoverStatus;
@@ -158,44 +159,44 @@ public class DBGenerator implements CommandLineRunner {
             // 1. Xóa warranty và warranty_history (có FK đến serial)
             warrantyRepository.deleteAll();
             warrantyHistoryRepository.deleteAll();
-            
+
             // 2. Xóa serial (có FK đến product_detail và order_detail)
             serialRepository.deleteAll();
-            
+
             // 3. Xóa order details -> orders (order có FK đến customer, voucher)
             orderDetailRepository.deleteAll();
             orderRepository.deleteAll();
-            
+
             // 4. Xóa cart details -> carts (cart có FK đến customer)
             cartDetailRepository.deleteAll();
             cartRepository.deleteAll();
-            
+
             // 5. Xóa discount details -> discounts
             discountDetailRepository.deleteAll();
             discountRepository.deleteAll();
-            
+
             // 6. Xóa voucher details -> vouchers (voucher_detail có FK đến customer và voucher)
             voucherDetailRepository.deleteAll();
             voucherRepository.deleteAll();
-            
+
             // 7. Xóa addresses (có FK đến customer)
             addressRepository.deleteAll();
-            
+
             // 8. Xóa customers (phải sau tất cả bảng có FK đến customer)
             customerRepository.deleteAll();
-            
+
             // 9. Xóa product variants, images, products
             productDetailRepository.deleteAll();
             productImageRepository.deleteAll();
             productRepository.deleteAll();
-            
+
             // 10. Xóa các bảng lookup
             techSpecRepository.deleteAll();
             storageCapacityRepository.deleteAll();
             colorRepository.deleteAll();
             brandRepository.deleteAll();
             productCategoryRepository.deleteAll();
-            
+
             // 11. Xóa banners
             bannerRepository.deleteAll();
 
@@ -280,7 +281,7 @@ public class DBGenerator implements CommandLineRunner {
             seedDiscounts();
 
             // 13. Seed Carts and Cart Details
-            seedCarts(customers);
+      //      seedCarts(customers);
 
             // 14. Seed Orders and Order Details
             seedOrders(customers);
@@ -338,181 +339,113 @@ public class DBGenerator implements CommandLineRunner {
     }
 
     private void seedProductsWithVariants(List<ProductCategory> categories, List<Brand> brands,
-                                           List<Color> colors, List<StorageCapacity> storages) {
-        
-        // Canon EOS R5 - Mirrorless Full-frame
-        TechSpec techSpec1 = createTechSpec("Full-frame CMOS", "Canon RF", "45MP", 
-            "ISO 100-51200", "DIGIC X", "JPEG, RAW", "8K RAW, 4K 120fps", "Canon");
+                                          List<Color> colors, List<StorageCapacity> storages) {
+
+        // Lấy thương hiệu Canon (phần tử đầu tiên trong danh sách brands)
+        Brand canon = brands.get(0);
+
+        // 1. Canon EOS R5 - Mirrorless Full-frame cao cấp
+        TechSpec techSpec1 = createTechSpec("Full-frame CMOS", "Canon RF", "45MP",
+                "ISO 100-51200", "DIGIC X", "JPEG, RAW", "8K RAW, 4K 120fps", "Canon");
         techSpecRepository.save(techSpec1);
-        Product product1 = createProduct("Canon EOS R5", 
-            "Máy ảnh mirrorless full-frame 45MP với khả năng quay video 8K, chống rung 8-stop IBIS, hệ thống AF 594 điểm.",
-            new BigDecimal("259900000"), categories.get(1), brands.get(0), techSpec1);
+        Product product1 = createProduct("Canon EOS R5",
+                "Máy ảnh mirrorless full-frame 45MP với khả năng quay video 8K, chống rung 8-stop IBIS, hệ thống AF 594 điểm.",
+                new BigDecimal("259900000"), categories.get(1), canon, techSpec1);
         productRepository.save(product1);
         addProductImages(product1, Arrays.asList(
-            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800",
-            "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800"
+                "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800",
+                "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800"
         ));
-        addProductVariants(product1, colors.subList(0, 3), storages.subList(0, 4), 
-            new BigDecimal[]{new BigDecimal("259900000"), new BigDecimal("279900000"), 
-                            new BigDecimal("299900000"), new BigDecimal("349900000")});
+        addProductVariants(product1, colors.subList(0, 3), storages.subList(0, 4),
+                new BigDecimal[]{new BigDecimal("259900000"), new BigDecimal("279900000"),
+                        new BigDecimal("299900000"), new BigDecimal("349900000")});
 
-        // Sony A7 IV - Mirrorless
-        TechSpec techSpec2 = createTechSpec("Full-frame CMOS", "Sony E", "33MP", 
-            "ISO 100-51200", "BIONZ XR", "JPEG, RAW", "4K 60fps", "Sony");
+        // 2. Canon EOS R6 Mark II
+        TechSpec techSpec2 = createTechSpec("Full-frame CMOS", "Canon RF", "24.2MP",
+                "ISO 100-102400", "DIGIC X", "JPEG, RAW", "4K 60fps, 6K RAW", "Canon");
         techSpecRepository.save(techSpec2);
-        Product product2 = createProduct("Sony A7 IV", 
-            "Máy ảnh mirrorless full-frame 33MP, quay video 4K 60fps, AF nhận diện thời gian thực.",
-            new BigDecimal("44990000"), categories.get(1), brands.get(2), techSpec2);
+        Product product2 = createProduct("Canon EOS R6 Mark II",
+                "Máy ảnh mirrorless full-frame 24.2MP, AF nhận diện, chống rung 8-stop, quay 4K 60fps.",
+                new BigDecimal("69990000"), categories.get(1), canon, techSpec2);
         productRepository.save(product2);
         addProductImages(product2, Arrays.asList(
-            "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=800",
-            "https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?w=800"
+                "https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?w=800"
         ));
-        addProductVariants(product2, colors.subList(0, 4), storages.subList(0, 3),
-            new BigDecimal[]{new BigDecimal("44990000"), new BigDecimal("49990000"), new BigDecimal("54990000")});
+        addProductVariants(product2, colors.subList(0, 2), storages.subList(0, 3),
+                new BigDecimal[]{new BigDecimal("69990000"), new BigDecimal("75990000"), new BigDecimal("82990000")});
 
-        // Nikon Z8
-        TechSpec techSpec3 = createTechSpec("Full-frame CMOS", "Nikon Z", "45.7MP", 
-            "ISO 64-25600", "EXPEED 7", "JPEG, RAW", "8K 60fps, 4K 120fps", "Nikon");
+        // 3. Canon EOS R8 (Full-frame nhẹ)
+        TechSpec techSpec3 = createTechSpec("Full-frame CMOS", "Canon RF", "24.2MP",
+                "ISO 100-102400", "DIGIC X", "JPEG, RAW", "4K 60fps", "Canon");
         techSpecRepository.save(techSpec3);
-        Product product3 = createProduct("Nikon Z8", 
-            "Máy ảnh mirrorless full-frame 45.7MP, thừa hưởng công nghệ từ Z9, quay video 8K.",
-            new BigDecimal("89990000"), categories.get(1), brands.get(1), techSpec3);
+        Product product3 = createProduct("Canon EOS R8",
+                "Máy ảnh mirrorless full-frame nhẹ nhất, nhỏ gọn, lấy nét nhanh, quay video 4K.",
+                new BigDecimal("35990000"), categories.get(1), canon, techSpec3);
         productRepository.save(product3);
         addProductImages(product3, Arrays.asList(
-            "https://images.unsplash.com/photo-1606986628213-9d1c1d17c12d?w=800"
+                "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=800"
         ));
-        addProductVariants(product3, colors.subList(0, 2), storages.subList(1, 4),
-            new BigDecimal[]{new BigDecimal("89990000"), new BigDecimal("99990000"), new BigDecimal("119900000")});
+        addProductVariants(product3, colors.subList(0, 2), storages.subList(0, 2),
+                new BigDecimal[]{new BigDecimal("35990000"), new BigDecimal("38990000")});
 
-        // Canon EOS 90D - DSLR
-        TechSpec techSpec4 = createTechSpec("APS-C CMOS", "Canon EF-S", "32.5MP", 
-            "ISO 100-25600", "DIGIC 8", "JPEG, RAW", "4K 30fps", "Canon");
+        // 4. Canon EOS R10 (APS-C Mirrorless)
+        TechSpec techSpec4 = createTechSpec("APS-C CMOS", "Canon RF-S", "24.2MP",
+                "ISO 100-32000", "DIGIC X", "JPEG, RAW", "4K 60fps", "Canon");
         techSpecRepository.save(techSpec4);
-        Product product4 = createProduct("Canon EOS 90D", 
-            "Máy ảnh DSLR APS-C 32.5MP, quay video 4K, màn hình xoay lật, AF 45 điểm.",
-            new BigDecimal("28990000"), categories.get(0), brands.get(0), techSpec4);
+        Product product4 = createProduct("Canon EOS R10",
+                "Máy ảnh mirrorless APS-C, lấy nét nhanh, 15fps, quay 4K, thích hợp cho người mới.",
+                new BigDecimal("18990000"), categories.get(1), canon, techSpec4);
         productRepository.save(product4);
         addProductImages(product4, Arrays.asList(
-            "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800",
-            "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=800"
+                "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=800"
         ));
         addProductVariants(product4, colors.subList(0, 2), storages.subList(0, 2),
-            new BigDecimal[]{new BigDecimal("28990000"), new BigDecimal("30990000")});
+                new BigDecimal[]{new BigDecimal("18990000"), new BigDecimal("20990000")});
 
-        // Sony A6400
-        TechSpec techSpec5 = createTechSpec("APS-C CMOS", "Sony E", "24.2MP", 
-            "ISO 100-102400", "BIONZ X", "JPEG, RAW", "4K 30fps", "Sony");
+        // 5. Canon EOS 90D (DSLR)
+        TechSpec techSpec5 = createTechSpec("APS-C CMOS", "Canon EF-S", "32.5MP",
+                "ISO 100-25600", "DIGIC 8", "JPEG, RAW", "4K 30fps", "Canon");
         techSpecRepository.save(techSpec5);
-        Product product5 = createProduct("Sony Alpha A6400", 
-            "Máy ảnh mirrorless APS-C 24.2MP, AF 0.02s, quay video 4K, màn hình selfie.",
-            new BigDecimal("18990000"), categories.get(1), brands.get(2), techSpec5);
+        Product product5 = createProduct("Canon EOS 90D",
+                "Máy ảnh DSLR APS-C 32.5MP, quay video 4K, màn hình xoay lật, AF 45 điểm.",
+                new BigDecimal("28990000"), categories.get(0), canon, techSpec5);
         productRepository.save(product5);
         addProductImages(product5, Arrays.asList(
-            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800"
+                "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800",
+                "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=800"
         ));
-        addProductVariants(product5, colors.subList(0, 3), storages.subList(0, 2),
-            new BigDecimal[]{new BigDecimal("18990000"), new BigDecimal("20990000")});
+        addProductVariants(product5, colors.subList(0, 2), storages.subList(0, 2),
+                new BigDecimal[]{new BigDecimal("28990000"), new BigDecimal("30990000")});
 
-        // Fujifilm X-T5
-        TechSpec techSpec6 = createTechSpec("APS-C X-Trans CMOS 5 HR", "Fujifilm X", "40.2MP", 
-            "ISO 125-12800", "X-Processor 5", "JPEG, RAW", "6.2K 30fps", "Fujifilm");
+        // 6. Canon EOS M50 Mark II (Mirrorless EF-M)
+        TechSpec techSpec6 = createTechSpec("APS-C CMOS", "Canon EF-M", "24.1MP",
+                "ISO 100-25600", "DIGIC 8", "JPEG, RAW", "4K 24fps", "Canon");
         techSpecRepository.save(techSpec6);
-        Product product6 = createProduct("Fujifilm X-T5", 
-            "Máy ảnh mirrorless 40.2MP, thiết kế retro, quay video 6.2K, 7-stop IBIS.",
-            new BigDecimal("56990000"), categories.get(1), brands.get(3), techSpec6);
+        Product product6 = createProduct("Canon EOS M50 Mark II",
+                "Máy ảnh mirrorless nhỏ gọn, màn hình selfie, live stream, thích hợp cho vlog.",
+                new BigDecimal("14990000"), categories.get(1), canon, techSpec6);
         productRepository.save(product6);
         addProductImages(product6, Arrays.asList(
-            "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=800"
+                "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=800"
         ));
-        addProductVariants(product6, colors.subList(0, 3), storages.subList(1, 4),
-            new BigDecimal[]{new BigDecimal("56990000"), new BigDecimal("61990000"), new BigDecimal("69990000")});
+        addProductVariants(product6, colors.subList(0, 3), storages.subList(0, 2),
+                new BigDecimal[]{new BigDecimal("14990000"), new BigDecimal("16990000")});
 
-        // Canon EOS R6 Mark II
-        TechSpec techSpec7 = createTechSpec("Full-frame CMOS", "Canon RF", "24.2MP", 
-            "ISO 100-102400", "DIGIC X", "JPEG, RAW", "4K 60fps, 6K RAW", "Canon");
+        // 7. Canon PowerShot G7 X Mark III (Compact)
+        TechSpec techSpec7 = createTechSpec("1-inch CMOS", "Fixed", "20.1MP",
+                "ISO 125-12800", "DIGIC 8", "JPEG, RAW", "4K 30fps", "Canon");
         techSpecRepository.save(techSpec7);
-        Product product7 = createProduct("Canon EOS R6 Mark II", 
-            "Máy ảnh mirrorless full-frame 24.2MP, AF nhận diện, chống rung 8-stop, quay 4K 60fps.",
-            new BigDecimal("69990000"), categories.get(1), brands.get(0), techSpec7);
+        Product product7 = createProduct("Canon PowerShot G7 X Mark III",
+                "Máy ảnh compact 20.1MP, nhỏ gọn, quay video 4K, màn hình selfie, live streaming.",
+                new BigDecimal("15990000"), categories.get(2), canon, techSpec7);
         productRepository.save(product7);
         addProductImages(product7, Arrays.asList(
-            "https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?w=800"
+                "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=800"
         ));
-        addProductVariants(product7, colors.subList(0, 2), storages.subList(0, 3),
-            new BigDecimal[]{new BigDecimal("69990000"), new BigDecimal("75990000"), new BigDecimal("82990000")});
+        addProductVariants(product7, colors.subList(0, 2), storages.subList(0, 1),
+                new BigDecimal[]{new BigDecimal("15990000")});
 
-        // Sony A7C II
-        TechSpec techSpec8 = createTechSpec("Full-frame CMOS", "Sony E", "33MP", 
-            "ISO 100-51200", "BIONZ XR", "JPEG, RAW", "4K 60fps", "Sony");
-        techSpecRepository.save(techSpec8);
-        Product product8 = createProduct("Sony A7C II", 
-            "Máy ảnh mirrorless full-frame nhỏ gọn 33MP, thiết kế compact, IBIS 7-stop.",
-            new BigDecimal("52990000"), categories.get(1), brands.get(2), techSpec8);
-        productRepository.save(product8);
-        addProductImages(product8, Arrays.asList(
-            "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=800"
-        ));
-        addProductVariants(product8, colors.subList(0, 3), storages.subList(0, 3),
-            new BigDecimal[]{new BigDecimal("52990000"), new BigDecimal("57990000"), new BigDecimal("62990000")});
-
-        // Nikon D7500 - DSLR
-        TechSpec techSpec9 = createTechSpec("APS-C CMOS", "Nikon F", "20.9MP", 
-            "ISO 100-51200", "EXPEED 5", "JPEG, RAW", "4K 30fps", "Nikon");
-        techSpecRepository.save(techSpec9);
-        Product product9 = createProduct("Nikon D7500", 
-            "Máy ảnh DSLR APS-C 20.9MP, quay video 4K, màn hình cảm ứng, chống thời tiết.",
-            new BigDecimal("24990000"), categories.get(0), brands.get(1), techSpec9);
-        productRepository.save(product9);
-        addProductImages(product9, Arrays.asList(
-            "https://images.unsplash.com/photo-1606986628213-9d1c1d17c12d?w=800"
-        ));
-        addProductVariants(product9, colors.subList(0, 2), storages.subList(0, 2),
-            new BigDecimal[]{new BigDecimal("24990000"), new BigDecimal("26990000")});
-
-        // Canon PowerShot G7 X Mark III
-        TechSpec techSpec10 = createTechSpec("1-inch CMOS", "Fixed", "20.1MP", 
-            "ISO 125-12800", "DIGIC 8", "JPEG, RAW", "4K 30fps", "Canon");
-        techSpecRepository.save(techSpec10);
-        Product product10 = createProduct("Canon PowerShot G7 X Mark III", 
-            "Máy ảnh compact 20.1MP, nhỏ gọn, quay video 4K, màn hình selfie, live streaming.",
-            new BigDecimal("15990000"), categories.get(2), brands.get(0), techSpec10);
-        productRepository.save(product10);
-        addProductImages(product10, Arrays.asList(
-            "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=800"
-        ));
-        addProductVariants(product10, colors.subList(0, 2), storages.subList(0, 1),
-            new BigDecimal[]{new BigDecimal("15990000")});
-
-        // Sony ZV-1 II
-        TechSpec techSpec11 = createTechSpec("1-inch CMOS", "Fixed", "20.1MP", 
-            "ISO 125-12800", "BIONZ X", "JPEG, RAW", "4K 30fps", "Sony");
-        techSpecRepository.save(techSpec11);
-        Product product11 = createProduct("Sony ZV-1 II", 
-            "Máy ảnh vlog 20.1MP, micro direction, màn hình selfie, làm đẹp da.",
-            new BigDecimal("14990000"), categories.get(2), brands.get(2), techSpec11);
-        productRepository.save(product11);
-        addProductImages(product11, Arrays.asList(
-            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800"
-        ));
-        addProductVariants(product11, colors.subList(0, 2), storages.subList(0, 1),
-            new BigDecimal[]{new BigDecimal("14990000")});
-
-        // Panasonic Lumix GH6
-        TechSpec techSpec12 = createTechSpec("Micro Four Thirds", "Micro Four Thirds", "25.2MP", 
-            "ISO 100-25600", "Venus Engine", "JPEG, RAW", "5.7K 60fps", "Panasonic");
-        techSpecRepository.save(techSpec12);
-        Product product12 = createProduct("Panasonic Lumix GH6", 
-            "Máy ảnh mirrorless MFT 25.2MP, quay video 5.7K, chống rung 7.5-stop, V-Log.",
-            new BigDecimal("42990000"), categories.get(1), brands.get(4), techSpec12);
-        productRepository.save(product12);
-        addProductImages(product12, Arrays.asList(
-            "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=800"
-        ));
-        addProductVariants(product12, colors.subList(0, 2), storages.subList(1, 3),
-            new BigDecimal[]{new BigDecimal("42990000"), new BigDecimal("45990000")});
-
-        System.out.println(">>> Đã tạo 12 sản phẩm với các biến thể");
+        System.out.println(">>> Đã tạo 7 sản phẩm Canon với các biến thể");
     }
 
     private TechSpec createTechSpec(String sensorType, String lensMount, String resolution,
@@ -557,9 +490,14 @@ public class DBGenerator implements CommandLineRunner {
         productImageRepository.saveAll(images);
     }
 
-    private void addProductVariants(Product product, List<Color> colors, 
+    private void addProductVariants(Product product, List<Color> colors,
                                      List<StorageCapacity> storages, BigDecimal[] prices) {
         int priceIndex = 0;
+        // Random variantVersion for each variant - phân bổ đều 3 loại
+        ProductVersion[] versions = ProductVersion.values();
+        Random random = new Random();
+        int variantCount = 0;
+
         for (Color color : colors) {
             for (StorageCapacity storage : storages) {
                 if (priceIndex >= prices.length) break;
@@ -570,72 +508,86 @@ public class DBGenerator implements CommandLineRunner {
                 variant.setSalePrice(prices[priceIndex++]);
                 variant.setQuantity((int) (Math.random() * 50) + 10);
                 variant.setStatus(EntityStatus.ACTIVE);
-                variant.setVersion(color.getName() + " / " + storage.getName());
+
+                // LEVEL 1: Sử dụng ProductVersion enum để tạo version name
+                // Random variantVersion để test đầy đủ các trường hợp
+                ProductVersion selectedVersion = versions[variantCount % versions.length];
+                variant.setVariantVersion(selectedVersion.name());
+
+                // Auto-generate version name: {VariantVersion} / {Color} / {Storage}
+                String versionName = ProductVersion.formatFullName(
+                        selectedVersion.name(),
+                        color.getName(),
+                        storage.getName()
+                );
+                variant.setVersion(versionName);
+
                 productDetailRepository.save(variant);
+                variantCount++;
             }
         }
     }
 
     private void seedBanners() {
         System.out.println(">>> Đang tạo banners...");
-        
+
         try {
             List<Banner> banners = Arrays.asList(
-                createBanner(
-                    "Khám Phá Thế Giới Máy Ảnh",
-                    "Mirrorless Cao Cấp",
-                    "Trải nghiệm công nghệ tiên tiến nhất với dòng máy ảnh mirrorless full-frame",
-                    "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1920&q=80",
-                    BannerPosition.HOME_HERO,
-                    1,
-                    "Xem ngay",
-                    "/client/catalog?idProductCategory="
-                ),
-                createBanner(
-                    "Sony Alpha Series",
-                    "Giảm Giá Đặc Biệt",
-                    "Máy ảnh Sony Alpha với công nghệ AF tiên tiến",
-                    "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=1920&q=80",
-                    BannerPosition.HOME_HERO,
-                    2,
-                    "Mua ngay",
-                    "/client/catalog?idBrand="
-                ),
-                createBanner(
-                    "Canon EOS R",
-                    "Hệ Sinh Thái RF",
-                    "Khám phá hệ thống ống kính RF mount đột phá",
-                    "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1920&q=80",
-                    BannerPosition.HOME_HERO,
-                    3,
-                    "Tìm hiểu thêm",
-                    "/client/catalog?idBrand="
-                ),
-                createBanner(
-                    "Nikon Z Mount",
-                    "Chất Lượng Nhật Bản",
-                    "Độ bền và chất lượng hình ảnh vượt trội",
-                    "https://images.unsplash.com/photo-1606986628213-9d1c1d17c12d?w=1920&q=80",
-                    BannerPosition.HOME_MIDDLE,
-                    1,
-                    "Xem chi tiết",
-                    "/client/catalog?idBrand="
-                ),
-                createBanner(
-                    "Fujifilm X-T5",
-                    "Retro Đẳng Cấp",
-                    "Thiết kế cổ điển, công nghệ hiện đại",
-                    "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=1920&q=80",
-                    BannerPosition.HOME_MIDDLE,
-                    2,
-                    "Khám phá",
-                    "/client/catalog?idBrand="
-                )
+                    createBanner(
+                            "Khám Phá Thế Giới Máy Ảnh Canon",
+                            "EOS R Series",
+                            "Trải nghiệm công nghệ tiên tiến nhất với dòng máy ảnh mirrorless full-frame Canon EOS R",
+                            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1920&q=80",
+                            BannerPosition.HOME_HERO,
+                            1,
+                            "Xem ngay",
+                            "/client/catalog?idBrand=1"
+                    ),
+                    createBanner(
+                            "Canon EOS R6 Mark II",
+                            "Giảm Giá Đặc Biệt",
+                            "Máy ảnh Canon EOS R6 Mark II với khả năng lấy nét thông minh và chống rung vượt trội",
+                            "https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?w=1920&q=80",
+                            BannerPosition.HOME_HERO,
+                            2,
+                            "Mua ngay",
+                            "/client/catalog?idProduct=2"
+                    ),
+                    createBanner(
+                            "Canon EOS R5",
+                            "Đỉnh Cao Sáng Tạo",
+                            "Quay phim 8K, chụp ảnh 45MP - Chiếc máy ảnh cho những nhà sáng tạo nội dung chuyên nghiệp",
+                            "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1920&q=80",
+                            BannerPosition.HOME_HERO,
+                            3,
+                            "Tìm hiểu thêm",
+                            "/client/catalog?idProduct=1"
+                    ),
+                    createBanner(
+                            "Canon EOS 90D",
+                            "DSLR Chất Lượng",
+                            "Máy ảnh DSLR với cảm biến 32.5MP, lý tưởng cho nhiếp ảnh gia đam mê",
+                            "https://images.unsplash.com/photo-1606986628213-9d1c1d17c12d?w=1920&q=80",
+                            BannerPosition.HOME_MIDDLE,
+                            1,
+                            "Xem chi tiết",
+                            "/client/catalog?idProduct=5"
+                    ),
+                    createBanner(
+                            "Canon EOS M50 Mark II",
+                            "Vlog Cùng Canon",
+                            "Thiết kế nhỏ gọn, màn hình selfie, live stream - Vũ khí hoàn hảo cho dân vlog",
+                            "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=1920&q=80",
+                            BannerPosition.HOME_MIDDLE,
+                            2,
+                            "Khám phá",
+                            "/client/catalog?idProduct=6"
+                    )
             );
-            
+
             bannerRepository.saveAll(banners);
             System.out.println(">>> Đã tạo " + banners.size() + " banners");
-            
+
         } catch (Exception e) {
             System.err.println(">>> Lỗi seed banners: " + e.getMessage());
         }
@@ -1005,34 +957,34 @@ public class DBGenerator implements CommandLineRunner {
         return discount;
     }
 
-    private void seedCarts(List<Customer> customers) {
-        if (customers.isEmpty()) return;
-
-        List<ProductDetail> productDetails = productDetailRepository.findAll();
-        if (productDetails.isEmpty()) return;
-
-        Random random = new Random();
-
-        for (Customer customer : customers) {
-            // Create cart for customer
-            Cart cart = new Cart();
-            cart.setCustomer(customer);
-            cart = cartRepository.save(cart);
-
-            // Add 1-3 products to cart
-            int productCount = 1 + random.nextInt(3);
-            for (int i = 0; i < productCount; i++) {
-                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
-
-                CartDetail cd = new CartDetail();
-                cd.setId(java.util.UUID.randomUUID().toString());
-                cd.setCart(cart);
-                cd.setProductDetail(pd);
-                cartDetailRepository.save(cd);
-            }
-        }
-        System.out.println(">>> Đã tạo giỏ hàng cho " + customers.size() + " khách hàng");
-    }
+//    private void seedCarts(List<Customer> customers) {
+//        if (customers.isEmpty()) return;
+//
+//        List<ProductDetail> productDetails = productDetailRepository.findAll();
+//        if (productDetails.isEmpty()) return;
+//
+//        Random random = new Random();
+//
+//        for (Customer customer : customers) {
+//            // Create cart for customer
+//            Cart cart = new Cart();
+//            cart.setCustomer(customer);
+//            cart = cartRepository.save(cart);
+//
+//            // Add 1-3 products to cart
+//            int productCount = 1 + random.nextInt(3);
+//            for (int i = 0; i < productCount; i++) {
+//                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
+//
+//                CartDetail cd = new CartDetail();
+//                cd.setId(java.util.UUID.randomUUID().toString());
+//                cd.setCart(cart);
+//                cd.setProductDetail(pd);
+//                cartDetailRepository.save(cd);
+//            }
+//        }
+//        System.out.println(">>> Đã tạo giỏ hàng cho " + customers.size() + " khách hàng");
+//    }
 
     private void seedOrders(List<Customer> customers) {
         if (customers.isEmpty()) return;

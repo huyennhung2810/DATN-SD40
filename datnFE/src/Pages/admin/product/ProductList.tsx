@@ -63,6 +63,7 @@ import type { ProductDetailResponse } from "../../../models/productdetail";
 import type { ProductWithVariantsResponse, ProductVariantResponse } from "../../../models/productVariant";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import { ProductVersionOptions, ProductVersion, formatVariantDisplayInfo } from "../../../models/productVersion";
 import QuickAddCategoryModal from "../../../components/QuickAddCategoryModal";
 import QuickAddTechSpecModal, { type TechSpecType } from "../../../components/QuickAddTechSpecModal";
 import QuickAddColorModal from "../../../components/QuickAddColorModal";
@@ -508,6 +509,8 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
                     colorId: v.colorId,
                     colorName: v.colorName,
                     storageCapacityId: v.storageCapacityId,
@@ -764,6 +767,8 @@ const ProductPage: React.FC = () => {
         variantForm.setFieldsValue({
             status: "ACTIVE",
             quantity: 0,
+            // LEVEL 1: Default variantVersion là BODY_ONLY khi tạo mới
+            variantVersion: ProductVersion.BODY_ONLY,
         });
         setIsVariantModalOpen(true);
     };
@@ -784,7 +789,10 @@ const ProductPage: React.FC = () => {
         // Set giá trị form
         variantForm.setFieldsValue({
             code: variant.code,
+            // LEVEL 1: Backend auto-generate version, nhưng vẫn load về để hiển thị
             version: variant.version,
+            // LEVEL 1: Load variantVersion với fallback về BODY_ONLY nếu không có
+            variantVersion: (variant as any).variantVersion || ProductVersion.BODY_ONLY,
             colorId: variant.colorId,
             storageCapacityId: variant.storageCapacityId,
             salePrice: variant.salePrice,
@@ -809,7 +817,10 @@ const ProductPage: React.FC = () => {
             // Xử lý serial nếu có
             let variantData: any = {
                 code: values.code,
+                // LEVEL 1: Backend sẽ auto-generate version name từ variantVersion + color + storage
                 version: values.version,
+                // LEVEL 1: variantVersion bắt buộc - dimension cấp 1
+                variantVersion: values.variantVersion,
                 colorId: values.colorId,
                 storageCapacityId: values.storageCapacityId,
                 salePrice: values.salePrice,
@@ -901,7 +912,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -940,7 +955,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -978,7 +997,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -1418,7 +1441,7 @@ const ProductPage: React.FC = () => {
                     style={{ marginBottom: 24 }}
                     items={[
                         { title: "Sản phẩm", description: "Thông tin cơ bản" },
-                        { title: "Thông số & Phiên bản", description: "TechSpec & Màu/Dung lượng" },
+                        { title: "Thông số kỹ thuật & Phiên bản", description: "Thông số kỹ thuật, Phiên bản, Màu sắc" },
                         { title: "Hình ảnh", description: "Ảnh sản phẩm" },
                     ]}
                 />
@@ -2213,7 +2236,7 @@ const ProductPage: React.FC = () => {
                                             <>
                                                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <Typography.Text strong>
-                                                        Danh sách các biến thể sản phẩm (Màu sắc - Dung lượng)
+                                                        Danh sách biến thể sản phẩm
                                                     </Typography.Text>
                                                     <Button
                                                         type="primary"
@@ -2265,6 +2288,8 @@ const ProductPage: React.FC = () => {
                                                                                         id: detail.id,
                                                                                         code: detail.code,
                                                                                         version: detail.version,
+                                                                                        // LEVEL 1: Copy variantVersion
+                                                                                        variantVersion: (detail as any).variantVersion,
                                                                                         colorId: detail.colorId,
                                                                                         colorName: detail.colorName,
                                                                                         storageCapacityId: detail.storageCapacityId,
@@ -2300,32 +2325,103 @@ const ProductPage: React.FC = () => {
                                                                         </Popconfirm>,
                                                                     ]}
                                                                 >
-                                                                    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                                                                    <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                                                                        {/* Dòng 1: SKU */}
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                                            <Text type="secondary" style={{ fontSize: 12 }}>SKU:</Text>
+                                                                            <Text strong style={{ fontSize: 12 }}>{detail.code || "Không có mã"}</Text>
+                                                                        </div>
+
+                                                                        {/* Dòng 2: Tên hiển thị đầy đủ */}
+                                                                        {(() => {
+                                                                            const displayInfo = formatVariantDisplayInfo({
+                                                                                code: detail.code,
+                                                                                version: detail.version,
+                                                                                variantVersion: (detail as any).variantVersion,
+                                                                                colorName: detail.colorName,
+                                                                                storageCapacityName: detail.storageCapacityName,
+                                                                                salePrice: detail.salePrice,
+                                                                                quantity: detail.quantity,
+                                                                                status: detail.status,
+                                                                            });
+                                                                            return (
+                                                                                <Tag color="blue" style={{ alignSelf: "flex-start", fontSize: 12 }}>
+                                                                                    {displayInfo.shortLabel}
+                                                                                </Tag>
+                                                                            );
+                                                                        })()}
+
+                                                                        {/* Ảnh thumbnail */}
                                                                         {(detail.selectedImageUrl || detail.imageUrl) && (
-                                                                            <div style={{ textAlign: "center", marginBottom: 8 }}>
+                                                                            <div style={{ textAlign: "center", marginBottom: 4 }}>
                                                                                 <img
                                                                                     src={detail.selectedImageUrl || detail.imageUrl}
-                                                                                    alt={detail.version}
-                                                                                    style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 4 }}
+                                                                                    alt="variant"
+                                                                                    style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, border: "1px solid #f0f0f0" }}
                                                                                 />
                                                                             </div>
                                                                         )}
-                                                                        <Text strong>{detail.code || detail.version || "Biến thể"}</Text>
-                                                                        <Tag color="blue" style={{ alignSelf: "flex-start" }}>
-                                                                            {detail.colorName} | {detail.storageCapacityName}
-                                                                        </Tag>
-                                                                        <Divider style={{ margin: "8px 0" }} />
-                                                                        <Text type="secondary">Giá bán:</Text>
-                                                                        <Text strong style={{ color: "#ff4d4f" }}>
-                                                                            {detail.salePrice?.toLocaleString('vi-VN')} đ
-                                                                        </Text>
-                                                                        <Text type="secondary">Tồn kho:</Text>
-                                                                        <Tag color={detail.quantity > 0 ? "green" : "red"}>
-                                                                            {detail.quantity} máy
-                                                                        </Tag>
-                                                                        <Tag color={detail.status === "ACTIVE" ? "success" : "default"}>
-                                                                            {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
-                                                                        </Tag>
+
+                                                                        <Divider style={{ margin: "6px 0" }} />
+
+                                                                        {/* Khu vực thông tin chi tiết */}
+                                                                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                                                                            {/* Phiên bản */}
+                                                                            {(() => {
+                                                                                const displayInfo = formatVariantDisplayInfo({
+                                                                                    code: detail.code,
+                                                                                    version: detail.version,
+                                                                                    variantVersion: (detail as any).variantVersion,
+                                                                                    colorName: detail.colorName,
+                                                                                    storageCapacityName: detail.storageCapacityName,
+                                                                                    salePrice: detail.salePrice,
+                                                                                    quantity: detail.quantity,
+                                                                                    status: detail.status,
+                                                                                });
+                                                                                return (
+                                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                        <Text type="secondary">Phiên bản:</Text>
+                                                                                        <Text strong>{displayInfo.versionDisplay}</Text>
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+
+                                                                            {/* Màu sắc */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Màu sắc:</Text>
+                                                                                <Text strong>{detail.colorName || "Không rõ"}</Text>
+                                                                            </div>
+
+                                                                            {/* Dung lượng */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Dung lượng:</Text>
+                                                                                <Text strong>{detail.storageCapacityName || "Không rõ"}</Text>
+                                                                            </div>
+
+                                                                            {/* Giá bán */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Giá bán:</Text>
+                                                                                <Text strong style={{ color: "#ff4d4f" }}>
+                                                                                    {detail.salePrice?.toLocaleString('vi-VN')} đ
+                                                                                </Text>
+                                                                            </div>
+
+                                                                            {/* Tồn kho */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, alignItems: "center" }}>
+                                                                                <Text type="secondary">Tồn kho:</Text>
+                                                                                <Tag color={detail.quantity > 0 ? "green" : "red"} style={{ margin: 0 }}>
+                                                                                    {detail.quantity} máy
+                                                                                </Tag>
+                                                                            </div>
+
+                                                                            {/* Trạng thái */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, alignItems: "center" }}>
+                                                                                <Text type="secondary">Trạng thái:</Text>
+                                                                                <Tag color={detail.status === "ACTIVE" ? "success" : "default"} style={{ margin: 0 }}>
+                                                                                    {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+                                                                                </Tag>
+                                                                            </div>
+                                                                        </Space>
                                                                     </Space>
                                                                 </Card>
                                                             </Col>
@@ -2371,12 +2467,20 @@ const ProductPage: React.FC = () => {
                         <Input placeholder="Nhập mã sản phẩm chi tiết" />
                     </Form.Item>
 
+                    {/* LEVEL 1: Thêm field "Phiên bản" - Select bắt buộc với 3 giá trị */}
                     <Form.Item
-                        name="version"
-                        label="Tên phiên bản"
+                        name="variantVersion"
+                        label="Phiên bản"
+                        rules={[{ required: true, message: "Vui lòng chọn phiên bản!" }]}
                     >
-                        <Input placeholder="Ví dụ: Nikon D3500 Black 128GB" />
+                        <Select
+                            placeholder="Chọn phiên bản máy ảnh"
+                            options={ProductVersionOptions}
+                        />
                     </Form.Item>
+
+                    {/* NOTE: Trường "Tên phiên bản" (version) đã được loại bỏ vì backend sẽ tự động generate */}
+                    {/* Format: {VariantVersion} / {Color} / {Storage} - VD: "Body Only / Đen / 128GB" */}
 
                     <Row gutter={16}>
                         <Col span={12}>

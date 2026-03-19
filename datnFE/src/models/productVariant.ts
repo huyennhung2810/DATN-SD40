@@ -1,4 +1,5 @@
 import type { CommonStatus } from "./base";
+import { ProductVersion } from "./productVersion";
 
 export interface SerialResponse {
   id: string;
@@ -15,6 +16,11 @@ export interface ProductVariantResponse {
   id: string;
   code: string;
   version: string;
+
+  // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+  // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+  variantVersion?: ProductVersion;
+
   colorId?: string;
   colorName: string;
   colorCode?: string;

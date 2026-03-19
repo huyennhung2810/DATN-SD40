@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { productDetailActions } from "../../../redux/productdetail/productDetailSlice";
 import type { ColumnsType } from "antd/es/table";
 import type { ProductDetailResponse } from "../../../models/productdetail";
+import { ProductVersionOptions, ProductVersion, getProductVersionDisplayName } from "../../../models/productVersion";
 import type { RootState } from "../../../redux/store";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
@@ -125,7 +126,9 @@ const ProductDetailPage: React.FC = () => {
             colorId: data.colorId ? String(data.colorId) : undefined,
             storageCapacityId: data.storageCapacityId ? String(data.storageCapacityId) : undefined,
             serialList: serialText,
-            serialCode: data.serials?.[0]?.code || ""
+            serialCode: data.serials?.[0]?.code || "",
+            // LEVEL 1: Set variantVersion với fallback về BODY_ONLY nếu không có
+            variantVersion: data.variantVersion || ProductVersion.BODY_ONLY,
           });
         },
       })
@@ -134,7 +137,9 @@ const ProductDetailPage: React.FC = () => {
     formManager.setFieldsValue({
       code: generateCode(),
       status: 'ACTIVE',
-      quantity: 0
+      quantity: 0,
+      // LEVEL 1: Default variantVersion là BODY_ONLY khi tạo mới
+      variantVersion: ProductVersion.BODY_ONLY,
     });
   }
 
@@ -216,10 +221,20 @@ const handleImportExcel = (file: any) => {
   // Cấu hình cột cho bảng
   const columns: ColumnsType<ProductDetailResponse> = [
     { title: "STT", align: "center", width: 60, render: (_, __, i) => filter.page * filter.size + i + 1 },
-    { title: "Mã phiên bản", render: r => <Text strong>{r.code}</Text> },
+    { title: "Mã SPCT", render: r => <Text strong>{r.code}</Text> },
     { title: "Sản phẩm", dataIndex: "productName", render: v => <Text strong>{v || "---"}</Text> },
     {
+      title: "Phiên bản",
+      // LEVEL 1: Hiển thị variantVersion (Body Only / Kit 18-45 / Kit 18-150)
+      render: r => (
+        <Tag color="green" style={{ fontWeight: 600 }}>
+          {getProductVersionDisplayName(r.variantVersion) || "Body Only"}
+        </Tag>
+      ),
+    },
+    {
       title: "Cấu hình",
+      // LEVEL 1: version đã được backend auto-generate: "{VariantVersion} / {Color} / {Storage}"
       render: r => (
         <Space direction="vertical" size={0}>
           <Text strong style={{ color: '#1890ff' }}>{r.version}</Text>
@@ -244,7 +259,7 @@ const handleImportExcel = (file: any) => {
       render: r => <Button type="text"
       icon={<EditOutlined style={{ color: '#1890ff' }} />}
       onClick={(e) =>{
-        e.stopPropagation(); 
+        e.stopPropagation();
         openDrawer(r)}} />,
     },
   ];
@@ -344,43 +359,57 @@ const handleImportExcel = (file: any) => {
             <Form.Item label="Mã SPCT" name="code" rules={[{ required: true }]}>
               <Input placeholder="Mã định danh SPCT" disabled value={generateCode()}/>
             </Form.Item>
-            <Form.Item label="Tên phiên bản" name="version" rules={[{ required: true }]}>
-              <Input placeholder="Ví dụ: Pro Max..." />
+            {/* LEVEL 1: Thêm field "Phiên bản" - Select bắt buộc với 3 giá trị */}
+            <Form.Item
+              label="Phiên bản"
+              name="variantVersion"
+              rules={[{ required: true, message: 'Vui lòng chọn phiên bản!' }]}
+            >
+              <Select
+                placeholder="Chọn phiên bản máy ảnh"
+                options={ProductVersionOptions}
+              />
             </Form.Item>
           </div>
 
+          {/* NOTE: Trường "Tên phiên bản" (version) đã được loại bỏ vì backend sẽ tự động generate */}
+          {/* Format: {VariantVersion} / {Color} / {Storage} - VD: "Body Only / Đen / 128GB" */}
+
           <Form.Item label="Sản phẩm" name="productId" rules={[{ required: true }]}>
-            <Select 
-              placeholder="Chọn sản phẩm" 
+            <Select
+              placeholder="Chọn sản phẩm"
               showSearch
               optionFilterProp="label"
               loading={productList.length === 0}
-              options={(productList || []).map((p: any) => ({ 
-                label: p.name, 
-                value: String(p.id) 
-              }))} 
+              options={(productList || []).map((p: any) => ({
+                label: p.name,
+                value: String(p.id)
+              }))}
             />
           </Form.Item>
 
+          {/* LEVEL 1: Ưu tiên hiển thị "Phiên bản" TRƯỚC "Màu sắc" và "Dung lượng" */}
+          {/* Tuy nhiên để giữ backward compatibility, "Màu sắc" và "Dung lượng" vẫn giữ nguyên vị trí */}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Form.Item label="Màu sắc" name="colorId" rules={[{ required: true }]}>
-              <Select 
-                placeholder="Chọn màu sắc" 
+              <Select
+                placeholder="Chọn màu sắc"
                 loading={colors.length === 0}
-                options={(colors || []).map((c: any) => ({ 
-                  label: c.name, 
-                  value: String(c.id) 
-                }))} 
+                options={(colors || []).map((c: any) => ({
+                  label: c.name,
+                  value: String(c.id)
+                }))}
               />
             </Form.Item>
             <Form.Item label="Dung lượng" name="storageCapacityId" rules={[{ required: true }]}>
-              <Select 
-                placeholder="Chọn dung lượng" 
+              <Select
+                placeholder="Chọn dung lượng"
                 loading={capacities.length === 0}
-                options={(capacities || []).map((s: any) => ({ 
-                  label: s.name, 
-                  value: String(s.id) 
-                }))} 
+                options={(capacities || []).map((s: any) => ({
+                  label: s.name,
+                  value: String(s.id)
+                }))}
               />
             </Form.Item>
           </div>
