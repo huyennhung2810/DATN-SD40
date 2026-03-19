@@ -10,7 +10,10 @@ import {
   CloseOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
+import type { RootState } from "../../redux/store";
+import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
+import axiosClient from "../../api/axiosClient"; // Nơi bạn cấu hình Axios gọi API
+import { useSelector, useDispatch } from "react-redux";
 interface HeaderProps {
   onMenuClick?: () => void;
 }
@@ -21,6 +24,31 @@ const Header: React.FC<HeaderProps> = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
+ // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const cartCount = useSelector((state: RootState) => state.cart.cartCount);
+
+  useEffect(() => {
+    if (user && user.userId) {
+      // Gọi API lấy giỏ hàng ngay khi có user đăng nhập
+      axiosClient
+        .get(`/client/cart?customerId=${user.userId}`)
+        .then((response) => {
+          const cartItems = response.data;
+          // Hiển thị số lượng "Loại sản phẩm" (Mỗi mặt hàng là 1)
+          const count = cartItems.length;
+          dispatch(setCartCount(count));
+        })
+        .catch((error) => {
+          console.error("Lỗi lấy số lượng giỏ hàng:", error);
+        });
+    } else {
+      // Chưa đăng nhập thì reset số 0
+      dispatch(clearCartCount());
+    }
+  }, [user, dispatch]);
+  // ====================================================
 
   const handleSearch = (value: string) => {
     navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
@@ -45,11 +73,27 @@ const Header: React.FC<HeaderProps> = () => {
   ];
 
   const mainNavItems = [
-    { key: "may-anh", label: "Máy ảnh", href: "/client/catalog?category=may-anh" },
-    { key: "ong-kinh", label: "Ống kính", href: "/client/catalog?category=ong-kinh" },
-    { key: "may-quay", label: "Máy quay", href: "/client/catalog?category=may-quay" },
+    {
+      key: "may-anh",
+      label: "Máy ảnh",
+      href: "/client/catalog?category=may-anh",
+    },
+    {
+      key: "ong-kinh",
+      label: "Ống kính",
+      href: "/client/catalog?category=ong-kinh",
+    },
+    {
+      key: "may-quay",
+      label: "Máy quay",
+      href: "/client/catalog?category=may-quay",
+    },
     { key: "gimbal", label: "Gimbal", href: "/client/catalog?category=gimbal" },
-    { key: "phu-kien", label: "Phụ kiện", href: "/client/catalog?category=phu-kien" },
+    {
+      key: "phu-kien",
+      label: "Phụ kiện",
+      href: "/client/catalog?category=phu-kien",
+    },
     { key: "tin-tuc", label: "Tin tức", href: "/client/news" },
   ];
 
@@ -66,16 +110,14 @@ const Header: React.FC<HeaderProps> = () => {
           />
 
           {/* Logo */}
-          <div
-            className="header-logo"
-            onClick={() => navigate("/client")}
-          >
+          <div className="header-logo" onClick={() => navigate("/client")}>
             <img
               src="/logo_hikari.png"
               alt="Hikari Camera"
               className="logo-img"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://via.placeholder.com/150x50?text=HIKARI";
+                (e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/150x50?text=HIKARI";
               }}
             />
           </div>
@@ -89,7 +131,9 @@ const Header: React.FC<HeaderProps> = () => {
                 size="large"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                onPressEnter={(e) => handleSearch((e.target as HTMLInputElement).value)}
+                onPressEnter={(e) =>
+                  handleSearch((e.target as HTMLInputElement).value)
+                }
                 className="search-input"
                 prefix={<SearchOutlined className="search-icon" />}
               />
@@ -137,12 +181,12 @@ const Header: React.FC<HeaderProps> = () => {
             </Dropdown>
 
             {/* Cart */}
-            <Badge count={0} showZero={false} className="cart-badge">
+            <Badge count={cartCount} showZero={true} className="cart-badge">
               <Button
                 type="primary"
                 icon={<ShoppingCartOutlined />}
                 className="cart-btn"
-                onClick={() => navigate("/client/cart")}
+                onClick={() => navigate("/client/cart")} // Nhớ thêm onClick để chuyển trang nhé
               >
                 <span className="hidden lg:inline">Giỏ hàng</span>
               </Button>
@@ -151,7 +195,9 @@ const Header: React.FC<HeaderProps> = () => {
         </div>
 
         {/* Mobile Search Overlay */}
-        <div className={`mobile-search-overlay ${mobileSearchVisible ? "active" : ""}`}>
+        <div
+          className={`mobile-search-overlay ${mobileSearchVisible ? "active" : ""}`}
+        >
           <div className="mobile-search-container">
             <Input
               placeholder="Tìm kiếm sản phẩm..."
@@ -181,7 +227,8 @@ const Header: React.FC<HeaderProps> = () => {
               alt="Hikari"
               className="h-8"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://via.placeholder.com/100x30?text=HIKARI";
+                (e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/100x30?text=HIKARI";
               }}
             />
           </div>
@@ -232,7 +279,7 @@ const Header: React.FC<HeaderProps> = () => {
           )}
         />
 
-        <div className="mt-4 pt-4 border-t border-gray-100">
+       <div className="mt-4 pt-4 border-t border-gray-100">
           <Button
             type="primary"
             icon={<ShoppingCartOutlined />}
@@ -243,7 +290,7 @@ const Header: React.FC<HeaderProps> = () => {
               setMobileMenuVisible(false);
             }}
           >
-            Giỏ hàng (0)
+            Giỏ hàng ({cartCount}) {/* Thay số 0 bằng biến cartCount */}
           </Button>
         </div>
       </Drawer>

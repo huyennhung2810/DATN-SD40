@@ -382,11 +382,6 @@ const DiscountForm: React.FC = () => {
                   key: "storageCapacityName",
                 },
                 {
-                  title: "Cấu hình",
-                  dataIndex: "version",
-                  key: "version",
-                },
-                {
                   title: "Giá bán",
                   dataIndex: "salePrice",
                   key: "salePrice",

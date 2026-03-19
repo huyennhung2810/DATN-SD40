@@ -280,7 +280,7 @@ public class DBGenerator implements CommandLineRunner {
             seedDiscounts();
 
             // 13. Seed Carts and Cart Details
-            seedCarts(customers);
+//            seedCarts(customers);
 
             // 14. Seed Orders and Order Details
             seedOrders(customers);
@@ -976,7 +976,7 @@ public class DBGenerator implements CommandLineRunner {
             dd.setStatus(1);
             dd.setPriceBefore(pd.getSalePrice());
             dd.setPriceAfter(pd.getSalePrice().multiply(new BigDecimal("0.85")));
-            dd.setCreatedAt(now);
+
             dd.setProductDetail(pd);
             dd.setDiscount(discount);
             discountDetailRepository.save(dd);
@@ -1005,34 +1005,34 @@ public class DBGenerator implements CommandLineRunner {
         return discount;
     }
 
-    private void seedCarts(List<Customer> customers) {
-        if (customers.isEmpty()) return;
-
-        List<ProductDetail> productDetails = productDetailRepository.findAll();
-        if (productDetails.isEmpty()) return;
-
-        Random random = new Random();
-
-        for (Customer customer : customers) {
-            // Create cart for customer
-            Cart cart = new Cart();
-            cart.setCustomer(customer);
-            cart = cartRepository.save(cart);
-
-            // Add 1-3 products to cart
-            int productCount = 1 + random.nextInt(3);
-            for (int i = 0; i < productCount; i++) {
-                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
-
-                CartDetail cd = new CartDetail();
-                cd.setId(java.util.UUID.randomUUID().toString());
-                cd.setCart(cart);
-                cd.setProductDetail(pd);
-                cartDetailRepository.save(cd);
-            }
-        }
-        System.out.println(">>> Đã tạo giỏ hàng cho " + customers.size() + " khách hàng");
-    }
+//    private void seedCarts(List<Customer> customers) {
+//        if (customers.isEmpty()) return;
+//
+//        List<ProductDetail> productDetails = productDetailRepository.findAll();
+//        if (productDetails.isEmpty()) return;
+//
+//        Random random = new Random();
+//
+//        for (Customer customer : customers) {
+//            // Create cart for customer
+//            Cart cart = new Cart();
+//            cart.setCustomer(customer);
+//            cart = cartRepository.save(cart);
+//
+//            // Add 1-3 products to cart
+//            int productCount = 1 + random.nextInt(3);
+//            for (int i = 0; i < productCount; i++) {
+//                ProductDetail pd = productDetails.get(random.nextInt(productDetails.size()));
+//
+//                CartDetail cd = new CartDetail();
+//                cd.setId(java.util.UUID.randomUUID().toString());
+//                cd.setCart(cart);
+//                cd.setProductDetail(pd);
+//                cartDetailRepository.save(cd);
+//            }
+//        }
+//        System.out.println(">>> Đã tạo giỏ hàng cho " + customers.size() + " khách hàng");
+//    }
 
     private void seedOrders(List<Customer> customers) {
         if (customers.isEmpty()) return;

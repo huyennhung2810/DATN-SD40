@@ -1,6 +1,7 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.PrimaryEntity;
+import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,8 +13,13 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-@Table(name = "cart_detail")
-public class CartDetail extends PrimaryEntity implements Serializable {
+@Table(name = "cart_detail", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_cart_product", columnNames = {"id_cart", "id_product_detail"})
+})
+public class CartDetail implements Serializable {
+    @Id
+    @Column(length = EntityProperties.LENGTH_ID, updatable = false)
+    private String id;
 
     @ManyToOne
     @JoinColumn(name = "id_cart", referencedColumnName = "id")
@@ -22,4 +28,11 @@ public class CartDetail extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "id_product_detail", referencedColumnName = "id")
     private ProductDetail productDetail;
+
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "created_date", updatable = false)
+    private Long createdDate;
+
 }

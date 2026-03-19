@@ -48,5 +48,6 @@ export default function* rootSaga() {
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
     fork(watchChatSaga),
+  
   ]);
 }
