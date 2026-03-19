@@ -21,6 +21,13 @@ public class ADProductVariantResponse {
     private String code;
     
     private String version;
+
+    // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+    // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+    private String variantVersion;
+
+    // Display name của variantVersion (VD: "Body Only", "Kit 18-45", "Kit 18-150")
+    private String variantVersionDisplayName;
     
     private String colorId;
     

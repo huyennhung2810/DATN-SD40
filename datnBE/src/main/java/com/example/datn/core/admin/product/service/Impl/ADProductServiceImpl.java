@@ -19,6 +19,7 @@ import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.ProductVersion;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductCategoryRepository;
 import com.example.datn.repository.TechSpecRepository;
@@ -416,6 +417,15 @@ public class ADProductServiceImpl implements ADProductService {
         response.setId(variant.getId());
         response.setCode(variant.getCode());
         response.setVersion(variant.getVersion());
+
+        // LEVEL 1: Map variantVersion - với fallback cho dữ liệu cũ
+        String variantVersion = variant.getVariantVersion();
+        if (variantVersion == null || variantVersion.isBlank()) {
+            variantVersion = ProductVersion.BODY_ONLY.name(); // Default fallback
+        }
+        response.setVariantVersion(variantVersion);
+        response.setVariantVersionDisplayName(ProductVersion.fromString(variantVersion).getDisplayName());
+
         response.setSalePrice(variant.getSalePrice());
         response.setQuantity(variant.getQuantity());
         response.setStatus(variant.getStatus());
@@ -503,7 +513,32 @@ public class ADProductServiceImpl implements ADProductService {
 
         ProductDetail variant = new ProductDetail();
         variant.setCode(request.getCode());
-        variant.setVersion(request.getVersion());
+
+        // LEVEL 1: Auto-generate version name từ variantVersion + color + storage
+        String colorName = "";
+        String storageName = "";
+        if (request.getColorId() != null && !request.getColorId().isEmpty()) {
+            colorName = colorRepository.findById(request.getColorId())
+                    .map(c -> c.getName())
+                    .orElse("");
+        }
+        if (request.getStorageCapacityId() != null && !request.getStorageCapacityId().isEmpty()) {
+            storageName = storageCapacityRepository.findById(request.getStorageCapacityId())
+                    .map(s -> s.getName())
+                    .orElse("");
+        }
+
+        // Lưu variantVersion - enum value (BODY_ONLY, KIT_18_45, KIT_18_150)
+        String variantVersion = request.getVariantVersion();
+        if (variantVersion == null || variantVersion.isBlank()) {
+            variantVersion = ProductVersion.BODY_ONLY.name(); // Default
+        }
+        variant.setVariantVersion(variantVersion);
+
+        // Auto-generate version name: {VariantVersion} / {Color} / {Storage}
+        String generatedVersion = ProductVersion.formatFullName(variantVersion, colorName, storageName);
+        variant.setVersion(generatedVersion);
+
         variant.setSalePrice(request.getSalePrice());
         variant.setStatus(request.getStatus() != null ? request.getStatus() : EntityStatus.ACTIVE);
         variant.setNote(request.getNote());
@@ -603,9 +638,36 @@ public class ADProductServiceImpl implements ADProductService {
         if (request.getCode() != null) {
             variant.setCode(request.getCode());
         }
-        if (request.getVersion() != null) {
-            variant.setVersion(request.getVersion());
+
+        // LEVEL 1: Auto-generate version name khi có variantVersion mới hoặc color/storage thay đổi
+        String colorName = variant.getColor() != null ? variant.getColor().getName() : "";
+        String storageName = variant.getStorageCapacity() != null ? variant.getStorageCapacity().getName() : "";
+
+        // Nếu color hoặc storage thay đổi, cập nhật lại tên
+        if (request.getColorId() != null && !request.getColorId().isEmpty()) {
+            colorName = colorRepository.findById(request.getColorId())
+                    .map(c -> c.getName())
+                    .orElse(colorName);
         }
+        if (request.getStorageCapacityId() != null && !request.getStorageCapacityId().isEmpty()) {
+            storageName = storageCapacityRepository.findById(request.getStorageCapacityId())
+                    .map(s -> s.getName())
+                    .orElse(storageName);
+        }
+
+        // Cập nhật variantVersion và regenerate version name
+        String variantVersion = request.getVariantVersion();
+        if (variantVersion != null && !variantVersion.isBlank()) {
+            variant.setVariantVersion(variantVersion);
+        } else if (variant.getVariantVersion() == null || variant.getVariantVersion().isBlank()) {
+            variant.setVariantVersion(ProductVersion.BODY_ONLY.name()); // Default fallback
+        }
+
+        // Auto-generate version name: {VariantVersion} / {Color} / {Storage}
+        String currentVariantVersion = variant.getVariantVersion();
+        String generatedVersion = ProductVersion.formatFullName(currentVariantVersion, colorName, storageName);
+        variant.setVersion(generatedVersion);
+
         if (request.getSalePrice() != null) {
             variant.setSalePrice(request.getSalePrice());
         }
