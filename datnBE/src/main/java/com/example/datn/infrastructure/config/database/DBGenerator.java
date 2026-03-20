@@ -8,7 +8,6 @@ import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.RoleConstant;
 import com.example.datn.infrastructure.constant.SerialStatus;
-import com.example.datn.infrastructure.constant.HandoverStatus;
 import com.example.datn.infrastructure.constant.ShiftStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
@@ -24,7 +23,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +55,8 @@ public class DBGenerator implements CommandLineRunner {
     private final CartRepository cartRepository;
     private final DiscountDetailRepository discountDetailRepository;
     private final DiscountRepository discountRepository;
-    private final BillDetailRepository orderDetailRepository;
-    private final BillRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
+    private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
     private final VoucherDetailRepository voucherDetailRepository;
     private final VoucherRepository voucherRepository;
@@ -1058,7 +1056,7 @@ public class DBGenerator implements CommandLineRunner {
             order.setRecipientPhone(customer.getPhoneNumber());
             order.setRecipientAddress("Số " + (100 + i) + " Đường ABC, Quận 1, TP.HCM");
             order.setPaymentMethod(random.nextBoolean() ? "Tiền mặt" : "Chuyển khoản");
-            order.setOrderStatus(OrderStatus.COMPLETED);
+            order.setOrderStatus(OrderStatus.HOAN_THANH);
             order.setCustomer(customer);
             order.setShippingMethod(shippingMethods.get(random.nextInt(shippingMethods.size())));
 

@@ -1,483 +1,345 @@
-import React, { useState, useEffect } from "react";
-import {
-  Table,
-  Card,
-  Tag,
-  Typography,
-  Tabs,
-  Button,
-  Drawer,
-  Space,
-  message,
-  Row,
-  Col,
-  Badge,
-} from "antd";
 import {
   EyeOutlined,
-  CheckCircleOutlined,
-  CarOutlined,
-  InboxOutlined,
-  StopOutlined,
+  FilterOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
-import { orderApi } from "../../../api/admin/orderApi";
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Input,
+  Row,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+  Select,
+  DatePicker,
+} from "antd";
 import dayjs from "dayjs";
-import AssignSerialModal from "../../../components/AssignSerialModal";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { orderActions } from "../../../redux/order/OrderSlice";
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
+// Định nghĩa trạng thái chuẩn như ảnh mẫu
 const OrderStatuses = [
   { key: "ALL", label: "Tất cả" },
-  { key: "PENDING", label: "Chờ xác nhận" },
-  { key: "CONFIRMED", label: "Đã xác nhận" },
-  { key: "PACKAGING", label: "Đang đóng gói" },
-  { key: "SHIPPING", label: "Đang vận chuyển" },
-  { key: "COMPLETED", label: "Hoàn thành" },
-  { key: "CANCELED", label: "Đã hủy" },
-  { key: "RETURNED", label: "Trả hàng/Hoàn tiền" },
+  { key: "CHO_XAC_NHAN", label: "Chờ xác nhận" },
+  { key: "DA_XAC_NHAN", label: "Đã xác nhận" },
+  { key: "CHO_GIAO", label: "Chờ giao" },
+  { key: "DANG_GIAO", label: "Đang giao" },
+  { key: "HOAN_THANH", label: "Hoàn thành" },
+  { key: "DA_HUY", label: "Đã hủy" },
 ];
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "PENDING":
-      return "orange";
-    case "CONFIRMED":
-      return "blue";
-    case "PACKAGING":
-      return "cyan";
-    case "SHIPPING":
-      return "purple";
-    case "COMPLETED":
-      return "green";
-    case "CANCELED":
-      return "red";
-    case "RETURNED":
-      return "volcano";
-    default:
-      return "default";
-  }
-};
-
-const getStatusLabel = (status: string) => {
-  const found = OrderStatuses.find((s) => s.key === status);
-  return found ? found.label : status;
-};
-
 const OrderPage: React.FC = () => {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [activeTab, setActiveTab] = useState("ALL");
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
-
-  // Initialize statusCounts với 0 cho tất cả statuses
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(
-    () => {
-      const initial: Record<string, number> = {};
-      OrderStatuses.filter((s) => s.key !== "ALL").forEach((s) => {
-        initial[s.key] = 0;
-      });
-      return initial;
-    },
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { ordersData, isLoadingList } = useSelector(
+    (state: any) => state.order,
   );
 
-  // Detail Drawer State
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [orderDetails, setOrderDetails] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("ALL");
+  const [keyword, setKeyword] = useState("");
+  const [dateRange, setDateRange] = useState<any>(null);
+  const [_orderType, setOrderType] = useState<string | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  // Serial Modal
-  const [serialModalOpen, setSerialModalOpen] = useState(false);
-  const [activeDetailForSerial, setActiveDetailForSerial] = useState<any>(null);
+  const loadData = useCallback(() => {
+    dispatch(
+      orderActions.fetchOrdersRequest({
+        page: currentPage - 1,
+        size: pageSize,
+        q: keyword.trim() || undefined,
+        status: activeTab === "ALL" ? undefined : activeTab,
+        startDate: dateRange
+          ? dayjs(dateRange[0]).startOf("day").valueOf()
+          : undefined,
+        endDate: dateRange
+          ? dayjs(dateRange[1]).endOf("day").valueOf()
+          : undefined,
+      }),
+    );
+  }, [dispatch, currentPage, pageSize, keyword, activeTab, dateRange]);
 
   useEffect(() => {
-    fetchStatusCounts();
-  }, []);
+    loadData();
+  }, [loadData]);
 
-  useEffect(() => {
-    // Reset to first page whenever we change tab (filter)
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  }, [activeTab]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [activeTab, pagination.current, pagination.pageSize]);
-
-  const fetchStatusCounts = async () => {
-    try {
-      const statusKeys = OrderStatuses.filter((s) => s.key !== "ALL").map(
-        (s) => s.key,
-      );
-
-      const results = await Promise.all(
-        statusKeys.map((key) =>
-          orderApi
-            .searchOrders({ page: 0, size: 1, status: key })
-            .then((res) => ({ key, total: res.data?.data?.totalElements || 0 }))
-            .catch(() => ({ key, total: 0 })),
-        ),
-      );
-
-      const counts: Record<string, number> = {};
-      results.forEach((item) => {
-        counts[item.key] = item.total;
-      });
-
-      setStatusCounts(counts);
-    } catch (e) {
-      console.error(e);
-      // Không hiển thị error cho counts, để tránh spam
-    }
-  };
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const params: any = {
-        page: pagination.current - 1,
-        size: pagination.pageSize,
-      };
-      if (activeTab !== "ALL") params.status = activeTab;
-
-      const res = await orderApi.searchOrders(params);
-      if (res.data?.data) {
-        setOrders(res.data.data.content);
-        setTotal(res.data.data.totalElements);
-      }
-    } catch (e) {
-      console.error(e);
-      message.error("Lỗi khi tải đơn hàng");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleViewDetail = async (record: any) => {
-    setSelectedOrder(record);
-    setDrawerOpen(true);
-    setOrderDetails([]); // reset
-    try {
-      const res = await orderApi.getOrderDetails(record.id);
-      setOrderDetails(res.data.data);
-    } catch (e) {
-      console.error(e);
-      message.error("Không thể tải chi tiết đơn hàng");
-    }
-  };
-
-  const handleUpdateStatus = async (newStatus: string) => {
-    if (!selectedOrder) return;
-    try {
-      await orderApi.updateOrderStatus(selectedOrder.id, newStatus);
-      message.success("Cập nhật trạng thái thành công");
-      setDrawerOpen(false);
-      // Refresh cả orders và status counts
-      fetchOrders();
-      fetchStatusCounts();
-    } catch (e) {
-      console.error(e);
-      message.error("Lỗi cập nhật trạng thái");
-    }
-  };
-
-  const handleAssignSerials = async (serialNumbers: string[]) => {
-    try {
-      await orderApi.assignSerials(
-        selectedOrder.id,
-        activeDetailForSerial.id,
-        serialNumbers,
-      );
-      message.success("Đã xuất kho Serial cho sản phẩm này!");
-      setSerialModalOpen(false);
-
-      // Refresh order details map
-      const res = await orderApi.getOrderDetails(selectedOrder.id);
-      setOrderDetails(res.data.data);
-    } catch (e: any) {
-      message.error(e.response?.data?.message || "Lỗi khi gán Serial");
-    }
-  };
-
-  const columns = [
-    {
-      title: "Mã Đơn",
-      dataIndex: "code",
-      key: "code",
-      render: (t: string) => <Text strong>{t || "---"}</Text>,
-    },
-    {
-      title: "Khách hàng",
-      dataIndex: "recipientName",
-      key: "recipientName",
-      render: (t: string, record: any) => (
-        <div>
-          <Text strong>{t || "Thách vãng lai"}</Text>
-          <br />
-          <Text type="secondary">{record.recipientPhone}</Text>
-        </div>
-      ),
-    },
-    {
-      title: "Ngày đặt",
-      dataIndex: "createdDate",
-      key: "createdDate",
-      render: (d: number) => dayjs(d).format("DD/MM/YYYY HH:mm"),
-    },
-    {
-      title: "Tổng tiền",
-      dataIndex: "totalAfterDiscount",
-      key: "totalAfterDiscount",
-      render: (price: number) => (
-        <Text type="danger" strong>
-          {price?.toLocaleString("vi-VN")} đ
-        </Text>
-      ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "orderStatus",
-      key: "orderStatus",
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
-      ),
-    },
-    {
-      title: "Loại đơn",
-      dataIndex: "orderType",
-      key: "orderType",
-      render: (type: string) => (
-        <Tag color={type === "ONLINE" ? "geekblue" : "magenta"}>{type}</Tag>
-      ),
-    },
-    {
-      title: "Hành động",
-      key: "action",
-      render: (_: any, record: any) => (
-        <Button
-          type="primary"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewDetail(record)}
-        >
-          Chi tiết
-        </Button>
-      ),
-    },
-  ];
-
-  const detailColumns = [
-    {
-      title: "Sản phẩm",
-      render: (record: any) =>
-        record.productDetail?.product?.name || "Máy ảnh/Ống kính",
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      render: (price: number) => `${price?.toLocaleString("vi-VN")} đ`,
-    },
-    {
-      title: "Số lượng",
-      dataIndex: "quantity",
-      align: "center",
-      render: (qty: number) => <Tag color="blue">{qty}</Tag>,
-    },
-    {
-      title: "Thành tiền",
-      dataIndex: "totalPrice",
-      render: (price: number) => (
-        <Text strong>{`${price?.toLocaleString("vi-VN")} đ`}</Text>
-      ),
-    },
-    {
-      title: "Hành động (Serial)",
-      render: (record: any) => {
-        const assigned = record.assignedSerialsCount || 0;
-        const req = record.quantity || 0;
-        const isComplete = assigned === req;
-
-        if (selectedOrder?.orderStatus === "CONFIRMED") {
-          return (
-            <Space>
-              <Tag color={isComplete ? "green" : "warning"}>
-                Đã gán {assigned}/{req}
-              </Tag>
-              <Button
-                type={isComplete ? "dashed" : "primary"}
-                onClick={() => {
-                  setActiveDetailForSerial(record);
-                  setSerialModalOpen(true);
-                }}
-              >
-                {isComplete ? "Sửa Serial" : "Xuất kho (Gán)"}
-              </Button>
-            </Space>
-          );
-        }
-        return (
-          <Tag color={isComplete ? "green" : "default"}>
-            Đã gán {assigned}/{req}
-          </Tag>
-        );
+  const columns = useMemo(
+    () => [
+      {
+        title: "STT",
+        key: "index",
+        width: 70,
+        align: "center" as const,
+        render: (_: any, __: any, index: number) =>
+          (currentPage - 1) * pageSize + index + 1,
       },
-    },
-  ];
-
-  return (
-    <>
-      <Card>
-        <Title level={4}>Quản Lý Đơn Hàng</Title>
-      </Card>
-
-      <Card style={{ marginTop: 16 }}>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          {OrderStatuses.map((status) => (
-            <Tabs.TabPane
-              key={status.key}
-              tab={
-                <span>
-                  {status.label}{" "}
-                  <Badge
-                    count={
-                      status.key === "ALL"
-                        ? total
-                        : statusCounts[status.key] || 0
-                    }
-                    size="small"
-                  />
-                </span>
-              }
-            />
-          ))}
-        </Tabs>
-        <Table
-          columns={columns as any}
-          dataSource={orders}
-          loading={loading}
-          rowKey="id"
-          pagination={{ ...pagination, total }}
-          onChange={(pg) => setPagination(pg as any)}
-        />
-      </Card>
-
-      <Drawer
-        title={`Chi tiết đơn hàng: ${selectedOrder?.code || ""}`}
-        width={720}
-        onClose={() => setDrawerOpen(false)}
-        open={drawerOpen}
-        extra={
-          <Space>
-            {selectedOrder?.orderStatus === "PENDING" && (
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleUpdateStatus("CONFIRMED")}
-              >
-                Xác nhận đơn
-              </Button>
-            )}
-            {selectedOrder?.orderStatus === "CONFIRMED" && (
-              <Button
-                style={{ background: "#17A2B8", color: "#fff" }}
-                icon={<InboxOutlined />}
-                onClick={() => handleUpdateStatus("PACKAGING")}
-              >
-                Chốt Đóng gói
-              </Button>
-            )}
-            {selectedOrder?.orderStatus === "PACKAGING" && (
-              <Button
-                style={{ background: "#6F42C1", color: "#fff" }}
-                icon={<CarOutlined />}
-                onClick={() => handleUpdateStatus("SHIPPING")}
-              >
-                Giao hàng
-              </Button>
-            )}
-            {selectedOrder?.orderStatus === "SHIPPING" && (
-              <Button
-                type="primary"
-                style={{ background: "#28A745", color: "#fff" }}
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleUpdateStatus("COMPLETED")}
-              >
-                Giao Thành Công (Sinh Bảo hành)
-              </Button>
-            )}
-            {["PENDING", "CONFIRMED"].includes(selectedOrder?.orderStatus) && (
-              <Button
-                danger
-                icon={<StopOutlined />}
-                onClick={() => handleUpdateStatus("CANCELED")}
-              >
-                Hủy đơn
-              </Button>
+      {
+        title: "Mã HĐ",
+        dataIndex: "maHoaDon",
+        key: "maHoaDon",
+        render: (t: string) => (
+          <Text style={{ color: "#52c41a" }} strong>
+            {t}
+          </Text>
+        ),
+      },
+      {
+        title: "Khách hàng",
+        key: "customer",
+        render: (_: any, record: any) => (
+          <Space direction="vertical" size={0}>
+            <Text strong>{record.tenKhachHang || "Khách vãng lai"}</Text>
+            {record.sdtKhachHang && (
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                {record.sdtKhachHang}
+              </Text>
             )}
           </Space>
-        }
-      >
-        <Row gutter={[16, 16]}>
-          <Col span={12}>
-            <Card size="small" title="Thông tin người nhận">
-              <p>
-                <Text strong>Người nhận:</Text> {selectedOrder?.recipientName}
-              </p>
-              <p>
-                <Text strong>Điện thoại:</Text> {selectedOrder?.recipientPhone}
-              </p>
-              <p>
-                <Text strong>Ghi chú:</Text> {selectedOrder?.note || "..."}
-              </p>
-              <p>
-                <Text strong>Trạng thái:</Text>{" "}
-                <Tag color={getStatusColor(selectedOrder?.orderStatus)}>
-                  {getStatusLabel(selectedOrder?.orderStatus)}
-                </Tag>
-              </p>
-            </Card>
-          </Col>
-          <Col span={12}>
-            <Card size="small" title="Tổng quan thanh toán">
-              <p>
-                <Text strong>Tổng tiền hàng:</Text>{" "}
-                {selectedOrder?.totalAmount?.toLocaleString("vi-VN")} đ
-              </p>
-              <p>
-                <Text strong>Giảm giá:</Text>{" "}
-                {selectedOrder?.discountAmount?.toLocaleString("vi-VN") || 0} đ
-              </p>
-              <p>
-                <Text strong>Phải thanh toán:</Text>{" "}
-                <Text type="danger" strong>
-                  {selectedOrder?.totalAfterDiscount?.toLocaleString("vi-VN")} đ
-                </Text>
-              </p>
-            </Card>
-          </Col>
+        ),
+      },
+      {
+        title: "Nhân viên",
+        key: "staff",
+        render: (_: any, record: any) => (
+          <Space direction="vertical" size={0}>
+            <Text>{record.tenNhanVien || "N/A"}</Text>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px", color: "#1677ff" }}
+            >
+              {record.maNhanVien || ""}
+            </Text>
+          </Space>
+        ),
+      },
+      {
+        title: "Loại",
+        dataIndex: "loaiHoaDon",
+        key: "loaiHoaDon",
+        render: (type: string) => (
+          <Tag
+            color="orange"
+            style={{ border: "none", background: "#fff7e6", color: "#d46b08" }}
+          >
+            {type === "OFFLINE" ? "Tại quầy" : "Online"}
+          </Tag>
+        ),
+      },
+      {
+        title: "Ngày tạo",
+        dataIndex: "createdDate",
+        key: "createdDate",
+        render: (d: number) => dayjs(d).format("HH:mm DD/MM/YYYY"),
+      },
+      {
+        title: "Tổng tiền",
+        dataIndex: "tongTien",
+        key: "tongTien",
+        align: "right" as const,
+        render: (v: number) => (
+          <Text type="danger" strong>
+            {v?.toLocaleString("vi-VN")} đ
+          </Text>
+        ),
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        key: "status",
+        align: "center" as const,
+        render: (st: string) => {
+          const statusMap: any = {
+            CHO_XAC_NHAN: { color: "blue", label: "Chờ xác nhận" },
+            DA_XAC_NHAN: { color: "cyan", label: "Đã xác nhận" },
+            HOAN_THANH: { color: "green", label: "Hoàn thành" },
+            DA_HUY: { color: "red", label: "Đã hủy" },
+          };
+          const config = statusMap[st] || { color: "default", label: st };
+          return (
+            <Tag color={config.color} style={{ borderRadius: "4px" }}>
+              {config.label}
+            </Tag>
+          );
+        },
+      },
+      {
+        title: "Thao tác",
+        key: "action",
+        align: "center" as const,
+        render: (_: any, record: any) => (
+          <Button
+            type="text"
+            shape="circle"
+            icon={
+              <EyeOutlined style={{ color: "#1677ff", fontSize: "16px" }} />
+            }
+            onClick={() => navigate(`/admin/orders/${record.maHoaDon}`)}
+          />
+        ),
+      },
+    ],
+    [currentPage, pageSize, navigate],
+  );
+
+  return (
+    <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
+      {/* 1. Header Card */}
+      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          Quản lý Hóa Đơn
+        </Title>
+        <Text type="secondary">
+          Quản lý và theo dõi danh sách Hóa Đơn của cửa hàng
+        </Text>
+      </Card>
+
+      {/* 2. Filter Card */}
+      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
+        <Row
+          justify="space-between"
+          align="middle"
+          style={{ marginBottom: 20 }}
+        >
+          <Space>
+            <FilterOutlined style={{ fontSize: "18px", color: "#52c41a" }} />
+            <Text strong style={{ fontSize: "16px" }}>
+              Bộ lọc tìm kiếm
+            </Text>
+          </Space>
+          <Button
+            icon={<ReloadOutlined />}
+            type="text"
+            style={{
+              background: "#f6ffed",
+              color: "#52c41a",
+              border: "1px solid #b7eb8f",
+            }}
+            onClick={() => {
+              setKeyword("");
+              setDateRange(null);
+              setActiveTab("ALL");
+            }}
+          />
         </Row>
 
-        <Title level={5} style={{ marginTop: 24 }}>
-          Danh sách sản phẩm xuất kho
-        </Title>
-        <Table
-          columns={detailColumns as any}
-          dataSource={orderDetails}
-          rowKey="id"
-          pagination={false}
-          bordered
-          size="middle"
-        />
-      </Drawer>
+        <Row gutter={24}>
+          <Col span={8}>
+            <Text strong>Tìm kiếm chung</Text>
+            <Input
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+              placeholder="Mã hóa đơn, tên KH, SĐT..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ marginTop: 8 }}
+            />
+          </Col>
+          <Col span={8}>
+            <Text strong>Khoảng thời gian</Text>
+            <RangePicker
+              style={{ width: "100%", marginTop: 8 }}
+              value={dateRange}
+              onChange={(val) => setDateRange(val)}
+              format="DD/MM/YYYY"
+            />
+          </Col>
+          <Col span={4}>
+            <Text strong>Loại hóa đơn</Text>
+            <Select
+              placeholder="Tất cả"
+              style={{ width: "100%", marginTop: 8 }}
+              allowClear
+              onChange={setOrderType}
+            />
+          </Col>
+          <Col span={4}>
+            <Text strong>Trạng thái</Text>
+            <Select
+              value={activeTab}
+              style={{ width: "100%", marginTop: 8 }}
+              onChange={setActiveTab}
+              options={OrderStatuses.map((s) => ({
+                value: s.key,
+                label: s.label,
+              }))}
+            />
+          </Col>
+        </Row>
+      </Card>
 
-      {/* Serial Scanner popup */}
-      {activeDetailForSerial && (
-        <AssignSerialModal
-          open={serialModalOpen}
-          onClose={() => setSerialModalOpen(false)}
-          maxQuantity={activeDetailForSerial.quantity}
-          onAssign={handleAssignSerials}
+      {/* 3. Table Card */}
+      <Card bordered={false} style={{ borderRadius: 8 }}>
+        <Row justify="space-between" style={{ marginBottom: 16 }}>
+          <Text strong style={{ fontSize: "16px" }}>
+            Danh sách Hóa Đơn
+          </Text>
+          <Space>
+            <Button
+              icon={<FileExcelOutlined />}
+              style={{ color: "#217346", borderColor: "#217346" }}
+            >
+              Xuất Excel
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
+          </Space>
+        </Row>
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            setCurrentPage(1);
+          }}
+          items={OrderStatuses.map((s) => ({
+            key: s.key,
+            label: (
+              <Space>
+                {s.label}
+                <Badge
+                  count={
+                    s.key === "ALL"
+                      ? ordersData?.page?.totalElements
+                      : ordersData?.countByStatus?.[s.key]
+                  }
+                  showZero
+                  color={activeTab === s.key ? "#1677ff" : "#bfbfbf"}
+                  style={{ fontSize: "10px" }}
+                />
+              </Space>
+            ),
+          }))}
         />
-      )}
-    </>
+
+        <Table
+          columns={columns}
+          dataSource={ordersData?.page?.content || []}
+          loading={isLoadingList}
+          rowKey="id"
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: ordersData?.page?.totalElements || 0,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng ${total} hóa đơn`,
+          }}
+          onChange={(p) => {
+            setCurrentPage(p.current!);
+            setPageSize(p.pageSize!);
+          }}
+        />
+      </Card>
+    </div>
   );
 };
 

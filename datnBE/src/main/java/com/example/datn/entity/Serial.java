@@ -32,4 +32,13 @@ public class Serial extends PrimaryEntity implements Serializable {
     @JoinColumn(name = "id_order_detail", referencedColumnName = "id")
     private OrderDetail orderDetail;
 
+    @ManyToOne
+    @JoinColumn(name = "id_order")
+    private Order orderHolding;
+
+    private Long lockedAt;
+
+    public void setSoldAt(long l) {
+    }
+
 }

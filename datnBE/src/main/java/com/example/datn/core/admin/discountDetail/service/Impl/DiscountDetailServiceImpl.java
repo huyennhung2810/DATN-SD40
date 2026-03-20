@@ -1,9 +1,6 @@
     package com.example.datn.core.admin.discountDetail.service.Impl;
 
-
-
-
-    import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
+   import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
     import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
     import com.example.datn.core.admin.discountDetail.service.DiscountDetailService;
     import com.example.datn.entity.Discount;

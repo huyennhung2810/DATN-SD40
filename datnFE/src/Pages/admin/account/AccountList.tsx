@@ -1,31 +1,34 @@
-import React, { useEffect, useState } from "react";
 import {
-  Table,
+  CheckOutlined,
+  EditOutlined,
+  EyeOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
+import {
   Button,
   Card,
   Input,
+  message,
+  Select,
   Space,
+  Table,
   Tag,
   Tooltip,
-  Select,
-  message,
-  Popconfirm,
 } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  StopOutlined,
-  CheckOutlined,
-  KeyOutlined,
-  EyeOutlined,
-} from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import accountApi from "../../../api/accountApi";
-import type { AccountResponse, AccountSearchParams, CommonStatus, AccountRole } from "../../../models/account";
-import { ACCOUNT_ROLES, ACCOUNT_PROVIDERS } from "../../../models/account";
+import type {
+  AccountResponse,
+  AccountRole,
+  AccountSearchParams,
+} from "../../../models/account";
+import { ACCOUNT_PROVIDERS, ACCOUNT_ROLES } from "../../../models/account";
 import ResetPasswordModal from "./ResetPasswordModal";
+import type { CommonStatus } from "../../../models/base";
 
 const { Search } = Input;
 
@@ -42,7 +45,8 @@ const AccountList: React.FC = () => {
     role: undefined,
   });
   const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<AccountResponse | null>(null);
+  const [selectedAccount, setSelectedAccount] =
+    useState<AccountResponse | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -51,7 +55,7 @@ const AccountList: React.FC = () => {
         page: params.page || 0,
         size: params.size || 10,
       };
-      
+
       if (params.keyword && params.keyword.trim()) {
         searchParams.keyword = params.keyword.trim();
       }
@@ -61,7 +65,7 @@ const AccountList: React.FC = () => {
       if (params.role) {
         searchParams.role = params.role;
       }
-      
+
       const response = await accountApi.search(searchParams);
       setData(response.data || []);
       setTotalElements(response.totalElements || 0);
@@ -88,23 +92,13 @@ const AccountList: React.FC = () => {
     });
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await accountApi.delete(id);
-      message.success("Xóa tài khoản thành công");
-      fetchData();
-    } catch (error) {
-      message.error("Xóa tài khoản thất bại");
-    }
-  };
-
   const handleStatusChange = async (id: string, status: string) => {
     try {
       await accountApi.updateStatus(id, status);
       message.success("Cập nhật trạng thái thành công");
       fetchData();
     } catch (error) {
-      message.error("Cập nhật trạng thái thất bại");
+      console.log("Cập nhật trạng thái thất bại", error);
     }
   };
 
@@ -129,7 +123,8 @@ const AccountList: React.FC = () => {
       title: "STT",
       key: "index",
       width: 60,
-      render: (_: any, __: any, index: number) => params.page! * params.size! + index + 1,
+      render: (_: any, __: any, index: number) =>
+        params.page! * params.size! + index + 1,
     },
     {
       title: "Mã tài khoản",
@@ -175,14 +170,17 @@ const AccountList: React.FC = () => {
       title: "Ngày tạo",
       dataIndex: "createdDate",
       key: "createdDate",
-      render: (createdDate: number) => dayjs(createdDate).format("DD/MM/YYYY HH:mm"),
+      render: (createdDate: number) =>
+        dayjs(createdDate).format("DD/MM/YYYY HH:mm"),
     },
     {
       title: "Ngày cập nhật",
       dataIndex: "lastModifiedDate",
       key: "lastModifiedDate",
       render: (lastModifiedDate: number) =>
-        lastModifiedDate ? dayjs(lastModifiedDate).format("DD/MM/YYYY HH:mm") : "-",
+        lastModifiedDate
+          ? dayjs(lastModifiedDate).format("DD/MM/YYYY HH:mm")
+          : "-",
     },
     {
       title: "Thao tác",
@@ -211,7 +209,9 @@ const AccountList: React.FC = () => {
               onClick={() => handleResetPassword(record)}
             />
           </Tooltip>
-          <Tooltip title={record.status === "ACTIVE" ? "Vô hiệu hóa" : "Kích hoạt"}>
+          <Tooltip
+            title={record.status === "ACTIVE" ? "Vô hiệu hóa" : "Kích hoạt"}
+          >
             {record.status === "ACTIVE" ? (
               <Button
                 type="text"
@@ -227,16 +227,6 @@ const AccountList: React.FC = () => {
               />
             )}
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
         </Space>
       ),
     },

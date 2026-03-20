@@ -63,5 +63,9 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     private HandoverStatus handoverStatus;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+
 }
 

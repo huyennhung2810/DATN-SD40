@@ -3,12 +3,15 @@ package com.example.datn.entity;
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import com.example.datn.infrastructure.constant.OrderStatus;
+import com.example.datn.infrastructure.constant.PaymentStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -37,6 +40,9 @@ public class Order extends PrimaryEntity implements Serializable {
 
     @Column(name = "recipient_address")
     private String recipientAddress;
+
+    @Column(name = "recipient_email")
+    private String recipientEmail;
 
     @Column(name = "recipient_phone")
     private String recipientPhone;
@@ -73,4 +79,20 @@ public class Order extends PrimaryEntity implements Serializable {
     @ManyToOne
     @JoinColumn(name = "account_id")
     private Account account;
+
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status")
+    private PaymentStatus paymentStatus;
+
+    @Column(name = "customer_paid", precision = 15, scale = 2)
+    private BigDecimal customerPaid;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<OrderHistory> orderHistories = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "id_shift")
+    private ShiftHandover shiftHandover;
 }
