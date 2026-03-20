@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -48,4 +49,7 @@ public class ADProductResponse implements IsIdentify {
     
     // Danh sách URL ảnh
     private List<String> imageUrls;
+
+    /** Thông số kỹ thuật động (nhóm định nghĩa) — key: spec_{definitionCode} */
+    private Map<String, Object> techSpecDynamic;
 }

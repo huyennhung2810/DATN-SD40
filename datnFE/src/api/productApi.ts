@@ -38,6 +38,18 @@ const productApi = {
         return res.data;
     },
 
+    /** Lưu thông số kỹ thuật động (tech_spec_value) */
+    saveTechSpecValues: async (
+        productId: string,
+        values: Record<string, string | number | boolean | null | undefined>
+    ): Promise<ResponseObject<void>> => {
+        const res = await axiosClient.put<ResponseObject<void>>(
+            `${BASE_URL}/${productId}/tech-spec-values`,
+            values
+        );
+        return res.data;
+    },
+
     // Thêm biến thể cho sản phẩm
     addVariant: async (productId: string, data: ProductDetailRequest): Promise<ResponseObject<ProductVariantResponse>> => {
         const res = await axiosClient.post<ResponseObject<ProductVariantResponse>>(`${BASE_URL}/${productId}/variants`, data);

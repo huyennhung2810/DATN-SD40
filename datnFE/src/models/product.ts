@@ -17,6 +17,8 @@ export interface ProductResponse {
   createdDate: number;
   lastModifiedDate: number;
   imageUrls?: string[];
+  /** Thông số động (tech_spec_value), key: spec_{definitionCode} */
+  techSpecDynamic?: Record<string, string | number | null | undefined>;
 }
 
 export interface ProductRequest {

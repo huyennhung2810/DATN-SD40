@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Button, Badge, Typography, Drawer, List, Dropdown } from "antd";
 import {
   ShoppingCartOutlined,
@@ -14,6 +14,10 @@ import {
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState } from "../../redux/store";
+import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
+import axiosClient from "../../api/axiosClient"; // Nơi bạn cấu hình Axios gọi API
 
 const { Text } = Typography;
 
@@ -25,6 +29,31 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+  // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const cartCount = useSelector((state: RootState) => state.cart.cartCount);
+
+  useEffect(() => {
+    if (user && user.userId) {
+      // Gọi API lấy giỏ hàng ngay khi có user đăng nhập
+      axiosClient
+        .get(`/api/client/cart?customerId=${user.userId}`)
+        .then((response) => {
+          const cartItems = response.data;
+          // Hiển thị số lượng "Loại sản phẩm" (Mỗi mặt hàng là 1)
+          const count = cartItems.length;
+          dispatch(setCartCount(count));
+        })
+        .catch((error) => {
+          console.error("Lỗi lấy số lượng giỏ hàng:", error);
+        });
+    } else {
+      // Chưa đăng nhập thì reset số 0
+      dispatch(clearCartCount());
+    }
+  }, [user, dispatch]);
+  // ====================================================
 
   const handleSearch = (value: string) => {
     navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
@@ -32,24 +61,64 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
 
   // Top bar utilities
   const utilityItems = [
-    { key: "hotline", label: "Hotline", value: "1900 1909", icon: <PhoneOutlined /> },
-    { key: "showroom", label: "Cửa hàng", value: "Xem bản đồ", icon: <EnvironmentOutlined /> },
-    { key: "warranty", label: "Bảo hành", value: "Tra cứu BH", icon: <SafetyCertificateOutlined /> },
-    { key: "shipping", label: "Vận chuyển", value: "Free 30km", icon: <TruckOutlined /> },
+    {
+      key: "hotline",
+      label: "Hotline",
+      value: "1900 1909",
+      icon: <PhoneOutlined />,
+    },
+    {
+      key: "showroom",
+      label: "Cửa hàng",
+      value: "Xem bản đồ",
+      icon: <EnvironmentOutlined />,
+    },
+    {
+      key: "warranty",
+      label: "Bảo hành",
+      value: "Tra cứu BH",
+      icon: <SafetyCertificateOutlined />,
+    },
+    {
+      key: "shipping",
+      label: "Vận chuyển",
+      value: "Free 30km",
+      icon: <TruckOutlined />,
+    },
   ];
 
   // Main navigation
   const mainNavItems = [
-    { key: "may-anh", label: "Máy ảnh", href: "/client/catalog?category=may-anh" },
-    { key: "ong-kinh", label: "Ống kính", href: "/client/catalog?category=ong-kinh" },
-    { key: "action-cam", label: "Action Cam", href: "/client/catalog?category=action-cam" },
+    {
+      key: "may-anh",
+      label: "Máy ảnh",
+      href: "/client/catalog?category=may-anh",
+    },
+    {
+      key: "ong-kinh",
+      label: "Ống kính",
+      href: "/client/catalog?category=ong-kinh",
+    },
+    {
+      key: "action-cam",
+      label: "Action Cam",
+      href: "/client/catalog?category=action-cam",
+    },
     { key: "gimbal", label: "Gimbal", href: "/client/catalog?category=gimbal" },
     { key: "tripod", label: "Tripod", href: "/client/catalog?category=tripod" },
     { key: "flash", label: "Flash", href: "/client/catalog?category=flash" },
     { key: "micro", label: "Micro", href: "/client/catalog?category=micro" },
-    { key: "phu-kien", label: "Phụ kiện", href: "/client/catalog?category=phu-kien" },
+    {
+      key: "phu-kien",
+      label: "Phụ kiện",
+      href: "/client/catalog?category=phu-kien",
+    },
     { key: "hang-moi", label: "Hàng mới", href: "/client/catalog?new=true" },
-    { key: "khuyen-mai", label: "Khuyến mãi", href: "/client/catalog?sale=true" },
+    {
+      key: "khuyen-mai",
+      label: "Khuyến mãi",
+      href: "/client/catalog?sale=true",
+    },
   ];
 
   // Mega menu categories
@@ -58,7 +127,10 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
       title: "Máy ảnh",
       icon: "📷",
       items: [
-        { name: "Mirrorless", href: "/client/catalog?category=may-anh-mirrorless" },
+        {
+          name: "Mirrorless",
+          href: "/client/catalog?category=may-anh-mirrorless",
+        },
         { name: "DSLR", href: "/client/catalog?category=may-anh-dslr" },
         { name: "Compact", href: "/client/catalog?category=may-anh-compact" },
         { name: "Cinema", href: "/client/catalog?category=may-anh-cinema" },
@@ -68,11 +140,23 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
       title: "Ống kính",
       icon: "🔭",
       items: [
-        { name: "Canon RF/RF-S", href: "/client/catalog?brand=canon&category=lens" },
-        { name: "Sony E-mount", href: "/client/catalog?brand=sony&category=lens" },
+        {
+          name: "Canon RF/RF-S",
+          href: "/client/catalog?brand=canon&category=lens",
+        },
+        {
+          name: "Sony E-mount",
+          href: "/client/catalog?brand=sony&category=lens",
+        },
         { name: "Nikon Z", href: "/client/catalog?brand=nikon&category=lens" },
-        { name: "Fujifilm X", href: "/client/catalog?brand=fujifilm&category=lens" },
-        { name: "Sigma Art", href: "/client/catalog?brand=sigma&category=lens" },
+        {
+          name: "Fujifilm X",
+          href: "/client/catalog?brand=fujifilm&category=lens",
+        },
+        {
+          name: "Sigma Art",
+          href: "/client/catalog?brand=sigma&category=lens",
+        },
         { name: "Tamron", href: "/client/catalog?brand=tamron&category=lens" },
       ],
     },
@@ -159,7 +243,8 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
                     alt="Hikari Camera"
                     className="h-10 md:h-12"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/150x50?text=HIKARI";
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/150x50?text=HIKARI";
                     }}
                   />
                 </div>
@@ -174,7 +259,9 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
                     size="large"
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    onPressEnter={(e) => handleSearch((e.target as HTMLInputElement).value)}
+                    onPressEnter={(e) =>
+                      handleSearch((e.target as HTMLInputElement).value)
+                    }
                     className="search-input"
                     prefix={<SearchOutlined className="text-gray-400" />}
                   />
@@ -216,16 +303,24 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
                 >
                   <Button type="text" className="header-icon-btn">
                     <UserOutlined />
-                    <span className="hidden lg:inline text-sm ml-1">Tài khoản</span>
+                    <span className="hidden lg:inline text-sm ml-1">
+                      Tài khoản
+                    </span>
                   </Button>
                 </Dropdown>
 
                 {/* Cart */}
-                <Badge count={0} showZero={false} className="cart-badge">
+                {/* SỬA SỐ 0 THÀNH cartCount ở dòng dưới */}
+                <Badge
+                  count={cartCount}
+                  showZero={true}
+                  className="cart-badge"
+                >
                   <Button
                     type="primary"
                     icon={<ShoppingCartOutlined />}
                     className="cart-btn"
+                    onClick={() => navigate("/client/cart")} // Nhớ thêm onClick để chuyển trang nhé
                   >
                     <span className="hidden lg:inline">Giỏ hàng</span>
                   </Button>
@@ -272,7 +367,11 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
                         <Text type="secondary" className="text-xs block mt-1">
                           Giảm giá lên đến 30%
                         </Text>
-                        <Button type="link" size="small" className="mt-2 p-0 text-red-500">
+                        <Button
+                          type="link"
+                          size="small"
+                          className="mt-2 p-0 text-red-500"
+                        >
                           Xem chi tiết <RightOutlined />
                         </Button>
                       </div>
@@ -284,11 +383,7 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
               {/* Main Menu */}
               <div className="flex items-center gap-0">
                 {mainNavItems.map((item) => (
-                  <a
-                    key={item.key}
-                    href={item.href}
-                    className="nav-link"
-                  >
+                  <a key={item.key} href={item.href} className="nav-link">
                     {item.label}
                   </a>
                 ))}
@@ -297,7 +392,10 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
               {/* Hotline */}
               <div className="flex items-center gap-2 text-white">
                 <PhoneOutlined className="text-sm" />
-                <a href="tel:19001909" className="font-semibold hover:text-white/90 text-sm">
+                <a
+                  href="tel:19001909"
+                  className="font-semibold hover:text-white/90 text-sm"
+                >
                   1900 1909
                 </a>
               </div>
@@ -315,7 +413,8 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
               alt="Hikari"
               className="h-8"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://via.placeholder.com/100x30?text=HIKARI";
+                (e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/100x30?text=HIKARI";
               }}
             />
           </div>
@@ -378,8 +477,12 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
             icon={<ShoppingCartOutlined />}
             block
             className="!bg-red-600 !border-red-600 h-12"
+            onClick={() => {
+              setMobileMenuVisible(false); // Đóng menu mobile
+              navigate("/client/cart"); // Chuyển sang trang giỏ hàng
+            }}
           >
-            Giỏ hàng (0)
+            Giỏ hàng ({cartCount}) {/* SỬA SỐ 0 Ở ĐÂY */}
           </Button>
         </div>
       </Drawer>

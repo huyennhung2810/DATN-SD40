@@ -2,6 +2,7 @@ import React from "react";
 import { Card, Button, Tag, Typography, Tooltip } from "antd";
 import { ShoppingCartOutlined, HeartOutlined, EyeOutlined, CheckCircleFilled } from "@ant-design/icons";
 import type { ProductResponse } from "../../models/product";
+import { useNavigate } from "react-router-dom";
 
 const { Text, Title } = Typography;
 
@@ -13,6 +14,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddToCart }) => {
   // Check if product is new (created within 14 days)
+  const navigate = useNavigate();
   const isNew = product.createdDate
     ? Date.now() - product.createdDate < 14 * 24 * 60 * 60 * 1000
     : false;
@@ -26,7 +28,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
       maximumFractionDigits: 0,
     }).format(price);
   };
-
+ const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();   
+    navigate(`/client/product/${product.id}`); 
+  };
   // Get primary image
   const primaryImage = product.imageUrls && product.imageUrls.length > 0
     ? product.imageUrls[0]
@@ -40,14 +45,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onAddToCart) {
-      onAddToCart(product);
-    } else {
-      console.log("Add to cart:", product.id);
-    }
-  };
 
   const handleAddToWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();

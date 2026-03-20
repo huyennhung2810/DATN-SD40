@@ -57,8 +57,26 @@ public class ADProductDetailController {
     }
 
     @PutMapping("/{id}")
-    public ResponseObject<?> updateProductDetail(@Valid @PathVariable String id, @RequestBody ADProductDetailRequest adProductDetailRequest) {
-        return adProductDetailService.updateProductDetail(id, adProductDetailRequest);
+    public ResponseEntity<ResponseObject<ADProductDetailResponse>> updateProductDetail(
+            @PathVariable String id,
+            @RequestBody ADProductDetailRequest request) {
+        ResponseObject<ADProductDetailResponse> res = new ResponseObject<>();
+        try {
+            @SuppressWarnings("unchecked")
+            ResponseObject<ADProductDetailResponse> response = (ResponseObject<ADProductDetailResponse>) adProductDetailService.updateProductDetail(id, request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            res.setStatus(HttpStatus.BAD_REQUEST);
+            res.setMessage(e.getMessage());
+            res.setSuccess(false);
+            return ResponseEntity.badRequest().body(res);
+        } catch (Exception e) {
+            res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+            res.setMessage("Lỗi khi cập nhật sản phẩm chi tiết: " + e.getMessage());
+            res.setSuccess(false);
+            log.error("Error updating product detail", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+        }
     }
 }
 

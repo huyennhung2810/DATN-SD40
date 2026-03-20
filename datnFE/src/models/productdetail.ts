@@ -1,4 +1,5 @@
 import type { CommonStatus } from "./base";
+import { ProductVersion } from "./productVersion";
 
 
 export interface SerialResponse {
@@ -16,7 +17,17 @@ export interface ProductDetailResponse {
   id: string;
   code: string;
   note: string;
+
+  // Tên phiên bản hiển thị đầy đủ (format: "{VariantVersion} / {Color} / {Storage}")
   version: string;
+
+  // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+  // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+  variantVersion: ProductVersion;
+
+  // Display name của variantVersion (VD: "Body Only", "Kit 18-45", "Kit 18-150")
+  variantVersionDisplayName?: string;
+
   quantity: number;
   salePrice: number;
   status: CommonStatus;
@@ -50,7 +61,16 @@ export interface ProductDetailResponse {
 export interface ProductDetailFormValues {
   code: string;
   note: string;
+
+  // Tên phiên bản hiển thị đầy đủ (format: "{VariantVersion} / {Color} / {Storage}")
+  // NOTE: Trường này sẽ được backend auto-generate, frontend chỉ cần hiển thị
   version: string;
+
+  // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+  // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+  // LEVEL 1: Bắt buộc phải có khi submit form
+  variantVersion: ProductVersion;
+
   quantity: number;
   salePrice: number;
   status: CommonStatus;
@@ -73,6 +93,7 @@ export const initialProductDetail: ProductDetailFormValues = {
   code: "",
   note: "",
   version: "",
+  variantVersion: ProductVersion.BODY_ONLY, // Default value
   quantity: 0,
   salePrice: 0,
   status: "ACTIVE",
@@ -92,7 +113,16 @@ export interface ProductDetailPageParams {
 // Request interface for creating/updating product detail (variant)
 export interface ProductDetailRequest {
   code: string;
+
+  // Tên phiên bản hiển thị đầy đủ (format: "{VariantVersion} / {Color} / {Storage}")
+  // NOTE: Backend sẽ auto-generate, frontend có thể bỏ qua trường này khi submit
   version?: string;
+
+  // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+  // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+  // LEVEL 1: Bắt buộc phải có khi submit form
+  variantVersion: ProductVersion;
+
   colorId: string;
   storageCapacityId: string;
   salePrice: number;

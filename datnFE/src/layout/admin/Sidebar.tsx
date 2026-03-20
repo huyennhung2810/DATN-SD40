@@ -18,7 +18,6 @@ import {
   PictureOutlined,
   KeyOutlined,
   MessageOutlined,
-  BankOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -81,11 +80,6 @@ const Sidebar: React.FC = () => {
           key: "/admin/product-categories",
           icon: <TagOutlined />,
           label: "Loại sản phẩm",
-        },
-        {
-          key: "/admin/brands",
-          icon: <BankOutlined />,
-          label: "Thương hiệu",
         },
         { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
         {

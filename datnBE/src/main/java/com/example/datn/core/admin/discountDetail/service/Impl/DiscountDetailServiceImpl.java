@@ -59,8 +59,6 @@
                     detail.setPriceBefore(pd.getSalePrice());
                     detail.setPriceAfter(calculatePriceAfter(pd.getSalePrice(), discount.getDiscountPercent()));
                     detail.setStatus(1);
-                    detail.setCreatedAt(System.currentTimeMillis());
-                    detail.setUpdatedAt(System.currentTimeMillis());
                     detailsToSave.add(detail);
                 }
                 // Lưu tất cả cùng một lúc

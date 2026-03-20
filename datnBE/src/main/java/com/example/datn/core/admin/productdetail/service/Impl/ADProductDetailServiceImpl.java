@@ -17,6 +17,7 @@ import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
 import com.example.datn.entity.Serial;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.ProductVersion;
 import com.example.datn.repository.ProductImageRepository;
 import com.example.datn.utils.Helper;
 import jakarta.persistence.EntityNotFoundException;
@@ -70,11 +71,23 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                     .orElse(null);
         }
 
+        // Xử lý variantVersion - backward compatibility cho dữ liệu cũ
+        String variantVersion = entity.getVariantVersion();
+        if (variantVersion == null || variantVersion.isBlank()) {
+            variantVersion = ProductVersion.BODY_ONLY.name(); // Default fallback
+        }
+
+        // Lấy display name cho variantVersion
+        ProductVersion pv = ProductVersion.fromString(variantVersion);
+        String variantVersionDisplayName = pv.getDisplayName();
+
         return ADProductDetailResponse.builder()
                 .id(entity.getId())
                 .code(entity.getCode())
                 .note(entity.getNote())
                 .version(entity.getVersion())
+                .variantVersion(variantVersion)
+                .variantVersionDisplayName(variantVersionDisplayName)
                 .quantity(entity.getQuantity())
                 .salePrice(entity.getSalePrice())
                 .status(entity.getStatus())
@@ -145,7 +158,21 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
 
         ProductDetail spct = new ProductDetail();
         spct.setCode(request.getCode());
-        spct.setVersion(request.getVersion());
+
+        // LEVEL 1: Auto-generate version name từ variantVersion + color + storage
+        // Format: {VariantVersion} / {Color} / {Storage}
+        String colorName = adColorRepository.findById(request.getColorId())
+                .map(c -> c.getName())
+                .orElse("");
+        String storageName = adStorageCapacityRepository.findById(request.getStorageCapacityId())
+                .map(s -> s.getName())
+                .orElse("");
+        String generatedVersion = ProductVersion.formatFullName(request.getVariantVersion(), colorName, storageName);
+        spct.setVersion(generatedVersion);
+
+        // Lưu variantVersion - enum value (BODY_ONLY, KIT_18_45, KIT_18_150)
+        spct.setVariantVersion(request.getVariantVersion());
+
         spct.setSalePrice(request.getSalePrice());
         spct.setStatus(request.getStatus());
         spct.setNote(request.getNote());
@@ -226,7 +253,29 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         }
 
         // 3. Cập nhật các thông tin cơ bản
-        productDetail.setVersion(request.getVersion());
+        // LEVEL 1: Auto-generate version name khi có variantVersion mới hoặc color/storage thay đổi
+        String colorId = request.getColorId();
+        String storageId = request.getStorageCapacityId();
+        String colorName = productDetail.getColor() != null ? productDetail.getColor().getName() : "";
+        String storageName = productDetail.getStorageCapacity() != null ? productDetail.getStorageCapacity().getName() : "";
+
+        // Nếu color hoặc storage thay đổi, cập nhật lại tên
+        if (colorId != null && !colorId.equals(productDetail.getColor() != null ? productDetail.getColor().getId() : null)) {
+            colorName = adColorRepository.findById(colorId).map(c -> c.getName()).orElse(colorName);
+        }
+        if (storageId != null && !storageId.equals(productDetail.getStorageCapacity() != null ? productDetail.getStorageCapacity().getId() : null)) {
+            storageName = adStorageCapacityRepository.findById(storageId).map(s -> s.getName()).orElse(storageName);
+        }
+
+        // Cập nhật variantVersion và regenerate version name
+        String variantVersion = request.getVariantVersion();
+        if (variantVersion == null || variantVersion.isBlank()) {
+            variantVersion = ProductVersion.BODY_ONLY.name(); // Default
+        }
+        productDetail.setVariantVersion(variantVersion);
+        String generatedVersion = ProductVersion.formatFullName(variantVersion, colorName, storageName);
+        productDetail.setVersion(generatedVersion);
+
         productDetail.setNote(request.getNote());
         productDetail.setSalePrice(request.getSalePrice());
         productDetail.setStatus(request.getStatus());

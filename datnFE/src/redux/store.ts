@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import createSagaMiddleware from 'redux-saga';
+import createSagaMiddleware from "redux-saga";
 import customerReducer from "./customer/customerSlice";
 import rootSaga from "../store/rootSaga";
 const sagaMiddleware = createSagaMiddleware();
@@ -20,13 +20,14 @@ import resolutionReducer from "./techSpec/resolutionSlice";
 import processorReducer from "./techSpec/processorSlice";
 import imageFormatReducer from "./techSpec/imageFormatSlice";
 import videoFormatReducer from "./techSpec/videoFormatSlice";
-import voucherReducer from "./Voucher/voucherSlice"; 
+import techSpecGroupReducer from "./techSpec/techSpecGroupSlice";
+import techSpecDefinitionReducer from "./techSpec/techSpecDefinitionSlice";
+import voucherReducer from "./Voucher/voucherSlice";
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
 import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
 import authReducer from "./auth/authSlice";
 import chatReducer from "./chat/chatSlice";
-import brandReducer from "./brand/brandSlice";
-
+import cartReducer from "./cart/cartSlice";
 
 export const store = configureStore({
   reducer: {
@@ -53,13 +54,15 @@ export const store = configureStore({
     processor: processorReducer,
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
+    techSpecGroup: techSpecGroupReducer,
+    techSpecDefinition: techSpecDefinitionReducer,
     chat: chatReducer,
-    brand: brandReducer,
+    cart: cartReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       thunk: false,
-      serializableCheck: false
+      serializableCheck: false,
     }).concat(sagaMiddleware),
 });
 

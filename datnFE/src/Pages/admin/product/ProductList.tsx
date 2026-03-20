@@ -47,7 +47,6 @@ import type { RootState } from "../../../redux/store";
 import { productActions } from "../../../redux/product/productSlice";
 import { productCategoryActions } from "../../../redux/productCategory/productCategorySlice";
 import { productImageActions } from "../../../redux/productImage/productImageSlice";
-import { brandActions } from "../../../redux/brand/brandSlice";
 import { sensorTypeActions } from "../../../redux/techSpec/sensorTypeSlice";
 import { lensMountActions } from "../../../redux/techSpec/lensMountSlice";
 import { resolutionActions } from "../../../redux/techSpec/resolutionSlice";
@@ -64,12 +63,12 @@ import type { ProductDetailResponse } from "../../../models/productdetail";
 import type { ProductWithVariantsResponse, ProductVariantResponse } from "../../../models/productVariant";
 import { colorActions } from "../../../redux/color/colorSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import { ProductVersionOptions, ProductVersion, formatVariantDisplayInfo } from "../../../models/productVersion";
 import QuickAddCategoryModal from "../../../components/QuickAddCategoryModal";
 import QuickAddTechSpecModal, { type TechSpecType } from "../../../components/QuickAddTechSpecModal";
 import QuickAddColorModal from "../../../components/QuickAddColorModal";
 import QuickAddStorageModal from "../../../components/QuickAddStorageModal";
-import QuickAddBrandModal from "../../../components/QuickAddBrandModal";
-
+import DynamicTechSpecForm from "../../../components/admin/DynamicTechSpecForm";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
@@ -80,9 +79,6 @@ const ProductPage: React.FC = () => {
     );
     const { list: categories } = useSelector(
         (state: RootState) => state.productCategory,
-    );
-    const { list: brands } = useSelector(
-        (state: RootState) => state.brand,
     );
     const { list: productImages, loading: imageLoading } = useSelector(
         (state: RootState) => state.productImage,
@@ -108,7 +104,6 @@ const ProductPage: React.FC = () => {
     const [selectedProductWithVariants, setSelectedProductWithVariants] = useState<ProductWithVariantsResponse | null>(null);
     const [editingVariant, setEditingVariant] = useState<ProductVariantResponse | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-    const [selectedBrand, setSelectedBrand] = useState<string | undefined>();
     const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
     const [selectedSensorType, setSelectedSensorType] = useState<string | undefined>();
     const [selectedLensMount, setSelectedLensMount] = useState<string | undefined>();
@@ -145,7 +140,6 @@ const ProductPage: React.FC = () => {
     const [quickAddTechSpecType, setQuickAddTechSpecType] = useState<TechSpecType | null>(null);
     const [quickAddColorOpen, setQuickAddColorOpen] = useState(false);
     const [quickAddStorageOpen, setQuickAddStorageOpen] = useState(false);
-    const [quickAddBrandOpen, setQuickAddBrandOpen] = useState(false);
 
     // load ảnh
     useEffect(() => {
@@ -159,7 +153,6 @@ const ProductPage: React.FC = () => {
         size: 12,
         name: "",
         idProductCategory: undefined,
-        idBrand: undefined,
         idTechSpec: undefined,
         status: undefined,
         sensorType: undefined,
@@ -174,11 +167,6 @@ const ProductPage: React.FC = () => {
     // category
     useEffect(() => {
         dispatch(productCategoryActions.getAll({ page: 0, size: 1000 }));
-    }, [dispatch]);
-
-    // brand
-    useEffect(() => {
-        dispatch(brandActions.getAll({ page: 0, size: 1000 }));
     }, [dispatch]);
 
     // Load techspec data for filters on mount - data go brrr
@@ -220,7 +208,6 @@ const ProductPage: React.FC = () => {
                 ...prev,
                 name: keyword.trim(),
                 idProductCategory: selectedCategory,
-                idBrand: selectedBrand,
                 status: selectedStatus as "ACTIVE" | "INACTIVE" | undefined,
                 sensorType: selectedSensorType,
                 lensMount: selectedLensMount,
@@ -233,7 +220,7 @@ const ProductPage: React.FC = () => {
             }));
         }, 300);
         return () => clearTimeout(timeout);
-    }, [keyword, selectedCategory, selectedBrand, selectedStatus, selectedSensorType, selectedLensMount, selectedResolution, selectedProcessor, selectedImageFormat, selectedVideoFormat, selectedIso]);
+    }, [keyword, selectedCategory, selectedStatus, selectedSensorType, selectedLensMount, selectedResolution, selectedProcessor, selectedImageFormat, selectedVideoFormat, selectedIso]);
 
     const handleRefresh = () => {
         fetchProducts();
@@ -247,36 +234,44 @@ const ProductPage: React.FC = () => {
         setFilter((prev) => ({ ...prev, page: page - 1, size: pageSize }));
     };
 
-    const openModal = (product?: ProductResponse) => {
+    const openModal = async (product?: ProductResponse) => {
         if (product) {
+            // Lấy đầy đủ sản phẩm (có techSpecDynamic) — danh sách search thường không có
+            let full: ProductResponse = product;
+            try {
+                full = await productApi.getById(product.id);
+            } catch (e) {
+                console.warn("Không tải được chi tiết sản phẩm, dùng bản từ danh sách:", e);
+            }
             // edit mode on
-            setEditingProduct(product);
+            setEditingProduct(full);
             setCurrentStep(0);
-            setTempProductId(product.id);
+            setTempProductId(full.id);
             setTempProductData({
-                name: product.name,
-                description: product.description,
-                idProductCategory: product.idProductCategory,
-                idBrand: product.idBrand,
-                idTechSpec: product.idTechSpec || null,
-                status: product.status,
+                name: full.name,
+                description: full.description,
+                idProductCategory: full.idProductCategory,
+                idTechSpec: full.idTechSpec || null,
+                status: full.status,
             });
-            setTempTechSpecId(product.idTechSpec || null);
+            setTempTechSpecId(full.idTechSpec || null);
             setSelectedThumbnail(null);
             modalForm.setFieldsValue({
-                name: product.name,
-                description: product.description,
-                idProductCategory: product.idProductCategory,
-                idBrand: product.idBrand,
-                status: product.status,
-                techSpec: product.techSpec ? {
-                    sensorType: product.techSpec.sensorType || undefined,
-                    lensMount: product.techSpec.lensMount || undefined,
-                    resolution: product.techSpec.resolution || undefined,
-                    iso: product.techSpec.iso || "",
-                    processor: product.techSpec.processor || undefined,
-                    imageFormat: product.techSpec.imageFormat || undefined,
-                    videoFormat: product.techSpec.videoFormat || undefined,
+                name: full.name,
+                description: full.description,
+                idProductCategory: full.idProductCategory,
+                status: full.status,
+                techSpecDynamic: full.techSpecDynamic && Object.keys(full.techSpecDynamic).length > 0
+                    ? { ...full.techSpecDynamic }
+                    : {},
+                techSpec: full.techSpec ? {
+                    sensorType: full.techSpec.sensorType || undefined,
+                    lensMount: full.techSpec.lensMount || undefined,
+                    resolution: full.techSpec.resolution || undefined,
+                    iso: full.techSpec.iso || "",
+                    processor: full.techSpec.processor || undefined,
+                    imageFormat: full.techSpec.imageFormat || undefined,
+                    videoFormat: full.techSpec.videoFormat || undefined,
                 } : {
                     sensorType: undefined,
                     lensMount: undefined,
@@ -296,7 +291,7 @@ const ProductPage: React.FC = () => {
             setTempTechSpecId(null);
             setSelectedThumbnail(null);
             modalForm.resetFields();
-            modalForm.setFieldsValue({ status: "ACTIVE", techSpec: initialTechSpec });
+            modalForm.setFieldsValue({ status: "ACTIVE", techSpec: initialTechSpec, techSpecDynamic: {} });
         }
         setIsModalOpen(true);
     };
@@ -329,7 +324,6 @@ const ProductPage: React.FC = () => {
         name: values.name,
         description: values.description || undefined,
         idProductCategory: values.idProductCategory || undefined,
-        idBrand: values.idBrand || undefined,
         status: values.status || "ACTIVE",
       };
 
@@ -377,35 +371,81 @@ const ProductPage: React.FC = () => {
 
     // step 2: techspec vibes
     const handleStep2Submit = async () => {
+        let savedDynamicSpecs = false;
         try {
-            const values = await modalForm.validateFields(["techSpec"]);
-            const techSpecData = values.techSpec;
-            
+            // Try to read both old format (techSpec) and new format (techSpecDynamic)
+            let techSpecValues: any = {};
+            try {
+                const oldValues = await modalForm.validateFields(["techSpec"]);
+                if (oldValues.techSpec) {
+                    techSpecValues = { ...oldValues.techSpec };
+                }
+            } catch (_) { /* field not present */ }
+
+            // Also read new dynamic format
+            try {
+                const dynamicValues = modalForm.getFieldValue("techSpecDynamic");
+                if (dynamicValues && tempProductId && typeof dynamicValues === "object") {
+                    const payload: Record<string, string | number | boolean> = {};
+                    for (const [k, v] of Object.entries(dynamicValues)) {
+                        if (v === undefined || v === null || v === "") continue;
+                        if (typeof v === "object") continue;
+                        payload[k] = v as string | number | boolean;
+                    }
+                    if (Object.keys(payload).length > 0) {
+                        await productApi.saveTechSpecValues(tempProductId, payload);
+                        savedDynamicSpecs = true;
+                    }
+                }
+                if (dynamicValues) {
+                    // Map dynamic spec codes to legacy TechSpec fields
+                    if (dynamicValues["spec_sensor_type"] && !techSpecValues.sensorType) {
+                        techSpecValues.sensorType = dynamicValues["spec_sensor_type"];
+                    }
+                    if (dynamicValues["spec_lens_mount"] && !techSpecValues.lensMount) {
+                        techSpecValues.lensMount = dynamicValues["spec_lens_mount"];
+                    }
+                    if (dynamicValues["spec_resolution_mp"] && !techSpecValues.resolution) {
+                        techSpecValues.resolution = String(dynamicValues["spec_resolution_mp"]);
+                    }
+                    if (dynamicValues["spec_iso_standard"] && !techSpecValues.iso) {
+                        const isoMin = dynamicValues["spec_iso_standard"]?.min;
+                        const isoMax = dynamicValues["spec_iso_standard"]?.max;
+                        techSpecValues.iso = isoMin && isoMax ? `${isoMin}-${isoMax}` : (isoMin || isoMax || "");
+                    }
+                    if (dynamicValues["spec_image_processor"] && !techSpecValues.processor) {
+                        techSpecValues.processor = dynamicValues["spec_image_processor"];
+                    }
+                    if (dynamicValues["spec_video_format"] && !techSpecValues.videoFormat) {
+                        techSpecValues.videoFormat = dynamicValues["spec_video_format"];
+                    }
+                    // techSpecDynamic đã lưu vào bảng tech_spec_value; đồng thời map một phần sang TechSpec cũ.
+                }
+            } catch (_) { /* not set yet */ }
+
             // Check if any field has value
-            const hasTechSpecData = techSpecData && (
-                techSpecData.sensorType ||
-                techSpecData.lensMount ||
-                techSpecData.resolution ||
-                techSpecData.iso ||
-                techSpecData.processor ||
-                techSpecData.imageFormat ||
-                techSpecData.videoFormat
-            );
+            const hasTechSpecData =
+                techSpecValues.sensorType ||
+                techSpecValues.lensMount ||
+                techSpecValues.resolution ||
+                techSpecValues.iso ||
+                techSpecValues.processor ||
+                techSpecValues.imageFormat ||
+                techSpecValues.videoFormat;
 
             setStepLoading(true);
 
             if (hasTechSpecData && tempProductId) {
-                // @ts-ignore
                 const techSpecPayload: TechSpecRequest = {
                     id: tempTechSpecId || undefined,
                     idProduct: tempProductId,
-                    sensorType: techSpecData.sensorType || undefined,
-                    lensMount: techSpecData.lensMount || undefined,
-                    resolution: techSpecData.resolution || undefined,
-                    iso: techSpecData.iso || undefined,
-                    processor: techSpecData.processor || undefined,
-                    imageFormat: techSpecData.imageFormat || undefined,
-                    videoFormat: techSpecData.videoFormat || undefined,
+                    sensorType: techSpecValues.sensorType || undefined,
+                    lensMount: techSpecValues.lensMount || undefined,
+                    resolution: techSpecValues.resolution || undefined,
+                    iso: techSpecValues.iso || undefined,
+                    processor: techSpecValues.processor || undefined,
+                    imageFormat: techSpecValues.imageFormat || undefined,
+                    videoFormat: techSpecValues.videoFormat || undefined,
                     status: "ACTIVE",
                 };
 
@@ -440,8 +480,10 @@ const ProductPage: React.FC = () => {
                 if (tempProductData) {
                     await productApi.update(tempProductId, { ...tempProductData, idTechSpec: techSpecId });
                 }
-            } else {
+            } else if (!savedDynamicSpecs) {
                 notification.info({ message: "Bỏ qua thông số kỹ thuật", description: "Không có thông số kỹ thuật nào được chọn" });
+            } else if (savedDynamicSpecs && !hasTechSpecData) {
+                notification.success({ message: "Đã lưu thông số kỹ thuật động" });
             }
 
             setCurrentStep(2);
@@ -526,6 +568,8 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
                     colorId: v.colorId,
                     colorName: v.colorName,
                     storageCapacityId: v.storageCapacityId,
@@ -782,6 +826,8 @@ const ProductPage: React.FC = () => {
         variantForm.setFieldsValue({
             status: "ACTIVE",
             quantity: 0,
+            // LEVEL 1: Default variantVersion là BODY_ONLY khi tạo mới
+            variantVersion: ProductVersion.BODY_ONLY,
         });
         setIsVariantModalOpen(true);
     };
@@ -802,7 +848,10 @@ const ProductPage: React.FC = () => {
         // Set giá trị form
         variantForm.setFieldsValue({
             code: variant.code,
+            // LEVEL 1: Backend auto-generate version, nhưng vẫn load về để hiển thị
             version: variant.version,
+            // LEVEL 1: Load variantVersion với fallback về BODY_ONLY nếu không có
+            variantVersion: (variant as any).variantVersion || ProductVersion.BODY_ONLY,
             colorId: variant.colorId,
             storageCapacityId: variant.storageCapacityId,
             salePrice: variant.salePrice,
@@ -827,7 +876,10 @@ const ProductPage: React.FC = () => {
             // Xử lý serial nếu có
             let variantData: any = {
                 code: values.code,
+                // LEVEL 1: Backend sẽ auto-generate version name từ variantVersion + color + storage
                 version: values.version,
+                // LEVEL 1: variantVersion bắt buộc - dimension cấp 1
+                variantVersion: values.variantVersion,
                 colorId: values.colorId,
                 storageCapacityId: values.storageCapacityId,
                 salePrice: values.salePrice,
@@ -919,7 +971,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -958,7 +1014,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -996,7 +1056,11 @@ const ProductPage: React.FC = () => {
                     id: v.id,
                     code: v.code,
                     version: v.version,
+                    // LEVEL 1: Copy variantVersion
+                    variantVersion: v.variantVersion,
+                    colorId: v.colorId,
                     colorName: v.colorName,
+                    storageCapacityId: v.storageCapacityId,
                     storageCapacityName: v.storageCapacityName,
                     salePrice: v.salePrice,
                     quantity: v.quantity,
@@ -1019,11 +1083,6 @@ const ProductPage: React.FC = () => {
     const getCategoryName = (id: string) => {
         const cat = categories.find((c) => c.id === id);
         return cat?.name || "---";
-    };
-
-    const getBrandName = (id: string) => {
-        const brand = brands.find((b) => b.id === id);
-        return brand?.name || "---";
     };
 
     // check if techSpec has any data
@@ -1087,20 +1146,6 @@ const ProductPage: React.FC = () => {
                                     options={categories.map((cat) => ({
                                         label: cat.name,
                                         value: cat.id,
-                                    }))}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={4}>
-                            <Form.Item name="idBrand" label="Thương hiệu">
-                                <Select
-                                    placeholder="Tất cả thương hiệu"
-                                    allowClear
-                                    value={selectedBrand}
-                                    onChange={(val) => setSelectedBrand(val)}
-                                    options={brands.map((brand) => ({
-                                        label: brand.name,
-                                        value: brand.id,
                                     }))}
                                 />
                             </Form.Item>
@@ -1368,9 +1413,6 @@ const ProductPage: React.FC = () => {
                                                 <Text type="secondary" style={{ fontSize: "12px" }}>
                                                     Loại: {getCategoryName(product.idProductCategory)}
                                                 </Text>
-                                                <Text type="secondary" style={{ fontSize: "12px" }}>
-                                                    Thương hiệu: {product.brandName || "Chưa có"}
-                                                </Text>
                                                 <Tag
                                                     color={product.status === "ACTIVE" ? "green" : "red"}
                                                     style={{ marginTop: 4 }}
@@ -1458,7 +1500,7 @@ const ProductPage: React.FC = () => {
                     style={{ marginBottom: 24 }}
                     items={[
                         { title: "Sản phẩm", description: "Thông tin cơ bản" },
-                        { title: "Thông số & Phiên bản", description: "TechSpec & Màu/Dung lượng" },
+                        { title: "Thông số kỹ thuật & Phiên bản", description: "Thông số kỹ thuật, Phiên bản, Màu sắc" },
                         { title: "Hình ảnh", description: "Ảnh sản phẩm" },
                     ]}
                 />
@@ -1511,40 +1553,6 @@ const ProductPage: React.FC = () => {
                                 />
                             </Form.Item>
 
-                            <Form.Item 
-                                name="idBrand" 
-                                label="Thương hiệu"
-                                rules={[{ required: true, message: "Vui lòng chọn thương hiệu" }]}
-                            >
-                                <Select
-                                    placeholder="Chọn thương hiệu (bắt buộc)"
-                                    size="large"
-                                    showSearch
-                                    optionFilterProp="children"
-                                    options={brands.map((brand) => ({
-                                        label: brand.name,
-                                        value: brand.id,
-                                    }))}
-                                    dropdownRender={(menu) => (
-                                        <>
-                                            {menu}
-                                            <Divider style={{ margin: "8px 0" }} />
-                                            <Button
-                                                type="link"
-                                                icon={<PlusOutlined />}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setQuickAddBrandOpen(true);
-                                                }}
-                                                style={{ padding: "4px 12px", height: "auto" }}
-                                            >
-                                                + Thêm mới thương hiệu
-                                            </Button>
-                                        </>
-                                    )}
-                                />
-                            </Form.Item>
-
                             <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
                                 <Select
                                     size="large"
@@ -1561,227 +1569,13 @@ const ProductPage: React.FC = () => {
                     {currentStep === 1 && (
                         <>
                             <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-                                Chọn thông số kỹ thuật cho sản phẩm từ danh sách có sẵn (không bắt buộc)
+                                Thông số kỹ thuật được cấu hình động từ hệ thống nhóm thông số (không bắt buộc)
                             </Typography.Text>
                             <Divider style={{ margin: "12px 0" }} />
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "sensorType"]} label="Loại cảm biến">
-                                        <Select
-                                            placeholder="Chọn loại cảm biến"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={sensorTypeState.loading}
-                                            options={sensorTypeState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("sensorType");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "lensMount"]} label="Mount ống kính">
-                                        <Select
-                                            placeholder="Chọn mount ống kính"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={lensMountState.loading}
-                                            options={lensMountState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("lensMount");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "resolution"]} label="Độ phân giải">
-                                        <Select
-                                            placeholder="Chọn độ phân giải"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={resolutionState.loading}
-                                            options={resolutionState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("resolution");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "iso"]} label="ISO">
-                                        <Input placeholder="ví dụ: 100-51200" />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "processor"]} label="Bộ xử lý">
-                                        <Select
-                                            placeholder="Chọn bộ xử lý"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={processorState.loading}
-                                            options={processorState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("processor");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "imageFormat"]} label="Định dạng ảnh">
-                                        <Select
-                                            placeholder="Chọn định dạng ảnh"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={imageFormatState.loading}
-                                            options={imageFormatState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("imageFormat");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Form.Item name={["techSpec", "videoFormat"]} label="Định dạng video">
-                                <Select
-                                    placeholder="Chọn định dạng video"
-                                    allowClear
-                                    showSearch
-                                    optionFilterProp="children"
-                                    loading={videoFormatState.loading}
-                                    options={videoFormatState.list.map((item) => ({
-                                        label: item.name,
-                                        value: item.name,
-                                    }))}
-                                    dropdownRender={(menu) => (
-                                        <>
-                                            {menu}
-                                            <Divider style={{ margin: "8px 0" }} />
-                                            <Button
-                                                type="link"
-                                                icon={<PlusOutlined />}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setQuickAddTechSpecType("videoFormat");
-                                                    setQuickAddTechSpecOpen(true);
-                                                }}
-                                                style={{ padding: "4px 12px", height: "auto" }}
-                                            >
-                                                + Thêm mới
-                                            </Button>
-                                        </>
-                                    )}
-                                />
-                            </Form.Item>
-
+                            <DynamicTechSpecForm form={modalForm} />
                             <Divider orientation="left">
                                 <Typography.Text strong>Phiên bản sản phẩm</Typography.Text>
                             </Divider>
-                            <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-                                Lưu ý: Các trường thông số kỹ thuật bên trên chọn từ danh sách có sẵn, riêng ISO nhập thủ công vì là dải giá trị.
-                            </Typography.Text>
                         </>
                     )}
 
@@ -1987,9 +1781,6 @@ const ProductPage: React.FC = () => {
                                             </Descriptions.Item>
                                             <Descriptions.Item label="Loại sản phẩm">
                                                 {getCategoryName(selectedProduct.idProductCategory)}
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label="Thương hiệu">
-                                                {getBrandName(selectedProduct.idBrand || "")}
                                             </Descriptions.Item>
                                             <Descriptions.Item label="Trạng thái">
                                                 <Tag color={selectedProduct.status === "ACTIVE" ? "green" : "red"}>
@@ -2290,7 +2081,7 @@ const ProductPage: React.FC = () => {
                                             <>
                                                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <Typography.Text strong>
-                                                        Danh sách các biến thể sản phẩm (Màu sắc - Dung lượng)
+                                                        Danh sách biến thể sản phẩm
                                                     </Typography.Text>
                                                     <Button
                                                         type="primary"
@@ -2342,6 +2133,8 @@ const ProductPage: React.FC = () => {
                                                                                         id: detail.id,
                                                                                         code: detail.code,
                                                                                         version: detail.version,
+                                                                                        // LEVEL 1: Copy variantVersion
+                                                                                        variantVersion: (detail as any).variantVersion,
                                                                                         colorId: detail.colorId,
                                                                                         colorName: detail.colorName,
                                                                                         storageCapacityId: detail.storageCapacityId,
@@ -2377,32 +2170,103 @@ const ProductPage: React.FC = () => {
                                                                         </Popconfirm>,
                                                                     ]}
                                                                 >
-                                                                    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                                                                    <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                                                                        {/* Dòng 1: SKU */}
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                                            <Text type="secondary" style={{ fontSize: 12 }}>SKU:</Text>
+                                                                            <Text strong style={{ fontSize: 12 }}>{detail.code || "Không có mã"}</Text>
+                                                                        </div>
+
+                                                                        {/* Dòng 2: Tên hiển thị đầy đủ */}
+                                                                        {(() => {
+                                                                            const displayInfo = formatVariantDisplayInfo({
+                                                                                code: detail.code,
+                                                                                version: detail.version,
+                                                                                variantVersion: (detail as any).variantVersion,
+                                                                                colorName: detail.colorName,
+                                                                                storageCapacityName: detail.storageCapacityName,
+                                                                                salePrice: detail.salePrice,
+                                                                                quantity: detail.quantity,
+                                                                                status: detail.status,
+                                                                            });
+                                                                            return (
+                                                                                <Tag color="blue" style={{ alignSelf: "flex-start", fontSize: 12 }}>
+                                                                                    {displayInfo.shortLabel}
+                                                                                </Tag>
+                                                                            );
+                                                                        })()}
+
+                                                                        {/* Ảnh thumbnail */}
                                                                         {(detail.selectedImageUrl || detail.imageUrl) && (
-                                                                            <div style={{ textAlign: "center", marginBottom: 8 }}>
+                                                                            <div style={{ textAlign: "center", marginBottom: 4 }}>
                                                                                 <img
                                                                                     src={detail.selectedImageUrl || detail.imageUrl}
-                                                                                    alt={detail.version}
-                                                                                    style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 4 }}
+                                                                                    alt="variant"
+                                                                                    style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, border: "1px solid #f0f0f0" }}
                                                                                 />
                                                                             </div>
                                                                         )}
-                                                                        <Text strong>{detail.code || detail.version || "Biến thể"}</Text>
-                                                                        <Tag color="blue" style={{ alignSelf: "flex-start" }}>
-                                                                            {detail.colorName} | {detail.storageCapacityName}
-                                                                        </Tag>
-                                                                        <Divider style={{ margin: "8px 0" }} />
-                                                                        <Text type="secondary">Giá bán:</Text>
-                                                                        <Text strong style={{ color: "#ff4d4f" }}>
-                                                                            {detail.salePrice?.toLocaleString('vi-VN')} đ
-                                                                        </Text>
-                                                                        <Text type="secondary">Tồn kho:</Text>
-                                                                        <Tag color={detail.quantity > 0 ? "green" : "red"}>
-                                                                            {detail.quantity} máy
-                                                                        </Tag>
-                                                                        <Tag color={detail.status === "ACTIVE" ? "success" : "default"}>
-                                                                            {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
-                                                                        </Tag>
+
+                                                                        <Divider style={{ margin: "6px 0" }} />
+
+                                                                        {/* Khu vực thông tin chi tiết */}
+                                                                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                                                                            {/* Phiên bản */}
+                                                                            {(() => {
+                                                                                const displayInfo = formatVariantDisplayInfo({
+                                                                                    code: detail.code,
+                                                                                    version: detail.version,
+                                                                                    variantVersion: (detail as any).variantVersion,
+                                                                                    colorName: detail.colorName,
+                                                                                    storageCapacityName: detail.storageCapacityName,
+                                                                                    salePrice: detail.salePrice,
+                                                                                    quantity: detail.quantity,
+                                                                                    status: detail.status,
+                                                                                });
+                                                                                return (
+                                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                        <Text type="secondary">Phiên bản:</Text>
+                                                                                        <Text strong>{displayInfo.versionDisplay}</Text>
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+
+                                                                            {/* Màu sắc */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Màu sắc:</Text>
+                                                                                <Text strong>{detail.colorName || "Không rõ"}</Text>
+                                                                            </div>
+
+                                                                            {/* Dung lượng */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Dung lượng:</Text>
+                                                                                <Text strong>{detail.storageCapacityName || "Không rõ"}</Text>
+                                                                            </div>
+
+                                                                            {/* Giá bán */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                                                <Text type="secondary">Giá bán:</Text>
+                                                                                <Text strong style={{ color: "#ff4d4f" }}>
+                                                                                    {detail.salePrice?.toLocaleString('vi-VN')} đ
+                                                                                </Text>
+                                                                            </div>
+
+                                                                            {/* Tồn kho */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, alignItems: "center" }}>
+                                                                                <Text type="secondary">Tồn kho:</Text>
+                                                                                <Tag color={detail.quantity > 0 ? "green" : "red"} style={{ margin: 0 }}>
+                                                                                    {detail.quantity} máy
+                                                                                </Tag>
+                                                                            </div>
+
+                                                                            {/* Trạng thái */}
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, alignItems: "center" }}>
+                                                                                <Text type="secondary">Trạng thái:</Text>
+                                                                                <Tag color={detail.status === "ACTIVE" ? "success" : "default"} style={{ margin: 0 }}>
+                                                                                    {detail.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+                                                                                </Tag>
+                                                                            </div>
+                                                                        </Space>
                                                                     </Space>
                                                                 </Card>
                                                             </Col>
@@ -2448,12 +2312,20 @@ const ProductPage: React.FC = () => {
                         <Input placeholder="Nhập mã sản phẩm chi tiết" />
                     </Form.Item>
 
+                    {/* LEVEL 1: Thêm field "Phiên bản" - Select bắt buộc với 3 giá trị */}
                     <Form.Item
-                        name="version"
-                        label="Tên phiên bản"
+                        name="variantVersion"
+                        label="Phiên bản"
+                        rules={[{ required: true, message: "Vui lòng chọn phiên bản!" }]}
                     >
-                        <Input placeholder="Ví dụ: Nikon D3500 Black 128GB" />
+                        <Select
+                            placeholder="Chọn phiên bản máy ảnh"
+                            options={ProductVersionOptions}
+                        />
                     </Form.Item>
+
+                    {/* NOTE: Trường "Tên phiên bản" (version) đã được loại bỏ vì backend sẽ tự động generate */}
+                    {/* Format: {VariantVersion} / {Color} / {Storage} - VD: "Body Only / Đen / 128GB" */}
 
                     <Row gutter={16}>
                         <Col span={12}>
@@ -2840,16 +2712,6 @@ const ProductPage: React.FC = () => {
                 onCreated={(storageId, label) => {
                     dispatch(storageCapacityActions.getAll({ page: 0, size: 1000, keyword: "" }));
                     variantForm.setFieldsValue({ storageCapacityId: storageId });
-                    notification.success({ message: `Đã chọn: ${label}` });
-                }}
-            />
-
-            <QuickAddBrandModal
-                open={quickAddBrandOpen}
-                onClose={() => setQuickAddBrandOpen(false)}
-                onCreated={(brandId, label) => {
-                    dispatch(brandActions.getAll({ page: 0, size: 1000 }));
-                    modalForm.setFieldsValue({ idBrand: brandId });
                     notification.success({ message: `Đã chọn: ${label}` });
                 }}
             />

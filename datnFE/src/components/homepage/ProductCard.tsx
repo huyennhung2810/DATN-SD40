@@ -34,8 +34,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => 
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    message.success("Đã thêm vào giỏ hàng");
+    e.stopPropagation(); // Chặn sự kiện click nhầm
+    // Chuyển thẳng vào trang chi tiết sản phẩm để khách chọn phân loại
+    navigate(`/client/product/${product.id}`); 
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -51,6 +52,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => 
       navigate(`/client/product/${product.id}`);
     }
   };
+  
 
   return (
     <div

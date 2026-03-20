@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, Children } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Card,
@@ -12,7 +12,15 @@ import {
   Form,
   Modal,
   Popconfirm,
+  Select,
   Tabs,
+  Row,
+  Col,
+  Badge,
+  Empty,
+  Divider,
+  Spin,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,284 +29,180 @@ import {
   DeleteOutlined,
   ReloadOutlined,
   SettingOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Select } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 import type { RootState } from "../../../redux/store";
-import { sensorTypeActions } from "../../../redux/techSpec/sensorTypeSlice";
-import { lensMountActions } from "../../../redux/techSpec/lensMountSlice";
-import { resolutionActions } from "../../../redux/techSpec/resolutionSlice";
-import { processorActions } from "../../../redux/techSpec/processorSlice";
-import { imageFormatActions } from "../../../redux/techSpec/imageFormatSlice";
-import { videoFormatActions } from "../../../redux/techSpec/videoFormatSlice";
-import type { SensorTypeResponse } from "../../../api/sensorTypeApi";
-import type { LensMountResponse } from "../../../api/lensMountApi";
-import type { ResolutionResponse } from "../../../api/resolutionApi";
-import type { ProcessorResponse } from "../../../api/processorApi";
-import type { ImageFormatResponse } from "../../../api/imageFormatApi";
-import type { VideoFormatResponse } from "../../../api/videoFormatApi";
-import { App } from "antd";
-import { keyBy } from "lodash";
-import ColorPage from "../color/ColorList";
-import StorageCapacityPage from "../storage/StorageList";
+import { techSpecGroupActions } from "../../../redux/techSpec/techSpecGroupSlice";
+import { techSpecDefinitionActions } from "../../../redux/techSpec/techSpecDefinitionSlice";
+import { techSpecDefinitionItemApi } from "../../../api/techSpecGroupApi";
+import type {
+  TechSpecGroupResponse,
+  TechSpecDefinitionResponse,
+  TechSpecGroupRequest,
+  TechSpecDefinitionRequest,
+  TechSpecDataType,
+  TechSpecDefinitionItemResponse,
+  TechSpecDefinitionItemRequest,
+} from "../../../models/techSpecGroup";
 
 const { Title, Text } = Typography;
 
-// Common Tab Component
-interface TabItemProps {
-  title: string;
-  dataIndex: string;
-  actions: typeof sensorTypeActions;
-  list: any[];
-  loading: boolean;
-  totalElements: number;
-  filter: any;
-  setFilter: React.Dispatch<React.SetStateAction<any>>;
-  currentItem: any | null;
-  setCurrentItem: React.Dispatch<React.SetStateAction<any | null>>;
-  deleteItem: (id: string) => void;
-  nameField: string;
-  descriptionField: string;
+const DATA_TYPE_LABELS: Record<TechSpecDataType, { label: string; color: string }> = {
+  TEXT: { label: "Văn bản", color: "blue" },
+  NUMBER: { label: "Số", color: "green" },
+  ENUM: { label: "Danh sách", color: "orange" },
+  BOOLEAN: { label: "Có/Không", color: "purple" },
+  RANGE: { label: "Khoảng", color: "cyan" },
+};
+
+// ---- Sub-component: Item Manager for ENUM definitions ----
+
+interface EnumItemManagerProps {
+  definition: TechSpecDefinitionResponse;
+  open: boolean;
+  onClose: () => void;
 }
 
-const TechSpecTab: React.FC<TabItemProps> = ({
-  title,
-  dataIndex,
-  actions,
-  list,
-  loading,
-  totalElements,
-  filter,
-  setFilter,
-  currentItem,
-  setCurrentItem,
-  nameField,
-  deleteItem,
-  descriptionField,
-}) => {
-  const dispatch = useDispatch();
+const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onClose }) => {
+  const [items, setItems] = useState<TechSpecDefinitionItemResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<TechSpecDefinitionItemResponse | null>(null);
   const [form] = Form.useForm();
-  const [modalForm] = Form.useForm();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { notification } = App.useApp();
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchData = useCallback(() => {
-    dispatch(actions.getAll(filter));
-  }, [dispatch, filter, actions]);
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await techSpecDefinitionItemApi.getByDefinitionId(definition.id);
+      setItems(data);
+    } catch {
+      message.error("Không thể tải danh sách giá trị");
+    } finally {
+      setLoading(false);
+    }
+  }, [definition.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (open) {
+      loadItems();
+    }
+  }, [open, loadItems]);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setFilter((prev: any) => ({
-        ...prev,
-        keyword: filter.keyword?.trim() || "",
-        page: 0,
-      }));
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [filter.keyword]);
-
-  const handleRefresh = () => {
-    fetchData();
-    notification.success({
-      message: "Làm mới thành công",
-      description: "Dữ liệu đã được cập nhật",
-    });
-  };
-
-  const handleReset = () => {
-    form.resetFields();
-    setFilter({
-      page: 0,
-      size: 10,
-      keyword: "",
-      status: undefined,
-    });
-  };
-
-  const handlePageChange = (page: number, pageSize: number) => {
-    setFilter((prev: any) => ({ ...prev, page: page - 1, size: pageSize }));
-  };
-
-  const openModal = (item?: any) => {
+  const openModal = (item?: TechSpecDefinitionItemResponse) => {
     if (item) {
-      setCurrentItem(item);
-      modalForm.setFieldsValue({
-        name: item[nameField],
-        description: item[descriptionField],
-        status: item.status,
-      });
+      setEditingItem(item);
+      form.setFieldsValue({ name: item.name, value: item.value, displayOrder: item.displayOrder });
     } else {
-      setCurrentItem(null);
-      modalForm.resetFields();
-      modalForm.setFieldsValue({ status: "ACTIVE" });
+      setEditingItem(null);
+      form.resetFields();
     }
-    setIsModalOpen(true);
-  };
-
-  // Validate name - check for duplicates
-  const validateName = async (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject("Vui lòng nhập tên");
-    }
-    if (!value.trim()) {
-      return Promise.reject("Tên không được chỉ chứa khoảng trắng");
-    }
-    if (value.trim().length < 2) {
-      return Promise.reject("Tên phải có ít nhất 2 ký tự");
-    }
-    
-    // Check for duplicates
-    const trimmedValue = value.trim().toLowerCase();
-    const isDuplicate = list.some(
-      (item) => item[nameField]?.toLowerCase().trim() === trimmedValue
-    );
-    
-    if (isDuplicate) {
-      // If updating, allow keeping the same name
-      if (currentItem && currentItem[nameField]?.toLowerCase().trim() === trimmedValue) {
-        return Promise.resolve();
-      }
-      return Promise.reject(`Tên ${title.toLowerCase()} đã tồn tại`);
-    }
-    
-    return Promise.resolve();
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setCurrentItem(null);
-    modalForm.resetFields();
+    setModalOpen(true);
   };
 
   const handleSubmit = () => {
-    if (isSubmitting) {
-      return;
-    }
-    modalForm.validateFields().then((values) => {
-      const data = {
-        id: currentItem?.id,
-        name: values.name?.trim(),
-        description: values.description?.trim() || undefined,
-        status: values.status,
-      };
+    form.validateFields().then(async (values) => {
+      setSubmitting(true);
+      try {
+        const payload: TechSpecDefinitionItemRequest = {
+          id: editingItem?.id,
+          definitionId: definition.id,
+          name: values.name?.trim(),
+          value: values.value?.trim() || values.name?.trim(),
+          displayOrder: values.displayOrder ?? undefined,
+          status: values.status || "ACTIVE",
+        };
 
-      setIsSubmitting(true);
-      dispatch(
-        currentItem
-          ? actions.update({
-              data,
-              onSuccess: () => {
-                setIsSubmitting(false);
-                closeModal();
-              },
-            })
-          : actions.create({
-              data,
-              onSuccess: () => {
-                setIsSubmitting(false);
-                closeModal();
-              },
-            })
-      );
+        if (editingItem) {
+          await techSpecDefinitionItemApi.update(editingItem.id, payload);
+          message.success("Đã cập nhật giá trị");
+        } else {
+          await techSpecDefinitionItemApi.create(payload);
+          message.success("Đã thêm giá trị mới");
+        }
+
+        setModalOpen(false);
+        loadItems();
+      } catch {
+        message.error("Không thể lưu giá trị");
+      } finally {
+        setSubmitting(false);
+      }
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (deletingId) {
-      return;
+  const handleDelete = async (id: string) => {
+    try {
+      await techSpecDefinitionItemApi.delete(id);
+      message.success("Đã xóa giá trị");
+      loadItems();
+    } catch {
+      message.error("Không thể xóa giá trị");
     }
-    setDeletingId(id);
-    dispatch(deleteItem(id));
-    // reset trạng thái sau một khoảng ngắn để tránh khóa vĩnh viễn
-    setTimeout(() => {
-      setDeletingId((current) => (current === id ? null : current));
-    }, 800);
   };
 
-  const columns: ColumnsType<any> = [
+  const itemColumns: ColumnsType<TechSpecDefinitionItemResponse> = [
     {
       title: "STT",
       key: "index",
-      render: (_, __, index) => filter.page * filter.size + index + 1,
       width: 60,
       align: "center",
+      render: (_, __, idx) => idx + 1,
     },
     {
-      title: "Tên",
-      dataIndex: nameField,
-      key: nameField,
-    },
-    {
-      title: "Mô tả",
-      dataIndex: descriptionField,
-      key: descriptionField,
+      title: "Tên giá trị",
+      dataIndex: "name",
+      key: "name",
       ellipsis: true,
+    },
+    {
+      title: "Giá trị hiển thị",
+      dataIndex: "value",
+      key: "value",
+      ellipsis: true,
+      render: (v) => v || "—",
+    },
+    {
+      title: "Thứ tự",
+      dataIndex: "displayOrder",
+      key: "displayOrder",
+      width: 80,
+      align: "center",
+      render: (v) => v || "—",
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 120,
+      width: 110,
       align: "center",
-      render: (status: string) => (
-        <Tag color={status === "ACTIVE" ? "green" : "red"}>
-          {status === "ACTIVE" ? "Hoạt động" : "Không hoạt động"}
+      render: (s: string) => (
+        <Tag color={s === "ACTIVE" ? "green" : "red"} style={{ fontSize: "12px" }}>
+          {s === "ACTIVE" ? "Hoạt động" : "Tắt"}
         </Tag>
-      ),
-    },
-    {
-      title: "Ngày tạo",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      align: "center",
-      render: (date: number) => (
-        <span style={{ fontSize: "13px" }}>
-          {date ? dayjs(date).format("DD/MM/YYYY") : "---"}
-        </span>
       ),
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 120,
+      width: 100,
       align: "center",
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              shape="circle"
-              icon={<EditOutlined style={{ color: "#faad14" }} />}
-              onClick={() => openModal(record)}
-            />
+          <Tooltip title="Sửa">
+            <Button type="text" shape="circle" icon={<EditOutlined style={{ color: "#faad14" }} />} onClick={() => openModal(record)} />
           </Tooltip>
           <Popconfirm
-            title={`Xóa ${title}`}
-            description={`Bạn có chắc chắn muốn xóa ${title.toLowerCase()} này?`}
+            title="Xóa giá trị này?"
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
-            okButtonProps={{
-              loading: deletingId === record.id,
-              disabled: !!deletingId && deletingId !== record.id,
-            }}
+            okButtonProps={{ danger: true }}
           >
             <Tooltip title="Xóa">
-              <Button
-                type="text"
-                danger
-                shape="circle"
-                icon={<DeleteOutlined />}
-              />
+              <Button type="text" danger shape="circle" icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -307,369 +211,615 @@ const TechSpecTab: React.FC<TabItemProps> = ({
   ];
 
   return (
-    <div>
-      <Card
-        title={
-          <span>
-            <SearchOutlined /> Bộ lọc tìm kiếm
-          </span>
-        }
-        extra={
-          <Tooltip title="Làm mới bộ lọc">
-            <Button
-              shape="circle"
-              icon={<ReloadOutlined />}
-              onClick={handleReset}
-              type="primary"
-              ghost
-            />
-          </Tooltip>
-        }
-      >
-        <Form form={form} layout="vertical">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "15px",
-            }}
-          >
-            <Form.Item name="keyword" label="Tìm kiếm">
-              <Input
-                prefix={<SearchOutlined />}
-                placeholder={`Nhập tên ${title.toLowerCase()}...`}
-                allowClear
-                value={filter.keyword}
-                onChange={(e) =>
-                  setFilter((prev: any) => ({ ...prev, keyword: e.target.value }))
-                }
-              />
-            </Form.Item>
-          </div>
-        </Form>
-      </Card>
+    <Modal
+      title={
+        <Space>
+          <UnorderedListOutlined />
+          <span>Quản lý giá trị — <Text strong>{definition.name}</Text></span>
+        </Space>
+      }
+      open={open}
+      onCancel={onClose}
+      width={700}
+      footer={null}
+    >
+      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Text type="secondary">
+          {items.length} giá trị trong danh sách. Nhấn "Thêm giá trị" để mở rộng danh sách chọn cho thông số này.
+        </Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size="small">
+          Thêm giá trị
+        </Button>
+      </div>
 
-      <Card
-        title={
-          <Text strong style={{ fontSize: "16px" }}>
-            Danh sách {title} ({totalElements})
-          </Text>
-        }
-        extra={
-          <Space size="middle">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openModal()}
-              style={{ borderRadius: "20px", height: "35px" }}
-            >
-              Thêm mới
-            </Button>
-            <Button
-              icon={<ReloadOutlined spin={loading} />}
-              onClick={handleRefresh}
-              style={{ borderRadius: "20px" }}
-            >
-              Tải lại
-            </Button>
-          </Space>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={list}
-          loading={loading}
-          pagination={false}
-          rowKey="id"
-          scroll={{ x: 800 }}
-          bordered
-        />
+      <Table
+        columns={itemColumns}
+        dataSource={items}
+        loading={loading}
+        rowKey="id"
+        size="small"
+        pagination={false}
+        bordered
+        locale={{
+          emptyText: (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có giá trị nào. Hãy thêm giá trị cho danh sách này." />
+          ),
+        }}
+      />
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginTop: "16px",
-          }}
-        >
-          <Pagination
-            current={filter.page + 1}
-            pageSize={filter.size}
-            total={totalElements}
-            onChange={handlePageChange}
-            showSizeChanger
-            pageSizeOptions={["5", "10", "20", "50"]}
-          />
-        </div>
-      </Card>
-
+      {/* Add/Edit Item Modal */}
       <Modal
-        title={currentItem ? `Cập nhật ${title}` : `Thêm mới ${title}`}
-        open={isModalOpen}
-        onCancel={closeModal}
+        title={editingItem ? "Sửa giá trị" : "Thêm giá trị mới"}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
         onOk={handleSubmit}
-        confirmLoading={isSubmitting}
+        confirmLoading={submitting}
         okText="Lưu"
         cancelText="Hủy"
-        width={500}
+        width={420}
       >
-        <Form form={modalForm} layout="vertical">
+        <Form form={form} layout="vertical" style={{ marginTop: "16px" }}>
           <Form.Item
             name="name"
-            label="Tên"
-            rules={[
-              { validator: validateName }
-            ]}
+            label="Tên giá trị"
+            rules={[{ required: true, message: "Vui lòng nhập tên giá trị" }]}
           >
-            <Input placeholder={`Nhập tên ${title.toLowerCase()}`} />
+            <Input placeholder="VD: Full-frame CMOS" />
           </Form.Item>
-
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Nhập mô tả" />
+          <Form.Item name="value" label="Giá trị hiển thị (tùy chọn)">
+            <Input placeholder="Giá trị hiển thị (mặc định = tên)" />
           </Form.Item>
-
-          <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
-            <Select
-              options={[
-                { label: "Hoạt động", value: "ACTIVE" },
-                { label: "Không hoạt động", value: "INACTIVE" },
-              ]}
-            />
-          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="displayOrder" label="Thứ tự">
+                <Input type="number" placeholder="1" min={0} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
+                <Select
+                  options={[
+                    { label: "Hoạt động", value: "ACTIVE" },
+                    { label: "Không hoạt động", value: "INACTIVE" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
-    </div>
+    </Modal>
   );
 };
 
-const TechSpecPage: React.FC = () => {
-  // SensorType state
-  const [sensorTypeFilter, setSensorTypeFilter] = useState({
-    page: 0,
-    size: 10,
-    keyword: "",
-    status: undefined,
-  });
-  const [sensorTypeCurrent, setSensorTypeCurrent] = useState<SensorTypeResponse | null>(null);
-  const sensorTypeState = useSelector((state: RootState) => state.sensorType);
+// ---- Main Component: TechSpecList ----
 
-  // LensMount state
-  const [lensMountFilter, setLensMountFilter] = useState({
-    page: 0,
-    size: 10,
-    keyword: "",
-    status: undefined,
-  });
-  const [lensMountCurrent, setLensMountCurrent] = useState<LensMountResponse | null>(null);
-  const lensMountState = useSelector((state: RootState) => state.lensMount);
+const TechSpecListPage: React.FC = () => {
+  const dispatch = useDispatch();
+  const [groupForm] = Form.useForm();
+  const [defForm] = Form.useForm();
 
-  // Resolution state
-  const [resolutionFilter, setResolutionFilter] = useState({
-    page: 0,
-    size: 10,
-    keyword: "",
-    status: undefined,
-  });
-  const [resolutionCurrent, setResolutionCurrent] = useState<ResolutionResponse | null>(null);
-  const resolutionState = useSelector((state: RootState) => state.resolution);
+  // Group state
+  const [groupFilter] = useState({ page: 0, size: 50, keyword: "", status: undefined as any });
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<TechSpecGroupResponse | null>(null);
+  const [groupSubmitting, setGroupSubmitting] = useState(false);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 
-  // Processor state
-  const [processorFilter, setProcessorFilter] = useState({
+  // Definition state
+  const [defFilter, setDefFilter] = useState({
     page: 0,
-    size: 10,
+    size: 100,
     keyword: "",
-    status: undefined,
+    groupId: undefined as string | undefined,
+    status: undefined as any,
   });
-  const [processorCurrent, setProcessorCurrent] = useState<ProcessorResponse | null>(null);
-  const processorState = useSelector((state: RootState) => state.processor);
+  const [defModalOpen, setDefModalOpen] = useState(false);
+  const [editingDef, setEditingDef] = useState<TechSpecDefinitionResponse | null>(null);
+  const [defSubmitting, setDefSubmitting] = useState(false);
 
-  // ImageFormat state
-  const [imageFormatFilter, setImageFormatFilter] = useState({
-    page: 0,
-    size: 10,
-    keyword: "",
-    status: undefined,
-  });
-  const [imageFormatCurrent, setImageFormatCurrent] = useState<ImageFormatResponse | null>(null);
-  const imageFormatState = useSelector((state: RootState) => state.imageFormat);
+  // ENUM item manager
+  const [enumManagerOpen, setEnumManagerOpen] = useState(false);
+  const [selectedEnumDef, setSelectedEnumDef] = useState<TechSpecDefinitionResponse | null>(null);
 
-  // VideoFormat state
-  const [videoFormatFilter, setVideoFormatFilter] = useState({
-    page: 0,
-    size: 10,
-    keyword: "",
-    status: undefined,
-  });
-  const [videoFormatCurrent, setVideoFormatCurrent] = useState<VideoFormatResponse | null>(null);
-  const videoFormatState = useSelector((state: RootState) => state.videoFormat);
+  // Active tab
+  const [activeTab, setActiveTab] = useState<string>("");
 
-  const tabItems = [
-    {
-      key: "sensor-type",
-      label: "Loại cảm biến",
-      children: (
-        <TechSpecTab
-          title="Loại cảm biến"
-          dataIndex="sensorType"
-          actions={sensorTypeActions}
-          list={sensorTypeState.list}
-          loading={sensorTypeState.loading}
-          totalElements={sensorTypeState.totalElements}
-          filter={sensorTypeFilter}
-          setFilter={setSensorTypeFilter}
-          currentItem={sensorTypeCurrent}
-          setCurrentItem={setSensorTypeCurrent}
-          deleteItem={(id: string) => sensorTypeActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },
-    {
-      key: "lens-mount",
-      label: "Ngàm lens",
-      children: (
-        <TechSpecTab
-          title="Ngàm lens"
-          dataIndex="lensMount"
-          actions={lensMountActions}
-          list={lensMountState.list}
-          loading={lensMountState.loading}
-          totalElements={lensMountState.totalElements}
-          filter={lensMountFilter}
-          setFilter={setLensMountFilter}
-          currentItem={lensMountCurrent}
-          setCurrentItem={setLensMountCurrent}
-          deleteItem={(id: string) => lensMountActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },
-    {
-      key: "resolution",
-      label: "Độ phân giải",
-      children: (
-        <TechSpecTab
-          title="Độ phân giải"
-          dataIndex="resolution"
-          actions={resolutionActions}
-          list={resolutionState.list}
-          loading={resolutionState.loading}
-          totalElements={resolutionState.totalElements}
-          filter={resolutionFilter}
-          setFilter={setResolutionFilter}
-          currentItem={resolutionCurrent}
-          setCurrentItem={setResolutionCurrent}
-          deleteItem={(id: string) => resolutionActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },
-    {
-      key: "processor",
-      label: "Bộ xử lý",
-      children: (
-        <TechSpecTab
-          title="Bộ xử lý"
-          dataIndex="processor"
-          actions={processorActions}
-          list={processorState.list}
-          loading={processorState.loading}
-          totalElements={processorState.totalElements}
-          filter={processorFilter}
-          setFilter={setProcessorFilter}
-          currentItem={processorCurrent}
-          setCurrentItem={setProcessorCurrent}
-          deleteItem={(id: string) => processorActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },
-    {
-      key: "image-format",
-      label: "Định dạng ảnh",
-      children: (
-        <TechSpecTab
-          title="Định dạng ảnh"
-          dataIndex="imageFormat"
-          actions={imageFormatActions}
-          list={imageFormatState.list}
-          loading={imageFormatState.loading}
-          totalElements={imageFormatState.totalElements}
-          filter={imageFormatFilter}
-          setFilter={setImageFormatFilter}
-          currentItem={imageFormatCurrent}
-          setCurrentItem={setImageFormatCurrent}
-          deleteItem={(id: string) => imageFormatActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },
-    {
-      key: "video-format",
-      label: "Định dạng video",
-      children: (
-        <TechSpecTab
-          title="Định dạng video"
-          dataIndex="videoFormat"
-          actions={videoFormatActions}
-          list={videoFormatState.list}
-          loading={videoFormatState.loading}
-          totalElements={videoFormatState.totalElements}
-          filter={videoFormatFilter}
-          setFilter={setVideoFormatFilter}
-          currentItem={videoFormatCurrent}
-          setCurrentItem={setVideoFormatCurrent}
-          deleteItem={(id: string) => videoFormatActions.delete(id)}
-          nameField="name"
-          descriptionField="description"
-        />
-      ),
-    },{
-      key: "color",
-      label: "Màu sắc",
-      children: <ColorPage/>
-    },{
-      key: "storage-capacity",
-      label: "Dung lượng",
-      children: <StorageCapacityPage/>
+  const groupState = useSelector((state: RootState) => state.techSpecGroup);
+  const defState = useSelector((state: RootState) => state.techSpecDefinition);
+
+  // Load all groups
+  const loadGroups = useCallback(() => {
+    dispatch(techSpecGroupActions.getAll(groupFilter));
+  }, [dispatch, groupFilter]);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
+
+  // Auto-select first group and load its definitions
+  useEffect(() => {
+    if (groupState.list.length > 0) {
+      const first = groupState.list[0];
+      setActiveTab(first.id);
+      setDefFilter((prev) => ({ ...prev, groupId: first.id, keyword: "", page: 0 }));
     }
+  }, [groupState.list]);
+
+  // Load definitions when tab/filter changes
+  useEffect(() => {
+    if (activeTab) {
+      dispatch(techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }));
+    }
+  }, [dispatch, activeTab, defFilter.page, defFilter.size, defFilter.status]);
+
+  // Debounce keyword search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (activeTab) {
+        setDefFilter((prev) => ({ ...prev, keyword: defFilter.keyword.trim(), page: 0 }));
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [defFilter.keyword]); // eslint-disable-line
+
+  // ---- GROUP HANDLERS ----
+
+  const openGroupModal = (g?: TechSpecGroupResponse) => {
+    if (g) {
+      setEditingGroup(g);
+      groupForm.setFieldsValue({ name: g.name, code: g.code, description: g.description, displayOrder: g.displayOrder, status: g.status });
+    } else {
+      setEditingGroup(null);
+      groupForm.resetFields();
+      groupForm.setFieldsValue({ status: "ACTIVE" });
+    }
+    setGroupModalOpen(true);
+  };
+
+  const handleGroupSubmit = () => {
+    groupForm.validateFields().then((values) => {
+      setGroupSubmitting(true);
+      const data: TechSpecGroupRequest = {
+        id: editingGroup?.id,
+        name: values.name?.trim(),
+        code: values.code?.trim() || undefined,
+        description: values.description?.trim() || undefined,
+        displayOrder: values.displayOrder ?? undefined,
+        status: values.status,
+      };
+      const action = editingGroup
+        ? techSpecGroupActions.updateGroup({
+            id: editingGroup.id, data,
+            onSuccess: () => { setGroupSubmitting(false); setGroupModalOpen(false); loadGroups(); },
+          })
+        : techSpecGroupActions.createGroup({
+            data,
+            onSuccess: () => { setGroupSubmitting(false); setGroupModalOpen(false); loadGroups(); },
+          });
+      dispatch(action);
+    });
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    setDeletingGroupId(id);
+    dispatch(techSpecGroupActions.deleteGroup(id));
+    setTimeout(() => { setDeletingGroupId(null); loadGroups(); }, 800);
+  };
+
+  // ---- DEFINITION HANDLERS ----
+
+  const openDefModal = (def?: TechSpecDefinitionResponse) => {
+    if (def) {
+      setEditingDef(def);
+      defForm.setFieldsValue({
+        name: def.name, code: def.code, groupId: def.groupId, description: def.description,
+        dataType: def.dataType, unit: def.unit, isFilterable: def.isFilterable,
+        isRequired: def.isRequired, displayOrder: def.displayOrder, status: def.status,
+      });
+    } else {
+      setEditingDef(null);
+      defForm.resetFields();
+      defForm.setFieldsValue({ groupId: activeTab, dataType: "ENUM", status: "ACTIVE", isFilterable: false, isRequired: false });
+    }
+    setDefModalOpen(true);
+  };
+
+  const handleDefSubmit = () => {
+    defForm.validateFields().then((values) => {
+      setDefSubmitting(true);
+      const data: TechSpecDefinitionRequest = {
+        id: editingDef?.id,
+        name: values.name?.trim(),
+        code: values.code?.trim() || undefined,
+        groupId: values.groupId,
+        description: values.description?.trim() || undefined,
+        dataType: values.dataType,
+        unit: values.unit?.trim() || undefined,
+        isFilterable: values.isFilterable ?? false,
+        isRequired: values.isRequired ?? false,
+        displayOrder: values.displayOrder ?? undefined,
+        status: values.status,
+      };
+      const action = editingDef
+        ? techSpecDefinitionActions.updateDefinition({
+            id: editingDef.id, data,
+            onSuccess: () => { setDefSubmitting(false); setDefModalOpen(false); reloadDefs(); },
+          })
+        : techSpecDefinitionActions.createDefinition({
+            data,
+            onSuccess: () => { setDefSubmitting(false); setDefModalOpen(false); reloadDefs(); },
+          });
+      dispatch(action);
+    });
+  };
+
+  const reloadDefs = () => {
+    if (activeTab) {
+      dispatch(techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }));
+    }
+  };
+
+  const defColumns: ColumnsType<TechSpecDefinitionResponse> = [
+    {
+      title: "STT",
+      key: "index",
+      width: 55,
+      align: "center",
+      render: (_, __, idx) => defFilter.page * defFilter.size + idx + 1,
+    },
+    {
+      title: "Tên thông số",
+      dataIndex: "name",
+      key: "name",
+      ellipsis: true,
+    },
+    {
+      title: "Mã",
+      dataIndex: "code",
+      key: "code",
+      width: 140,
+      ellipsis: true,
+      render: (v: string) => v ? <Text code style={{ fontSize: "11px" }}>{v}</Text> : "—",
+    },
+    {
+      title: "Kiểu",
+      dataIndex: "dataType",
+      key: "dataType",
+      width: 110,
+      align: "center",
+      render: (dt: TechSpecDataType) => {
+        const meta = DATA_TYPE_LABELS[dt] || { label: dt, color: "default" };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
+    {
+      title: "Đơn vị",
+      dataIndex: "unit",
+      key: "unit",
+      width: 70,
+      align: "center",
+      render: (v: string) => v || "—",
+    },
+    {
+      title: "Lọc",
+      dataIndex: "isFilterable",
+      key: "isFilterable",
+      width: 65,
+      align: "center",
+      render: (v: boolean) =>
+        v ? <Badge status="success" text={<span style={{ fontSize: "12px" }}>Có</span>} /> : <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>,
+    },
+    {
+      title: "Bắt buộc",
+      dataIndex: "isRequired",
+      key: "isRequired",
+      width: 90,
+      align: "center",
+      render: (v: boolean) =>
+        v ? <Badge status="error" text={<span style={{ fontSize: "12px" }}>Có</span>} /> : <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 100,
+      align: "center",
+      render: (s: string) => (
+        <Tag color={s === "ACTIVE" ? "green" : "red"} style={{ fontSize: "12px" }}>
+          {s === "ACTIVE" ? "Hoạt động" : "Tắt"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 140,
+      align: "center",
+      fixed: "right",
+      render: (_, record) => (
+        <Space size="small">
+          {record.dataType === "ENUM" && (
+            <Tooltip title="Quản lý giá trị danh sách">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<UnorderedListOutlined style={{ color: "#1890ff" }} />}
+                onClick={() => { setSelectedEnumDef(record); setEnumManagerOpen(true); }}
+              />
+            </Tooltip>
+          )}
+          <Tooltip title="Sửa">
+            <Button type="text" shape="circle" icon={<EditOutlined style={{ color: "#faad14" }} />} onClick={() => openDefModal(record)} />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa thông số?"
+            onConfirm={() => {
+              dispatch(techSpecDefinitionActions.deleteDefinition(record.id));
+              setTimeout(reloadDefs, 800);
+            }}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button type="text" danger shape="circle" icon={<DeleteOutlined />} />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
+
+  // Build tab items from group list
+  const tabItems = groupState.list.map((group) => ({
+    key: group.id,
+    label: <Space>{group.name}</Space>,
+    children: (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+          <Text strong style={{ fontSize: "14px" }}>
+            Danh sách thông số trong nhóm
+            <Text type="secondary" style={{ fontSize: "12px", marginLeft: "8px" }}>
+              ({defState.totalElements} thông số)
+            </Text>
+          </Text>
+          <Space>
+            <Button icon={<ReloadOutlined spin={defState.loading} />} onClick={reloadDefs} size="small">
+              Tải lại
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openDefModal()} size="small" style={{ borderRadius: "6px" }}>
+              Thêm thông số
+            </Button>
+          </Space>
+        </div>
+
+        <Input
+          prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+          placeholder="Tìm thông số..."
+          allowClear
+          style={{ marginBottom: "12px" }}
+          value={defFilter.keyword}
+          onChange={(e) => setDefFilter((prev) => ({ ...prev, keyword: e.target.value }))}
+        />
+
+        <Table
+          columns={defColumns}
+          dataSource={defState.list}
+          loading={defState.loading}
+          pagination={false}
+          rowKey="id"
+          size="small"
+          bordered
+          scroll={{ x: 800 }}
+          locale={{
+            emptyText: (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có thông số nào trong nhóm này" />
+            ),
+          }}
+        />
+
+        {defState.totalElements > defFilter.size && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+            <Pagination
+              current={defFilter.page + 1}
+              pageSize={defFilter.size}
+              total={defState.totalElements}
+              onChange={(p, s) => setDefFilter((prev) => ({ ...prev, page: p - 1, size: s }))}
+              showSizeChanger
+              pageSizeOptions={["10", "20", "50", "100"]}
+              size="small"
+            />
+          </div>
+        )}
+      </div>
+    ),
+  }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <Card className="mb-3" style={{ borderRadius: "12px" }}>
+      {/* Header */}
+      <Card style={{ borderRadius: "12px" }}>
         <Space align="center" size={16}>
-          <div
-            style={{
-              backgroundColor: "#e6f7ff",
-              padding: "12px",
-              borderRadius: "10px",
-            }}
-          >
+          <div style={{ background: "#e6f7ff", padding: "12px", borderRadius: "10px" }}>
             <SettingOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
           </div>
           <div>
-            <Title level={4} style={{ margin: 0 }}>
-              Quản lý thông số kỹ thuật
-            </Title>
-            <Text type="secondary" style={{ fontSize: "14px" }}>
-              Quản lý các thông số kỹ thuật của sản phẩm
+            <Title level={4} style={{ margin: 0 }}>Quản lý thông số kỹ thuật</Title>
+            <Text type="secondary" style={{ fontSize: "13px" }}>
+              Chia theo nhóm — ENUM: nhấn biểu tượng danh sách để quản lý giá trị con
             </Text>
+          </div>
+          <div style={{ marginLeft: "auto" }}>
+            <Button type="link" icon={<PlusOutlined />} onClick={() => openGroupModal()} style={{ padding: 0, height: "auto" }}>
+              Thêm nhóm mới
+            </Button>
           </div>
         </Space>
       </Card>
 
+      {/* Nhóm thông số — horizontal tabs */}
       <Card style={{ borderRadius: "12px" }}>
-        <Tabs items={tabItems} />
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            setDefFilter((prev) => ({ ...prev, groupId: key, keyword: "", page: 0 }));
+          }}
+          type="card"
+          items={tabItems}
+          tabBarExtraContent={
+            <Space style={{ marginRight: "8px" }}>
+              <Text type="secondary" style={{ fontSize: "12px" }}>{groupState.list.length} nhóm</Text>
+            </Space>
+          }
+        />
       </Card>
+
+      {/* Group Modal */}
+      <Modal
+        title={editingGroup ? "Sửa nhóm thông số" : "Thêm nhóm thông số mới"}
+        open={groupModalOpen}
+        onCancel={() => setGroupModalOpen(false)}
+        onOk={handleGroupSubmit}
+        confirmLoading={groupSubmitting}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={480}
+      >
+        <Form form={groupForm} layout="vertical">
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="name" label="Tên nhóm" rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}>
+                <Input placeholder="VD: Cảm biến & Chất lượng ảnh" />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="code" label="Mã nhóm">
+                <Input placeholder="VD: sensor-image" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={2} placeholder="Mô tả ngắn về nhóm" />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item name="displayOrder" label="Thứ tự">
+                <Input type="number" placeholder="1" min={0} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
+                <Select options={[{ label: "Hoạt động", value: "ACTIVE" }, { label: "Không hoạt động", value: "INACTIVE" }]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="action" label="Thao tác">
+                <Button
+                  danger size="small" block
+                  onClick={() => { if (editingGroup) { handleDeleteGroup(editingGroup.id); setGroupModalOpen(false); } }}
+                >
+                  Xóa nhóm
+                </Button>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Definition Modal */}
+      <Modal
+        title={editingDef ? "Sửa thông số kỹ thuật" : "Thêm thông số kỹ thuật mới"}
+        open={defModalOpen}
+        onCancel={() => setDefModalOpen(false)}
+        onOk={handleDefSubmit}
+        confirmLoading={defSubmitting}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={560}
+      >
+        <Form form={defForm} layout="vertical">
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="name" label="Tên thông số" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+                <Input placeholder="VD: Kích thước cảm biến" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="code" label="Mã thông số">
+                <Input placeholder="VD: sensor_size" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={16}>
+              <Form.Item name="groupId" label="Nhóm" rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}>
+                <Select
+                  placeholder="Chọn nhóm"
+                  options={groupState.list.map((g) => ({ label: g.name, value: g.id }))}
+                  showSearch optionFilterProp="label"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="dataType" label="Kiểu dữ liệu" rules={[{ required: true, message: "Vui lòng chọn kiểu" }]}>
+                <Select
+                  placeholder="Chọn kiểu"
+                  options={[
+                    { label: "Danh sách (ENUM)", value: "ENUM" },
+                    { label: "Văn bản (TEXT)", value: "TEXT" },
+                    { label: "Số (NUMBER)", value: "NUMBER" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item name="unit" label="Đơn vị">
+                <Input placeholder="VD: MP, fps, g, mm..." />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="displayOrder" label="Thứ tự">
+                <Input type="number" placeholder="1" min={0} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
+                <Select options={[{ label: "Hoạt động", value: "ACTIVE" }, { label: "Không hoạt động", value: "INACTIVE" }]} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="isFilterable" label="Dùng để lọc" initialValue={false}>
+                <Select options={[{ label: "Có", value: true }, { label: "Không", value: false }]} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="isRequired" label="Bắt buộc nhập" initialValue={false}>
+                <Select options={[{ label: "Có", value: true }, { label: "Không", value: false }]} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={2} placeholder="Mô tả chi tiết thông số này" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ENUM Item Manager Modal */}
+      {selectedEnumDef && (
+        <EnumItemManager
+          definition={selectedEnumDef}
+          open={enumManagerOpen}
+          onClose={() => { setEnumManagerOpen(false); setSelectedEnumDef(null); }}
+        />
+      )}
     </div>
   );
 };
 
-export default TechSpecPage;
-
+export default TechSpecListPage;
