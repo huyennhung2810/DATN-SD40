@@ -68,6 +68,7 @@ import QuickAddCategoryModal from "../../../components/QuickAddCategoryModal";
 import QuickAddTechSpecModal, { type TechSpecType } from "../../../components/QuickAddTechSpecModal";
 import QuickAddColorModal from "../../../components/QuickAddColorModal";
 import QuickAddStorageModal from "../../../components/QuickAddStorageModal";
+import DynamicTechSpecForm from "../../../components/admin/DynamicTechSpecForm";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
@@ -233,34 +234,44 @@ const ProductPage: React.FC = () => {
         setFilter((prev) => ({ ...prev, page: page - 1, size: pageSize }));
     };
 
-    const openModal = (product?: ProductResponse) => {
+    const openModal = async (product?: ProductResponse) => {
         if (product) {
+            // Lấy đầy đủ sản phẩm (có techSpecDynamic) — danh sách search thường không có
+            let full: ProductResponse = product;
+            try {
+                full = await productApi.getById(product.id);
+            } catch (e) {
+                console.warn("Không tải được chi tiết sản phẩm, dùng bản từ danh sách:", e);
+            }
             // edit mode on
-            setEditingProduct(product);
+            setEditingProduct(full);
             setCurrentStep(0);
-            setTempProductId(product.id);
+            setTempProductId(full.id);
             setTempProductData({
-                name: product.name,
-                description: product.description,
-                idProductCategory: product.idProductCategory,
-                idTechSpec: product.idTechSpec || null,
-                status: product.status,
+                name: full.name,
+                description: full.description,
+                idProductCategory: full.idProductCategory,
+                idTechSpec: full.idTechSpec || null,
+                status: full.status,
             });
-            setTempTechSpecId(product.idTechSpec || null);
+            setTempTechSpecId(full.idTechSpec || null);
             setSelectedThumbnail(null);
             modalForm.setFieldsValue({
-                name: product.name,
-                description: product.description,
-                idProductCategory: product.idProductCategory,
-                status: product.status,
-                techSpec: product.techSpec ? {
-                    sensorType: product.techSpec.sensorType || undefined,
-                    lensMount: product.techSpec.lensMount || undefined,
-                    resolution: product.techSpec.resolution || undefined,
-                    iso: product.techSpec.iso || "",
-                    processor: product.techSpec.processor || undefined,
-                    imageFormat: product.techSpec.imageFormat || undefined,
-                    videoFormat: product.techSpec.videoFormat || undefined,
+                name: full.name,
+                description: full.description,
+                idProductCategory: full.idProductCategory,
+                status: full.status,
+                techSpecDynamic: full.techSpecDynamic && Object.keys(full.techSpecDynamic).length > 0
+                    ? { ...full.techSpecDynamic }
+                    : {},
+                techSpec: full.techSpec ? {
+                    sensorType: full.techSpec.sensorType || undefined,
+                    lensMount: full.techSpec.lensMount || undefined,
+                    resolution: full.techSpec.resolution || undefined,
+                    iso: full.techSpec.iso || "",
+                    processor: full.techSpec.processor || undefined,
+                    imageFormat: full.techSpec.imageFormat || undefined,
+                    videoFormat: full.techSpec.videoFormat || undefined,
                 } : {
                     sensorType: undefined,
                     lensMount: undefined,
@@ -280,7 +291,7 @@ const ProductPage: React.FC = () => {
             setTempTechSpecId(null);
             setSelectedThumbnail(null);
             modalForm.resetFields();
-            modalForm.setFieldsValue({ status: "ACTIVE", techSpec: initialTechSpec });
+            modalForm.setFieldsValue({ status: "ACTIVE", techSpec: initialTechSpec, techSpecDynamic: {} });
         }
         setIsModalOpen(true);
     };
@@ -360,35 +371,81 @@ const ProductPage: React.FC = () => {
 
     // step 2: techspec vibes
     const handleStep2Submit = async () => {
+        let savedDynamicSpecs = false;
         try {
-            const values = await modalForm.validateFields(["techSpec"]);
-            const techSpecData = values.techSpec;
-            
+            // Try to read both old format (techSpec) and new format (techSpecDynamic)
+            let techSpecValues: any = {};
+            try {
+                const oldValues = await modalForm.validateFields(["techSpec"]);
+                if (oldValues.techSpec) {
+                    techSpecValues = { ...oldValues.techSpec };
+                }
+            } catch (_) { /* field not present */ }
+
+            // Also read new dynamic format
+            try {
+                const dynamicValues = modalForm.getFieldValue("techSpecDynamic");
+                if (dynamicValues && tempProductId && typeof dynamicValues === "object") {
+                    const payload: Record<string, string | number | boolean> = {};
+                    for (const [k, v] of Object.entries(dynamicValues)) {
+                        if (v === undefined || v === null || v === "") continue;
+                        if (typeof v === "object") continue;
+                        payload[k] = v as string | number | boolean;
+                    }
+                    if (Object.keys(payload).length > 0) {
+                        await productApi.saveTechSpecValues(tempProductId, payload);
+                        savedDynamicSpecs = true;
+                    }
+                }
+                if (dynamicValues) {
+                    // Map dynamic spec codes to legacy TechSpec fields
+                    if (dynamicValues["spec_sensor_type"] && !techSpecValues.sensorType) {
+                        techSpecValues.sensorType = dynamicValues["spec_sensor_type"];
+                    }
+                    if (dynamicValues["spec_lens_mount"] && !techSpecValues.lensMount) {
+                        techSpecValues.lensMount = dynamicValues["spec_lens_mount"];
+                    }
+                    if (dynamicValues["spec_resolution_mp"] && !techSpecValues.resolution) {
+                        techSpecValues.resolution = String(dynamicValues["spec_resolution_mp"]);
+                    }
+                    if (dynamicValues["spec_iso_standard"] && !techSpecValues.iso) {
+                        const isoMin = dynamicValues["spec_iso_standard"]?.min;
+                        const isoMax = dynamicValues["spec_iso_standard"]?.max;
+                        techSpecValues.iso = isoMin && isoMax ? `${isoMin}-${isoMax}` : (isoMin || isoMax || "");
+                    }
+                    if (dynamicValues["spec_image_processor"] && !techSpecValues.processor) {
+                        techSpecValues.processor = dynamicValues["spec_image_processor"];
+                    }
+                    if (dynamicValues["spec_video_format"] && !techSpecValues.videoFormat) {
+                        techSpecValues.videoFormat = dynamicValues["spec_video_format"];
+                    }
+                    // techSpecDynamic đã lưu vào bảng tech_spec_value; đồng thời map một phần sang TechSpec cũ.
+                }
+            } catch (_) { /* not set yet */ }
+
             // Check if any field has value
-            const hasTechSpecData = techSpecData && (
-                techSpecData.sensorType ||
-                techSpecData.lensMount ||
-                techSpecData.resolution ||
-                techSpecData.iso ||
-                techSpecData.processor ||
-                techSpecData.imageFormat ||
-                techSpecData.videoFormat
-            );
+            const hasTechSpecData =
+                techSpecValues.sensorType ||
+                techSpecValues.lensMount ||
+                techSpecValues.resolution ||
+                techSpecValues.iso ||
+                techSpecValues.processor ||
+                techSpecValues.imageFormat ||
+                techSpecValues.videoFormat;
 
             setStepLoading(true);
 
             if (hasTechSpecData && tempProductId) {
-                // @ts-ignore
                 const techSpecPayload: TechSpecRequest = {
                     id: tempTechSpecId || undefined,
                     idProduct: tempProductId,
-                    sensorType: techSpecData.sensorType || undefined,
-                    lensMount: techSpecData.lensMount || undefined,
-                    resolution: techSpecData.resolution || undefined,
-                    iso: techSpecData.iso || undefined,
-                    processor: techSpecData.processor || undefined,
-                    imageFormat: techSpecData.imageFormat || undefined,
-                    videoFormat: techSpecData.videoFormat || undefined,
+                    sensorType: techSpecValues.sensorType || undefined,
+                    lensMount: techSpecValues.lensMount || undefined,
+                    resolution: techSpecValues.resolution || undefined,
+                    iso: techSpecValues.iso || undefined,
+                    processor: techSpecValues.processor || undefined,
+                    imageFormat: techSpecValues.imageFormat || undefined,
+                    videoFormat: techSpecValues.videoFormat || undefined,
                     status: "ACTIVE",
                 };
 
@@ -423,8 +480,10 @@ const ProductPage: React.FC = () => {
                 if (tempProductData) {
                     await productApi.update(tempProductId, { ...tempProductData, idTechSpec: techSpecId });
                 }
-            } else {
+            } else if (!savedDynamicSpecs) {
                 notification.info({ message: "Bỏ qua thông số kỹ thuật", description: "Không có thông số kỹ thuật nào được chọn" });
+            } else if (savedDynamicSpecs && !hasTechSpecData) {
+                notification.success({ message: "Đã lưu thông số kỹ thuật động" });
             }
 
             setCurrentStep(2);
@@ -1510,227 +1569,13 @@ const ProductPage: React.FC = () => {
                     {currentStep === 1 && (
                         <>
                             <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-                                Chọn thông số kỹ thuật cho sản phẩm từ danh sách có sẵn (không bắt buộc)
+                                Thông số kỹ thuật được cấu hình động từ hệ thống nhóm thông số (không bắt buộc)
                             </Typography.Text>
                             <Divider style={{ margin: "12px 0" }} />
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "sensorType"]} label="Loại cảm biến">
-                                        <Select
-                                            placeholder="Chọn loại cảm biến"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={sensorTypeState.loading}
-                                            options={sensorTypeState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("sensorType");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "lensMount"]} label="Mount ống kính">
-                                        <Select
-                                            placeholder="Chọn mount ống kính"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={lensMountState.loading}
-                                            options={lensMountState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("lensMount");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "resolution"]} label="Độ phân giải">
-                                        <Select
-                                            placeholder="Chọn độ phân giải"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={resolutionState.loading}
-                                            options={resolutionState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("resolution");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "iso"]} label="ISO">
-                                        <Input placeholder="ví dụ: 100-51200" />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Row gutter={[16, 0]}>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "processor"]} label="Bộ xử lý">
-                                        <Select
-                                            placeholder="Chọn bộ xử lý"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={processorState.loading}
-                                            options={processorState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("processor");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name={["techSpec", "imageFormat"]} label="Định dạng ảnh">
-                                        <Select
-                                            placeholder="Chọn định dạng ảnh"
-                                            allowClear
-                                            showSearch
-                                            optionFilterProp="children"
-                                            loading={imageFormatState.loading}
-                                            options={imageFormatState.list.map((item) => ({
-                                                label: item.name,
-                                                value: item.name,
-                                            }))}
-                                            dropdownRender={(menu) => (
-                                                <>
-                                                    {menu}
-                                                    <Divider style={{ margin: "8px 0" }} />
-                                                    <Button
-                                                        type="link"
-                                                        icon={<PlusOutlined />}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setQuickAddTechSpecType("imageFormat");
-                                                            setQuickAddTechSpecOpen(true);
-                                                        }}
-                                                        style={{ padding: "4px 12px", height: "auto" }}
-                                                    >
-                                                        + Thêm mới
-                                                    </Button>
-                                                </>
-                                            )}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Form.Item name={["techSpec", "videoFormat"]} label="Định dạng video">
-                                <Select
-                                    placeholder="Chọn định dạng video"
-                                    allowClear
-                                    showSearch
-                                    optionFilterProp="children"
-                                    loading={videoFormatState.loading}
-                                    options={videoFormatState.list.map((item) => ({
-                                        label: item.name,
-                                        value: item.name,
-                                    }))}
-                                    dropdownRender={(menu) => (
-                                        <>
-                                            {menu}
-                                            <Divider style={{ margin: "8px 0" }} />
-                                            <Button
-                                                type="link"
-                                                icon={<PlusOutlined />}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setQuickAddTechSpecType("videoFormat");
-                                                    setQuickAddTechSpecOpen(true);
-                                                }}
-                                                style={{ padding: "4px 12px", height: "auto" }}
-                                            >
-                                                + Thêm mới
-                                            </Button>
-                                        </>
-                                    )}
-                                />
-                            </Form.Item>
-
+                            <DynamicTechSpecForm form={modalForm} />
                             <Divider orientation="left">
                                 <Typography.Text strong>Phiên bản sản phẩm</Typography.Text>
                             </Divider>
-                            <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-                                Lưu ý: Các trường thông số kỹ thuật bên trên chọn từ danh sách có sẵn, riêng ISO nhập thủ công vì là dải giá trị.
-                            </Typography.Text>
                         </>
                     )}
 

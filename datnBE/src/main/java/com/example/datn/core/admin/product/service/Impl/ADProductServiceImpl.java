@@ -16,6 +16,7 @@ import com.example.datn.core.admin.serial.model.response.ADSerialResponse;
 import com.example.datn.core.admin.serial.repository.ADSerialRepository;
 import com.example.datn.core.admin.storagecapacity.repository.ADStorageCapacityRepository;
 import com.example.datn.core.admin.techspec.model.response.ADTechSpecResponse;
+import com.example.datn.core.admin.techspec.service.ProductTechSpecService;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.EntityStatus;
@@ -51,6 +52,7 @@ public class ADProductServiceImpl implements ADProductService {
     private final ADColorRepository colorRepository;
     private final ADStorageCapacityRepository storageCapacityRepository;
     private final ADSerialRepository serialRepository;
+    private final ProductTechSpecService productTechSpecService;
 
     @Override
     public PageableObject<ADProductResponse> search(ADProductSearchRequest request) {
@@ -301,6 +303,8 @@ public class ADProductServiceImpl implements ADProductService {
                                 .collect(Collectors.toList());
                         response.setImageUrls(imageUrls);
                     }
+
+                    response.setTechSpecDynamic(productTechSpecService.getProductSpecFormValues(product.getId()));
 
                     return response;
                 })

@@ -13,6 +13,11 @@ import com.example.datn.infrastructure.constant.HandoverStatus;
 import com.example.datn.infrastructure.constant.ShiftStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
+import com.example.datn.entity.TechSpecGroup;
+import com.example.datn.entity.TechSpecDefinition;
+import com.example.datn.entity.TechSpecDefinitionItem;
+import com.example.datn.entity.TechSpecValue;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,6 +34,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -78,6 +84,12 @@ public class DBGenerator implements CommandLineRunner {
     private final ShiftHandoverRepository shiftHandoverRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
+
+    // TechSpec Group & Definition repositories (new system)
+    private final TechSpecGroupRepository techSpecGroupRepository;
+    private final TechSpecDefinitionRepository techSpecDefinitionRepository;
+    private final TechSpecDefinitionItemRepository itemRepository;
+    private final TechSpecValueRepository techSpecValueRepository;
 
     @Autowired
     @Qualifier("employeeRepository")
@@ -185,7 +197,8 @@ public class DBGenerator implements CommandLineRunner {
             // 8. Xóa customers (phải sau tất cả bảng có FK đến customer)
             customerRepository.deleteAll();
 
-            // 9. Xóa product variants, images, products
+            // 9. Xóa product variants, images, products (xóa tech_spec_value TRƯỚC vì nó FK đến product)
+            techSpecValueRepository.deleteAll();
             productDetailRepository.deleteAll();
             productImageRepository.deleteAll();
             productRepository.deleteAll();
@@ -268,7 +281,13 @@ public class DBGenerator implements CommandLineRunner {
             // 8. Seed TechSpec Lookup Tables
             seedTechSpecLookups();
 
-            // 9. Seed Shift Templates
+            // 9. Seed TechSpec Groups & Definitions (new group system)
+            seedTechSpecGroups();
+
+            // 9b. Seed TechSpec Values cho từng sản phẩm
+            seedProductTechSpecs();
+
+            // 10. Seed Shift Templates
             seedShiftTemplates();
 
             // 10. Seed Customers and Addresses
@@ -707,6 +726,1027 @@ public class DBGenerator implements CommandLineRunner {
             createTechSpecLookup("6.2K 30fps", videoFormatRepository)
         );
         System.out.println(">>> Đã tạo " + videoFormats.size() + " định dạng video");
+    }
+
+    // ============================================================
+    // SEED: TechSpec Groups & Definitions (New Group System)
+    // ============================================================
+
+    private void seedTechSpecGroups() {
+        try {
+            // Xóa dữ liệu cũ
+            itemRepository.deleteAll();
+            techSpecDefinitionRepository.deleteAll();
+            techSpecGroupRepository.deleteAll();
+
+            // Tạo 6 nhóm thông số
+            TechSpecGroup grpSensor = createTechSpecGroup("sensor-image", "Cảm biến & Chất lượng ảnh",
+                    "Các thông số liên quan đến cảm biến, độ phân giải và chất lượng hình ảnh", 1);
+            TechSpecGroup grpLens = createTechSpecGroup("lens-focus", "Ống kính & Lấy nét",
+                    "Các thông số liên quan đến ngàm lens, hệ thống lấy nét và tốc độ chụp", 2);
+            TechSpecGroup grpVideo = createTechSpecGroup("video", "Video",
+                    "Các thông số liên quan đến khả năng quay phim", 3);
+            TechSpecGroup grpScreen = createTechSpecGroup("screen-viewfinder", "Màn hình & Kính ngắm",
+                    "Các thông số liên quan đến màn hình hiển thị và kính ngắm", 4);
+            TechSpecGroup grpBattery = createTechSpecGroup("battery-storage-connectivity", "Pin, lưu trữ & Kết nối",
+                    "Các thông số liên quan đến pin, thẻ nhớ và cổng kết nối", 5);
+            TechSpecGroup grpBody = createTechSpecGroup("body-build", "Thân máy & Hoàn thiện",
+                    "Các thông số liên quan đến thân máy, trọng lượng và khả năng chống thời tiết", 6);
+
+            // Tạo definitions cho từng nhóm
+            seedSensorImageDefinitions(grpSensor);
+            seedLensFocusDefinitions(grpLens);
+            seedVideoDefinitions(grpVideo);
+            seedScreenViewfinderDefinitions(grpScreen);
+            seedBatteryStorageDefinitions(grpBattery);
+            seedBodyBuildDefinitions(grpBody);
+
+            System.out.println(">>> Đã seed 6 nhóm thông số kỹ thuật Canon (ENUM/TEXT/NUMBER) + items");
+        } catch (Exception e) {
+            System.err.println(">>> Lỗi seed TechSpecGroups: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private TechSpecGroup createTechSpecGroup(String code, String name, String description, int displayOrder) {
+        TechSpecGroup group = new TechSpecGroup();
+        group.setCode(code);
+        group.setName(name);
+        group.setDescription(description);
+        group.setDisplayOrder(displayOrder);
+        group.setStatus(EntityStatus.ACTIVE);
+        return techSpecGroupRepository.save(group);
+    }
+
+    private TechSpecDefinition createTechSpecDefinition(String code, String name, String description,
+            TechSpecGroup group, TechSpecDefinition.DataType dataType, String unit,
+            boolean isFilterable, boolean isRequired, int displayOrder) {
+        TechSpecDefinition def = new TechSpecDefinition();
+        def.setCode(code);
+        def.setName(name);
+        def.setDescription(description);
+        def.setTechSpecGroup(group);
+        def.setDataType(dataType);
+        def.setUnit(unit);
+        def.setIsFilterable(isFilterable);
+        def.setIsRequired(isRequired);
+        def.setDisplayOrder(displayOrder);
+        def.setStatus(EntityStatus.ACTIVE);
+        return techSpecDefinitionRepository.save(def);
+    }
+
+    // ---- SEED TECH SPEC DEFINITIONS (Canon — ENUM/TEXT/NUMBER) ----
+
+    private void seedSensorImageDefinitions(TechSpecGroup group) {
+        // ENUM (với items)
+        TechSpecDefinition sensorType = createTechSpecDefinition("sensor_type", "Loại cảm biến",
+                "Công nghệ cảm biến (CMOS, BSI-CMOS...)", group, TechSpecDefinition.DataType.ENUM, null, true, false, 1);
+        createEnumItems(sensorType, new String[]{
+                "Full-frame CMOS", "APS-C CMOS", "APS-C X-Trans CMOS",
+                "Micro Four Thirds", "1-inch CMOS", "Medium Format CMOS",
+                "BSI-CMOS", "Stacked CMOS", "Dual Pixel CMOS"
+        });
+
+        TechSpecDefinition imageProcessor = createTechSpecDefinition("image_processor", "Bộ xử lý ảnh",
+                "Tên chip xử lý hình ảnh (VD: DIGIC X)", group, TechSpecDefinition.DataType.ENUM, null, false, false, 2);
+        createEnumItems(imageProcessor, new String[]{
+                "DIGIC X", "DIGIC 8", "DIGIC 7", "DIGIC 6",
+                "DIGIC 5", "DIGIC 4", "DIGIC 3",
+                "EXPEED 7", "EXPEED 6", "EXPEED 5",
+                "BIONZ X", "BIONZ XR", "BIONZ Z",
+                "X-Processor 5", "X-Processor 4", "X-Processor 3"
+        });
+
+        // TEXT
+        createTechSpecDefinition("sensor_size", "Kích thước cảm biến",
+                "Kích thước vật lý cảm biến (VD: 36 x 24mm)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 3);
+        createTechSpecDefinition("iso_standard", "ISO chuẩn",
+                "Dải ISO tiêu chuẩn (VD: 100-51200)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 4);
+        createTechSpecDefinition("iso_extended", "ISO mở rộng",
+                "Dải ISO mở rộng (VD: 50-204800)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 5);
+        // NUMBER
+        createTechSpecDefinition("resolution_mp", "Độ phân giải",
+                "Số megapixel hiệu dụng", group, TechSpecDefinition.DataType.NUMBER, "MP", true, false, 6);
+        createTechSpecDefinition("bit_depth", "Độ sâu bit",
+                "Độ sâu bit màu (VD: 14-bit)", group, TechSpecDefinition.DataType.NUMBER, "bit", false, false, 7);
+    }
+
+    private void seedLensFocusDefinitions(TechSpecGroup group) {
+        // ENUM
+        TechSpecDefinition lensMount = createTechSpecDefinition("lens_mount", "Mount ống kính",
+                "Loại ngàm gắn ống kính", group, TechSpecDefinition.DataType.ENUM, null, true, false, 1);
+        createEnumItems(lensMount, new String[]{
+                "Canon RF", "Canon RF-S", "Canon EF", "Canon EF-S", "Canon EF-M",
+                "Nikon Z", "Nikon F", "Sony E", "Fujifilm X",
+                "Micro Four Thirds", "Leica M", "Leica L", "Fixed"
+        });
+
+        TechSpecDefinition afSystem = createTechSpecDefinition("af_system", "Hệ thống lấy nét",
+                "Loại hệ thống AF", group, TechSpecDefinition.DataType.ENUM, null, false, false, 2);
+        createEnumItems(afSystem, new String[]{
+                "Dual Pixel CMOS AF II", "Dual Pixel CMOS AF", "Hybrid CMOS AF",
+                "Phase Detection AF", "Contrast AF", "Eye Detection AF"
+        });
+
+        TechSpecDefinition articulatingScreen = createTechSpecDefinition("articulating_screen", "Màn hình xoay lật",
+                "Loại cơ chế xoay/lật màn hình", group, TechSpecDefinition.DataType.ENUM, null, false, false, 3);
+        createEnumItems(articulatingScreen, new String[]{
+                "Full Articulating (xoay 180°)", "Vari-angle (xoay lật đa hướng)",
+                "Tilt (nghiêng)", "Fixed (cố định)", "Touchscreen-only"
+        });
+
+        // TEXT
+        createTechSpecDefinition("eye_af", "Eye AF",
+                "Hỗ trợ Eye AF (VD: Có — AF người + động vật)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 4);
+        // NUMBER
+        createTechSpecDefinition("af_points", "Số điểm lấy nét",
+                "Tổng số điểm AF", group, TechSpecDefinition.DataType.NUMBER, "điểm", true, false, 5);
+        createTechSpecDefinition("burst_fps", "Tốc độ chụp liên tiếp",
+                "fps khi chụp liên tiếp (Mechanical / Electronic)", group, TechSpecDefinition.DataType.NUMBER, "fps", true, false, 6);
+    }
+
+    private void seedVideoDefinitions(TechSpecGroup group) {
+        // ENUM
+        TechSpecDefinition videoMaxRes = createTechSpecDefinition("video_max_resolution", "Độ phân giải video tối đa",
+                "Resolution cao nhất khi quay", group, TechSpecDefinition.DataType.ENUM, null, true, false, 1);
+        createEnumItems(videoMaxRes, new String[]{
+                "8K 30fps", "8K 24fps", "5.7K 60fps",
+                "4K 120fps", "4K 60fps", "4K 30fps",
+                "Full HD 120fps", "Full HD 60fps", "Full HD 30fps", "HD 60fps"
+        });
+
+        TechSpecDefinition logProfile = createTechSpecDefinition("log_profile", "Log profile",
+                "Profile log hỗ trợ", group, TechSpecDefinition.DataType.ENUM, null, false, false, 2);
+        createEnumItems(logProfile, new String[]{
+                "Canon Log 3", "Canon Log 2", "Canon Log",
+                "HDR PQ", "HLG",
+                "S-Log3 / S-Gamut3", "S-Log3 / S-Gamut3.Cine",
+                "F-Log2", "D-Log", "V-Log", "None"
+        });
+
+        TechSpecDefinition videoFormat = createTechSpecDefinition("video_format", "Định dạng video",
+                "Codec / container video", group, TechSpecDefinition.DataType.ENUM, null, false, false, 3);
+        createEnumItems(videoFormat, new String[]{
+                "H.265 / HEVC", "H.264 / AVC",
+                "ProRes 422 HQ", "ProRes 422", "ProRes RAW",
+                "RAW", "MP4", "MOV"
+        });
+
+        // TEXT
+        createTechSpecDefinition("slow_motion", "Slow motion",
+                "Quay chậm (VD: 4K 120fps, FHD 240fps)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 4);
+        createTechSpecDefinition("video_stabilization", "Chống rung video",
+                "Công nghệ ổn định hình ảnh khi quay", group, TechSpecDefinition.DataType.TEXT, null, false, false, 5);
+        // NUMBER
+        createTechSpecDefinition("video_max_fps", "FPS tối đa",
+                "Số khung hình/giây tối đa", group, TechSpecDefinition.DataType.NUMBER, "fps", true, false, 6);
+        createTechSpecDefinition("recording_limit", "Thời gian quay liên tục",
+                "Giới hạn quay liên tục (VD: 120 phút)", group, TechSpecDefinition.DataType.NUMBER, "phút", false, false, 7);
+    }
+
+    private void seedScreenViewfinderDefinitions(TechSpecGroup group) {
+        // NUMBER
+        createTechSpecDefinition("screen_size", "Kích thước màn hình",
+                "Kích thước LCD", group, TechSpecDefinition.DataType.NUMBER, "inch", false, false, 1);
+        createTechSpecDefinition("screen_dots", "Độ phân giải màn hình",
+                "Số điểm ảnh màn hình (VD: 1620000)", group, TechSpecDefinition.DataType.NUMBER, "điểm ảnh", false, false, 2);
+        createTechSpecDefinition("evf_resolution", "Độ phân giải EVF",
+                "Độ phân giải kính ngắm điện tử", group, TechSpecDefinition.DataType.NUMBER, "điểm ảnh", false, false, 3);
+        createTechSpecDefinition("evf_magnification", "Phóng đại EVF",
+                "Độ phóng đại kính ngắm điện tử", group, TechSpecDefinition.DataType.NUMBER, "x", false, false, 4);
+        // ENUM
+        TechSpecDefinition touchscreen = createTechSpecDefinition("touchscreen", "Màn hình cảm ứng",
+                "Loại cảm ứng", group, TechSpecDefinition.DataType.ENUM, null, false, false, 5);
+        createEnumItems(touchscreen, new String[]{
+                "Có — Cảm ứng đa điểm", "Có — Cảm ứng", "Không"
+        });
+
+        TechSpecDefinition viewfinderType = createTechSpecDefinition("viewfinder_type", "Loại viewfinder",
+                "Loại kính ngắm", group, TechSpecDefinition.DataType.ENUM, null, false, false, 6);
+        createEnumItems(viewfinderType, new String[]{
+                "EVF (điện tử)", "OVF (quang học)",
+                "Electronic Viewfinder (OLED)", "Electronic Viewfinder (LCD)", "Không có"
+        });
+    }
+
+    private void seedBatteryStorageDefinitions(TechSpecGroup group) {
+        // ENUM
+        TechSpecDefinition batteryType = createTechSpecDefinition("battery_type", "Loại pin",
+                "Model pin (VD: LP-E6NH)", group, TechSpecDefinition.DataType.ENUM, null, false, false, 1);
+        createEnumItems(batteryType, new String[]{
+                "LP-E6NH", "LP-E6N", "LP-E6",
+                "LP-E19", "LP-E12", "LP-E17",
+                "EN-EL15", "EN-EL14",
+                "NP-FZ100", "NP-W126S",
+                "DMW-BLK22", "DMW-BLC12"
+        });
+
+        TechSpecDefinition usbPort = createTechSpecDefinition("usb_port", "USB",
+                "Loại cổng USB", group, TechSpecDefinition.DataType.ENUM, null, false, false, 2);
+        createEnumItems(usbPort, new String[]{
+                "USB-C 3.2 Gen 2", "USB-C 3.1 Gen 2", "USB-C 3.1 Gen 1", "USB-C",
+                "USB Micro-B", "USB 3.0", "USB 2.0"
+        });
+
+        TechSpecDefinition hdmiPort = createTechSpecDefinition("hdmi_port", "HDMI",
+                "Loại cổng HDMI", group, TechSpecDefinition.DataType.ENUM, null, false, false, 3);
+        createEnumItems(hdmiPort, new String[]{
+                "HDMI Type A", "HDMI Type D (Micro)", "HDMI Type C (Mini)", "HDMI", "Không có"
+        });
+
+        TechSpecDefinition cardType = createTechSpecDefinition("card_type", "Loại thẻ nhớ",
+                "Các loại thẻ tương thích", group, TechSpecDefinition.DataType.ENUM, null, true, false, 4);
+        createEnumItems(cardType, new String[]{
+                "SD (UHS-II)", "SD (UHS-I)", "CFexpress Type B", "CFexpress Type A",
+                "CFast", "MicroSD", "XQD", "SD + CFexpress", "SD + CFast"
+        });
+
+        // TEXT
+        createTechSpecDefinition("bluetooth", "Bluetooth",
+                "Phiên bản Bluetooth (VD: 5.0, 5.3)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 5);
+        createTechSpecDefinition("wifi_standard", "Wi-Fi",
+                "Tiêu chuẩn Wi-Fi (VD: Wi-Fi 5, Wi-Fi 6E)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 6);
+        // NUMBER
+        createTechSpecDefinition("card_slots", "Số khe thẻ nhớ",
+                "Số lượng khe cắm thẻ", group, TechSpecDefinition.DataType.NUMBER, "khe", false, false, 7);
+    }
+
+    private void seedBodyBuildDefinitions(TechSpecGroup group) {
+        // NUMBER
+        createTechSpecDefinition("weight", "Trọng lượng",
+                "Trọng lượng thân máy", group, TechSpecDefinition.DataType.NUMBER, "g", false, false, 1);
+        // TEXT
+        createTechSpecDefinition("dimensions", "Kích thước",
+                "Kích thước tổng thể (D x R x S)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 2);
+        createTechSpecDefinition("weather_sealing", "Chống thời tiết",
+                "Mức độ chống bụi/ẩm (VD: Dust & Moisture Resistant)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 3);
+        createTechSpecDefinition("body_material", "Chất liệu thân máy",
+                "Vật liệu cấu tạo thân (VD: Magie alloy)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 4);
+        createTechSpecDefinition("grip_material", "Báng cầm",
+                "Chất liệu báng cầm (VD: Rubber)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 5);
+        createTechSpecDefinition("shutter_rating", "Tuổi thọ cửa trập",
+                "Số lần đóng mở cửa trập (VD: 200,000 lần)", group, TechSpecDefinition.DataType.TEXT, null, false, false, 6);
+    }
+
+    private TechSpecDefinitionItem createEnumItem(TechSpecDefinition definition, String name, int order) {
+        TechSpecDefinitionItem item = new TechSpecDefinitionItem();
+        item.setTechSpecDefinition(definition);
+        item.setName(name);
+        item.setValue(name);
+        item.setDisplayOrder(order);
+        item.setStatus(EntityStatus.ACTIVE);
+        return itemRepository.save(item);
+    }
+
+    // ============================================================
+    // SEED: TechSpec Values cho từng sản phẩm
+    // ============================================================
+
+    private void seedProductTechSpecs() {
+        try {
+            List<Product> products = productRepository.findAll();
+            if (products.isEmpty()) {
+                System.out.println(">>> Không có sản phẩm để seed techspec values");
+                return;
+            }
+
+            // Xóa dữ liệu cũ
+            techSpecValueRepository.deleteAll();
+
+            // Lấy map definition theo code
+            Map<String, TechSpecDefinition> defMap = getDefinitionMap();
+
+            int totalValues = 0;
+            for (Product product : products) {
+                int count = seedProductTechSpecValues(product, defMap);
+                totalValues += count;
+            }
+
+            System.out.println(">>> Đã seed " + totalValues + " thông số kỹ thuật cho " + products.size() + " sản phẩm");
+        } catch (Exception e) {
+            System.err.println(">>> Lỗi seed TechSpec Values: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private Map<String, TechSpecDefinition> getDefinitionMap() {
+        Map<String, TechSpecDefinition> map = new java.util.HashMap<>();
+        List<TechSpecDefinition> defs = techSpecDefinitionRepository.findAll();
+        for (TechSpecDefinition def : defs) {
+            map.put(def.getCode(), def);
+        }
+        return map;
+    }
+
+    private int seedProductTechSpecValues(Product product, Map<String, TechSpecDefinition> defMap) {
+        String name = product.getName().toLowerCase();
+        List<TechSpecValue> values = new ArrayList<>();
+
+        if (name.contains("eos r5")) {
+            values.addAll(seedEOSR5(defMap));
+        } else if (name.contains("eos r6")) {
+            values.addAll(seedEOSR6(defMap));
+        } else if (name.contains("eos r8")) {
+            values.addAll(seedEOSR8(defMap));
+        } else if (name.contains("eos r10")) {
+            values.addAll(seedEOSR10(defMap));
+        } else if (name.contains("eos 90d")) {
+            values.addAll(seedEOS90D(defMap));
+        } else if (name.contains("eos m50")) {
+            values.addAll(seedEOSM50(defMap));
+        } else if (name.contains("powershot g7") || name.contains("g7 x")) {
+            values.addAll(seedG7X(defMap));
+        }
+
+        // Lưu tất cả values
+        for (TechSpecValue v : values) {
+            v.setProduct(product);
+            techSpecValueRepository.save(v);
+        }
+        return values.size();
+    }
+
+    // ---- Canon EOS R5 ----
+    private List<TechSpecValue> seedEOSR5(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        // Nhóm Cảm biến
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "Full-frame CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC X"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "36 x 24mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-51200"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "50-204800"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 45.0, "45MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        // Nhóm Ống kính & Lấy nét
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon RF"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Dual Pixel CMOS AF II"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người + động vật + xe"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 5940.0, "5940 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 20.0, "20 fps"));
+
+        // Nhóm Video
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "8K 30fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "Canon Log 3"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "RAW"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "4K 120fps, Full HD 240fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120 phút"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "IBIS 5 trục + Lens IS (8-stop)"));
+
+        // Nhóm Màn hình & Kính ngắm
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.2, "3.2 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 2100000.0, "2.100.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 5760000.0, "5.760.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.76, "0.76x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Electronic Viewfinder (OLED)"));
+
+        // Nhóm Pin & Kết nối
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E6NH"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "5.0"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB-C 3.1 Gen 2"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type A"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "CFexpress Type B"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 2.0, "2 khe"));
+
+        // Nhóm Thân máy
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 738.0, "738g"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "138.5 x 97.5 x 88mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Dust & Moisture Resistant"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Magnesium Alloy"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "500,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon EOS R6 Mark II ----
+    private List<TechSpecValue> seedEOSR6(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "Full-frame CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC X"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "36 x 24mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-102400"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "50-204800"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 24.2, "24.2MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon RF"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Dual Pixel CMOS AF II"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người + động vật + xe"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 1053.0, "1053 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 40.0, "40 fps (Electronic)"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 60fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 180.0, "180fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "Canon Log 3"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.265 / HEVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "4K 60fps, Full HD 180fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 60.0, "60 phút (4K 60fps)"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "IBIS 5 trục + Lens IS (8-stop)"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.0, "3.0 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1620000.0, "1.620.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 3690000.0, "3.690.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.76, "0.76x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Electronic Viewfinder (OLED)"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E6NH"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "5.0"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB-C 3.1 Gen 2"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type A"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-II)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 2.0, "2 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 670.0, "670g"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "138.4 x 98.4 x 88.4mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Dust & Moisture Resistant"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Magnesium Alloy"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "300,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon EOS R8 ----
+    private List<TechSpecValue> seedEOSR8(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "Full-frame CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC X"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "36 x 24mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-102400"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "50-204800"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 24.2, "24.2MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon RF"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Dual Pixel CMOS AF II"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người + động vật"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 1053.0, "1053 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 40.0, "40 fps (Electronic)"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 60fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "Canon Log 3"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.265 / HEVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "Full HD 120fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 30.0, "30 phút (4K 60fps)"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "Digital IS (không IBIS)"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.0, "3.0 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1620000.0, "1.620.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 2360000.0, "2.360.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.70, "0.70x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Electronic Viewfinder (OLED)"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E17"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "5.0"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB-C 3.1 Gen 1"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type D (Micro)"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-II)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 1.0, "1 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 461.0, "461g (thân máy)"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "132.5 x 86.1 x 70mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Dust & Moisture Resistant"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Polycarbonate (GFRP)"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "100,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon EOS R10 ----
+    private List<TechSpecValue> seedEOSR10(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "APS-C CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC X"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "22.3 x 14.9mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-32000"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "100-51200"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 24.2, "24.2MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon RF-S"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Dual Pixel CMOS AF II"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người + động vật"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 651.0, "651 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 15.0, "15 fps (Mechanical)"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 60fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "HDR PQ"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.264 / AVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "Full HD 120fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 60.0, "60 phút"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "Digital IS"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 2.95, "2.95 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1040000.0, "1.040.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 2360000.0, "2.360.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.95, "0.95x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Electronic Viewfinder (OLED)"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E17"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "4.2"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB-C 3.1 Gen 1"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type D (Micro)"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-I)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 1.0, "1 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 429.0, "429g (thân máy)"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "122.5 x 87.8 x 83.4mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Không"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Polycarbonate"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "100,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon EOS 90D ----
+    private List<TechSpecValue> seedEOS90D(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "APS-C CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC 8"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "22.3 x 14.9mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-25600"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "100-51200"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 32.5, "32.5MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon EF-S"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Phase Detection AF"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Vari-angle (xoay lật đa hướng)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Không"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 45.0, "45 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 10.0, "10 fps"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 30fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "None"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.264 / AVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "Full HD 120fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 30.0, "30 phút (4K)"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "Digital IS"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.0, "3.0 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1040000.0, "1.040.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 2360000.0, "2.360.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.95, "0.95x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "OVF (quang học)"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E6N"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "4.1"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi (802.11b/g/n)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB 2.0"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type C (Mini)"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-I)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 1.0, "1 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 701.0, "701g (thân máy)"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "140.7 x 104.8 x 76.8mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Dust & Moisture Resistant"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Aluminum Alloy / Polycarbonate"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "100,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon EOS M50 Mark II ----
+    private List<TechSpecValue> seedEOSM50(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "APS-C CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC 8"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "22.3 x 14.9mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "100-25600"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "100-51200"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 24.1, "24.1MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Canon EF-M"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Dual Pixel CMOS AF"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 143.0, "143 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 10.0, "10 fps"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 24fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "HDR PQ"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.264 / AVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "Full HD 120fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 30.0, "30 phút (4K)"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "Digital IS"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.0, "3.0 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1040000.0, "1.040.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createNumberValue(d, 2360000.0, "2.360.000 điểm ảnh"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createNumberValue(d, 0.95, "0.95x"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Electronic Viewfinder (OLED)"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "LP-E12"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "4.2"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB Micro-B"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type D (Micro)"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-I)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 1.0, "1 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 387.0, "387g (thân máy)"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "116.3 x 88.1 x 58.7mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Không"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Polycarbonate"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "50,000 lần"));
+
+        return list;
+    }
+
+    // ---- Canon PowerShot G7 X Mark III ----
+    private List<TechSpecValue> seedG7X(Map<String, TechSpecDefinition> defMap) {
+        List<TechSpecValue> list = new ArrayList<>();
+        TechSpecDefinition d;
+
+        d = defMap.get("sensor_type");
+        if (d != null) list.add(createEnumValue(d, "1-inch CMOS"));
+        d = defMap.get("image_processor");
+        if (d != null) list.add(createEnumValue(d, "DIGIC 8"));
+        d = defMap.get("sensor_size");
+        if (d != null) list.add(createTextValue(d, "13.2 x 8.8mm"));
+        d = defMap.get("iso_standard");
+        if (d != null) list.add(createTextValue(d, "125-12800"));
+        d = defMap.get("iso_extended");
+        if (d != null) list.add(createTextValue(d, "125-25600"));
+        d = defMap.get("resolution_mp");
+        if (d != null) list.add(createNumberValue(d, 20.1, "20.1MP"));
+        d = defMap.get("bit_depth");
+        if (d != null) list.add(createNumberValue(d, 14.0, "14-bit"));
+
+        d = defMap.get("lens_mount");
+        if (d != null) list.add(createEnumValue(d, "Fixed"));
+        d = defMap.get("af_system");
+        if (d != null) list.add(createEnumValue(d, "Contrast AF"));
+        d = defMap.get("articulating_screen");
+        if (d != null) list.add(createEnumValue(d, "Full Articulating (xoay 180°)"));
+        d = defMap.get("eye_af");
+        if (d != null) list.add(createTextValue(d, "Có — AF người"));
+        d = defMap.get("af_points");
+        if (d != null) list.add(createNumberValue(d, 31.0, "31 điểm"));
+        d = defMap.get("burst_fps");
+        if (d != null) list.add(createNumberValue(d, 20.0, "20 fps"));
+
+        d = defMap.get("video_max_resolution");
+        if (d != null) list.add(createEnumValue(d, "4K 30fps"));
+        d = defMap.get("video_max_fps");
+        if (d != null) list.add(createNumberValue(d, 120.0, "120fps"));
+        d = defMap.get("log_profile");
+        if (d != null) list.add(createEnumValue(d, "None"));
+        d = defMap.get("video_format");
+        if (d != null) list.add(createEnumValue(d, "H.265 / HEVC"));
+        d = defMap.get("slow_motion");
+        if (d != null) list.add(createTextValue(d, "Full HD 120fps"));
+        d = defMap.get("recording_limit");
+        if (d != null) list.add(createNumberValue(d, 10.0, "10 phút (4K 30fps)"));
+        d = defMap.get("video_stabilization");
+        if (d != null) list.add(createTextValue(d, "IS 5 trục"));
+
+        d = defMap.get("screen_size");
+        if (d != null) list.add(createNumberValue(d, 3.0, "3.0 inch"));
+        d = defMap.get("screen_dots");
+        if (d != null) list.add(createNumberValue(d, 1040000.0, "1.040.000 điểm ảnh"));
+        d = defMap.get("evf_resolution");
+        if (d != null) list.add(createTextValue(d, "Không có"));
+        d = defMap.get("evf_magnification");
+        if (d != null) list.add(createTextValue(d, "Không có"));
+        d = defMap.get("touchscreen");
+        if (d != null) list.add(createEnumValue(d, "Có — Cảm ứng đa điểm"));
+        d = defMap.get("viewfinder_type");
+        if (d != null) list.add(createEnumValue(d, "Không có"));
+
+        d = defMap.get("battery_type");
+        if (d != null) list.add(createEnumValue(d, "NB-13L"));
+        d = defMap.get("bluetooth");
+        if (d != null) list.add(createTextValue(d, "4.2"));
+        d = defMap.get("wifi_standard");
+        if (d != null) list.add(createTextValue(d, "Wi-Fi 5 (802.11ac)"));
+        d = defMap.get("usb_port");
+        if (d != null) list.add(createEnumValue(d, "USB-C 3.1 Gen 1"));
+        d = defMap.get("hdmi_port");
+        if (d != null) list.add(createEnumValue(d, "HDMI Type D (Micro)"));
+        d = defMap.get("card_type");
+        if (d != null) list.add(createEnumValue(d, "SD (UHS-I)"));
+        d = defMap.get("card_slots");
+        if (d != null) list.add(createNumberValue(d, 1.0, "1 khe"));
+
+        d = defMap.get("weight");
+        if (d != null) list.add(createNumberValue(d, 304.0, "304g"));
+        d = defMap.get("dimensions");
+        if (d != null) list.add(createTextValue(d, "105.5 x 60.9 x 41.4mm"));
+        d = defMap.get("weather_sealing");
+        if (d != null) list.add(createTextValue(d, "Không"));
+        d = defMap.get("body_material");
+        if (d != null) list.add(createTextValue(d, "Aluminum Alloy"));
+        d = defMap.get("grip_material");
+        if (d != null) list.add(createTextValue(d, "Rubber"));
+        d = defMap.get("shutter_rating");
+        if (d != null) list.add(createTextValue(d, "Không có thông số"));
+
+        return list;
+    }
+
+    // ---- Helper tạo TechSpecValue ----
+    private TechSpecValue createEnumValue(TechSpecDefinition def, String displayValue) {
+        TechSpecValue v = new TechSpecValue();
+        v.setTechSpecDefinition(def);
+        v.setDisplayValue(displayValue);
+        v.setStatus(EntityStatus.ACTIVE);
+        return v;
+    }
+
+    private TechSpecValue createTextValue(TechSpecDefinition def, String text) {
+        TechSpecValue v = new TechSpecValue();
+        v.setTechSpecDefinition(def);
+        v.setValueText(text);
+        v.setDisplayValue(text);
+        v.setStatus(EntityStatus.ACTIVE);
+        return v;
+    }
+
+    private TechSpecValue createNumberValue(TechSpecDefinition def, Double number, String display) {
+        TechSpecValue v = new TechSpecValue();
+        v.setTechSpecDefinition(def);
+        v.setValueNumber(number);
+        v.setDisplayValue(display);
+        v.setStatus(EntityStatus.ACTIVE);
+        return v;
+    }
+
+    private void createEnumItems(TechSpecDefinition definition, String[] names) {
+        for (int i = 0; i < names.length; i++) {
+            createEnumItem(definition, names[i], i + 1);
+        }
     }
 
     private <T> T createTechSpecLookup(String name, JpaRepository<T, String> repository) {

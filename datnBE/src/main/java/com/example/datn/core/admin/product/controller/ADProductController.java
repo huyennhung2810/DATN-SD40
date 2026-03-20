@@ -7,6 +7,7 @@ import com.example.datn.core.admin.product.model.response.ADProductResponse;
 import com.example.datn.core.admin.product.model.response.ADProductVariantResponse;
 import com.example.datn.core.admin.product.model.response.ADProductWithVariantsResponse;
 import com.example.datn.core.admin.product.service.ADProductService;
+import com.example.datn.core.admin.techspec.service.ProductTechSpecService;
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
 import com.example.datn.core.common.base.PageableObject;
 import com.example.datn.core.common.base.ResponseObject;
@@ -16,12 +17,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping(MappingConstants.ADMIN_PRODUCT)
 @RequiredArgsConstructor
 public class ADProductController {
     
     private final ADProductService service;
+    private final ProductTechSpecService productTechSpecService;
     
     @GetMapping
     public ResponseObject<PageableObject<ADProductResponse>> search(
@@ -52,6 +57,31 @@ public class ADProductController {
             .status(HttpStatus.OK)
             .data(service.getProductWithVariants(id))
             .message("Lấy thông tin sản phẩm và danh sách biến thể thành công")
+            .build();
+    }
+
+    /** Lưu toàn bộ thông số kỹ thuật động (bảng tech_spec_value). Body: { "spec_sensor_type": "...", ... } */
+    @PutMapping("/{id}/tech-spec-values")
+    public ResponseObject<Void> saveTechSpecValues(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> raw) {
+        Map<String, String> values = new HashMap<>();
+        if (raw != null) {
+            for (Map.Entry<String, Object> e : raw.entrySet()) {
+                if (e.getValue() == null) {
+                    continue;
+                }
+                String s = String.valueOf(e.getValue()).trim();
+                if (!s.isEmpty()) {
+                    values.put(e.getKey(), s);
+                }
+            }
+        }
+        productTechSpecService.saveProductSpecValues(id, values);
+        return ResponseObject.<Void>builder()
+            .isSuccess(true)
+            .status(HttpStatus.OK)
+            .message("Đã lưu thông số kỹ thuật động")
             .build();
     }
     

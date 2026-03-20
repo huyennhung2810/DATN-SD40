@@ -20,6 +20,8 @@ import resolutionReducer from "./techSpec/resolutionSlice";
 import processorReducer from "./techSpec/processorSlice";
 import imageFormatReducer from "./techSpec/imageFormatSlice";
 import videoFormatReducer from "./techSpec/videoFormatSlice";
+import techSpecGroupReducer from "./techSpec/techSpecGroupSlice";
+import techSpecDefinitionReducer from "./techSpec/techSpecDefinitionSlice";
 import voucherReducer from "./Voucher/voucherSlice";
 import shiftHandoverReducer from "./shiftHandover/shiftHandoverSlice";
 import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
@@ -52,6 +54,8 @@ export const store = configureStore({
     processor: processorReducer,
     imageFormat: imageFormatReducer,
     videoFormat: videoFormatReducer,
+    techSpecGroup: techSpecGroupReducer,
+    techSpecDefinition: techSpecDefinitionReducer,
     chat: chatReducer,
     cart: cartReducer,
   },
