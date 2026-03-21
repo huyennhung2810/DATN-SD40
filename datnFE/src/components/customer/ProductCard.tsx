@@ -73,9 +73,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
                 MỚI
               </Tag>
             )}
-            {product.price && product.price < 10000000 && (
-              <Tag color="orange" className="badge-hot">
-                GIÁ TỐT
+            {product.hasActiveSaleCampaign && (
+              <Tag color="red" className="badge-sale">
+                GIẢM GIÁ
               </Tag>
             )}
           </div>
@@ -131,9 +131,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
         {/* Price Section */}
         <div className="price-section mt-auto">
           <div className="sale-price">
-            <Text strong className="price-value">
-              {formatPrice(product.price)}
-            </Text>
+            {product.originalPrice && product.originalPrice !== product.price ? (
+              <>
+                <Text strong className="price-value">
+                  {formatPrice(product.price)}
+                </Text>
+                <Text delete type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>
+                  {formatPrice(product.originalPrice)}
+                </Text>
+              </>
+            ) : (
+              <Text strong className="price-value">
+                {formatPrice(product.price)}
+              </Text>
+            )}
           </div>
         </div>
 
@@ -200,7 +211,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
           z-index: 2;
         }
 
-        .badge-new, .badge-hot {
+        .badge-new, .badge-sale {
           font-size: 10px;
           font-weight: 600;
           padding: 2px 8px;

@@ -89,13 +89,12 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setBrandName((String) row[6]);
                     response.setIdTechSpec((String) row[7]);
                     response.setTechSpecName((String) row[8]);
-                    response.setPrice(row[9] != null ? (java.math.BigDecimal) row[9] : null);
-                    response.setStatus((EntityStatus) row[10]);
-                    response.setCreatedDate((Long) row[11]);
-                    response.setLastModifiedDate((Long) row[12]);
+                    response.setStatus((EntityStatus) row[9]);
+                    response.setCreatedDate((Long) row[10]);
+                    response.setLastModifiedDate((Long) row[11]);
                     
                     // Lấy thông số kỹ thuật
-                    String techSpecId = (String) row[5];
+                    String techSpecId = (String) row[7];
                     if (techSpecId != null && !techSpecId.isEmpty()) {
                         TechSpec techSpec = techSpecRepository.findById(techSpecId).orElse(null);
                         if (techSpec != null) {
@@ -157,7 +156,7 @@ public class ADProductServiceImpl implements ADProductService {
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
+        //product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setBrand(brand);
         product.setTechSpec(techSpec);
@@ -211,7 +210,7 @@ public class ADProductServiceImpl implements ADProductService {
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
+      //  product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setBrand(brand);
         product.setTechSpec(techSpec);
@@ -259,7 +258,7 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setId(product.getId());
                     response.setName(product.getName());
                     response.setDescription(product.getDescription());
-                    response.setPrice(product.getPrice());
+                   // response.setPrice(product.getPrice());
                     response.setStatus(product.getStatus());
                     response.setCreatedDate(product.getCreatedDate());
                     response.setLastModifiedDate(product.getLastModifiedDate());
@@ -324,7 +323,7 @@ public class ADProductServiceImpl implements ADProductService {
                 .id(product.getId())
                 .name(product.getName())
                 .description(product.getDescription())
-                .price(product.getPrice())
+                //.price(product.getPrice())
                 .status(product.getStatus())
                 .createdDate(product.getCreatedDate())
                 .lastModifiedDate(product.getLastModifiedDate())

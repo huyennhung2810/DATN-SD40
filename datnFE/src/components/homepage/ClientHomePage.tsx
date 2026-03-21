@@ -14,19 +14,25 @@ import {
 import { customerProductApi } from "../../api/customerProductApi";
 import type { ProductResponse } from "../../models/product";
 
-// Transform API product to display format
+/**
+ * Map API → card props. Không được tự bịa giá gạch (vd. price * 1.1) — chỉ dùng
+ * originalPrice / hasActiveSaleCampaign từ backend (giá gốc biến thể rẻ nhất & đợt giảm thật).
+ */
 const transformProduct = (product: ProductResponse) => ({
   id: product.id,
   name: product.name,
   price: product.price || 0,
-  originalPrice: product.price ? Math.floor(product.price * 1.1) : undefined,
+  originalPrice:
+    product.hasActiveSaleCampaign && product.originalPrice != null
+      ? product.originalPrice
+      : undefined,
   imageUrls: product.imageUrls || [],
   categoryName: product.productCategoryName || "",
   brandName: product.brandName || "",
   rating: 4.5 + Math.random() * 0.5, // Random rating 4.5-5.0
   reviewCount: Math.floor(Math.random() * 200) + 10,
   isNew: product.createdDate && Date.now() - product.createdDate < 30 * 24 * 60 * 60 * 1000,
-  isSale: product.price ? product.price < 50000000 : false,
+  isSale: !!product.hasActiveSaleCampaign,
   inStock: true,
 });
 
@@ -52,13 +58,12 @@ const ClientHomePage: React.FC = () => {
 
         setAllProducts(allProductsData);
         setNewProducts(newProductsData.slice(0, 6).map(transformProduct));
-        
-        // Mark products under 50M as sale
+
+        // Chỉ hiển thị mục "Khuyến mãi hot" khi backend xác nhận có đợt giảm giá active
         const saleProds = allProductsData
-          .filter(p => p.price && p.price < 50000000)
+          .filter((p) => p.hasActiveSaleCampaign)
           .slice(0, 6)
           .map(transformProduct);
-        saleProds.forEach(p => p.isSale = true);
         setSaleProducts(saleProds);
 
         // Use first 4 products as bestsellers (in real app would use actual sales data)
@@ -124,7 +129,11 @@ const ClientHomePage: React.FC = () => {
         <ProductSection
           title="Khuyến mãi hot"
           subtitle="Giảm giá sốc - Limited time"
-          products={saleProducts.length > 0 ? saleProducts : allProducts.filter(p => p.price && p.price < 50000000).slice(0, 6).map(transformProduct)}
+          products={
+            saleProducts.length > 0
+              ? saleProducts
+              : allProducts.filter((p) => p.hasActiveSaleCampaign).slice(0, 6).map(transformProduct)
+          }
           viewAllLink="/client/catalog?maxPrice=50000000"
           backgroundColor="#f8f9fa"
         />

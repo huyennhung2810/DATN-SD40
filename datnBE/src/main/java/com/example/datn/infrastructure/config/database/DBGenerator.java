@@ -489,7 +489,7 @@ public class DBGenerator implements CommandLineRunner {
         Product product = new Product();
         product.setName(name);
         product.setDescription(description);
-        product.setPrice(price);
+       // product.setPrice(price);
         product.setProductCategory(category);
         product.setBrand(brand);
         product.setTechSpec(techSpec);

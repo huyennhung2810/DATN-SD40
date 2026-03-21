@@ -168,6 +168,21 @@ const ProductCard: React.FC<{ product: ProductResponse; onViewVariants: (product
               <Text type="secondary">Chưa có hình ảnh</Text>
             </div>
           )}
+          {product.hasActiveSaleCampaign && (
+            <Tag
+              color="red"
+              style={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                fontWeight: 600,
+                fontSize: 11,
+                zIndex: 2,
+              }}
+            >
+              GIẢM GIÁ
+            </Tag>
+          )}
         </div>
       }
     >
@@ -185,12 +200,22 @@ const ProductCard: React.FC<{ product: ProductResponse; onViewVariants: (product
               </Text>
             )}
             {product.price && (
-              <Text strong style={{ fontSize: 16, color: "#ff4d4f", display: "block", marginTop: 8 }}>
-                {new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(product.price)}
-              </Text>
+              <>
+                <Text strong style={{ fontSize: 16, color: "#ff4d4f", display: "block", marginTop: 8 }}>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(product.price)}
+                </Text>
+                {product.hasActiveSaleCampaign && product.originalPrice && (
+                  <Text delete type="secondary" style={{ fontSize: 13 }}>
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(product.originalPrice)}
+                  </Text>
+                )}
+              </>
             )}
           </div>
         }
@@ -286,7 +311,7 @@ const ClientHomePage: React.FC = () => {
   const fetchProducts = useCallback(async () => {
     setProductLoading(true);
     try {
-      const result = await productApi.search(filter);
+      const result = await customerProductApi.getProducts(filter);
       setProducts(result.data);
       setTotalProducts(result.totalElements);
     } catch (error) {

@@ -80,7 +80,8 @@ const ProductDetail: React.FC = () => {
   }
 
   const activeVariant = product.variants?.find((v: any) => v.id === selectedVariantId);
-  const displayPrice = activeVariant ? activeVariant.price : product.price;
+  const displayPrice = activeVariant ? (activeVariant.displayPrice ?? activeVariant.salePrice) : (product.displayPrice ?? product.price);
+  const displayOriginalPrice = activeVariant ? (activeVariant.originalPrice ?? activeVariant.salePrice) : product.originalPrice;
   const maxStock = activeVariant ? activeVariant.stock : 1;
 
   return (
@@ -121,7 +122,16 @@ const ProductDetail: React.FC = () => {
                 <Title level={2} className="product-title">{product.name}</Title>
                 
                 <div className="price-box">
-                  <span className="current-price">{formatPrice(displayPrice)}</span>
+                  {displayOriginalPrice && displayOriginalPrice !== displayPrice ? (
+                    <>
+                      <span className="current-price">{formatPrice(displayPrice)}</span>
+                      <span className="original-price" style={{ textDecoration: 'line-through', marginLeft: 12, color: '#999' }}>
+                        {formatPrice(displayOriginalPrice)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="current-price">{formatPrice(displayPrice)}</span>
+                  )}
                 </div>
 
                 <Divider />
@@ -143,6 +153,18 @@ const ProductDetail: React.FC = () => {
                           <div className="variant-stock">
                             {isOutOfStock ? 'Hết hàng' : `Còn ${variant.stock} sp`}
                           </div>
+                          {variant.hasActiveSaleCampaign ? (
+                            <div className="variant-price">
+                              <span style={{ color: '#ff4d4f', fontWeight: 600 }}>{formatPrice(variant.displayPrice ?? variant.salePrice)}</span>
+                              <span style={{ textDecoration: 'line-through', marginLeft: 6, fontSize: 12, color: '#999' }}>
+                                {formatPrice(variant.originalPrice ?? variant.salePrice)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="variant-price" style={{ fontWeight: 600 }}>
+                              {formatPrice(variant.displayPrice ?? variant.salePrice)}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

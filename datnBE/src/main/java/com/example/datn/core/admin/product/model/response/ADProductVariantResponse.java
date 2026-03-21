@@ -40,7 +40,16 @@ public class ADProductVariantResponse {
     private String storageCapacityName;
     
     private BigDecimal salePrice;
-    
+
+    /** Giá sau khi áp dụng đợt giảm giá. Null nếu không có đợt giảm giá active. */
+    private BigDecimal discountedPrice;
+
+    /** Giá hiển thị trên UI = discountedPrice (nếu có) hoặc salePrice. */
+    private BigDecimal displayPrice;
+
+    /** True nếu variant này đang trong đợt giảm giá hợp lệ. */
+    private Boolean hasActiveSaleCampaign;
+
     private Integer quantity;
     
     private EntityStatus status;

@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.discountDetail.repository;
 
-import com.example.datn.repository.DiscountDetailRepository;
 import com.example.datn.entity.DiscountDetail;
 import com.example.datn.repository.DiscountDetailRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -38,14 +37,33 @@ public interface ADDiscountDetailRepository extends DiscountDetailRepository {
             @Param("endDate") Long endDate
     );
     @Query("""
-    SELECT dd FROM DiscountDetail dd 
-    WHERE dd.productDetail.id = :productDetailId 
-    AND dd.discount.status = 2 
-    AND dd.discount.startDate <= :now 
+    SELECT dd FROM DiscountDetail dd
+    WHERE dd.productDetail.id = :productDetailId
+    AND dd.discount.status = 2
+    AND dd.discount.startDate <= :now
     AND dd.discount.endDate >= :now
 """)
     java.util.Optional<com.example.datn.entity.DiscountDetail> findActiveByProductDetailId(
             @Param("productDetailId") String productDetailId,
+            @Param("now") Long now
+    );
+
+    /**
+     * Đợt giảm giá đang active cho từng {@code productDetailId}.
+     * Mỗi dòng: {@code [productDetailId, discountPercent, priceAfter, priceBefore]}.
+     * <p>
+     * Client tính giá đỏ từ {@code discountPercent} × giá niêm yết <i>hiện tại</i>; các cột snapshot
+     * chỉ dùng khi không có % hoặc để đối chiếu (xem {@link com.example.datn.core.client.product.service.ProductPricingRules}).
+     */
+    @Query("""
+    SELECT dd.productDetail.id, dd.discount.discountPercent, dd.priceAfter, dd.priceBefore FROM DiscountDetail dd
+    WHERE dd.productDetail.id IN :productDetailIds
+    AND dd.discount.status = 2
+    AND dd.discount.startDate <= :now
+    AND dd.discount.endDate >= :now
+    """)
+    List<Object[]> findActiveDiscountsByProductDetailIds(
+            @Param("productDetailIds") List<String> productDetailIds,
             @Param("now") Long now
     );
 }

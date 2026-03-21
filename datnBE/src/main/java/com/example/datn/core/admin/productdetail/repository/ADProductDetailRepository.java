@@ -59,4 +59,8 @@ public interface ADProductDetailRepository extends ProductDetailRepository {
     // Kiểm tra xem ảnh có đang được sử dụng bởi biến thể nào không
     @Query("SELECT COUNT(pd) > 0 FROM ProductDetail pd WHERE pd.selectedImageId = :imageId")
     boolean existsBySelectedImageId(@Param("imageId") String imageId);
+
+    // Lấy tất cả product details theo danh sách productIds (dùng cho client product search)
+    @Query("SELECT pd FROM ProductDetail pd WHERE pd.product.id IN :productIds")
+    List<ProductDetail> findByProductIds(@Param("productIds") List<String> productIds);
 }

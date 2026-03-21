@@ -55,7 +55,9 @@ public class GeminiService {
         if (products.isEmpty()) return "Hiện tại không tìm thấy sản phẩm cụ thể khách yêu cầu.";
         return products.stream()
                 .map(p -> String.format("- %s: Giá %s. Tình trạng: %s",
-                        p.getName(), p.getPrice(), p.getDescription()))
+                        p.getName(),
+                       // p.getPrice(),
+                        p.getDescription()))
                 .collect(Collectors.joining("\n"));
     }
 

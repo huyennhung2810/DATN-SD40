@@ -27,6 +27,14 @@ export interface ProductVariantResponse {
   storageCapacityId?: string;
   storageCapacityName: string;
   salePrice: number;
+  /** Giá gốc = salePrice. Dùng để hiển thị giá cũ gạch ngang khi có giảm giá. */
+  originalPrice?: number;
+  /** Giá sau khi áp dụng giảm giá (nếu có đang hoạt động). Null nếu không giảm. */
+  discountedPrice?: number;
+  /** Giá hiển thị trên UI = discountedPrice (nếu có) hoặc salePrice. */
+  displayPrice?: number;
+  /** True nếu variant này đang trong đợt giảm giá hợp lệ. */
+  hasActiveSaleCampaign?: boolean;
   quantity: number;
   status: CommonStatus;
   imageUrls?: string[];
