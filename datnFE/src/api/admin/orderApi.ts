@@ -13,10 +13,11 @@ export const orderApi = {
     },
 
     //chi tiét
-    getOrderDetails: (maHoaDon: string, params?: { page?: number, size?: number }): Promise<ResponseObject<OrderDetailPageResponse>> => {
-        return axiosClient.get(`${PREFIX}/all`, { 
-            params: { maHoaDon, ...params } 
+    getOrderDetails: async (maHoaDon: string, params?: { page?: number, size?: number }): Promise<ResponseObject<OrderDetailPageResponse>> => {
+        const res = await axiosClient.get(`${PREFIX}/all`, { 
+            params: { maHoaDon, page: 0, size: 100, ...params } 
         });
+        return res.data;
     },
 
     //cập nhật trạng thái

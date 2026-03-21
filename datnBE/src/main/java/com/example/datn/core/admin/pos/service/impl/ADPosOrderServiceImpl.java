@@ -20,6 +20,8 @@ import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.DiscountDetail;
 import com.example.datn.entity.Employee;
 import com.example.datn.entity.Warranty;
+import com.example.datn.entity.OrderHistory;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import java.util.Date;
 import org.springframework.security.core.Authentication;
@@ -48,6 +50,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final ADDiscountDetailRepository adDiscountDetailRepository;
     private final ADVouchersRepository adVouchersRepository;
     private final EmployeeRepository employeeRepository;
+    private final OrderHistoryRepository orderHistoryRepository;
 
     @Override
     @Transactional
@@ -361,17 +364,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             newTotal = BigDecimal.ZERO;
         order.setTotalAmount(newTotal);
 
-        // Apply Automatic Discount
-        BigDecimal discount = BigDecimal.ZERO;
-        if (newTotal.compareTo(new BigDecimal("50000000")) >= 0) {
-            discount = new BigDecimal("1500000"); // 1.5M
-        } else if (newTotal.compareTo(new BigDecimal("20000000")) >= 0) {
-            discount = new BigDecimal("500000"); // 500k
-        }
-        BigDecimal afterDiscount = newTotal.subtract(discount);
-        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0)
-            afterDiscount = BigDecimal.ZERO;
-        order.setTotalAfterDiscount(afterDiscount);
+        // Recalculate totalAfterDiscount respecting any applied voucher
+        order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
 
         posOrderRepository.save(order);
 
@@ -462,6 +456,17 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         }
 
         posOrderRepository.save(order);
+
+        // Record checkout history
+        OrderHistory lichSu = new OrderHistory();
+        lichSu.setOrder(order);
+        lichSu.setHoaDon(order);
+        lichSu.setTrangThai(OrderStatus.HOAN_THANH);
+        lichSu.setThoiGian(LocalDateTime.now());
+        lichSu.setNote("Thanh toán tại quầy");
+        lichSu.setNhanVien(getCurrentEmployee());
+        orderHistoryRepository.save(lichSu);
+
         return ResponseObject.success(order, "Thanh toán thành công");
     }
 

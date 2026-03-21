@@ -37,6 +37,7 @@ public class OrderDetail extends PrimaryEntity implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "id_order", referencedColumnName = "id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 
     @ManyToOne

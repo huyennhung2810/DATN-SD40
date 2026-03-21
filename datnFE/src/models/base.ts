@@ -16,6 +16,7 @@ export interface BaseSearchParams {
 
 export interface ResponseObject<T> {
   isSuccess: boolean;
+  success?: boolean | undefined;
   status: any;
   data: T;
   message: string;

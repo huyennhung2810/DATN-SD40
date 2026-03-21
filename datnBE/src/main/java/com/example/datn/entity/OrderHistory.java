@@ -19,11 +19,13 @@ import java.time.LocalDateTime;
 public class OrderHistory extends PrimaryEntity implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_order", referencedColumnName = "id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 
     // Quan hệ N-1 với bảng Order (Hóa đơn)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_hoa_don", referencedColumnName = "id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Order hoaDon;
 
     // Enum trạng thái hóa đơn

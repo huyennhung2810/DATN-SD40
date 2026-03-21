@@ -30,10 +30,12 @@ public class Serial extends PrimaryEntity implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "id_order_detail", referencedColumnName = "id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private OrderDetail orderDetail;
 
     @ManyToOne
     @JoinColumn(name = "id_order")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Order orderHolding;
 
     private Long lockedAt;

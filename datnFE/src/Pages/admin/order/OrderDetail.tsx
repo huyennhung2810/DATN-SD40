@@ -230,7 +230,7 @@ const OrderDetailPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await orderApi.getOrderDetails(id);
-      if (res.isSuccess && res.data?.content?.length) {
+      if (res.success && res.data?.content?.length) {
         const rows = res.data.content;
         setItems(rows);
         setOrder(rows[0]);

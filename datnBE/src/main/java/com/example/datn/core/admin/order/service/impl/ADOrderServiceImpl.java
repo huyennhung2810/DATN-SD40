@@ -187,7 +187,8 @@ public class ADOrderServiceImpl implements ADOrderService {
             Employee nhanVien) {
 
         OrderHistory lichSu = new OrderHistory();
-        lichSu.setHoaDon(hoaDon);
+        lichSu.setOrder(hoaDon);   // id_order column - used by native SQL query in ADOrderDetailRepository
+        lichSu.setHoaDon(hoaDon);  // id_hoa_don column - used by JPA repository methods
         lichSu.setTrangThai(trangThai);
         lichSu.setThoiGian(LocalDateTime.now());
         lichSu.setNote(ghiChu != null ? ghiChu : "Cập nhật từ hệ thống quản trị");
