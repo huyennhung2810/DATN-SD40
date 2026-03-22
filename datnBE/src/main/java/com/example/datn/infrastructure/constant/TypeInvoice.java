@@ -2,7 +2,7 @@ package com.example.datn.infrastructure.constant;
 
 public enum TypeInvoice {
 
-    OFFLINE,
+    GIAO_HANG,
     ONLINE,
-    ;
+    OFFLINE,
 }

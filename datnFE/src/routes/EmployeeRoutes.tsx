@@ -19,6 +19,7 @@ import ProductDetailPage from "../Pages/admin/productdetail/productDetailList";
 import VoucherForm from "../Pages/admin/voucher/VoucherForm";
 import DiscountForm from "../Pages/admin/discount/DiscountForm";
 import BannerForm from "../Pages/admin/banner/BannerForm";
+import OrderDetailPage from "../Pages/admin/order/OrderDetail";
 
 export const EmployeeRoutes = () => [
   <Route
@@ -28,6 +29,7 @@ export const EmployeeRoutes = () => [
     {/* Nghiệp vụ chính */}
     <Route path="/pos" element={<PosPage />} />
     <Route path="/orders" element={<OrderPage />} />
+    <Route path="/admin/orders/:id" element={<OrderDetailPage />} />
     <Route path="/EChatAi" element={<EmployeeChatPage />} />
     <Route path="/shift-handover" element={<ShiftHandoverPage />} />
 

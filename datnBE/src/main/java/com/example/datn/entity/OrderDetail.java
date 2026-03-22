@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -35,9 +37,14 @@ public class OrderDetail extends PrimaryEntity implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "id_order", referencedColumnName = "id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 
     @ManyToOne
     @JoinColumn(name = "id_product_detail", referencedColumnName = "id")
     private ProductDetail productDetail;
+
+    @OneToMany(mappedBy = "orderDetail", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ToString.Exclude
+    private List<Serial> serials = new ArrayList<>();
 }

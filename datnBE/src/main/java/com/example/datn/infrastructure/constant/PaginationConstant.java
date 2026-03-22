@@ -8,8 +8,8 @@ public class PaginationConstant {
     //Mỗi trang 5 phần tử
     public static final int DEFAULT_SIZE = 5;
 
-    //Trang bắt đầu từ 1
-    public static final int DEFAULT_PAGE = 1;
+    //Trang bắt đầu từ 0 (Spring Data dùng 0-indexed)
+    public static final int DEFAULT_PAGE = 0;
 
     //Mặc định sắp xếp theo giảm dần
     public static final String DEFAULT_ORDER_BY = "desc";

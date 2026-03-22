@@ -28,6 +28,8 @@ import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
 import authReducer from "./auth/authSlice";
 import chatReducer from "./chat/chatSlice";
 import cartReducer from "./cart/cartSlice";
+import orderReducer from "./order/OrderSlice"
+
 
 export const store = configureStore({
   reducer: {
@@ -58,6 +60,7 @@ export const store = configureStore({
     techSpecDefinition: techSpecDefinitionReducer,
     chat: chatReducer,
     cart: cartReducer,
+    order: orderReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

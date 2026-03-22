@@ -1,6 +1,6 @@
 package com.example.datn.core.admin.discountDetail.service.Impl;
 
-import com.example.datn.core.admin.discountDetail.model.ADProductDetailResponse;
+import com.example.datn.core.admin.discountDetail.model.ADDiscountProductDetailResponse;
 import com.example.datn.core.admin.discountDetail.repository.ADProductDetailForDiscountRepository;
 import com.example.datn.core.admin.discountDetail.service.ProductDetailForDiscountService;
 import com.example.datn.entity.ProductDetail;
@@ -18,13 +18,13 @@ public class ProductDetailForDiscountServiceImpl implements ProductDetailForDisc
     private ADProductDetailForDiscountRepository adProductDetailForDiscountRepository;
 
     @Override
-    public Page<ADProductDetailResponse> getAll(String keyword, Pageable pageable) {
+    public Page<ADDiscountProductDetailResponse> getAll(String keyword, Pageable pageable) {
         // 1. Lấy ra Page<ProductDetail> (Entity) từ Repository
         Page<ProductDetail> entityPage = adProductDetailForDiscountRepository.searchByKeyword(keyword, pageable);
 
         // 2. Map Entity sang DTO ngay trên đối tượng Page
-        Page<ADProductDetailResponse> dtoPage = entityPage.map(entity ->
-                ADProductDetailResponse.builder()
+        Page<ADDiscountProductDetailResponse> dtoPage = entityPage.map(entity ->
+                ADDiscountProductDetailResponse.builder()
                         .id(entity.getId())
                         .code(entity.getCode())
                         .note(entity.getNote())

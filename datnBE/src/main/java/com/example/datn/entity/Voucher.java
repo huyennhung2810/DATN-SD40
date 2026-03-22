@@ -4,6 +4,7 @@ import com.example.datn.entity.base.NameEntity;
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.TypeVoucher;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -76,4 +77,8 @@ public class Voucher implements Serializable {
     @JsonIgnoreProperties("voucher") // ✅ Bỏ tham chiếu ngược
     @ToString.Exclude
     private List<VoucherDetail> details;
+
+    @Enumerated(EnumType.ORDINAL)
+    private TypeVoucher typeVoucher;
+
 }

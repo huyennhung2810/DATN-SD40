@@ -4,5 +4,6 @@ public enum SerialStatus {
     AVAILABLE,
     RESERVED,
     SOLD,
-    DEFECTIVE;
+    DEFECTIVE,
+    WARRANTY;
 }

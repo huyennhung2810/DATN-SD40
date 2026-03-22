@@ -40,6 +40,21 @@ public class Helper {
         return PageRequest.of(page, size, Sort.by(direction, sortBy));
     }
 
+    // Hàm mới: Tạo Pageable và cho phép truyền vào trường sắp xếp mặc định
+    public static Pageable createPageable(PageableRequest request, String defaultSortBy) {
+        // Nếu request có gửi sortBy từ frontend lên thì dùng cái đó, nếu không thì dùng cái defaultSortBy truyền vào
+        String sortBy = (request.getSortBy() == null || request.getSortBy().trim().isEmpty())
+                ? defaultSortBy : request.getSortBy();
+
+        Sort.Direction direction = "ASC".equalsIgnoreCase(request.getOrderBy())
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        int page = Math.max(0, request.getPage());
+        int size = (request.getSize() <= 0) ? PaginationConstant.DEFAULT_SIZE : request.getSize();
+
+        return PageRequest.of(page, size, Sort.by(direction, sortBy));
+    }
+
     // Chuyển ResponseObject thành ResponseEntity để trả về cho Frontend
     public static ResponseEntity<?> createResponseEntity(ResponseObject<?> responseObject) {
         return new ResponseEntity<>(responseObject, responseObject.getStatus());

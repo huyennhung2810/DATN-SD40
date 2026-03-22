@@ -5,27 +5,21 @@ import com.example.datn.core.admin.pos.repository.ADPosOrderRepository;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
-import com.example.datn.entity.Order;
-import com.example.datn.entity.OrderDetail;
-import com.example.datn.entity.Serial;
+import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.OrderStatus;
+import com.example.datn.infrastructure.constant.PaymentStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
-import com.example.datn.repository.CustomerRepository;
-import com.example.datn.repository.SerialRepository;
-import com.example.datn.repository.WarrantyRepository;
-import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
+import com.example.datn.repository.*;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
-import com.example.datn.entity.Voucher;
 import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
-import com.example.datn.repository.ProductDetailRepository;
-import com.example.datn.entity.Customer;
-import com.example.datn.entity.ProductDetail;
-import com.example.datn.entity.DiscountDetail;
-import com.example.datn.entity.Warranty;
+
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import java.util.Date;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,24 +42,43 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final ProductDetailRepository productDetailRepository;
     private final ADDiscountDetailRepository adDiscountDetailRepository;
     private final ADVouchersRepository adVouchersRepository;
+    private final EmployeeRepository employeeRepository;
+    private final OrderHistoryRepository orderHistoryRepository;
 
     @Override
     @Transactional
     public ResponseObject<?> createEmptyOrder() {
         long pendingCount = posOrderRepository.findAll().stream()
-                .filter(o -> o.getOrderStatus() == OrderStatus.PENDING && o.getOrderType() == TypeInvoice.OFFLINE)
+                .filter(o -> o.getOrderStatus() == OrderStatus.CHO_XAC_NHAN && o.getOrderType() == TypeInvoice.OFFLINE)
                 .count();
         if (pendingCount >= 10) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST,
                     "Đã đạt giới hạn tối đa 10 hóa đơn chờ. Vui lòng thanh toán hoặc hủy bớt hóa đơn trước khi tạo mới.");
         }
         Order order = new Order();
-        order.setOrderStatus(OrderStatus.PENDING);
+        order.setOrderStatus(OrderStatus.CHO_XAC_NHAN);
         order.setOrderType(TypeInvoice.OFFLINE);
         order.setTotalAmount(BigDecimal.ZERO);
         order.setTotalAfterDiscount(BigDecimal.ZERO);
+        // Gán nhân viên thực hiện bán hàng tại thời điểm tạo hóa đơn
+        Employee currentEmployee = getCurrentEmployee();
+        order.setEmployee(currentEmployee);
         posOrderRepository.save(order);
         return ResponseObject.success(order, "Tạo hóa đơn tại quầy thành công");
+    }
+
+    // Lấy nhân viên
+    private Employee getCurrentEmployee() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("Không xác định được nhân viên thực hiện");
+        }
+
+        String username = authentication.getName();
+
+        return employeeRepository.findByAccount_Username(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên: " + username));
     }
 
     @Override
@@ -97,7 +110,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         }
 
         // --- CHECK ACTIVE PRODUCT DISCOUNT ---
-        Optional<DiscountDetail> discountDetail = adDiscountDetailRepository.findActiveByProductDetailId(productDetailId, System.currentTimeMillis());
+        Optional<DiscountDetail> discountDetail = adDiscountDetailRepository
+                .findActiveByProductDetailId(productDetailId, System.currentTimeMillis());
         if (discountDetail.isPresent()) {
             unitPrice = discountDetail.get().getPriceAfter();
         }
@@ -195,7 +209,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     public ResponseObject<?> getPendingOrders() {
-        List<Order> list = posOrderRepository.findByOrderStatusAndOrderType(OrderStatus.PENDING, TypeInvoice.OFFLINE);
+        List<Order> list = posOrderRepository.findByOrderStatusAndOrderType(OrderStatus.CHO_XAC_NHAN,
+                TypeInvoice.OFFLINE);
 
         List<Map<String, Object>> result = list.stream().map(o -> {
             Map<String, Object> map = new HashMap<>();
@@ -217,7 +232,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 map.put("voucher", null);
             }
 
-            if(o.getCustomer() != null){
+            if (o.getCustomer() != null) {
                 Map<String, Object> cMap = new HashMap<>();
                 cMap.put("id", o.getCustomer().getId());
                 cMap.put("name", o.getCustomer().getName());
@@ -267,7 +282,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 pdMap.put("code", d.getProductDetail().getCode());
                 pdMap.put("version", d.getProductDetail().getVersion());
                 String imageUrl = null;
-                if (d.getProductDetail().getProduct() != null && !d.getProductDetail().getProduct().getImages().isEmpty()) {
+                if (d.getProductDetail().getProduct() != null
+                        && !d.getProductDetail().getProduct().getImages().isEmpty()) {
                     imageUrl = d.getProductDetail().getProduct().getImages().get(0).getUrl();
                 }
                 pdMap.put("image", imageUrl);
@@ -341,16 +357,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             newTotal = BigDecimal.ZERO;
         order.setTotalAmount(newTotal);
 
-        // Apply Automatic Discount
-        BigDecimal discount = BigDecimal.ZERO;
-        if (newTotal.compareTo(new BigDecimal("50000000")) >= 0) {
-            discount = new BigDecimal("1500000"); // 1.5M
-        } else if (newTotal.compareTo(new BigDecimal("20000000")) >= 0) {
-            discount = new BigDecimal("500000"); // 500k
-        }
-        BigDecimal afterDiscount = newTotal.subtract(discount);
-        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
-        order.setTotalAfterDiscount(afterDiscount);
+        // Recalculate totalAfterDiscount respecting any applied voucher
+        order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
 
         posOrderRepository.save(order);
 
@@ -362,15 +370,36 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     @Override
     @Transactional
     public ResponseObject<?> setCustomerForOrder(String orderId, String customerId) {
+
         Order order = posOrderRepository.findById(orderId).orElse(null);
-        if (order == null)
+        if (order == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        }
 
         Customer customer = customerRepository.findById(customerId).orElse(null);
-        if (customer == null)
+        if (customer == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy khách hàng");
+        }
 
         order.setCustomer(customer);
+        order.setRecipientName(customer.getName());
+        order.setRecipientPhone(customer.getPhoneNumber());
+        order.setRecipientEmail(customer.getEmail());
+
+        // 🔥 Lấy địa chỉ mặc định
+        Address address = customer.getAddresses().stream()
+                .filter(addr -> Boolean.TRUE.equals(addr.getIsDefault()))
+                .findFirst()
+                .orElse(null);
+
+        if (address == null && !customer.getAddresses().isEmpty()) {
+            address = customer.getAddresses().get(0);
+        }
+
+        if (address != null) {
+            order.setRecipientAddress(address.getFullAddress());
+        }
+
         posOrderRepository.save(order);
 
         return ResponseObject.success(order, "Đã gắn khách hàng vào hóa đơn");
@@ -382,14 +411,16 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         Order order = posOrderRepository.findById(orderId).orElse(null);
         if (order == null)
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
+        if (order.getOrderStatus() != OrderStatus.CHO_XAC_NHAN) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Hóa đơn này không ở trạng thái chờ thanh toán");
         }
 
         // Update Order status
-        order.setOrderStatus(OrderStatus.COMPLETED);
+        order.setOrderStatus(OrderStatus.HOAN_THANH);
         order.setPaymentDate(new Date().getTime());
         order.setPaymentMethod("TIEN_MAT"); // Hardcode for now
+        // Gán trạng thái thanh toán
+        order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
 
         List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
         if (details.isEmpty()) {
@@ -416,7 +447,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         for (OrderDetail detail : details) {
             ProductDetail productDetail = detail.getProductDetail();
             int newQuantity = productDetail.getQuantity() - detail.getQuantity();
-            if (newQuantity < 0) newQuantity = 0;
+            if (newQuantity < 0)
+                newQuantity = 0;
             productDetail.setQuantity(newQuantity);
             productDetailRepository.save(productDetail);
 
@@ -440,6 +472,17 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         }
 
         posOrderRepository.save(order);
+
+        // Record checkout history
+        OrderHistory lichSu = new OrderHistory();
+        lichSu.setOrder(order);
+        lichSu.setHoaDon(order);
+        lichSu.setTrangThai(OrderStatus.HOAN_THANH);
+        lichSu.setThoiGian(LocalDateTime.now());
+        lichSu.setNote("Thanh toán tại quầy");
+        lichSu.setNhanVien(getCurrentEmployee());
+        orderHistoryRepository.save(lichSu);
+
         return ResponseObject.success(order, "Thanh toán thành công");
     }
 
@@ -450,7 +493,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         if (order == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
         }
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
+        if (order.getOrderStatus() != OrderStatus.CHO_XAC_NHAN) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chỉ có thể hủy/xóa hóa đơn ở trạng thái CHỜ");
         }
 
@@ -496,10 +539,11 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     }
 
     private BigDecimal calculateTotalAfterVoucher(BigDecimal total, Voucher voucher) {
-        if (voucher == null) return total;
+        if (voucher == null)
+            return total;
         BigDecimal discount = BigDecimal.ZERO;
 
-        //Lấy đơn vị giảm giá, cắt bỏ mọi khoảng trắng thừa và kiểm tra an toàn
+        // Lấy đơn vị giảm giá, cắt bỏ mọi khoảng trắng thừa và kiểm tra an toàn
         String unit = voucher.getDiscountUnit() != null ? voucher.getDiscountUnit().trim() : "";
 
         if ("%".equalsIgnoreCase(unit) || "PERCENT".equalsIgnoreCase(unit)) {
@@ -537,12 +581,15 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     @Transactional
     public ResponseObject<?> applyVoucher(String orderId, String voucherId) {
         Order order = posOrderRepository.findById(orderId).orElse(null);
-        if (order == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        if (order == null)
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
         Voucher voucher = adVouchersRepository.findById(voucherId).orElse(null);
-        if (voucher == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy voucher");
+        if (voucher == null)
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy voucher");
         if (voucher.getConditions() != null && order.getTotalAmount().compareTo(voucher.getConditions()) < 0) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST,
-                    "Đơn hàng chưa đạt giá trị tối thiểu " + voucher.getConditions().toPlainString() + " để dùng voucher này");
+                    "Đơn hàng chưa đạt giá trị tối thiểu " + voucher.getConditions().toPlainString()
+                            + " để dùng voucher này");
         }
         order.setVoucher(voucher);
         order.setTotalAfterDiscount(calculateTotalAfterVoucher(order.getTotalAmount(), voucher));
@@ -558,7 +605,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     @Transactional
     public ResponseObject<?> removeVoucher(String orderId) {
         Order order = posOrderRepository.findById(orderId).orElse(null);
-        if (order == null) return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        if (order == null)
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
         order.setVoucher(null);
         order.setTotalAfterDiscount(order.getTotalAmount());
         posOrderRepository.save(order);

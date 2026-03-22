@@ -86,7 +86,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
 
         //Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
         BigDecimal systemCashSales = shiftHandoverRepository.sumCashRevenue(
-                empId, OrderStatus.COMPLETED, handover.getCheckInTime(), endTime);
+                empId, OrderStatus.HOAN_THANH, handover.getCheckInTime(), endTime);
 
         //Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
