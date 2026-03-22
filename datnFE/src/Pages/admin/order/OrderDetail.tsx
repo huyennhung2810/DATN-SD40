@@ -842,10 +842,14 @@ const OrderDetailPage: React.FC = () => {
               <Descriptions.Item label="Trạng thái">
                 <Tag
                   color={
-                    order?.trangThaiThanhToan === "PAID" ? "green" : "orange"
+                    order?.trangThaiThanhToan === "PAID" ||
+                    order?.trangThaiThanhToan === "DA_THANH_TOAN"
+                      ? "green"
+                      : "orange"
                   }
                 >
-                  {order?.trangThaiThanhToan === "PAID"
+                  {order?.trangThaiThanhToan === "PAID" ||
+                  order?.trangThaiThanhToan === "DA_THANH_TOAN"
                     ? "Đã thanh toán"
                     : "Chưa thanh toán"}
                 </Tag>

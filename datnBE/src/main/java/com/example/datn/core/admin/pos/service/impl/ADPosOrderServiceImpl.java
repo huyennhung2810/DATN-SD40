@@ -5,22 +5,15 @@ import com.example.datn.core.admin.pos.repository.ADPosOrderRepository;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
-import com.example.datn.entity.Order;
-import com.example.datn.entity.OrderDetail;
-import com.example.datn.entity.Serial;
+import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.OrderStatus;
+import com.example.datn.infrastructure.constant.PaymentStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
-import com.example.datn.entity.Voucher;
 import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
-import com.example.datn.entity.Customer;
-import com.example.datn.entity.ProductDetail;
-import com.example.datn.entity.DiscountDetail;
-import com.example.datn.entity.Employee;
-import com.example.datn.entity.Warranty;
-import com.example.datn.entity.OrderHistory;
+
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import java.util.Date;
@@ -74,7 +67,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         return ResponseObject.success(order, "Tạo hóa đơn tại quầy thành công");
     }
 
-    //Lấy nhân viên
+    // Lấy nhân viên
     private Employee getCurrentEmployee() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -377,15 +370,36 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     @Override
     @Transactional
     public ResponseObject<?> setCustomerForOrder(String orderId, String customerId) {
+
         Order order = posOrderRepository.findById(orderId).orElse(null);
-        if (order == null)
+        if (order == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        }
 
         Customer customer = customerRepository.findById(customerId).orElse(null);
-        if (customer == null)
+        if (customer == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy khách hàng");
+        }
 
         order.setCustomer(customer);
+        order.setRecipientName(customer.getName());
+        order.setRecipientPhone(customer.getPhoneNumber());
+        order.setRecipientEmail(customer.getEmail());
+
+        // 🔥 Lấy địa chỉ mặc định
+        Address address = customer.getAddresses().stream()
+                .filter(addr -> Boolean.TRUE.equals(addr.getIsDefault()))
+                .findFirst()
+                .orElse(null);
+
+        if (address == null && !customer.getAddresses().isEmpty()) {
+            address = customer.getAddresses().get(0);
+        }
+
+        if (address != null) {
+            order.setRecipientAddress(address.getFullAddress());
+        }
+
         posOrderRepository.save(order);
 
         return ResponseObject.success(order, "Đã gắn khách hàng vào hóa đơn");
@@ -405,6 +419,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         order.setOrderStatus(OrderStatus.HOAN_THANH);
         order.setPaymentDate(new Date().getTime());
         order.setPaymentMethod("TIEN_MAT"); // Hardcode for now
+        // Gán trạng thái thanh toán
+        order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
 
         List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
         if (details.isEmpty()) {

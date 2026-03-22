@@ -68,4 +68,11 @@ public class Address implements Serializable {
     @Column(name = "status")
     @Enumerated(EnumType.ORDINAL)
     private EntityStatus status;
+
+
+    public String getFullAddress() {
+        return (addressDetail != null ? addressDetail + ", " : "")
+                + (wardCommune != null ? wardCommune + ", " : "")
+                + (provinceCity != null ? provinceCity : "");
+    }
 }
