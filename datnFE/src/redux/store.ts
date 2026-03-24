@@ -45,7 +45,6 @@ export const store = configureStore({
     productDetail: productDetailReducer,
     color: colorReducer,
     storage: storageCapacityReducer,
-    //voucher: voucherReducer, // Đăng ký voucher reducer vào store
     productCategory: productCategoryReducer,
     techSpec: techSpecReducer,
     product: productReducer,
