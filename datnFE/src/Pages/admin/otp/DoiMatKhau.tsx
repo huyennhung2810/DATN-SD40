@@ -14,8 +14,7 @@ const ChangePasswordPage: React.FC = () => {
   const [form] = Form.useForm();
 
   const onFinish = (values: ChangePasswordValues) => {
-    console.log("Gửi dữ liệu lên Server:", { username, ...values });
-
+    // Gửi dữ liệu lên Server (KHÔNG log password)
     notification.success({
       message: "Thành công",
       description: "Mật khẩu của bạn đã được cập nhật!",

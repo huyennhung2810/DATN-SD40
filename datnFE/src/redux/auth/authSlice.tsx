@@ -84,17 +84,15 @@ const authSlice = createSlice({
       action: PayloadAction<{
         user: AuthUser;
         accessToken: string;
-        refreshToken: string;
       }>,
     ) => {
-      const { user, accessToken, refreshToken } = action.payload;
+      const { user, accessToken } = action.payload;
       state.user = user;
       state.isLoggedIn = true;
       state.loading = false;
       state.error = null;
 
       localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
       localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
     },
 

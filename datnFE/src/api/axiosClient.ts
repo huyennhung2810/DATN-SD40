@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig} from "axios";
+import { message } from "antd";
 import { AUTH_STORAGE_KEYS } from "../models/auth";
 import { store } from "../redux/store";
 import { authActions } from "../redux/auth/authSlice";
@@ -10,6 +11,7 @@ const axiosClient = axios.create({
     headers: {
         "Content-Type": "application/json"
     },
+    timeout: 10000, // 10 giây
 });
 
 const AUTH_WHITELIST = [
@@ -54,14 +56,11 @@ axiosClient.interceptors.response.use(
 
         // 1. Xử lý lỗi 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
-            
             const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-
             if (!refreshToken) {
                 handleGlobalLogout();
                 return Promise.reject(error);
             }
-
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -70,34 +69,37 @@ axiosClient.interceptors.response.use(
                     return axiosClient(originalRequest);
                 }).catch(err => Promise.reject(err));
             }
-
             originalRequest._retry = true;
             isRefreshing = true;
-
             try {
                 // Dùng axios (global instance) để tránh interceptor của axiosClient gây loop
                 const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-
                 localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
                 if (newRefreshToken) {
                     localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
                 }
-
                 processQueue(null, accessToken);
-                
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return axiosClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
+                message.error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
                 handleGlobalLogout();
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;
             }
         }
-        
-        // 2. Trả về data lỗi từ GlobalExceptionHandler của Backend
+
+        // 2. Xử lý lỗi mạng hoặc timeout
+        if (!error.response) {
+            // Lỗi mạng (Network Error) hoặc timeout
+            message.error("Không thể kết nối máy chủ. Vui lòng kiểm tra mạng hoặc thử lại sau.");
+            return Promise.reject({ message: "Không thể kết nối máy chủ" });
+        }
+
+        // 3. Trả về data lỗi từ GlobalExceptionHandler của Backend
         if (error.response && error.response.data) {
             return Promise.reject(error.response.data);
         }

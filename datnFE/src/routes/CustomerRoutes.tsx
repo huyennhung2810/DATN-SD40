@@ -4,6 +4,7 @@ import { ClientHomePage } from "../components/homepage";
 import CustomerCatalogPage from "../Pages/customer/CatalogPage";
 import ProductDetail from "../components/homepage/ProductDetail";
 import CartPage from "../Pages/client/CartPage";
+import CheckoutPage from "../Pages/client/CheckoutPage";
 export const CustomerRoutes = () => (
   <Route path="/client" element={<CustomerLayout />}>
     <Route index element={<ClientHomePage />} />
@@ -11,6 +12,7 @@ export const CustomerRoutes = () => (
     <Route path="products" element={<CustomerCatalogPage />} />
     <Route path="product/:id" element={<ProductDetail />} />
     <Route path="cart" element={<CartPage />} />
+    <Route path="checkout" element={<CheckoutPage />} />
   </Route>
 );
 

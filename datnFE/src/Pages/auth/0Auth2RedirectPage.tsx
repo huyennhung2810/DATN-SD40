@@ -59,7 +59,7 @@ const OAuth2RedirectPage: React.FC = () => {
         roles: ((claims.rolesCode ?? claims.roles) as string[]) ?? [],
       };
 
-      dispatch(authActions.loginSuccess({ user, accessToken, refreshToken }));
+      dispatch(authActions.loginSuccess({ user, accessToken }));
 
       // Redirect based on role
       const roles: string[] = user.roles ?? [];

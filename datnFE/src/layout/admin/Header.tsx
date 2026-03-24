@@ -19,7 +19,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Avatar, Badge, Button, Dropdown, Input, type MenuProps } from "antd";
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authActions } from "../../redux/auth/authSlice";
@@ -169,11 +169,15 @@ const Header: React.FC = () => {
     breadcrumb = [{ title: defaultPageInfo.title, icon: defaultPageInfo.icon }];
 
   //xử lý khi chọn menu
+  const [_settingsModalOpen, setSettingsModalOpen] = useState(false);
+
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
       dispatch(authActions.logout({ isAdmin: true }));
     } else if (key === "profile") {
       navigate("/profile");
+    } else if (key === "settings") {
+      setSettingsModalOpen(true);
     }
   };
 
@@ -184,7 +188,7 @@ const Header: React.FC = () => {
 
   const menuItems: MenuProps["items"] = [
     { key: "profile", label: "Hồ sơ cá nhân", icon: <UserOutlined /> },
-    { key: "settings", label: "Cài đặt tài khoản", icon: <SettingOutlined /> },
+
     { type: "divider" },
     {
       key: "logout",
@@ -195,171 +199,173 @@ const Header: React.FC = () => {
   ];
 
   return (
-    <header className="admin-header">
-      <div className="header-page-info">
-        {breadcrumb.map((item, idx) => (
-          <React.Fragment key={idx}>
-            {idx === 0 && item.icon && (
-              <span className="page-icon">{item.icon}</span>
-            )}
-            <span
-              className="page-title"
-              style={{
-                fontWeight: idx === breadcrumb.length - 1 ? 600 : 400,
-                fontSize: 18,
-                marginRight: 4,
-              }}
-            >
-              {item.title}
-            </span>
-            {idx < breadcrumb.length - 1 && (
-              <span style={{ margin: "0 4px", color: "#aaa" }}>/</span>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
+    <>
+      <header className="admin-header">
+        <div className="header-page-info">
+          {breadcrumb.map((item, idx) => (
+            <React.Fragment key={idx}>
+              {idx === 0 && item.icon && (
+                <span className="page-icon">{item.icon}</span>
+              )}
+              <span
+                className="page-title"
+                style={{
+                  fontWeight: idx === breadcrumb.length - 1 ? 600 : 400,
+                  fontSize: 18,
+                  marginRight: 4,
+                }}
+              >
+                {item.title}
+              </span>
+              {idx < breadcrumb.length - 1 && (
+                <span style={{ margin: "0 4px", color: "#aaa" }}>/</span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
 
-      <div className="header-search">
-        <Search
-          placeholder="Tìm sản phẩm, đơn hàng..."
-          allowClear
-          className="header-search-input"
-          onSearch={handleSearch}
-        />
-      </div>
-
-      <div className="header-actions">
-        <Badge count={5} size="small" offset={[-2, 4]}>
-          <Button
-            type="text"
-            icon={<BellOutlined />}
-            className="header-action-btn"
+        <div className="header-search">
+          <Search
+            placeholder="Tìm sản phẩm, đơn hàng..."
+            allowClear
+            className="header-search-input"
+            onSearch={handleSearch}
           />
-        </Badge>
+        </div>
 
-        <Dropdown
-          menu={{ items: menuItems, onClick: handleMenuClick }}
-          trigger={["click"]}
-          placement="bottomRight"
-        >
-          <div className="header-user">
-            <Avatar
-              src={user?.pictureUrl}
-              icon={!user?.pictureUrl && <UserOutlined />}
-              className="header-avatar"
+        <div className="header-actions">
+          <Badge count={5} size="small" offset={[-2, 4]}>
+            <Button
+              type="text"
+              icon={<BellOutlined />}
+              className="header-action-btn"
             />
-            <div className="header-user-info">
-              <div className="header-user-name">
-                {user?.fullName || "Admin"}
-              </div>
-              <div className="header-user-role">
-                {user?.roles?.[0] === "ADMIN" ? "Quản trị viên" : "Nhân viên"}
+          </Badge>
+
+          <Dropdown
+            menu={{ items: menuItems, onClick: handleMenuClick }}
+            trigger={["click"]}
+            placement="bottomRight"
+          >
+            <div className="header-user">
+              <Avatar
+                src={user?.pictureUrl}
+                icon={!user?.pictureUrl && <UserOutlined />}
+                className="header-avatar"
+              />
+              <div className="header-user-info">
+                <div className="header-user-name">
+                  {user?.fullName || "Admin"}
+                </div>
+                <div className="header-user-role">
+                  {user?.roles?.[0] === "ADMIN" ? "Quản trị viên" : "Nhân viên"}
+                </div>
               </div>
             </div>
-          </div>
-        </Dropdown>
-      </div>
+          </Dropdown>
+        </div>
 
-      <style>{`
-        .admin-header {
-          height: 64px;
-          padding: 0 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          border-bottom: 1px solid #f0f0f0;
-          background: #fff;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          box-shadow: 0 1px 4px rgba(0,21,41,.08);
-        }
-
-        .header-page-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 250px;
-        }
-
-        .page-icon {
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-          border-radius: 8px;
-          color: #fff;
-          font-size: 18px;
-        }
-
-        .page-title {
-          margin: 0 !important;
-          font-size: 15px !important;
-          font-weight: 600 !important;
-        }
-
-        .page-desc {
-          font-size: 11px;
-          display: block;
-          margin-top: -2px;
-        }
-
-        .header-search {
-          flex: 1;
-          max-width: 350px;
-          margin: 0 20px;
-        }
-
-        .header-actions {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .header-action-btn {
-          font-size: 18px;
-          color: #595959;
-        }
-
-        .header-user {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: background 0.3s;
-        }
-
-        .header-user:hover {
-          background: #f5f5f5;
-        }
-
-        .header-avatar {
-          border: 1px solid #e8e8e8;
-          background: #1890ff;
-        }
-
-        .header-user-name {
-          font-weight: 600;
-          font-size: 13px;
-          color: #262626;
-        }
-
-        .header-user-role {
-          font-size: 11px;
-          color: #8c8c8c;
-        }
-
-        @media (max-width: 992px) {
-          .header-search, .page-desc {
-            display: none;
+        <style>{`
+          .admin-header {
+            height: 64px;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
           }
-        }
-      `}</style>
-    </header>
+
+          .header-page-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 250px;
+          }
+
+          .page-icon {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+          }
+
+          .page-title {
+            margin: 0 !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+          }
+
+          .page-desc {
+            font-size: 11px;
+            display: block;
+            margin-top: -2px;
+          }
+
+          .header-search {
+            flex: 1;
+            max-width: 350px;
+            margin: 0 20px;
+          }
+
+          .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+
+          .header-action-btn {
+            font-size: 18px;
+            color: #595959;
+          }
+
+          .header-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+          }
+
+          .header-user:hover {
+            background: #f5f5f5;
+          }
+
+          .header-avatar {
+            border: 1px solid #e8e8e8;
+            background: #1890ff;
+          }
+
+          .header-user-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #262626;
+          }
+
+          .header-user-role {
+            font-size: 11px;
+            color: #8c8c8c;
+          }
+
+          @media (max-width: 992px) {
+            .header-search, .page-desc {
+              display: none;
+            }
+          }
+        `}</style>
+      </header>
+    </>
   );
 };
 
