@@ -1,55 +1,57 @@
-import * as React from "react";
-const { useEffect, useState, useRef } = React;
 import {
-  Card,
-  Button,
-  Tabs,
-  Table,
-  Row,
-  Col,
-  Typography,
-  message,
-  Tag,
-  Space,
-  Input,
-  Modal,
-  InputNumber,
-  Select,
-  Tooltip,
-  Radio,
-  Alert,
-} from "antd";
-import {
-  PlusOutlined,
+  BankOutlined,
+  CarOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CreditCardOutlined,
   DeleteOutlined,
+  EditOutlined,
+  EnvironmentOutlined,
+  GiftOutlined,
+  InfoCircleOutlined,
+  LinkOutlined,
+  LoadingOutlined,
+  PlusOutlined,
+  PrinterOutlined,
   ScanOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
-  CheckCircleOutlined,
-  PrinterOutlined,
-  UserOutlined,
-  UserAddOutlined,
   TagsOutlined,
-  CloseCircleOutlined,
-  GiftOutlined,
-  CarOutlined,
-  ShopOutlined,
-  BankOutlined,
+  UserAddOutlined,
+  UserOutlined,
   WalletOutlined,
-  EditOutlined,
-  InfoCircleOutlined,
-  CreditCardOutlined,
-  LinkOutlined,
-  LoadingOutlined,
 } from "@ant-design/icons";
-import { posApi } from "../../../api/admin/posApi";
-import type { CheckoutPosRequest } from "../../../api/admin/posApi";
-import { productDetailApi } from "../../../api/productDetailApi";
-import { customerApi } from "../../../api/customerApi";
-import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
-import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
+import axios from "axios";
+import * as React from "react";
 import { useReactToPrint } from "react-to-print";
+import type { CheckoutPosRequest } from "../../../api/admin/posApi";
+import { posApi } from "../../../api/admin/posApi";
+import { customerApi } from "../../../api/customerApi";
+import { productDetailApi } from "../../../api/productDetailApi";
+import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
+import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
 import ReceiptTemplate from "../../../Pages/admin/pos/ReceiptTemplate";
+const { useEffect, useState, useRef } = React;
 
 const { Title, Text } = Typography;
 
@@ -77,19 +79,37 @@ const PosPage: React.FC = () => {
     name: "",
     phone: "",
     email: "",
-    address: "",
+    address: "", // computed full string
+    addressDetail: "",
+    provinceCode: undefined as number | undefined,
+    provinceCity: "",
+    wardCode: undefined as number | undefined,
+    wardCommune: "",
     note: "",
   });
   const [shippingFee, setShippingFee] = useState<number>(0);
   const [recipientModalOpen, setRecipientModalOpen] = useState(false);
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [draftRecipient, setDraftRecipient] = useState({
     name: "",
     phone: "",
     email: "",
-    address: "",
+    addressDetail: "",
+    provinceCode: undefined as number | undefined,
+    provinceCity: "",
+    wardCode: undefined as number | undefined,
+    wardCommune: "",
     note: "",
     shippingFee: 0,
   });
+  const [customerAddresses, setCustomerAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
+  // const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
+  const [posProvinces, setPosProvinces] = useState<any[]>([]);
+  const [posCommunes, setPosCommunes] = useState<any[]>([]);
+  const [posLoadingCommunes, setPosLoadingCommunes] = useState(false);
   const [vnpayPendingModal, setVnpayPendingModal] = useState<{
     open: boolean;
     paymentUrl: string;
@@ -222,8 +242,22 @@ const PosPage: React.FC = () => {
     setCustomerCash(null); // Reset cash input when switching tabs
     setOrderType("OFFLINE");
     setPosPaymentMethod("TIEN_MAT");
-    setRecipientInfo({ name: "", phone: "", email: "", address: "", note: "" });
+    setRecipientInfo({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      addressDetail: "",
+      provinceCode: undefined,
+      provinceCity: "",
+      wardCode: undefined,
+      wardCommune: "",
+      note: "",
+    });
+    setPosCommunes([]);
     setShippingFee(0);
+    setCustomerAddresses([]);
+    setSelectedAddressId(null);
     // Reset applied voucher when switching tabs (will be set from activeOrder)
     setAppliedVoucher(null);
     // Reset customer search
@@ -465,8 +499,90 @@ const PosPage: React.FC = () => {
   // Compute activeOrder early (before useEffect to avoid TDZ)
   const activeOrder = orders.find((o) => o.id === activeKey);
 
-  // Synchronize appliedVoucher state with activeOrder when it changes
-  // Sửa lại đoạn useEffect đồng bộ voucher
+  // Fetch customer addresses khi activeOrder thay đổi customer
+  useEffect(() => {
+    const customerId = activeOrder?.customer?.id;
+    if (customerId) {
+      customerApi
+        .getCustomerById(customerId)
+        .then((customer: any) => setCustomerAddresses(customer.addresses || []))
+        .catch(() => setCustomerAddresses([]));
+    } else {
+      setCustomerAddresses([]);
+      setSelectedAddressId(null);
+    }
+  }, [activeOrder?.customer?.id]);
+
+  // Load danh sách tỉnh/thành khi mở modal
+  useEffect(() => {
+    if (
+      (recipientModalOpen || addressPickerOpen) &&
+      posProvinces.length === 0
+    ) {
+      axios
+        .get("https://provinces.open-api.vn/api/v2/p/?depth=1")
+        .then((res) => setPosProvinces(res.data))
+        .catch(() => message.error("Không tải được danh sách Tỉnh/Thành"));
+    }
+  }, [recipientModalOpen, addressPickerOpen]);
+
+  // Fetch communes without side-effects — caller sets state when all data is ready
+  const fetchCommunes = async (pCode: number): Promise<any[]> => {
+    try {
+      const res = await axios.get(
+        `https://provinces.open-api.vn/api/v2/p/${pCode}?depth=2`,
+      );
+      return res.data.wards || [];
+    } catch {
+      return [];
+    }
+  };
+
+  // loadPosCommunes: fetch + cập nhật state communes cho Select tỉnh/phường
+  const loadPosCommunes = async (pCode: number): Promise<any[]> => {
+    if (!pCode) return [];
+    setPosLoadingCommunes(true);
+    const wards = await fetchCommunes(pCode);
+    setPosCommunes(wards);
+    setPosLoadingCommunes(false);
+    return wards;
+  };
+  // const setAddressAsDefault = async (targetAddrId: string) => {
+  //   const customer = activeOrder?.customer;
+  //   if (!customer) return;
+  //   setSettingDefaultId(targetAddrId);
+  //   try {
+  //     const updatedAddresses = customerAddresses.map((addr: any) => ({
+  //       id: addr.id,
+  //       name: addr.name || "",
+  //       phoneNumber: addr.phoneNumber || "",
+  //       provinceCode: addr.provinceCode,
+  //       wardCode: addr.wardCode,
+  //       provinceCity: addr.provinceCity || "",
+  //       wardCommune: addr.wardCommune || "",
+  //       addressDetail: addr.addressDetail || "",
+  //       isDefault: addr.id === targetAddrId,
+  //     }));
+  //     await customerApi.updateCustomer({
+  //       id: customer.id,
+  //       name: customer.name || "",
+  //       email: customer.email || "",
+  //       phoneNumber: customer.phoneNumber || "",
+  //       gender: customer.gender ?? true,
+  //       dateOfBirth: customer.dateOfBirth ?? null,
+  //       image: customer.image ?? null,
+  //       addresses: updatedAddresses,
+  //     });
+  //     const updated = await customerApi.getCustomerById(customer.id);
+  //     setCustomerAddresses((updated as any).addresses || []);
+  //     message.success("Đã đặt làm địa chỉ mặc định");
+  //   } catch {
+  //     message.error("Không thể cập nhật địa chỉ mặc định");
+  //   } finally {
+  //     setSettingDefaultId(null);
+  //   }
+  // };
+
   useEffect(() => {
     if (activeOrder?.voucher) {
       setAppliedVoucher(activeOrder.voucher);
@@ -514,21 +630,87 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const openRecipientModal = (currentCustomer?: any) => {
-    // Pre-fill draft from current recipientInfo; if empty, try from customer
+  const openRecipientModal = async (currentCustomer?: any) => {
     const customer = currentCustomer ?? activeOrder?.customer;
-    setDraftRecipient({
-      name: recipientInfo.name || customer?.name || "",
-      phone: recipientInfo.phone || customer?.phoneNumber || "",
-      email: recipientInfo.email || customer?.email || "",
-      address: recipientInfo.address,
-      note: recipientInfo.note,
-      shippingFee: shippingFee,
-    });
+
+    let provinces = posProvinces;
+    if (provinces.length === 0) {
+      try {
+        const res = await axios.get(
+          "https://provinces.open-api.vn/api/v2/p/?depth=1",
+        );
+        provinces = res.data;
+        setPosProvinces(provinces);
+      } catch {
+        message.error("Không tải được danh sách Tỉnh/Thành");
+      }
+    }
+
+    const defaultAddr =
+      customerAddresses.find((a) => a.isDefault) || customerAddresses[0];
+    if (defaultAddr && !recipientInfo.name) {
+      // Chưa có thông tin → tự điền địa chỉ mặc định
+      setSelectedAddressId(defaultAddr.id);
+      setDraftRecipient({
+        name: defaultAddr.name || "",
+        phone: defaultAddr.phoneNumber || "",
+        email: recipientInfo.email || customer?.email || "",
+        addressDetail: defaultAddr.addressDetail || "",
+        provinceCode: defaultAddr.provinceCode
+          ? Number(defaultAddr.provinceCode)
+          : undefined,
+        provinceCity: defaultAddr.provinceCity || "",
+        wardCode: undefined,
+        wardCommune: "",
+        note: recipientInfo.note,
+        shippingFee,
+      });
+      if (defaultAddr.provinceCode) {
+        const wards = await loadPosCommunes(Number(defaultAddr.provinceCode));
+        const wCode = defaultAddr.wardCode
+          ? Number(defaultAddr.wardCode)
+          : undefined;
+        const matched = wards.find((w: any) => w.code === wCode);
+        setDraftRecipient((prev) => ({
+          ...prev,
+          wardCode: matched ? wCode : undefined,
+          wardCommune: matched
+            ? matched.name || defaultAddr.wardCommune || ""
+            : "",
+        }));
+      }
+    } else {
+      // Đã có thông tin hoặc không có địa chỉ → giữ nguyên
+      setSelectedAddressId(recipientInfo.addressDetail ? "existing" : null);
+      setDraftRecipient({
+        name: recipientInfo.name || customer?.name || "",
+        phone: recipientInfo.phone || customer?.phoneNumber || "",
+        email: recipientInfo.email || customer?.email || "",
+        addressDetail: recipientInfo.addressDetail,
+        provinceCode: recipientInfo.provinceCode,
+        provinceCity: recipientInfo.provinceCity,
+        wardCode: undefined,
+        wardCommune: "",
+        note: recipientInfo.note,
+        shippingFee,
+      });
+      if (recipientInfo.provinceCode) {
+        const wards = await loadPosCommunes(recipientInfo.provinceCode);
+        const wCode = recipientInfo.wardCode;
+        const matched = wards.find((w: any) => w.code === wCode);
+        setDraftRecipient((prev) => ({
+          ...prev,
+          wardCode: matched ? wCode : undefined,
+          wardCommune: matched
+            ? matched.name || recipientInfo.wardCommune || ""
+            : "",
+        }));
+      }
+    }
     setRecipientModalOpen(true);
   };
 
-  const handleSaveRecipient = () => {
+  const handleSaveRecipient = async () => {
     if (!draftRecipient.name.trim()) {
       message.error("Vui lòng nhập tên người nhận!");
       return;
@@ -537,18 +719,90 @@ const PosPage: React.FC = () => {
       message.error("Vui lòng nhập số điện thoại người nhận!");
       return;
     }
-    if (!draftRecipient.address.trim()) {
-      message.error("Vui lòng nhập địa chỉ giao hàng!");
+    if (!draftRecipient.provinceCity) {
+      message.error("Vui lòng chọn Tỉnh/Thành phố!");
       return;
     }
+    if (!draftRecipient.wardCommune) {
+      message.error("Vui lòng chọn Xã/Phường!");
+      return;
+    }
+    if (!draftRecipient.addressDetail.trim()) {
+      message.error("Vui lòng nhập số nhà, tên đường!");
+      return;
+    }
+    const fullAddress = [
+      draftRecipient.addressDetail,
+      draftRecipient.wardCommune,
+      draftRecipient.provinceCity,
+    ]
+      .filter(Boolean)
+      .join(", ");
     setRecipientInfo({
       name: draftRecipient.name,
       phone: draftRecipient.phone,
       email: draftRecipient.email,
-      address: draftRecipient.address,
+      address: fullAddress,
+      addressDetail: draftRecipient.addressDetail,
+      provinceCode: draftRecipient.provinceCode,
+      provinceCity: draftRecipient.provinceCity,
+      wardCode: draftRecipient.wardCode,
+      wardCommune: draftRecipient.wardCommune,
       note: draftRecipient.note,
     });
     setShippingFee(draftRecipient.shippingFee);
+
+    // Nếu là địa chỉ mới và đơn hàng có khách hàng → lưu vào sổ địa chỉ
+    const customer = activeOrder?.customer;
+    if (selectedAddressId === "custom" && customer?.id) {
+      try {
+        const existingAddresses = customerAddresses.map((addr: any) => ({
+          id: addr.id,
+          name: addr.name || "",
+          phoneNumber: addr.phoneNumber || "",
+          provinceCode: addr.provinceCode,
+          wardCode: addr.wardCode,
+          provinceCity: addr.provinceCity || "",
+          wardCommune: addr.wardCommune || "",
+          addressDetail: addr.addressDetail || "",
+          isDefault: addr.isDefault ?? false,
+        }));
+        const newAddr = {
+          name: draftRecipient.name,
+          phoneNumber: draftRecipient.phone,
+          provinceCode: draftRecipient.provinceCode,
+          wardCode: draftRecipient.wardCode,
+          provinceCity: draftRecipient.provinceCity,
+          wardCommune: draftRecipient.wardCommune,
+          addressDetail: draftRecipient.addressDetail,
+          // Mặc định nếu chưa có địa chỉ nào
+          isDefault: existingAddresses.length === 0,
+        };
+        await customerApi.updateCustomer({
+          id: customer.id,
+          name: customer.name || "",
+          email: customer.email || "",
+          phoneNumber: customer.phoneNumber || "",
+          gender: customer.gender ?? true,
+          dateOfBirth: customer.dateOfBirth ?? null,
+          image: customer.image ?? null,
+          addresses: [...existingAddresses, newAddr],
+        });
+        // Tải lại danh sách địa chỉ
+        const updated = await customerApi.getCustomerById(customer.id);
+        const updatedAddresses = (updated as any).addresses || [];
+        setCustomerAddresses(updatedAddresses);
+        // Tự động chọn địa chỉ vừa thêm (địa chỉ cuối cùng)
+        const newSaved = updatedAddresses[updatedAddresses.length - 1];
+        if (newSaved) setSelectedAddressId(newSaved.id);
+        message.success("Đã lưu địa chỉ mới vào danh sách");
+      } catch {
+        message.warning(
+          "Lưu thông tin giao hàng thành công, nhưng không thể lưu địa chỉ vào danh sách khách hàng",
+        );
+      }
+    }
+
     setRecipientModalOpen(false);
     message.success("Đã lưu thông tin người nhận");
   };
@@ -940,7 +1194,6 @@ const PosPage: React.FC = () => {
         style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
       >
         <Row justify="space-between" align="middle">
-          {/* LEFT: Icon + Title */}
           <Space align="center" size={16}>
             <div
               style={{
@@ -964,7 +1217,6 @@ const PosPage: React.FC = () => {
             </div>
           </Space>
 
-          {/* RIGHT: Action */}
           <Space>
             <Text type="secondary" style={{ fontSize: 13 }}>
               Hóa đơn chờ:{" "}
@@ -996,12 +1248,10 @@ const PosPage: React.FC = () => {
       </div>
 
       <Row gutter={[16, 16]}>
-        {/* Left Column: Cart (Top) & Product List (Bottom) */}
         <Col
           span={16}
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
         >
-          {/* KHU VỰC 2: GIỎ HÀNG */}
           <Card
             title="Giỏ Hàng (Các Hóa đơn)"
             bordered={false}
@@ -1039,7 +1289,6 @@ const PosPage: React.FC = () => {
             )}
           </Card>
 
-          {/* KHU VỰC 1: TÌM KIẾM SẢN PHẨM */}
           <Card title="Tìm kiếm Kho Hàng" bordered={false} style={{ flex: 1 }}>
             <Input
               placeholder="Nhập tên máy ảnh, dòng máy..."
@@ -1060,7 +1309,6 @@ const PosPage: React.FC = () => {
             />
           </Card>
 
-          {/* KHU VỰC 4: THÔNG TIN NGƯỜI NHẬN (chỉ hiện khi GIAO_HANG) */}
           {orderType === "GIAO_HANG" && activeOrder && (
             <Card
               bordered={false}
@@ -1123,7 +1371,6 @@ const PosPage: React.FC = () => {
           )}
         </Col>
 
-        {/* KHU VỰC 3: THANH TOÁN */}
         <Col span={8}>
           <Card
             bordered={false}
@@ -1199,7 +1446,6 @@ const PosPage: React.FC = () => {
                       {activeOrder.totalAmount?.toLocaleString("vi-VN") || 0} đ
                     </Text>
                   </div>
-                  {/* Discount sản phẩm */}
                   {productDiscountAmount() > 0 && (
                     <div
                       style={{
@@ -1218,7 +1464,6 @@ const PosPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Voucher selector */}
                   <div style={{ marginBottom: 12 }}>
                     <div
                       style={{
@@ -1265,7 +1510,6 @@ const PosPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  {/* Phí ship (chỉ hiện khi GIAO_HANG và shippingFee > 0) */}
                   {orderType === "GIAO_HANG" && shippingFee > 0 && (
                     <div
                       style={{
@@ -1304,57 +1548,30 @@ const PosPage: React.FC = () => {
                     </Title>
                   </div>
 
-                  {/* Loại đơn hàng: Tại quầy / Giao hàng */}
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong style={{ display: "block", marginBottom: 8 }}>
-                      Hình thức nhận hàng:
+                  <div
+                    style={{
+                      marginBottom: 16,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text strong>
+                      <CarOutlined style={{ marginRight: 6 }} />
+                      Giao hàng
                     </Text>
-                    <Radio.Group
-                      value={orderType}
-                      onChange={(e) => {
-                        const newType = e.target.value;
+                    <Switch
+                      checked={orderType === "GIAO_HANG"}
+                      onChange={(checked) => {
+                        const newType = checked ? "GIAO_HANG" : "OFFLINE";
                         setOrderType(newType);
-                        if (newType === "GIAO_HANG") {
-                          // Open modal immediately to fill recipient info
-                          const customer = activeOrder?.customer;
-                          setDraftRecipient({
-                            name: recipientInfo.name || customer?.name || "",
-                            phone:
-                              recipientInfo.phone ||
-                              customer?.phoneNumber ||
-                              "",
-                            email: recipientInfo.email || customer?.email || "",
-                            address: recipientInfo.address,
-                            note: recipientInfo.note,
-                            shippingFee: shippingFee,
-                          });
-                          setRecipientModalOpen(true);
+                        if (checked) {
+                          openRecipientModal();
                         }
                       }}
-                      style={{ width: "100%" }}
-                    >
-                      <Radio.Button
-                        value="OFFLINE"
-                        style={{ width: "50%", textAlign: "center" }}
-                      >
-                        <Space>
-                          <ShopOutlined />
-                          Lấy tại quầy
-                        </Space>
-                      </Radio.Button>
-                      <Radio.Button
-                        value="GIAO_HANG"
-                        style={{ width: "50%", textAlign: "center" }}
-                      >
-                        <Space>
-                          <CarOutlined />
-                          Giao hàng
-                        </Space>
-                      </Radio.Button>
-                    </Radio.Group>
+                    />
                   </div>
 
-                  {/* Phương thức thanh toán */}
                   <div style={{ marginBottom: 16 }}>
                     <Text strong style={{ display: "block", marginBottom: 8 }}>
                       Phương thức thanh toán:
@@ -1385,7 +1602,6 @@ const PosPage: React.FC = () => {
                     </Radio.Group>
                   </div>
 
-                  {/* Tiền mặt: nhập số tiền khách đưa */}
                   {posPaymentMethod === "TIEN_MAT" && (
                     <>
                       <div style={{ marginBottom: 16 }}>
@@ -1442,7 +1658,6 @@ const PosPage: React.FC = () => {
                     </>
                   )}
 
-                  {/* Chuyển khoản: VNPay */}
                   {posPaymentMethod === "CHUYEN_KHOAN" && (
                     <div
                       style={{
@@ -1541,7 +1756,6 @@ const PosPage: React.FC = () => {
         onCreated={handleQuickCustomerCreated}
       />
 
-      {/* Voucher Selection Modal */}
       <Modal
         title={
           <Space>
@@ -1682,7 +1896,8 @@ const PosPage: React.FC = () => {
         width={560}
       >
         <div style={{ paddingTop: 8 }}>
-          <Row gutter={16} style={{ marginBottom: 12 }}>
+          {/* Tên + SĐT */}
+          <Row gutter={12} style={{ marginBottom: 12 }}>
             <Col span={12}>
               <Text strong>
                 Tên người nhận <Text type="danger">*</Text>
@@ -1714,11 +1929,12 @@ const PosPage: React.FC = () => {
             </Col>
           </Row>
 
+          {/* Email */}
           <div style={{ marginBottom: 12 }}>
             <Text strong>Email (Tùy chọn)</Text>
             <Input
               style={{ marginTop: 4 }}
-              placeholder="Nhập email người nhận để nhận thông báo..."
+              placeholder="Nhập email người nhận..."
               value={draftRecipient.email}
               onChange={(e) =>
                 setDraftRecipient({ ...draftRecipient, email: e.target.value })
@@ -1726,24 +1942,104 @@ const PosPage: React.FC = () => {
             />
           </div>
 
+          {/* Địa chỉ giao hàng */}
           <div style={{ marginBottom: 12 }}>
-            <Text strong>
-              Địa chỉ giao hàng <Text type="danger">*</Text>
-            </Text>
-            <Input.TextArea
-              style={{ marginTop: 4 }}
-              rows={3}
-              placeholder="Số nhà, ngõ, tên đường, phường/xã, tỉnh/thành phố..."
-              value={draftRecipient.address}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <Text strong>
+                Địa chỉ giao hàng <Text type="danger">*</Text>
+              </Text>
+              {customerAddresses.length > 0 && (
+                <Button
+                  size="small"
+                  icon={<EnvironmentOutlined />}
+                  onClick={() => setAddressPickerOpen(true)}
+                >
+                  Chọn địa chỉ
+                </Button>
+              )}
+            </div>
+
+            <Row gutter={8} style={{ marginBottom: 8 }}>
+              <Col span={12}>
+                <Select
+                  showSearch
+                  style={{ width: "100%" }}
+                  placeholder="Tỉnh/Thành phố..."
+                  value={draftRecipient.provinceCode}
+                  filterOption={(input, option) =>
+                    String(option?.label || "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={posProvinces.map((p: any) => ({
+                    label: p.name,
+                    value: p.code,
+                  }))}
+                  onChange={(val, opt: any) => {
+                    setDraftRecipient((prev) => ({
+                      ...prev,
+                      provinceCode: val,
+                      provinceCity: opt?.label || "",
+                      wardCode: undefined,
+                      wardCommune: "",
+                    }));
+                    setPosCommunes([]);
+                    loadPosCommunes(val);
+                  }}
+                />
+              </Col>
+              <Col span={12}>
+                <Select
+                  showSearch
+                  style={{ width: "100%" }}
+                  placeholder={
+                    draftRecipient.provinceCode
+                      ? "Xã/Phường..."
+                      : "Chọn Tỉnh trước"
+                  }
+                  disabled={!draftRecipient.provinceCode}
+                  loading={posLoadingCommunes}
+                  value={draftRecipient.wardCode}
+                  filterOption={(input, option) =>
+                    String(option?.label || "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={posCommunes.map((w: any) => ({
+                    label: w.name,
+                    value: w.code,
+                  }))}
+                  onChange={(val, opt: any) => {
+                    setDraftRecipient((prev) => ({
+                      ...prev,
+                      wardCode: val,
+                      wardCommune: opt?.label || "",
+                    }));
+                  }}
+                />
+              </Col>
+            </Row>
+
+            <Input
+              placeholder="Số nhà, ngõ, tên đường..."
+              value={draftRecipient.addressDetail}
               onChange={(e) =>
-                setDraftRecipient({
-                  ...draftRecipient,
-                  address: e.target.value,
-                })
+                setDraftRecipient((prev) => ({
+                  ...prev,
+                  addressDetail: e.target.value,
+                }))
               }
             />
           </div>
 
+          {/* Ghi chú */}
           <div style={{ marginBottom: 12 }}>
             <Text strong>Ghi chú đơn hàng</Text>
             <Input.TextArea
@@ -1757,6 +2053,7 @@ const PosPage: React.FC = () => {
             />
           </div>
 
+          {/* Phí vận chuyển */}
           <div>
             <Text strong>Phí vận chuyển</Text>
             <InputNumber
@@ -1776,6 +2073,126 @@ const PosPage: React.FC = () => {
               addonAfter="đ"
               placeholder="0"
             />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <Space>
+            <EnvironmentOutlined style={{ color: "#1890ff" }} />
+            <span>Chọn địa chỉ giao hàng</span>
+          </Space>
+        }
+        open={addressPickerOpen}
+        onCancel={() => setAddressPickerOpen(false)}
+        footer={null}
+        width={500}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            paddingTop: 4,
+          }}
+        >
+          {customerAddresses.map((addr: any) => {
+            const isSelected = selectedAddressId === addr.id;
+            return (
+              <div
+                key={addr.id}
+                style={{
+                  border: isSelected
+                    ? "2px solid #1890ff"
+                    : "1px solid #d9d9d9",
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  background: isSelected ? "#e6f7ff" : "#fafafa",
+                  transition: "all 0.2s",
+                }}
+              >
+                <div style={{ marginTop: 4, marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {[addr.addressDetail, addr.wardCommune, addr.provinceCity]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </Text>
+                </div>
+                <Button
+                  type={isSelected ? "primary" : "default"}
+                  size="small"
+                  icon={<EnvironmentOutlined />}
+                  onClick={async () => {
+                    setSelectedAddressId(addr.id);
+                    setDraftRecipient((prev) => ({
+                      ...prev,
+                      name: addr.name || "",
+                      phone: addr.phoneNumber || "",
+                      addressDetail: addr.addressDetail || "",
+                      provinceCode: addr.provinceCode
+                        ? Number(addr.provinceCode)
+                        : undefined,
+                      provinceCity: addr.provinceCity || "",
+                      wardCode: undefined,
+                      wardCommune: "",
+                    }));
+                    if (addr.provinceCode) {
+                      const wards = await loadPosCommunes(
+                        Number(addr.provinceCode),
+                      );
+                      const wCode = addr.wardCode
+                        ? Number(addr.wardCode)
+                        : undefined;
+                      const matched = wards.find((w: any) => w.code === wCode);
+                      setDraftRecipient((prev) => ({
+                        ...prev,
+                        wardCode: matched ? wCode : undefined,
+                        wardCommune: matched
+                          ? matched.name || addr.wardCommune || ""
+                          : "",
+                      }));
+                    }
+                    setAddressPickerOpen(false);
+                  }}
+                >
+                  {isSelected ? "Đang chọn" : "Chọn địa chỉ này"}
+                </Button>
+              </div>
+            );
+          })}
+
+          {/* Nhập địa chỉ mới */}
+          <div
+            onClick={() => {
+              setSelectedAddressId("custom");
+              setPosCommunes([]);
+              setDraftRecipient((prev) => ({
+                ...prev,
+                addressDetail: "",
+                provinceCode: undefined,
+                provinceCity: "",
+                wardCode: undefined,
+                wardCommune: "",
+              }));
+              setAddressPickerOpen(false);
+            }}
+            style={{
+              border:
+                selectedAddressId === "custom"
+                  ? "2px solid #1890ff"
+                  : "1px dashed #d9d9d9",
+              borderRadius: 8,
+              padding: "12px 14px",
+              cursor: "pointer",
+              background:
+                selectedAddressId === "custom" ? "#e6f7ff" : "#fafafa",
+              textAlign: "center",
+              transition: "all 0.2s",
+            }}
+          >
+            <PlusOutlined style={{ marginRight: 4, color: "#1890ff" }} />
+            <Text style={{ color: "#1890ff" }}>Nhập địa chỉ mới</Text>
           </div>
         </div>
       </Modal>
