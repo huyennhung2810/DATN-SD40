@@ -1,5 +1,7 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useReactToPrint } from "react-to-print";
+import OrderReceiptTemplate from "./OrderReceiptTemplate";
 import {
   Avatar,
   Button,
@@ -87,8 +89,6 @@ const ONLINE_STEPS = [
   { key: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 const fmt = (n?: number | null) =>
   n == null
     ? "0 đ"
@@ -109,8 +109,6 @@ const parseHistory = (raw?: string): OrderHistoryType[] => {
     return [];
   }
 };
-
-// ── Flat row type ─────────────────────────────────────────────────────────────
 
 interface FlatRow {
   rowKey: string;
@@ -171,12 +169,15 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
   return rows;
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: `HoaDon_${id}`,
+  });
 
   // State
   const [loading, setLoading] = useState(true);
@@ -223,8 +224,6 @@ const OrderDetailPage: React.FC = () => {
   const totalProductAmount = items.reduce((s, r) => s + (r.tongTien ?? 0), 0);
   const flatRows = buildFlatRows(items);
 
-  // ── Data fetch ────────────────────────────────────────────────────────────
-
   const fetchOrder = async () => {
     if (!id) return;
     setLoading(true);
@@ -247,8 +246,6 @@ const OrderDetailPage: React.FC = () => {
     fetchOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openStatusModal = (status: string) => {
     setNextStatus(status);
@@ -353,8 +350,6 @@ const OrderDetailPage: React.FC = () => {
       setChangingSerial(false);
     }
   };
-
-  // ── Column definitions ────────────────────────────────────────────────────
 
   const productColumns: ColumnsType<FlatRow> = [
     {
@@ -492,8 +487,6 @@ const OrderDetailPage: React.FC = () => {
     { title: "Nhân viên", dataIndex: "nhanVien" },
     { title: "Ghi chú", dataIndex: "ghiChu" },
   ];
-
-  // ── Progress tracker (Vue-style circles with connecting lines) ────────────
 
   const renderProgressTracker = () => {
     if (isCancelled) {
@@ -641,8 +634,6 @@ const OrderDetailPage: React.FC = () => {
     );
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
@@ -652,8 +643,7 @@ const OrderDetailPage: React.FC = () => {
   }
 
   return (
-    <div style={{ background: "#f0f2f5", minHeight: "100vh", padding: 24 }}>
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
       <Card bordered={false} style={{ marginBottom: 16, borderRadius: 12 }}>
         <Row justify="space-between" align="middle" wrap>
           <Col>
@@ -688,13 +678,14 @@ const OrderDetailPage: React.FC = () => {
               <Button icon={<ReloadOutlined />} onClick={fetchOrder}>
                 Làm mới
               </Button>
-              <Button icon={<PrinterOutlined />}>In hóa đơn</Button>
+              <Button icon={<PrinterOutlined />} onClick={() => handlePrint()}>
+                In hóa đơn
+              </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* ── Progress tracker ─────────────────────────────────────────────── */}
       {currentStatus !== "LUU_TAM" && (
         <Card
           bordered={false}
@@ -726,7 +717,6 @@ const OrderDetailPage: React.FC = () => {
         </Card>
       )}
 
-      {/* ── Info cards ───────────────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         {/* Customer */}
         <Col xs={24} lg={8}>
@@ -867,7 +857,6 @@ const OrderDetailPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* ── Product table ─────────────────────────────────────────────────── */}
       <Card
         bordered={false}
         style={{ marginBottom: 16, borderRadius: 12 }}
@@ -888,7 +877,6 @@ const OrderDetailPage: React.FC = () => {
         />
       </Card>
 
-      {/* ── History modal ─────────────────────────────────────────────────── */}
       <Modal
         title="Lịch sử xử lý đơn hàng"
         open={historyModalOpen}
@@ -907,7 +895,6 @@ const OrderDetailPage: React.FC = () => {
         />
       </Modal>
 
-      {/* ── Status change modal ───────────────────────────────────────────── */}
       <Modal
         title="Xác nhận thay đổi trạng thái"
         open={statusModalOpen}
@@ -948,7 +935,6 @@ const OrderDetailPage: React.FC = () => {
         />
       </Modal>
 
-      {/* ── Customer edit modal ───────────────────────────────────────────── */}
       <Modal
         title="Cập nhật thông tin khách hàng"
         open={customerModalOpen}
@@ -988,7 +974,6 @@ const OrderDetailPage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* ── Serial info modal ─────────────────────────────────────────────── */}
       <Modal
         title="Thông tin Serial / IMEI"
         open={serialInfoOpen}
@@ -1017,7 +1002,6 @@ const OrderDetailPage: React.FC = () => {
         )}
       </Modal>
 
-      {/* ── Serial change modal ───────────────────────────────────────────── */}
       <Modal
         title="Đổi Serial / IMEI"
         open={serialChangeOpen}
@@ -1063,6 +1047,10 @@ const OrderDetailPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {order && (
+        <OrderReceiptTemplate ref={receiptRef} order={order} items={items} />
+      )}
     </div>
   );
 };
