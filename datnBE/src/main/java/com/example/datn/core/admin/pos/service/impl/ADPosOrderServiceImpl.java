@@ -3,7 +3,6 @@ package com.example.datn.core.admin.pos.service.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import com.example.datn.core.admin.pos.repository.ADPosOrderDetailRepository;
 import com.example.datn.core.admin.pos.repository.ADPosOrderRepository;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
@@ -11,6 +10,8 @@ import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.OrderStatus;
+import com.example.datn.infrastructure.payment.VNPayConfig;
+import com.example.datn.infrastructure.payment.VNPayService;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
@@ -456,7 +457,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     @Transactional
-    public ResponseObject<?> checkoutOrder(String orderId) {
+    public ResponseObject<?> checkoutOrder(String orderId,
+            com.example.datn.core.admin.pos.model.request.CheckoutPosRequest request) {
         logger.info("[POS] Thanh toán hóa đơn {}", orderId);
         Order order = posOrderRepository.findById(orderId).orElse(null);
         if (order == null)
@@ -465,10 +467,43 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Hóa đơn này không ở trạng thái chờ thanh toán");
         }
 
+        // Xác định loại đơn hàng
+        TypeInvoice orderType = TypeInvoice.OFFLINE;
+        if (request != null && "GIAO_HANG".equals(request.getOrderType())) {
+            orderType = TypeInvoice.GIAO_HANG;
+        }
+        order.setOrderType(orderType);
+
+        // Xác định phương thức thanh toán
+        String paymentMethod = (request != null && request.getPaymentMethod() != null)
+                ? request.getPaymentMethod()
+                : PAYMENT_METHOD_CASH;
+        order.setPaymentMethod(paymentMethod);
+
+        // Cập nhật thông tin giao hàng
+        if (orderType == TypeInvoice.GIAO_HANG && request != null) {
+            if (request.getRecipientName() != null)
+                order.setRecipientName(request.getRecipientName());
+            if (request.getRecipientPhone() != null)
+                order.setRecipientPhone(request.getRecipientPhone());
+            if (request.getRecipientEmail() != null)
+                order.setRecipientEmail(request.getRecipientEmail());
+            if (request.getRecipientAddress() != null)
+                order.setRecipientAddress(request.getRecipientAddress());
+            BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
+            order.setShippingFee(shippingFee);
+        } else {
+            order.setShippingFee(BigDecimal.ZERO);
+        }
+
+        // Ghi nhận số tiền khách đưa
+        if (request != null && request.getCustomerPaid() != null) {
+            order.setCustomerPaid(request.getCustomerPaid());
+        }
+
         // Update Order status
         order.setOrderStatus(OrderStatus.HOAN_THANH);
         order.setPaymentDate(new Date().getTime());
-        order.setPaymentMethod(PAYMENT_METHOD_CASH);
         // Gán trạng thái thanh toán
         order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
 
@@ -505,14 +540,6 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 serial.setSerialStatus(SerialStatus.SOLD);
                 serial.setStatus(com.example.datn.infrastructure.constant.EntityStatus.INACTIVE);
                 serialRepository.save(serial);
-
-                // Generate Warranty
-                Warranty warranty = new Warranty();
-                warranty.setSerial(serial);
-                warranty.setStartDate(new Date().getTime());
-                warranty.setEndDate(new Date().getTime() + 31536000000L);
-                warranty.setNote("Bảo hành tự động khi mua tại quầy");
-                warrantyRepository.save(warranty);
             }
         }
 
@@ -651,4 +678,124 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         posOrderRepository.save(order);
         return ResponseObject.success(null, MSG_REMOVE_VOUCHER);
     }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> createVnPayUrl(String orderId, jakarta.servlet.http.HttpServletRequest request) {
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null)
+            return ResponseObject.error(HttpStatus.NOT_FOUND, MSG_ORDER_NOT_FOUND);
+        if (order.getOrderStatus() != OrderStatus.CHO_XAC_NHAN)
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Hóa đơn không ở trạng thái có thể thanh toán");
+
+        List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
+        if (details.isEmpty())
+            return ResponseObject.error(HttpStatus.BAD_REQUEST, MSG_ORDER_EMPTY);
+
+        // Validate serials
+        for (OrderDetail detail : details) {
+            long assignedCount = countSerialsByOrderDetailId(detail.getId());
+            if (assignedCount != detail.getQuantity())
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, MSG_SERIAL_NOT_ENOUGH);
+        }
+
+        // Tính tổng tiền (bao gồm phí ship nếu có)
+        BigDecimal totalAfterDiscount = order.getTotalAfterDiscount() != null ? order.getTotalAfterDiscount()
+                : order.getTotalAmount();
+        BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
+        long totalToPay = totalAfterDiscount.add(shippingFee).longValue();
+
+        // Cập nhật trạng thái order
+        order.setPaymentMethod("CHUYEN_KHOAN");
+        order.setPaymentStatus(PaymentStatus.CHO_THANH_TOAN_VNPAY);
+        posOrderRepository.save(order);
+
+        String posReturnUrl = vnPayConfig.getPosReturnUrl();
+        String paymentUrl = vnPayService.createPaymentUrl(
+                orderId,
+                totalToPay,
+                "Thanh toan POS " + order.getCode(),
+                request,
+                posReturnUrl);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("paymentUrl", paymentUrl);
+        result.put("orderCode", order.getCode());
+        result.put("totalAmount", totalToPay);
+        return ResponseObject.success(result, "Tạo link thanh toán VNPay thành công");
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> handlePosVnPayReturn(java.util.Map<String, String> params) {
+        if (!vnPayService.verifyReturn(params))
+            throw new RuntimeException("Chữ ký VNPay không hợp lệ!");
+
+        String orderId = params.get("vnp_TxnRef");
+        String responseCode = params.get("vnp_ResponseCode");
+        String transactionNo = params.get("vnp_TransactionNo");
+        String amountStr = params.get("vnp_Amount");
+
+        Order order = posOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + orderId));
+
+        // Idempotency: nếu đơn đã HOAN_THANH thì bỏ qua (VNPay gọi lại lần 2)
+        if (order.getOrderStatus() == OrderStatus.HOAN_THANH) {
+            return ResponseObject.success(null, "Thanh toán thành công");
+        }
+
+        BigDecimal amount = amountStr != null
+                ? new BigDecimal(amountStr).divide(BigDecimal.valueOf(100))
+                : (order.getTotalAfterDiscount() != null ? order.getTotalAfterDiscount() : order.getTotalAmount());
+
+        if ("00".equals(responseCode)) {
+            // Hoàn thành checkout POS
+            List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
+            for (OrderDetail detail : details) {
+                ProductDetail productDetail = detail.getProductDetail();
+                int newQuantity = productDetail.getQuantity() - detail.getQuantity();
+                if (newQuantity < 0)
+                    newQuantity = 0;
+                productDetail.setQuantity(newQuantity);
+                productDetailRepository.save(productDetail);
+
+                List<Serial> assignedSerials = getSerialsByOrderDetailId(detail.getId());
+                for (Serial serial : assignedSerials) {
+                    serial.setSerialStatus(SerialStatus.SOLD);
+                    serial.setStatus(com.example.datn.infrastructure.constant.EntityStatus.INACTIVE);
+                    serialRepository.save(serial);
+                }
+            }
+
+            order.setOrderStatus(OrderStatus.HOAN_THANH);
+            order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
+            order.setPaymentDate(System.currentTimeMillis());
+            order.setCustomerPaid(amount);
+            posOrderRepository.save(order);
+
+            OrderHistory lichSu = new OrderHistory();
+            lichSu.setOrder(order);
+            lichSu.setHoaDon(order);
+            lichSu.setTrangThai(OrderStatus.HOAN_THANH);
+            lichSu.setThoiGian(LocalDateTime.now());
+            lichSu.setNote("Thanh toán tại quầy qua VNPay, mã GD: " + transactionNo);
+            lichSu.setNhanVien(getCurrentEmployee());
+            orderHistoryRepository.save(lichSu);
+        } else {
+            order.setPaymentStatus(PaymentStatus.THANH_TOAN_THAT_BAI);
+            order.setOrderStatus(OrderStatus.CHO_XAC_NHAN);
+            posOrderRepository.save(order);
+        }
+
+        return ResponseObject.success(null,
+                "00".equals(responseCode) ? "Thanh toán thành công" : "Thanh toán thất bại");
+    }
+
+    // Lazy-injected to avoid circular dependency
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private VNPayService vnPayService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private VNPayConfig vnPayConfig;
 }

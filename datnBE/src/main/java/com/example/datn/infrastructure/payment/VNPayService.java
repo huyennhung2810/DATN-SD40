@@ -27,6 +27,10 @@ public class VNPayService {
      * @return URL chuyển hướng đến cổng VNPay
      */
     public String createPaymentUrl(String orderId, long amount, String orderInfo, HttpServletRequest request) {
+        return createPaymentUrl(orderId, amount, orderInfo, request, vnPayConfig.getReturnUrl());
+    }
+
+    public String createPaymentUrl(String orderId, long amount, String orderInfo, HttpServletRequest request, String customReturnUrl) {
         String vnpVersion = "2.1.0";
         String vnpCommand = "pay";
         String vnpLocale = "vn";
@@ -40,7 +44,7 @@ public class VNPayService {
 
         String ipAddr = getIpAddress(request);
 
-        String returnUrl = vnPayConfig.getReturnUrl();
+        String returnUrl = customReturnUrl != null ? customReturnUrl : vnPayConfig.getReturnUrl();
         // Đảm bảo return URL luôn có scheme http:// hoặc https://
         if (!returnUrl.startsWith("http://") && !returnUrl.startsWith("https://")) {
             returnUrl = "http://" + returnUrl;

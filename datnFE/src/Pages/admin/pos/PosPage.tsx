@@ -16,6 +16,8 @@ import {
   InputNumber,
   Select,
   Tooltip,
+  Radio,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,8 +32,18 @@ import {
   TagsOutlined,
   CloseCircleOutlined,
   GiftOutlined,
+  CarOutlined,
+  ShopOutlined,
+  BankOutlined,
+  WalletOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  CreditCardOutlined,
+  LinkOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { posApi } from "../../../api/admin/posApi";
+import type { CheckoutPosRequest } from "../../../api/admin/posApi";
 import { productDetailApi } from "../../../api/productDetailApi";
 import { customerApi } from "../../../api/customerApi";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
@@ -55,6 +67,36 @@ const PosPage: React.FC = () => {
 
   // Payment State
   const [customerCash, setCustomerCash] = useState<number | null>(null);
+  const [orderType, setOrderType] = useState<"OFFLINE" | "GIAO_HANG">(
+    "OFFLINE",
+  );
+  const [posPaymentMethod, setPosPaymentMethod] = useState<
+    "TIEN_MAT" | "CHUYEN_KHOAN"
+  >("TIEN_MAT");
+  const [recipientInfo, setRecipientInfo] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    note: "",
+  });
+  const [shippingFee, setShippingFee] = useState<number>(0);
+  const [recipientModalOpen, setRecipientModalOpen] = useState(false);
+  const [draftRecipient, setDraftRecipient] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    note: "",
+    shippingFee: 0,
+  });
+  const [vnpayPendingModal, setVnpayPendingModal] = useState<{
+    open: boolean;
+    paymentUrl: string;
+    orderCode: string;
+    totalAmount: number;
+  }>({ open: false, paymentUrl: "", orderCode: "", totalAmount: 0 });
+  const vnpayPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [checkoutSuccessModal, setCheckoutSuccessModal] = useState<{
     open: boolean;
     orderCode: string;
@@ -178,6 +220,10 @@ const PosPage: React.FC = () => {
     setActiveKey(key);
     fetchOrderDetails(key);
     setCustomerCash(null); // Reset cash input when switching tabs
+    setOrderType("OFFLINE");
+    setPosPaymentMethod("TIEN_MAT");
+    setRecipientInfo({ name: "", phone: "", email: "", address: "", note: "" });
+    setShippingFee(0);
     // Reset applied voucher when switching tabs (will be set from activeOrder)
     setAppliedVoucher(null);
     // Reset customer search
@@ -468,20 +514,81 @@ const PosPage: React.FC = () => {
     }
   };
 
+  const openRecipientModal = (currentCustomer?: any) => {
+    // Pre-fill draft from current recipientInfo; if empty, try from customer
+    const customer = currentCustomer ?? activeOrder?.customer;
+    setDraftRecipient({
+      name: recipientInfo.name || customer?.name || "",
+      phone: recipientInfo.phone || customer?.phoneNumber || "",
+      email: recipientInfo.email || customer?.email || "",
+      address: recipientInfo.address,
+      note: recipientInfo.note,
+      shippingFee: shippingFee,
+    });
+    setRecipientModalOpen(true);
+  };
+
+  const handleSaveRecipient = () => {
+    if (!draftRecipient.name.trim()) {
+      message.error("Vui lòng nhập tên người nhận!");
+      return;
+    }
+    if (!draftRecipient.phone.trim()) {
+      message.error("Vui lòng nhập số điện thoại người nhận!");
+      return;
+    }
+    if (!draftRecipient.address.trim()) {
+      message.error("Vui lòng nhập địa chỉ giao hàng!");
+      return;
+    }
+    setRecipientInfo({
+      name: draftRecipient.name,
+      phone: draftRecipient.phone,
+      email: draftRecipient.email,
+      address: draftRecipient.address,
+      note: draftRecipient.note,
+    });
+    setShippingFee(draftRecipient.shippingFee);
+    setRecipientModalOpen(false);
+    message.success("Đã lưu thông tin người nhận");
+  };
+
   const handleCheckout = async () => {
     if (!activeKey || cartDetails.length === 0) {
       message.warning("Hóa đơn trống, không thể thanh toán.");
       return;
     }
 
-    const totalToPay = activeOrder?.totalAfterDiscount || 0;
-    if (customerCash === null) {
-      message.error("Vui lòng nhập số tiền khách đưa trước khi thanh toán!");
-      return;
+    const totalToPay =
+      (activeOrder?.totalAfterDiscount || 0) +
+      (orderType === "GIAO_HANG" ? shippingFee : 0);
+
+    // Validate tiền mặt chỉ khi TIEN_MAT
+    if (posPaymentMethod === "TIEN_MAT") {
+      if (customerCash === null) {
+        message.error("Vui lòng nhập số tiền khách đưa trước khi thanh toán!");
+        return;
+      }
+      if (customerCash < totalToPay) {
+        message.error("Số tiền khách đưa không đủ!");
+        return;
+      }
     }
-    if (customerCash < totalToPay) {
-      message.error("Số tiền khách đưa không đủ!");
-      return;
+
+    // Validate thông tin người nhận khi giao hàng
+    if (orderType === "GIAO_HANG") {
+      if (!recipientInfo.name.trim()) {
+        message.error("Vui lòng nhập tên người nhận!");
+        return;
+      }
+      if (!recipientInfo.phone.trim()) {
+        message.error("Vui lòng nhập số điện thoại người nhận!");
+        return;
+      }
+      if (!recipientInfo.address.trim()) {
+        message.error("Vui lòng nhập địa chỉ giao hàng!");
+        return;
+      }
     }
 
     const isMissingSerials = cartDetails.some(
@@ -494,11 +601,84 @@ const PosPage: React.FC = () => {
       return;
     }
 
+    // CHUYEN_KHOAN → dùng VNPay
+    if (posPaymentMethod === "CHUYEN_KHOAN") {
+      try {
+        const res = await posApi.createVnPayUrl(activeKey);
+        const data = res.data?.data;
+        if (data?.paymentUrl) {
+          setVnpayPendingModal({
+            open: true,
+            paymentUrl: data.paymentUrl,
+            orderCode: data.orderCode || activeOrder.code,
+            totalAmount: data.totalAmount || totalToPay,
+          });
+          window.open(data.paymentUrl, "_blank");
+          // Poll every 3 s to detect payment confirmation
+          vnpayPollingRef.current = setInterval(async () => {
+            try {
+              const pollRes = await posApi.getPendingOrders();
+              const stillPending = (pollRes.data?.data || []).some(
+                (o: any) => o.id === activeKey,
+              );
+              if (!stillPending) {
+                // Order is gone from pending list → payment confirmed
+                clearInterval(vnpayPollingRef.current!);
+                setVnpayPendingModal({
+                  open: false,
+                  paymentUrl: "",
+                  orderCode: "",
+                  totalAmount: 0,
+                });
+                setCheckoutSuccessModal({
+                  open: true,
+                  orderCode: data.orderCode || activeOrder.code,
+                  totalAmount: data.totalAmount || totalToPay,
+                  change: 0,
+                  cartItems: [...cartDetails],
+                  customerCash: 0,
+                  voucherSaving: calcVoucherSaving(
+                    appliedVoucher,
+                    activeOrder.totalAmount || 0,
+                  ),
+                  customerName: activeOrder?.customer?.name,
+                });
+                fetchPendingOrders();
+              }
+            } catch {
+              // ignore polling errors
+            }
+          }, 3000);
+        }
+      } catch (error: any) {
+        console.error(error);
+        message.error(error.response?.data?.message || "Lỗi tạo link VNPay");
+      }
+      return;
+    }
+
+    const checkoutBody: CheckoutPosRequest = {
+      orderType,
+      paymentMethod: posPaymentMethod,
+      ...(orderType === "GIAO_HANG" && {
+        recipientName: recipientInfo.name,
+        recipientPhone: recipientInfo.phone,
+        recipientEmail: recipientInfo.email,
+        recipientAddress: recipientInfo.address,
+        shippingFee: shippingFee,
+      }),
+      ...(posPaymentMethod === "TIEN_MAT" && {
+        customerPaid: customerCash ?? 0,
+      }),
+    };
+
     try {
-      const res = await posApi.checkout(activeKey);
+      const res = await posApi.checkout(activeKey, checkoutBody);
       if (res.data?.data) {
         const changeAmount =
-          customerCash !== null ? customerCash - totalToPay : 0;
+          posPaymentMethod === "TIEN_MAT" && customerCash !== null
+            ? customerCash - totalToPay
+            : 0;
 
         setCheckoutSuccessModal({
           open: true,
@@ -867,6 +1047,68 @@ const PosPage: React.FC = () => {
               pagination={{ pageSize: 5 }}
             />
           </Card>
+
+          {/* KHU VỰC 4: THÔNG TIN NGƯỜI NHẬN (chỉ hiện khi GIAO_HANG) */}
+          {orderType === "GIAO_HANG" && activeOrder && (
+            <Card
+              bordered={false}
+              title={
+                <Space>
+                  <CarOutlined style={{ color: "#1890ff" }} />
+                  <span>Thông tin người nhận</span>
+                </Space>
+              }
+              extra={
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
+                  onClick={openRecipientModal}
+                >
+                  Chỉnh sửa
+                </Button>
+              }
+            >
+              {recipientInfo.name ? (
+                <Row gutter={[16, 8]}>
+                  <Col span={12}>
+                    <Space>
+                      <UserOutlined style={{ color: "#1890ff" }} />
+                      <Text strong>{recipientInfo.name}</Text>
+                    </Space>
+                  </Col>
+                  <Col span={12}>
+                    <Text>{recipientInfo.phone}</Text>
+                  </Col>
+                  {recipientInfo.email && (
+                    <Col span={24}>
+                      <Text type="secondary">{recipientInfo.email}</Text>
+                    </Col>
+                  )}
+                  <Col span={24}>
+                    <Space align="start">
+                      <CarOutlined style={{ color: "#8c8c8c", marginTop: 3 }} />
+                      <Text>{recipientInfo.address}</Text>
+                    </Space>
+                  </Col>
+                  {recipientInfo.note && (
+                    <Col span={24}>
+                      <Text type="secondary" italic>
+                        Ghi chú: {recipientInfo.note}
+                      </Text>
+                    </Col>
+                  )}
+                </Row>
+              ) : (
+                <Alert
+                  type="warning"
+                  showIcon
+                  icon={<InfoCircleOutlined />}
+                  message="Chưa có thông tin người nhận"
+                  description='Nhấn "Chỉnh sửa" để nhập thông tin giao hàng.'
+                />
+              )}
+            </Card>
+          )}
         </Col>
 
         {/* KHU VỰC 3: THANH TOÁN */}
@@ -1011,6 +1253,24 @@ const PosPage: React.FC = () => {
                       )}
                     </div>
                   </div>
+                  {/* Phí ship (chỉ hiện khi GIAO_HANG và shippingFee > 0) */}
+                  {orderType === "GIAO_HANG" && shippingFee > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Space size={4}>
+                        <CarOutlined style={{ color: "#1890ff" }} />
+                        <Text>Phí giao hàng:</Text>
+                      </Space>
+                      <Text strong>
+                        +{shippingFee.toLocaleString("vi-VN")} đ
+                      </Text>
+                    </div>
+                  )}
                   <div
                     style={{
                       display: "flex",
@@ -1024,54 +1284,200 @@ const PosPage: React.FC = () => {
                       Khách cần trả:
                     </Title>
                     <Title level={4} type="danger" style={{ margin: 0 }}>
-                      {activeOrder.totalAfterDiscount?.toLocaleString(
-                        "vi-VN",
-                      ) || 0}{" "}
+                      {(
+                        (activeOrder.totalAfterDiscount || 0) +
+                        (orderType === "GIAO_HANG" ? shippingFee : 0)
+                      ).toLocaleString("vi-VN")}{" "}
                       đ
                     </Title>
                   </div>
+
+                  {/* Loại đơn hàng: Tại quầy / Giao hàng */}
                   <div style={{ marginBottom: 16 }}>
-                    <Text strong>Tiền khách đưa:</Text>
-                    <InputNumber
-                      style={{ width: "100%", marginTop: 8 }}
-                      size="large"
-                      value={customerCash}
-                      onChange={(val) => setCustomerCash(val as number)}
-                      formatter={(value) =>
-                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                      }
-                      parser={(value) =>
-                        value!.replace(/\$\s?|(,*)/g, "") as any
-                      }
-                      addonAfter="đ"
-                      placeholder="Nhập số tiền..."
-                    />
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: 24,
-                    }}
-                  >
-                    <Text>Tiền thối lại:</Text>
-                    {customerCash !== null &&
-                    customerCash >= (activeOrder.totalAfterDiscount || 0) ? (
-                      <Text strong type="success">
-                        {(
-                          customerCash - (activeOrder.totalAfterDiscount || 0)
-                        ).toLocaleString("vi-VN")}{" "}
-                        đ
-                      </Text>
-                    ) : (
-                      <Text
-                        strong
-                        type={customerCash !== null ? "danger" : "secondary"}
+                    <Text strong style={{ display: "block", marginBottom: 8 }}>
+                      Hình thức nhận hàng:
+                    </Text>
+                    <Radio.Group
+                      value={orderType}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setOrderType(newType);
+                        if (newType === "GIAO_HANG") {
+                          // Open modal immediately to fill recipient info
+                          const customer = activeOrder?.customer;
+                          setDraftRecipient({
+                            name: recipientInfo.name || customer?.name || "",
+                            phone:
+                              recipientInfo.phone ||
+                              customer?.phoneNumber ||
+                              "",
+                            email: recipientInfo.email || customer?.email || "",
+                            address: recipientInfo.address,
+                            note: recipientInfo.note,
+                            shippingFee: shippingFee,
+                          });
+                          setRecipientModalOpen(true);
+                        }
+                      }}
+                      style={{ width: "100%" }}
+                    >
+                      <Radio.Button
+                        value="OFFLINE"
+                        style={{ width: "50%", textAlign: "center" }}
                       >
-                        {customerCash !== null ? "Khách đưa thiếu tiền" : "0 đ"}
-                      </Text>
-                    )}
+                        <Space>
+                          <ShopOutlined />
+                          Lấy tại quầy
+                        </Space>
+                      </Radio.Button>
+                      <Radio.Button
+                        value="GIAO_HANG"
+                        style={{ width: "50%", textAlign: "center" }}
+                      >
+                        <Space>
+                          <CarOutlined />
+                          Giao hàng
+                        </Space>
+                      </Radio.Button>
+                    </Radio.Group>
                   </div>
+
+                  {/* Phương thức thanh toán */}
+                  <div style={{ marginBottom: 16 }}>
+                    <Text strong style={{ display: "block", marginBottom: 8 }}>
+                      Phương thức thanh toán:
+                    </Text>
+                    <Radio.Group
+                      value={posPaymentMethod}
+                      onChange={(e) => setPosPaymentMethod(e.target.value)}
+                      style={{ width: "100%" }}
+                    >
+                      <Radio.Button
+                        value="TIEN_MAT"
+                        style={{ width: "50%", textAlign: "center" }}
+                      >
+                        <Space>
+                          <WalletOutlined />
+                          Tiền mặt
+                        </Space>
+                      </Radio.Button>
+                      <Radio.Button
+                        value="CHUYEN_KHOAN"
+                        style={{ width: "50%", textAlign: "center" }}
+                      >
+                        <Space>
+                          <BankOutlined />
+                          Chuyển khoản
+                        </Space>
+                      </Radio.Button>
+                    </Radio.Group>
+                  </div>
+
+                  {/* Tiền mặt: nhập số tiền khách đưa */}
+                  {posPaymentMethod === "TIEN_MAT" && (
+                    <>
+                      <div style={{ marginBottom: 16 }}>
+                        <Text strong>Tiền khách đưa:</Text>
+                        <InputNumber
+                          style={{ width: "100%", marginTop: 8 }}
+                          size="large"
+                          value={customerCash}
+                          onChange={(val) => setCustomerCash(val as number)}
+                          formatter={(value) =>
+                            `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                          }
+                          parser={(value) =>
+                            value!.replace(/\$\s?|(,*)/g, "") as any
+                          }
+                          addonAfter="đ"
+                          placeholder="Nhập số tiền..."
+                        />
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 24,
+                        }}
+                      >
+                        <Text>Tiền thối lại:</Text>
+                        {(() => {
+                          const total =
+                            (activeOrder.totalAfterDiscount || 0) +
+                            (orderType === "GIAO_HANG" ? shippingFee : 0);
+                          if (customerCash !== null && customerCash >= total) {
+                            return (
+                              <Text strong type="success">
+                                {(customerCash - total).toLocaleString("vi-VN")}{" "}
+                                đ
+                              </Text>
+                            );
+                          }
+                          return (
+                            <Text
+                              strong
+                              type={
+                                customerCash !== null ? "danger" : "secondary"
+                              }
+                            >
+                              {customerCash !== null
+                                ? "Khách đưa thiếu tiền"
+                                : "0 đ"}
+                            </Text>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Chuyển khoản: VNPay */}
+                  {posPaymentMethod === "CHUYEN_KHOAN" && (
+                    <div
+                      style={{
+                        marginBottom: 24,
+                        padding: "14px 16px",
+                        background: "#f0f5ff",
+                        borderRadius: 8,
+                        border: "1px solid #91caff",
+                      }}
+                    >
+                      <Space align="center" style={{ marginBottom: 8 }}>
+                        <CreditCardOutlined
+                          style={{ fontSize: 20, color: "#1677ff" }}
+                        />
+                        <Text strong style={{ color: "#1677ff" }}>
+                          Thanh toán qua VNPay
+                        </Text>
+                      </Space>
+                      <Text
+                        type="secondary"
+                        style={{
+                          display: "block",
+                          fontSize: 12,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Thẻ ATM, VISA, MasterCard, QR Code — Nhấn "Xác nhận
+                        Thanh toán" để tạo link VNPay và mở trang thanh toán.
+                      </Text>
+                      <Space size={4} style={{ flexWrap: "wrap" }}>
+                        {[
+                          "Vietcombank",
+                          "Techcombank",
+                          "MBBank",
+                          "VIB",
+                          "ACB",
+                        ].map((b) => (
+                          <Tag key={b} style={{ fontSize: 10 }}>
+                            {b}
+                          </Tag>
+                        ))}
+                        <Tag style={{ fontSize: 10 }}>
+                          + nhiều ngân hàng khác
+                        </Tag>
+                      </Space>
+                    </div>
+                  )}
                 </>
               ) : (
                 <Text type="secondary">
@@ -1092,8 +1498,11 @@ const PosPage: React.FC = () => {
                 cartDetails.some(
                   (d) => (d.assignedSerialsCount || 0) < d.quantity,
                 ) ||
-                customerCash === null ||
-                customerCash < (activeOrder.totalAfterDiscount || 0)
+                (posPaymentMethod === "TIEN_MAT" &&
+                  (customerCash === null ||
+                    customerCash <
+                      (activeOrder?.totalAfterDiscount || 0) +
+                        (orderType === "GIAO_HANG" ? shippingFee : 0)))
               }
             >
               Xác nhận Thanh toán
@@ -1244,6 +1653,182 @@ const PosPage: React.FC = () => {
         voucherSaving={checkoutSuccessModal.voucherSaving}
         customerName={checkoutSuccessModal.customerName}
       />
+
+      {/* Modal Thông tin người nhận */}
+      <Modal
+        title={
+          <Space>
+            <InfoCircleOutlined style={{ color: "#1890ff" }} />
+            <span>Thông tin người nhận</span>
+          </Space>
+        }
+        open={recipientModalOpen}
+        onCancel={() => setRecipientModalOpen(false)}
+        onOk={handleSaveRecipient}
+        okText="Lưu thông tin"
+        cancelText="Hủy"
+        width={560}
+      >
+        <div style={{ paddingTop: 8 }}>
+          <Row gutter={16} style={{ marginBottom: 12 }}>
+            <Col span={12}>
+              <Text strong>
+                Tên người nhận <Text type="danger">*</Text>
+              </Text>
+              <Input
+                style={{ marginTop: 4 }}
+                placeholder="Nhập tên người nhận..."
+                value={draftRecipient.name}
+                onChange={(e) =>
+                  setDraftRecipient({ ...draftRecipient, name: e.target.value })
+                }
+              />
+            </Col>
+            <Col span={12}>
+              <Text strong>
+                Số điện thoại <Text type="danger">*</Text>
+              </Text>
+              <Input
+                style={{ marginTop: 4 }}
+                placeholder="Nhập số điện thoại..."
+                value={draftRecipient.phone}
+                onChange={(e) =>
+                  setDraftRecipient({
+                    ...draftRecipient,
+                    phone: e.target.value,
+                  })
+                }
+              />
+            </Col>
+          </Row>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Email (Tùy chọn)</Text>
+            <Input
+              style={{ marginTop: 4 }}
+              placeholder="Nhập email người nhận để nhận thông báo..."
+              value={draftRecipient.email}
+              onChange={(e) =>
+                setDraftRecipient({ ...draftRecipient, email: e.target.value })
+              }
+            />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>
+              Địa chỉ giao hàng <Text type="danger">*</Text>
+            </Text>
+            <Input.TextArea
+              style={{ marginTop: 4 }}
+              rows={3}
+              placeholder="Số nhà, ngõ, tên đường, phường/xã, tỉnh/thành phố..."
+              value={draftRecipient.address}
+              onChange={(e) =>
+                setDraftRecipient({
+                  ...draftRecipient,
+                  address: e.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Ghi chú đơn hàng</Text>
+            <Input.TextArea
+              style={{ marginTop: 4 }}
+              rows={2}
+              placeholder="Nhập ghi chú giao hàng (nếu có)..."
+              value={draftRecipient.note}
+              onChange={(e) =>
+                setDraftRecipient({ ...draftRecipient, note: e.target.value })
+              }
+            />
+          </div>
+
+          <div>
+            <Text strong>Phí vận chuyển</Text>
+            <InputNumber
+              style={{ width: "100%", marginTop: 4 }}
+              min={0}
+              value={draftRecipient.shippingFee}
+              onChange={(val) =>
+                setDraftRecipient({
+                  ...draftRecipient,
+                  shippingFee: (val as number) ?? 0,
+                })
+              }
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+              addonAfter="đ"
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal chờ thanh toán VNPay */}
+      <Modal
+        title={
+          <Space>
+            <CreditCardOutlined style={{ color: "#1677ff" }} />
+            <span>Đang chờ thanh toán VNPay</span>
+          </Space>
+        }
+        open={vnpayPendingModal.open}
+        footer={null}
+        closable={false}
+        centered
+        width={420}
+      >
+        <div style={{ textAlign: "center", padding: "16px 0" }}>
+          <LoadingOutlined
+            style={{ fontSize: 48, color: "#1677ff", marginBottom: 16 }}
+          />
+          <Title level={4} style={{ marginBottom: 4 }}>
+            Mã hóa đơn: {vnpayPendingModal.orderCode}
+          </Title>
+          <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
+            Số tiền cần thanh toán:
+          </Text>
+          <Title level={3} type="danger" style={{ marginBottom: 16 }}>
+            {vnpayPendingModal.totalAmount.toLocaleString("vi-VN")} đ
+          </Title>
+          <Text type="secondary" style={{ display: "block", marginBottom: 20 }}>
+            Trang thanh toán VNPay đã được mở trong tab mới. Đang tự động kiểm
+            tra trạng thái thanh toán...
+          </Text>
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Button
+              type="primary"
+              icon={<LinkOutlined />}
+              block
+              onClick={() =>
+                window.open(vnpayPendingModal.paymentUrl, "_blank")
+              }
+            >
+              Mở lại trang VNPay
+            </Button>
+            <Button
+              block
+              onClick={() => {
+                if (vnpayPollingRef.current)
+                  clearInterval(vnpayPollingRef.current);
+                setVnpayPendingModal({
+                  open: false,
+                  paymentUrl: "",
+                  orderCode: "",
+                  totalAmount: 0,
+                });
+                fetchPendingOrders();
+              }}
+            >
+              Hủy thanh toán VNPay
+            </Button>
+          </Space>
+        </div>
+      </Modal>
 
       {/* Thanh toán thành công Modal */}
       <Modal

@@ -111,6 +111,8 @@ public class DBGenerator implements CommandLineRunner {
     @Value("${USER_CODE}")
     private String adminCode;
     private Long now;
+    @Autowired
+    private PaymentHistoryRepository paymentHistoryRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -173,6 +175,7 @@ public class DBGenerator implements CommandLineRunner {
             // 2. Xóa serial (có FK đến product_detail và order_detail)
             serialRepository.deleteAll();
 
+            paymentHistoryRepository.deleteAll();
             // 3. Xóa order details -> orders (order có FK đến customer, voucher)
             orderDetailRepository.deleteAll();
             orderRepository.deleteAll();

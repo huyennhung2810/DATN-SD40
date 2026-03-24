@@ -19,4 +19,7 @@ public class VNPayConfig {
 
     @Value("${vnpay.return-url}")
     private String returnUrl;
+
+    @Value("${vnpay.pos-return-url:http://localhost:6688/admin/pos/vnpay-return}")
+    private String posReturnUrl;
 }
