@@ -36,6 +36,6 @@ export const posApi = {
         axiosInstance.post(`/admin/pos/orders/${orderId}/apply-voucher`, null, { params: { voucherId } }),
     removeVoucher: (orderId: string) =>
         axiosInstance.delete(`/admin/pos/orders/${orderId}/remove-voucher`),
-    createVnPayUrl: (orderId: string) =>
-        axiosInstance.post(`/admin/pos/orders/${orderId}/vnpay-url`),
+    createVnPayUrl: (orderId: string, body?: Partial<CheckoutPosRequest>) =>
+        axiosInstance.post(`/admin/pos/orders/${orderId}/vnpay-url`, body ?? {}),
 };

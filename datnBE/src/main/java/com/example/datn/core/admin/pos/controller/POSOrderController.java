@@ -97,8 +97,10 @@ public class POSOrderController {
     }
 
     @PostMapping("/{orderId}/vnpay-url")
-    public ResponseEntity<?> createVnPayUrl(@PathVariable String orderId, HttpServletRequest request) {
-        return ResponseEntity.ok(posOrderService.createVnPayUrl(orderId, request));
+    public ResponseEntity<?> createVnPayUrl(@PathVariable String orderId,
+            @RequestBody(required = false) CheckoutPosRequest body,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(posOrderService.createVnPayUrl(orderId, body, request));
     }
 
     @GetMapping("/vnpay-return")

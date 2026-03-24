@@ -604,7 +604,19 @@ const PosPage: React.FC = () => {
     // CHUYEN_KHOAN → dùng VNPay
     if (posPaymentMethod === "CHUYEN_KHOAN") {
       try {
-        const res = await posApi.createVnPayUrl(activeKey);
+        const vnPayBody: Partial<
+          import("../../../api/admin/posApi").CheckoutPosRequest
+        > = {
+          orderType,
+          ...(orderType === "GIAO_HANG" && {
+            recipientName: recipientInfo.name,
+            recipientPhone: recipientInfo.phone,
+            recipientEmail: recipientInfo.email,
+            recipientAddress: recipientInfo.address,
+            shippingFee: shippingFee,
+          }),
+        };
+        const res = await posApi.createVnPayUrl(activeKey, vnPayBody);
         const data = res.data?.data;
         if (data?.paymentUrl) {
           setVnpayPendingModal({

@@ -689,7 +689,9 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
     @Override
     @Transactional
-    public ResponseObject<?> createVnPayUrl(String orderId, jakarta.servlet.http.HttpServletRequest request) {
+    public ResponseObject<?> createVnPayUrl(String orderId,
+            com.example.datn.core.admin.pos.model.request.CheckoutPosRequest body,
+            jakarta.servlet.http.HttpServletRequest request) {
         Order order = posOrderRepository.findById(orderId).orElse(null);
         if (order == null)
             return ResponseObject.error(HttpStatus.NOT_FOUND, MSG_ORDER_NOT_FOUND);
@@ -705,6 +707,28 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             long assignedCount = countSerialsByOrderDetailId(detail.getId());
             if (assignedCount != detail.getQuantity())
                 return ResponseObject.error(HttpStatus.BAD_REQUEST, MSG_SERIAL_NOT_ENOUGH);
+        }
+
+        // Lưu orderType và thông tin giao hàng vào order trước khi redirect VNPay
+        TypeInvoice orderType = TypeInvoice.OFFLINE;
+        if (body != null && "GIAO_HANG".equals(body.getOrderType())) {
+            orderType = TypeInvoice.GIAO_HANG;
+        }
+        order.setOrderType(orderType);
+
+        if (orderType == TypeInvoice.GIAO_HANG && body != null) {
+            if (body.getRecipientName() != null)
+                order.setRecipientName(body.getRecipientName());
+            if (body.getRecipientPhone() != null)
+                order.setRecipientPhone(body.getRecipientPhone());
+            if (body.getRecipientEmail() != null)
+                order.setRecipientEmail(body.getRecipientEmail());
+            if (body.getRecipientAddress() != null)
+                order.setRecipientAddress(body.getRecipientAddress());
+            BigDecimal fee = body.getShippingFee() != null ? body.getShippingFee() : BigDecimal.ZERO;
+            order.setShippingFee(fee);
+        } else {
+            order.setShippingFee(BigDecimal.ZERO);
         }
 
         // Tính tổng tiền (bao gồm phí ship nếu có)
