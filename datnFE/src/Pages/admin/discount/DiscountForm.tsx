@@ -372,14 +372,9 @@ const DiscountForm: React.FC = () => {
                   key: "productName",
                 },
                 {
-                  title: "Màu sắc",
-                  dataIndex: "colorName",
-                  key: "colorName",
-                },
-                {
-                  title: "Dung lượng",
-                  dataIndex: "storageCapacityName",
-                  key: "storageCapacityName",
+                  title: "version",
+                  dataIndex: "version",
+                  key: "version",
                 },
                 {
                   title: "Giá bán",
