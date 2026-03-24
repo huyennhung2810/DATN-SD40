@@ -1,44 +1,45 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import {
+  EditOutlined,
+  FileExcelOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  SyncOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
   Card,
   Form,
   Input,
-  Select,
-  Radio,
-  Button,
-  Table,
+  Modal,
   Pagination,
+  Popconfirm,
+  Radio,
+  Select,
   Space,
+  Switch,
+  Table,
+  Tag,
   Tooltip,
   Typography,
-  Tag,
   notification,
-  Avatar,
-  Switch,
-  Popconfirm,
-  Modal,
 } from "antd";
-import {
-  UserOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  FileExcelOutlined,
-  SyncOutlined,
-  EditOutlined,
-  PhoneOutlined,
-  MailOutlined,
-} from "@ant-design/icons";
-import type { RootState } from "../../../redux/store";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import type {
   CustomerPageParams,
   CustomerResponse,
 } from "../../../models/customer";
 import { customerActions } from "../../../redux/customer/customerSlice";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import type { RootState } from "../../../redux/store";
 
 const { Text } = Typography;
 
@@ -285,6 +286,32 @@ const CustomerPage: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {/* Header */}
+      <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <TeamOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
+          </div>
+
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý khách hàng
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý danh sách khách hàng trong hệ thống
+            </Typography.Text>
+          </div>
+        </Space>
+      </div>
+
       <Card
         title={
           <span>

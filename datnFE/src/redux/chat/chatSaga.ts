@@ -6,15 +6,16 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
 
 
-function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: string }>) {
+function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: string; userId?: string }>) {
   try {
-    const { content, sessionId } = action.payload;
+    const { content, sessionId, userId } = action.payload;
 
     yield put(addMessage({ content, sender: 'CUSTOMER', sessionId }));
 
     const response: { data: ChatResponse } = yield call(postChatMessage, { 
       message: content, 
-      sessionId 
+      sessionId,
+      userId
     });
 
     if (response.data.sender === 'AI') {

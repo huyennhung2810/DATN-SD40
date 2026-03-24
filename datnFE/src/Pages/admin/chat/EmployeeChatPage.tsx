@@ -10,6 +10,7 @@ import {
   Card,
   Empty,
   message,
+  Space,
 } from "antd";
 import {
   SendOutlined,
@@ -37,7 +38,7 @@ const EmployeeChatPage: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
 
   const stompClientRef = useRef<any>(null);
-  const subscriptionRef = useRef<any>(null); 
+  const subscriptionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Khởi tạo: Lấy danh sách session cũ từ DB
@@ -55,35 +56,49 @@ const EmployeeChatPage: React.FC = () => {
 
   //Kết nối WebSocket duy nhất (Global)
   useEffect(() => {
-    const socket = new SockJS("http://localhost:8386/ws-chat");
-    const client = Stomp.over(socket);
-    client.debug = () => {}; 
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let socket: any = null;
+    let client: any = null;
 
-    client.connect({}, () => {
-      stompClientRef.current = client;
+    const connectWebSocket = () => {
+      socket = new SockJS("http://localhost:8386/ws-chat");
+      client = Stomp.over(socket);
+      client.debug = () => {};
 
-      // Lắng nghe thông báo có khách hàng mới cần hỗ trợ
-      client.subscribe("/topic/admin/notifications", (payload) => {
-        const sessionId = payload.body;
-        message.info(`Khách hàng ${sessionId} đang cần hỗ trợ!`);
+      client.connect(
+        {},
+        () => {
+          stompClientRef.current = client;
+          // Lắng nghe thông báo có khách hàng mới cần hỗ trợ
+          client.subscribe("/topic/admin/notifications", (payload: any) => {
+            const sessionId = payload.body;
+            message.info(`Khách hàng ${sessionId} đang cần hỗ trợ!`);
+            setSessions((prev) => {
+              if (prev.find((s) => s.sessionId === sessionId)) return prev;
+              return [
+                {
+                  sessionId,
+                  lastMessage: "Đang đợi hỗ trợ...",
+                  unreadCount: 1,
+                  isAiActive: false,
+                },
+                ...prev,
+              ];
+            });
+          });
+        },
+        (error: any) => {
+          console.error("Lỗi kết nối WebSocket:", error);
+          reconnectTimeout = setTimeout(connectWebSocket, 3000);
+        },
+      );
+    };
 
-        setSessions((prev) => {
-          if (prev.find((s) => s.sessionId === sessionId)) return prev;
-          return [
-            {
-              sessionId,
-              lastMessage: "Đang đợi hỗ trợ...",
-              unreadCount: 1,
-              isAiActive: false,
-            },
-            ...prev,
-          ];
-        });
-      });
-    });
+    connectWebSocket();
 
     return () => {
       if (stompClientRef.current) stompClientRef.current.disconnect(() => {});
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, []);
 
@@ -92,10 +107,11 @@ const EmployeeChatPage: React.FC = () => {
     if (selectedSession && stompClientRef.current) {
       const fetchHistory = async () => {
         try {
-          const res = await axiosClient.get(
-            `/support/history/${selectedSession}`,
-          );
-          // Luôn đảm bảo messages là mảng
+          const userId = null;
+          const url = userId
+            ? `/support/history/${selectedSession}?userId=${userId}`
+            : `/support/history/${selectedSession}`;
+          const res = await axiosClient.get(url);
           setMessages(Array.isArray(res.data) ? res.data : []);
 
           setSessions((prev) =>
@@ -110,7 +126,14 @@ const EmployeeChatPage: React.FC = () => {
       };
       fetchHistory();
 
-      if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
+      if (subscriptionRef.current) {
+        try {
+          subscriptionRef.current.unsubscribe();
+        } catch (e) {
+          console.error("Lỗi hủy subscription cũ:", e);
+        }
+        subscriptionRef.current = null;
+      }
 
       subscriptionRef.current = stompClientRef.current.subscribe(
         `/topic/messages/${selectedSession}`,
@@ -132,14 +155,19 @@ const EmployeeChatPage: React.FC = () => {
   //gửi tn
   const handleSendMessage = () => {
     if (!inputValue.trim() || !selectedSession) return;
-
-    stompClientRef.current.send(
-      `/app/chat.staffReply/${selectedSession}`,
-      {},
-      inputValue,
-    );
-
-    setInputValue("");
+    try {
+      stompClientRef.current.send(
+        `/app/chat.staffReply/${selectedSession}`,
+        {},
+        inputValue,
+      );
+      setInputValue("");
+    } catch (error) {
+      message.error(
+        "Không thể gửi tin nhắn. Kết nối máy chủ có thể đã bị mất!",
+      );
+      console.error("Lỗi gửi tin nhắn qua WebSocket:", error);
+    }
   };
 
   //kết thúc hỗ trợ
@@ -149,6 +177,12 @@ const EmployeeChatPage: React.FC = () => {
       await axiosClient.post(
         `/support/end-support?sessionId=${selectedSession}`,
       );
+
+      // Unsubscribe khỏi topic WebSocket của session này
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
 
       setSessions((prev) =>
         prev.filter((s) => s.sessionId !== selectedSession),
@@ -168,174 +202,202 @@ const EmployeeChatPage: React.FC = () => {
   }, [messages]);
 
   return (
-    <Layout
-      style={{
-        height: "85vh",
-        background: "#fff",
-        borderRadius: "12px",
-        overflow: "hidden",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-      }}
-    >
-      <Sider
-        width={320}
-        theme="light"
-        style={{ borderRight: "1px solid #f0f0f0" }}
+    <>
+      {/* HEADER CARD */}
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
       >
-        <div
-          style={{
-            padding: "20px",
-            borderBottom: "1px solid #f0f0f0",
-            background: "#fafafa",
-          }}
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <CustomerServiceOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
+          </div>
+
+          <div>
+            <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Hỗ trợ khách hàng (Live Chat)
+            </Title>
+            <Text type="secondary" style={{ fontSize: "13px" }}>
+              Trò chuyện và hỗ trợ khách hàng theo thời gian thực
+            </Text>
+          </div>
+        </Space>
+      </div>
+
+      {/* MAIN CHAT */}
+      <Layout
+        style={{
+          height: "85vh",
+          background: "#fff",
+          borderRadius: "12px",
+          overflow: "hidden",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Sider
+          width={320}
+          theme="light"
+          style={{ borderRight: "1px solid #f0f0f0" }}
         >
-          <Title level={4} style={{ margin: 0, color: "#ff4d4f" }}>
-            {" "}
-            <CustomerServiceOutlined /> Khách đang chờ
-          </Title>
-        </div>
-        <List
-          dataSource={sessions}
-          renderItem={(item) => (
-            <List.Item
-              onClick={() => setSelectedSession(item.sessionId)}
-              style={{
-                cursor: "pointer",
-                padding: "16px",
-                background:
-                  selectedSession === item.sessionId
-                    ? "#fff2f0"
-                    : "transparent",
-                borderLeft:
-                  selectedSession === item.sessionId
-                    ? "4px solid #ff4d4f"
-                    : "none",
-              }}
-            >
-              <List.Item.Meta
-                avatar={
-                  <Badge count={item.unreadCount}>
-                    <Avatar size="large" icon={<UserOutlined />} />
-                  </Badge>
-                }
-                title={<Text strong>{item.sessionId}</Text>}
-                description={
-                  <Text ellipsis style={{ width: 200 }}>
-                    {item.lastMessage}
-                  </Text>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      </Sider>
+          <div
+            style={{
+              padding: "20px",
+              borderBottom: "1px solid #f0f0f0",
+              background: "#fafafa",
+            }}
+          >
+            <Title level={4} style={{ margin: 0, color: "#ff4d4f" }}>
+              <CustomerServiceOutlined /> Khách đang chờ
+            </Title>
+          </div>
 
-      <Content style={{ display: "flex", flexDirection: "column" }}>
-        {selectedSession ? (
-          <>
-            <div
-              style={{
-                padding: "16px 24px",
-                borderBottom: "1px solid #f0f0f0",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Title level={5} style={{ margin: 0 }}>
-                Đang hỗ trợ: {selectedSession}
-              </Title>
-              {/* ✅ ĐÃ GẮN HÀM handleEndSupport VÀO ĐÂY */}
-              <Button
-                type="primary"
-                danger
-                ghost
-                size="small"
-                onClick={handleEndSupport}
+          <List
+            dataSource={sessions}
+            renderItem={(item) => (
+              <List.Item
+                onClick={() => setSelectedSession(item.sessionId)}
+                style={{
+                  cursor: "pointer",
+                  padding: "16px",
+                  background:
+                    selectedSession === item.sessionId
+                      ? "#fff2f0"
+                      : "transparent",
+                  borderLeft:
+                    selectedSession === item.sessionId
+                      ? "4px solid #ff4d4f"
+                      : "none",
+                }}
               >
-                Kết thúc hỗ trợ
-              </Button>
-            </div>
+                <List.Item.Meta
+                  avatar={
+                    <Badge count={item.unreadCount}>
+                      <Avatar size="large" icon={<UserOutlined />} />
+                    </Badge>
+                  }
+                  title={<Text strong>{item.sessionId}</Text>}
+                  description={
+                    <Text ellipsis style={{ width: 200 }}>
+                      {item.lastMessage}
+                    </Text>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </Sider>
 
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "20px",
-                background: "#f5f5f5",
-              }}
-              ref={scrollRef}
-            >
-              {/* Kiểm tra: Nếu là mảng thì mới map, nếu không thì hiện thông báo hoặc để trống */}
-              {Array.isArray(messages) ? (
-                messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      justifyContent:
-                        msg.sender === "STAFF" ? "flex-end" : "flex-start",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    <Card
-                      size="small"
+        <Content style={{ display: "flex", flexDirection: "column" }}>
+          {selectedSession ? (
+            <>
+              {/* HEADER CHAT */}
+              <div
+                style={{
+                  padding: "16px 24px",
+                  borderBottom: "1px solid #f0f0f0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Title level={5} style={{ margin: 0 }}>
+                  Đang hỗ trợ: {selectedSession}
+                </Title>
+
+                <Button
+                  type="primary"
+                  danger
+                  ghost
+                  size="small"
+                  onClick={handleEndSupport}
+                >
+                  Kết thúc hỗ trợ
+                </Button>
+              </div>
+
+              {/* MESSAGES */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "20px",
+                  background: "#f5f5f5",
+                }}
+                ref={scrollRef}
+              >
+                {Array.isArray(messages) ? (
+                  messages.map((msg, index) => (
+                    <div
+                      key={index}
                       style={{
-                        maxWidth: "75%",
-                        borderRadius: "15px",
-                        background: msg.sender === "STAFF" ? "#ff4d4f" : "#fff",
-                        color: msg.sender === "STAFF" ? "#fff" : "#333",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                        display: "flex",
+                        justifyContent:
+                          msg.sender === "STAFF" ? "flex-end" : "flex-start",
+                        marginBottom: "12px",
                       }}
                     >
-                      {msg.content}
-                    </Card>
+                      <Card
+                        size="small"
+                        style={{
+                          maxWidth: "75%",
+                          borderRadius: "15px",
+                          background:
+                            msg.sender === "STAFF" ? "#ff4d4f" : "#fff",
+                          color: msg.sender === "STAFF" ? "#fff" : "#333",
+                        }}
+                      >
+                        {msg.content}
+                      </Card>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: "center", color: "#999" }}>
+                    Chưa có tin nhắn...
                   </div>
-                ))
-              ) : (
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "#999",
-                    marginTop: "20px",
-                  }}
-                >
-                  Chưa có tin nhắn hoặc đang tải dữ liệu...
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div
-              style={{
-                padding: "20px",
-                background: "#fff",
-                borderTop: "1px solid #f0f0f0",
-              }}
-            >
-              <Input
-                size="large"
-                placeholder="Nhập nội dung tư vấn..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onPressEnter={handleSendMessage}
-                suffix={
-                  <Button
-                    type="text"
-                    icon={<SendOutlined style={{ color: "#ff4d4f" }} />}
-                    onClick={handleSendMessage}
-                  />
-                }
-              />
-            </div>
-          </>
-        ) : (
-          <Empty
-            description="Hãy chọn một khách hàng để bắt đầu tư vấn máy ảnh"
-            style={{ marginTop: "150px" }}
-          />
-        )}
-      </Content>
-    </Layout>
+              {/* INPUT */}
+              <div
+                style={{
+                  padding: "20px",
+                  background: "#fff",
+                  borderTop: "1px solid #f0f0f0",
+                }}
+              >
+                <Input
+                  size="large"
+                  placeholder="Nhập nội dung tư vấn..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onPressEnter={handleSendMessage}
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={<SendOutlined style={{ color: "#ff4d4f" }} />}
+                      onClick={handleSendMessage}
+                    />
+                  }
+                />
+              </div>
+            </>
+          ) : (
+            <Empty
+              description="Hãy chọn một khách hàng để bắt đầu tư vấn"
+              style={{ marginTop: "150px" }}
+            />
+          )}
+        </Content>
+      </Layout>
+    </>
   );
 };
 

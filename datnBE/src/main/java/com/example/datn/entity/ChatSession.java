@@ -8,13 +8,17 @@ import java.util.List;
 
 @Entity
 @Table(name = "chat_sessions")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class ChatSession {
     @Id
     private String sessionId;
+
+    private String userId;
 
     private String customerName;
 
@@ -22,6 +26,7 @@ public class ChatSession {
     @Builder.Default
     private boolean isAiActive = true;
 
+    @Lob
     private String lastMessage;
 
     @Builder.Default

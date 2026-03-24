@@ -1,38 +1,30 @@
-import React from "react";
 import {
-  BellOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  LineChartOutlined,
-  CameraOutlined,
-  ShoppingCartOutlined,
-  ShopOutlined,
-  TeamOutlined,
-  TagOutlined,
-  CalendarOutlined,
-  ScheduleOutlined,
-  SwapOutlined,
-  ClockCircleOutlined,
-  SettingOutlined,
   BarcodeOutlined,
-  PictureOutlined,
+  BellOutlined,
+  CalendarOutlined,
+  CameraOutlined,
+  ClockCircleOutlined,
+  CustomerServiceOutlined,
   KeyOutlined,
+  LineChartOutlined,
+  LogoutOutlined,
+  PictureOutlined,
+  ScheduleOutlined,
+  SettingOutlined,
+  ShopOutlined,
+  ShoppingCartOutlined,
+  SwapOutlined,
+  TagOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import {
-  Badge,
-  Avatar,
-  Typography,
-  Dropdown,
-  Input,
-  type MenuProps,
-  Button,
-} from "antd";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Avatar, Badge, Button, Dropdown, Input, type MenuProps } from "antd";
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { RootState } from "../../redux/store";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authActions } from "../../redux/auth/authSlice";
+import type { RootState } from "../../redux/store";
 
-const { Text, Title } = Typography;
 const { Search } = Input;
 
 const pageInfoMap: Record<
@@ -44,15 +36,46 @@ const pageInfoMap: Record<
     desc: "Xem và quản lý các số liệu thống kê",
     icon: <LineChartOutlined />,
   },
-  "/product": {
+  "/admin/products": {
     title: "Sản phẩm",
     desc: "Quản lý danh mục máy ảnh",
+    icon: <ShopOutlined />,
+  },
+  "/admin/product-categories": {
+    title: "Loại sản phẩm",
+    desc: "Quản lý loại sản phẩm",
+    icon: <TagOutlined />,
+  },
+  "/admin/tech-spec": {
+    title: "Thông số kỹ thuật",
+    desc: "Quản lý thông số kỹ thuật của sản phẩm",
+    icon: <SettingOutlined />,
+  },
+  "/products/product-detail": {
+    title: "Sản phẩm chi tiết",
+    desc: "Quản lý chi tiết sản phẩm",
     icon: <CameraOutlined />,
+  },
+  "/admin/banners": {
+    title: "Banner",
+    desc: "Quản lý banner hiển thị trên trang khách hàng",
+    icon: <PictureOutlined />,
+  },
+  "/shiftManagement": {
+    title: "Quản lý ca",
+    desc: "Quản lý ca làm việc của nhân viên",
+    icon: <ScheduleOutlined />,
   },
   "/serial": {
     title: "Serial",
     desc: "Quản lý số serial của sản phẩm",
     icon: <BarcodeOutlined />,
+  },
+
+  "/EChatAi": {
+    title: "Hỗ trợ khách hàng",
+    desc: "Trò chuyện và hỗ trợ khách hàng qua hệ thống chat nội bộ",
+    icon: <CustomerServiceOutlined />,
   },
   "/orders": {
     title: "Đơn hàng",
@@ -126,15 +149,24 @@ const Header: React.FC = () => {
     icon: <ShopOutlined />,
   };
 
-  const getCurrentPageInfo = (path: string) => {
-    const matchKey = Object.keys(pageInfoMap)
-      .sort((a, b) => b.length - a.length)
-      .find((key) => path === key || path.startsWith(`${key}/`));
-
-    return matchKey ? pageInfoMap[matchKey] : defaultPageInfo;
-  };
-
-  const currentPage = getCurrentPageInfo(currentPath);
+  // Tạo breadcrumb từ path
+  const pathParts = currentPath.split("/").filter(Boolean);
+  let breadcrumb: { title: string; icon?: React.ReactNode }[] = [];
+  let accumulated = "";
+  for (let i = 0; i < pathParts.length; i++) {
+    accumulated += "/" + pathParts[i];
+    const info = pageInfoMap[accumulated];
+    if (info) {
+      breadcrumb.push({ title: info.title, icon: info.icon });
+    } else if (i === pathParts.length - 1) {
+      // Nếu là phần cuối mà không có trong map, lấy tên từ url
+      breadcrumb.push({
+        title: decodeURIComponent(pathParts[i]).replace(/-/g, " "),
+      });
+    }
+  }
+  if (breadcrumb.length === 0)
+    breadcrumb = [{ title: defaultPageInfo.title, icon: defaultPageInfo.icon }];
 
   //xử lý khi chọn menu
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
@@ -165,15 +197,26 @@ const Header: React.FC = () => {
   return (
     <header className="admin-header">
       <div className="header-page-info">
-        <div className="page-icon">{currentPage.icon}</div>
-        <div className="page-text">
-          <Title level={5} className="page-title">
-            {currentPage.title}
-          </Title>
-          <Text type="secondary" className="page-desc">
-            {currentPage.desc}
-          </Text>
-        </div>
+        {breadcrumb.map((item, idx) => (
+          <React.Fragment key={idx}>
+            {idx === 0 && item.icon && (
+              <span className="page-icon">{item.icon}</span>
+            )}
+            <span
+              className="page-title"
+              style={{
+                fontWeight: idx === breadcrumb.length - 1 ? 600 : 400,
+                fontSize: 18,
+                marginRight: 4,
+              }}
+            >
+              {item.title}
+            </span>
+            {idx < breadcrumb.length - 1 && (
+              <span style={{ margin: "0 4px", color: "#aaa" }}>/</span>
+            )}
+          </React.Fragment>
+        ))}
       </div>
 
       <div className="header-search">

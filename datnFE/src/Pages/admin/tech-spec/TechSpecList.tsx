@@ -49,7 +49,10 @@ import type {
 
 const { Title, Text } = Typography;
 
-const DATA_TYPE_LABELS: Record<TechSpecDataType, { label: string; color: string }> = {
+const DATA_TYPE_LABELS: Record<
+  TechSpecDataType,
+  { label: string; color: string }
+> = {
   TEXT: { label: "Văn bản", color: "blue" },
   NUMBER: { label: "Số", color: "green" },
   ENUM: { label: "Danh sách", color: "orange" },
@@ -65,18 +68,25 @@ interface EnumItemManagerProps {
   onClose: () => void;
 }
 
-const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onClose }) => {
+const EnumItemManager: React.FC<EnumItemManagerProps> = ({
+  definition,
+  open,
+  onClose,
+}) => {
   const [items, setItems] = useState<TechSpecDefinitionItemResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<TechSpecDefinitionItemResponse | null>(null);
+  const [editingItem, setEditingItem] =
+    useState<TechSpecDefinitionItemResponse | null>(null);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await techSpecDefinitionItemApi.getByDefinitionId(definition.id);
+      const data = await techSpecDefinitionItemApi.getByDefinitionId(
+        definition.id,
+      );
       setItems(data);
     } catch {
       message.error("Không thể tải danh sách giá trị");
@@ -94,7 +104,11 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
   const openModal = (item?: TechSpecDefinitionItemResponse) => {
     if (item) {
       setEditingItem(item);
-      form.setFieldsValue({ name: item.name, value: item.value, displayOrder: item.displayOrder });
+      form.setFieldsValue({
+        name: item.name,
+        value: item.value,
+        displayOrder: item.displayOrder,
+      });
     } else {
       setEditingItem(null);
       form.resetFields();
@@ -179,7 +193,10 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
       width: 110,
       align: "center",
       render: (s: string) => (
-        <Tag color={s === "ACTIVE" ? "green" : "red"} style={{ fontSize: "12px" }}>
+        <Tag
+          color={s === "ACTIVE" ? "green" : "red"}
+          style={{ fontSize: "12px" }}
+        >
           {s === "ACTIVE" ? "Hoạt động" : "Tắt"}
         </Tag>
       ),
@@ -192,7 +209,12 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Sửa">
-            <Button type="text" shape="circle" icon={<EditOutlined style={{ color: "#faad14" }} />} onClick={() => openModal(record)} />
+            <Button
+              type="text"
+              shape="circle"
+              icon={<EditOutlined style={{ color: "#faad14" }} />}
+              onClick={() => openModal(record)}
+            />
           </Tooltip>
           <Popconfirm
             title="Xóa giá trị này?"
@@ -202,7 +224,12 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
             okButtonProps={{ danger: true }}
           >
             <Tooltip title="Xóa">
-              <Button type="text" danger shape="circle" icon={<DeleteOutlined />} />
+              <Button
+                type="text"
+                danger
+                shape="circle"
+                icon={<DeleteOutlined />}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -215,7 +242,9 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
       title={
         <Space>
           <UnorderedListOutlined />
-          <span>Quản lý giá trị — <Text strong>{definition.name}</Text></span>
+          <span>
+            Quản lý giá trị — <Text strong>{definition.name}</Text>
+          </span>
         </Space>
       }
       open={open}
@@ -223,11 +252,24 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
       width={700}
       footer={null}
     >
-      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          marginBottom: "12px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Text type="secondary">
-          {items.length} giá trị trong danh sách. Nhấn "Thêm giá trị" để mở rộng danh sách chọn cho thông số này.
+          {items.length} giá trị trong danh sách. Nhấn "Thêm giá trị" để mở rộng
+          danh sách chọn cho thông số này.
         </Text>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()} size="small">
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => openModal()}
+          size="small"
+        >
           Thêm giá trị
         </Button>
       </div>
@@ -242,7 +284,10 @@ const EnumItemManager: React.FC<EnumItemManagerProps> = ({ definition, open, onC
         bordered
         locale={{
           emptyText: (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có giá trị nào. Hãy thêm giá trị cho danh sách này." />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Chưa có giá trị nào. Hãy thêm giá trị cho danh sách này."
+            />
           ),
         }}
       />
@@ -300,9 +345,15 @@ const TechSpecListPage: React.FC = () => {
   const [defForm] = Form.useForm();
 
   // Group state
-  const [groupFilter] = useState({ page: 0, size: 50, keyword: "", status: undefined as any });
+  const [groupFilter] = useState({
+    page: 0,
+    size: 50,
+    keyword: "",
+    status: undefined as any,
+  });
   const [groupModalOpen, setGroupModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<TechSpecGroupResponse | null>(null);
+  const [editingGroup, setEditingGroup] =
+    useState<TechSpecGroupResponse | null>(null);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 
@@ -315,12 +366,14 @@ const TechSpecListPage: React.FC = () => {
     status: undefined as any,
   });
   const [defModalOpen, setDefModalOpen] = useState(false);
-  const [editingDef, setEditingDef] = useState<TechSpecDefinitionResponse | null>(null);
+  const [editingDef, setEditingDef] =
+    useState<TechSpecDefinitionResponse | null>(null);
   const [defSubmitting, setDefSubmitting] = useState(false);
 
   // ENUM item manager
   const [enumManagerOpen, setEnumManagerOpen] = useState(false);
-  const [selectedEnumDef, setSelectedEnumDef] = useState<TechSpecDefinitionResponse | null>(null);
+  const [selectedEnumDef, setSelectedEnumDef] =
+    useState<TechSpecDefinitionResponse | null>(null);
 
   // Active tab
   const [activeTab, setActiveTab] = useState<string>("");
@@ -342,14 +395,21 @@ const TechSpecListPage: React.FC = () => {
     if (groupState.list.length > 0) {
       const first = groupState.list[0];
       setActiveTab(first.id);
-      setDefFilter((prev) => ({ ...prev, groupId: first.id, keyword: "", page: 0 }));
+      setDefFilter((prev) => ({
+        ...prev,
+        groupId: first.id,
+        keyword: "",
+        page: 0,
+      }));
     }
   }, [groupState.list]);
 
   // Load definitions when tab/filter changes
   useEffect(() => {
     if (activeTab) {
-      dispatch(techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }));
+      dispatch(
+        techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }),
+      );
     }
   }, [dispatch, activeTab, defFilter.page, defFilter.size, defFilter.status]);
 
@@ -357,7 +417,11 @@ const TechSpecListPage: React.FC = () => {
   useEffect(() => {
     const t = setTimeout(() => {
       if (activeTab) {
-        setDefFilter((prev) => ({ ...prev, keyword: defFilter.keyword.trim(), page: 0 }));
+        setDefFilter((prev) => ({
+          ...prev,
+          keyword: defFilter.keyword.trim(),
+          page: 0,
+        }));
       }
     }, 500);
     return () => clearTimeout(t);
@@ -368,7 +432,13 @@ const TechSpecListPage: React.FC = () => {
   const openGroupModal = (g?: TechSpecGroupResponse) => {
     if (g) {
       setEditingGroup(g);
-      groupForm.setFieldsValue({ name: g.name, code: g.code, description: g.description, displayOrder: g.displayOrder, status: g.status });
+      groupForm.setFieldsValue({
+        name: g.name,
+        code: g.code,
+        description: g.description,
+        displayOrder: g.displayOrder,
+        status: g.status,
+      });
     } else {
       setEditingGroup(null);
       groupForm.resetFields();
@@ -390,12 +460,21 @@ const TechSpecListPage: React.FC = () => {
       };
       const action = editingGroup
         ? techSpecGroupActions.updateGroup({
-            id: editingGroup.id, data,
-            onSuccess: () => { setGroupSubmitting(false); setGroupModalOpen(false); loadGroups(); },
+            id: editingGroup.id,
+            data,
+            onSuccess: () => {
+              setGroupSubmitting(false);
+              setGroupModalOpen(false);
+              loadGroups();
+            },
           })
         : techSpecGroupActions.createGroup({
             data,
-            onSuccess: () => { setGroupSubmitting(false); setGroupModalOpen(false); loadGroups(); },
+            onSuccess: () => {
+              setGroupSubmitting(false);
+              setGroupModalOpen(false);
+              loadGroups();
+            },
           });
       dispatch(action);
     });
@@ -404,7 +483,10 @@ const TechSpecListPage: React.FC = () => {
   const handleDeleteGroup = (id: string) => {
     setDeletingGroupId(id);
     dispatch(techSpecGroupActions.deleteGroup(id));
-    setTimeout(() => { setDeletingGroupId(null); loadGroups(); }, 800);
+    setTimeout(() => {
+      setDeletingGroupId(null);
+      loadGroups();
+    }, 800);
   };
 
   // ---- DEFINITION HANDLERS ----
@@ -413,14 +495,27 @@ const TechSpecListPage: React.FC = () => {
     if (def) {
       setEditingDef(def);
       defForm.setFieldsValue({
-        name: def.name, code: def.code, groupId: def.groupId, description: def.description,
-        dataType: def.dataType, unit: def.unit, isFilterable: def.isFilterable,
-        isRequired: def.isRequired, displayOrder: def.displayOrder, status: def.status,
+        name: def.name,
+        code: def.code,
+        groupId: def.groupId,
+        description: def.description,
+        dataType: def.dataType,
+        unit: def.unit,
+        isFilterable: def.isFilterable,
+        isRequired: def.isRequired,
+        displayOrder: def.displayOrder,
+        status: def.status,
       });
     } else {
       setEditingDef(null);
       defForm.resetFields();
-      defForm.setFieldsValue({ groupId: activeTab, dataType: "ENUM", status: "ACTIVE", isFilterable: false, isRequired: false });
+      defForm.setFieldsValue({
+        groupId: activeTab,
+        dataType: "ENUM",
+        status: "ACTIVE",
+        isFilterable: false,
+        isRequired: false,
+      });
     }
     setDefModalOpen(true);
   };
@@ -443,12 +538,21 @@ const TechSpecListPage: React.FC = () => {
       };
       const action = editingDef
         ? techSpecDefinitionActions.updateDefinition({
-            id: editingDef.id, data,
-            onSuccess: () => { setDefSubmitting(false); setDefModalOpen(false); reloadDefs(); },
+            id: editingDef.id,
+            data,
+            onSuccess: () => {
+              setDefSubmitting(false);
+              setDefModalOpen(false);
+              reloadDefs();
+            },
           })
         : techSpecDefinitionActions.createDefinition({
             data,
-            onSuccess: () => { setDefSubmitting(false); setDefModalOpen(false); reloadDefs(); },
+            onSuccess: () => {
+              setDefSubmitting(false);
+              setDefModalOpen(false);
+              reloadDefs();
+            },
           });
       dispatch(action);
     });
@@ -456,7 +560,9 @@ const TechSpecListPage: React.FC = () => {
 
   const reloadDefs = () => {
     if (activeTab) {
-      dispatch(techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }));
+      dispatch(
+        techSpecDefinitionActions.getAll({ ...defFilter, groupId: activeTab }),
+      );
     }
   };
 
@@ -480,7 +586,14 @@ const TechSpecListPage: React.FC = () => {
       key: "code",
       width: 140,
       ellipsis: true,
-      render: (v: string) => v ? <Text code style={{ fontSize: "11px" }}>{v}</Text> : "—",
+      render: (v: string) =>
+        v ? (
+          <Text code style={{ fontSize: "11px" }}>
+            {v}
+          </Text>
+        ) : (
+          "—"
+        ),
     },
     {
       title: "Kiểu",
@@ -508,7 +621,14 @@ const TechSpecListPage: React.FC = () => {
       width: 65,
       align: "center",
       render: (v: boolean) =>
-        v ? <Badge status="success" text={<span style={{ fontSize: "12px" }}>Có</span>} /> : <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>,
+        v ? (
+          <Badge
+            status="success"
+            text={<span style={{ fontSize: "12px" }}>Có</span>}
+          />
+        ) : (
+          <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>
+        ),
     },
     {
       title: "Bắt buộc",
@@ -517,7 +637,14 @@ const TechSpecListPage: React.FC = () => {
       width: 90,
       align: "center",
       render: (v: boolean) =>
-        v ? <Badge status="error" text={<span style={{ fontSize: "12px" }}>Có</span>} /> : <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>,
+        v ? (
+          <Badge
+            status="error"
+            text={<span style={{ fontSize: "12px" }}>Có</span>}
+          />
+        ) : (
+          <span style={{ color: "#ccc", fontSize: "12px" }}>—</span>
+        ),
     },
     {
       title: "Trạng thái",
@@ -526,7 +653,10 @@ const TechSpecListPage: React.FC = () => {
       width: 100,
       align: "center",
       render: (s: string) => (
-        <Tag color={s === "ACTIVE" ? "green" : "red"} style={{ fontSize: "12px" }}>
+        <Tag
+          color={s === "ACTIVE" ? "green" : "red"}
+          style={{ fontSize: "12px" }}
+        >
           {s === "ACTIVE" ? "Hoạt động" : "Tắt"}
         </Tag>
       ),
@@ -545,12 +675,20 @@ const TechSpecListPage: React.FC = () => {
                 type="text"
                 shape="circle"
                 icon={<UnorderedListOutlined style={{ color: "#1890ff" }} />}
-                onClick={() => { setSelectedEnumDef(record); setEnumManagerOpen(true); }}
+                onClick={() => {
+                  setSelectedEnumDef(record);
+                  setEnumManagerOpen(true);
+                }}
               />
             </Tooltip>
           )}
           <Tooltip title="Sửa">
-            <Button type="text" shape="circle" icon={<EditOutlined style={{ color: "#faad14" }} />} onClick={() => openDefModal(record)} />
+            <Button
+              type="text"
+              shape="circle"
+              icon={<EditOutlined style={{ color: "#faad14" }} />}
+              onClick={() => openDefModal(record)}
+            />
           </Tooltip>
           <Popconfirm
             title="Xóa thông số?"
@@ -563,7 +701,12 @@ const TechSpecListPage: React.FC = () => {
             okButtonProps={{ danger: true }}
           >
             <Tooltip title="Xóa">
-              <Button type="text" danger shape="circle" icon={<DeleteOutlined />} />
+              <Button
+                type="text"
+                danger
+                shape="circle"
+                icon={<DeleteOutlined />}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -577,18 +720,38 @@ const TechSpecListPage: React.FC = () => {
     label: <Space>{group.name}</Space>,
     children: (
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "12px",
+          }}
+        >
           <Text strong style={{ fontSize: "14px" }}>
             Danh sách thông số trong nhóm
-            <Text type="secondary" style={{ fontSize: "12px", marginLeft: "8px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px", marginLeft: "8px" }}
+            >
               ({defState.totalElements} thông số)
             </Text>
           </Text>
           <Space>
-            <Button icon={<ReloadOutlined spin={defState.loading} />} onClick={reloadDefs} size="small">
+            <Button
+              icon={<ReloadOutlined spin={defState.loading} />}
+              onClick={reloadDefs}
+              size="small"
+            >
               Tải lại
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openDefModal()} size="small" style={{ borderRadius: "6px" }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openDefModal()}
+              size="small"
+              style={{ borderRadius: "6px" }}
+            >
               Thêm thông số
             </Button>
           </Space>
@@ -600,7 +763,9 @@ const TechSpecListPage: React.FC = () => {
           allowClear
           style={{ marginBottom: "12px" }}
           value={defFilter.keyword}
-          onChange={(e) => setDefFilter((prev) => ({ ...prev, keyword: e.target.value }))}
+          onChange={(e) =>
+            setDefFilter((prev) => ({ ...prev, keyword: e.target.value }))
+          }
         />
 
         <Table
@@ -614,18 +779,29 @@ const TechSpecListPage: React.FC = () => {
           scroll={{ x: 800 }}
           locale={{
             emptyText: (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có thông số nào trong nhóm này" />
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="Chưa có thông số nào trong nhóm này"
+              />
             ),
           }}
         />
 
         {defState.totalElements > defFilter.size && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: "12px",
+            }}
+          >
             <Pagination
               current={defFilter.page + 1}
               pageSize={defFilter.size}
               total={defState.totalElements}
-              onChange={(p, s) => setDefFilter((prev) => ({ ...prev, page: p - 1, size: s }))}
+              onChange={(p, s) =>
+                setDefFilter((prev) => ({ ...prev, page: p - 1, size: s }))
+              }
               showSizeChanger
               pageSizeOptions={["10", "20", "50", "100"]}
               size="small"
@@ -639,24 +815,44 @@ const TechSpecListPage: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       {/* Header */}
-      <Card style={{ borderRadius: "12px" }}>
-        <Space align="center" size={16}>
-          <div style={{ background: "#e6f7ff", padding: "12px", borderRadius: "10px" }}>
-            <SettingOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
+      <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
+        <Space align="center" size={16} style={{ width: "100%" }}>
+          {/* Icon */}
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <SettingOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
           </div>
+
+          {/* Title */}
           <div>
-            <Title level={4} style={{ margin: 0 }}>Quản lý thông số kỹ thuật</Title>
+            <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý thông số kỹ thuật
+            </Title>
             <Text type="secondary" style={{ fontSize: "13px" }}>
-              Chia theo nhóm — ENUM: nhấn biểu tượng danh sách để quản lý giá trị con
+              Quản lý nhóm thông số và thuộc tính sản phẩm
             </Text>
           </div>
+
+          {/* Action bên phải */}
           <div style={{ marginLeft: "auto" }}>
-            <Button type="link" icon={<PlusOutlined />} onClick={() => openGroupModal()} style={{ padding: 0, height: "auto" }}>
-              Thêm nhóm mới
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openGroupModal()}
+              style={{ borderRadius: "var(--radius-md)" }}
+            >
+              Thêm nhóm
             </Button>
           </div>
         </Space>
-      </Card>
+      </div>
 
       {/* Nhóm thông số — horizontal tabs */}
       <Card style={{ borderRadius: "12px" }}>
@@ -664,13 +860,20 @@ const TechSpecListPage: React.FC = () => {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
-            setDefFilter((prev) => ({ ...prev, groupId: key, keyword: "", page: 0 }));
+            setDefFilter((prev) => ({
+              ...prev,
+              groupId: key,
+              keyword: "",
+              page: 0,
+            }));
           }}
           type="card"
           items={tabItems}
           tabBarExtraContent={
             <Space style={{ marginRight: "8px" }}>
-              <Text type="secondary" style={{ fontSize: "12px" }}>{groupState.list.length} nhóm</Text>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                {groupState.list.length} nhóm
+              </Text>
             </Space>
           }
         />
@@ -690,7 +893,11 @@ const TechSpecListPage: React.FC = () => {
         <Form form={groupForm} layout="vertical">
           <Row gutter={12}>
             <Col span={14}>
-              <Form.Item name="name" label="Tên nhóm" rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}>
+              <Form.Item
+                name="name"
+                label="Tên nhóm"
+                rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}
+              >
                 <Input placeholder="VD: Cảm biến & Chất lượng ảnh" />
               </Form.Item>
             </Col>
@@ -711,14 +918,26 @@ const TechSpecListPage: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
-                <Select options={[{ label: "Hoạt động", value: "ACTIVE" }, { label: "Không hoạt động", value: "INACTIVE" }]} />
+                <Select
+                  options={[
+                    { label: "Hoạt động", value: "ACTIVE" },
+                    { label: "Không hoạt động", value: "INACTIVE" },
+                  ]}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="action" label="Thao tác">
                 <Button
-                  danger size="small" block
-                  onClick={() => { if (editingGroup) { handleDeleteGroup(editingGroup.id); setGroupModalOpen(false); } }}
+                  danger
+                  size="small"
+                  block
+                  onClick={() => {
+                    if (editingGroup) {
+                      handleDeleteGroup(editingGroup.id);
+                      setGroupModalOpen(false);
+                    }
+                  }}
                 >
                   Xóa nhóm
                 </Button>
@@ -730,7 +949,9 @@ const TechSpecListPage: React.FC = () => {
 
       {/* Definition Modal */}
       <Modal
-        title={editingDef ? "Sửa thông số kỹ thuật" : "Thêm thông số kỹ thuật mới"}
+        title={
+          editingDef ? "Sửa thông số kỹ thuật" : "Thêm thông số kỹ thuật mới"
+        }
         open={defModalOpen}
         onCancel={() => setDefModalOpen(false)}
         onOk={handleDefSubmit}
@@ -742,7 +963,11 @@ const TechSpecListPage: React.FC = () => {
         <Form form={defForm} layout="vertical">
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="name" label="Tên thông số" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+              <Form.Item
+                name="name"
+                label="Tên thông số"
+                rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+              >
                 <Input placeholder="VD: Kích thước cảm biến" />
               </Form.Item>
             </Col>
@@ -754,16 +979,28 @@ const TechSpecListPage: React.FC = () => {
           </Row>
           <Row gutter={12}>
             <Col span={16}>
-              <Form.Item name="groupId" label="Nhóm" rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}>
+              <Form.Item
+                name="groupId"
+                label="Nhóm"
+                rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}
+              >
                 <Select
                   placeholder="Chọn nhóm"
-                  options={groupState.list.map((g) => ({ label: g.name, value: g.id }))}
-                  showSearch optionFilterProp="label"
+                  options={groupState.list.map((g) => ({
+                    label: g.name,
+                    value: g.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="dataType" label="Kiểu dữ liệu" rules={[{ required: true, message: "Vui lòng chọn kiểu" }]}>
+              <Form.Item
+                name="dataType"
+                label="Kiểu dữ liệu"
+                rules={[{ required: true, message: "Vui lòng chọn kiểu" }]}
+              >
                 <Select
                   placeholder="Chọn kiểu"
                   options={[
@@ -788,24 +1025,50 @@ const TechSpecListPage: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="status" label="Trạng thái" initialValue="ACTIVE">
-                <Select options={[{ label: "Hoạt động", value: "ACTIVE" }, { label: "Không hoạt động", value: "INACTIVE" }]} />
+                <Select
+                  options={[
+                    { label: "Hoạt động", value: "ACTIVE" },
+                    { label: "Không hoạt động", value: "INACTIVE" },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="isFilterable" label="Dùng để lọc" initialValue={false}>
-                <Select options={[{ label: "Có", value: true }, { label: "Không", value: false }]} />
+              <Form.Item
+                name="isFilterable"
+                label="Dùng để lọc"
+                initialValue={false}
+              >
+                <Select
+                  options={[
+                    { label: "Có", value: true },
+                    { label: "Không", value: false },
+                  ]}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="isRequired" label="Bắt buộc nhập" initialValue={false}>
-                <Select options={[{ label: "Có", value: true }, { label: "Không", value: false }]} />
+              <Form.Item
+                name="isRequired"
+                label="Bắt buộc nhập"
+                initialValue={false}
+              >
+                <Select
+                  options={[
+                    { label: "Có", value: true },
+                    { label: "Không", value: false },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={2} placeholder="Mô tả chi tiết thông số này" />
+            <Input.TextArea
+              rows={2}
+              placeholder="Mô tả chi tiết thông số này"
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -815,7 +1078,10 @@ const TechSpecListPage: React.FC = () => {
         <EnumItemManager
           definition={selectedEnumDef}
           open={enumManagerOpen}
-          onClose={() => { setEnumManagerOpen(false); setSelectedEnumDef(null); }}
+          onClose={() => {
+            setEnumManagerOpen(false);
+            setSelectedEnumDef(null);
+          }}
         />
       )}
     </div>

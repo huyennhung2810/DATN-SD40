@@ -26,14 +26,16 @@ public class ChatController {
     private final ChatSessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    //kh gửi tn
+    // kh gửi tn
     @PostMapping("/chat")
+
     public ResponseEntity<ChatResponse> handleCustomerChat(@RequestBody ChatRequest request) {
         String sessionId = request.getSessionId();
         String messageContent = request.getMessage();
+        String userId = request.getUserId();
 
         // Lưu tin nhắn của khách vào Database
-        sessionService.saveMessage(sessionId, messageContent, "CUSTOMER");
+        sessionService.saveMessage(sessionId, messageContent, "CUSTOMER", userId);
 
         // NHÂN VIÊN ĐANG TRỰC
         if (sessionService.checkIfStaffHandling(sessionId)) {
@@ -55,7 +57,7 @@ public class ChatController {
 
         // AI TRỰC (Dùng Gemini RAG tư vấn máy ảnh)
         String aiReply = geminiService.getChatResponse(messageContent, sessionId);
-        sessionService.saveMessage(sessionId, aiReply, "AI");
+        sessionService.saveMessage(sessionId, aiReply, "AI", userId);
 
         return ResponseEntity.ok(ChatResponse.builder()
                 .content(aiReply)
@@ -64,11 +66,11 @@ public class ChatController {
                 .build());
     }
 
-    //nv trả lời
+    // nv trả lời
     @MessageMapping("/chat.staffReply/{sessionId}")
     public void handleStaffReply(@DestinationVariable String sessionId, String content) {
         // Lưu tin nhắn của nhân viên vào DB
-        sessionService.saveMessage(sessionId, content, "STAFF");
+        sessionService.saveMessage(sessionId, content, "STAFF", null);
 
         // Gửi xuống cho Khách hàng qua WebSocket topic chung
         messagingTemplate.convertAndSend("/topic/messages/" + sessionId,
@@ -79,13 +81,14 @@ public class ChatController {
                         .build());
     }
 
-    //lấy ls chat
+    // lấy ls chat
     @GetMapping("/history/{sessionId}")
-    public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable String sessionId) {
-        return ResponseEntity.ok(sessionService.getChatHistory(sessionId));
+    public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable String sessionId,
+            @RequestParam(required = false) String userId) {
+        return ResponseEntity.ok(sessionService.getChatHistory(sessionId, userId));
     }
 
-    //y cầu nvien
+    // y cầu nvien
     @PostMapping("/request-staff")
     public ResponseEntity<Void> requestStaff(@RequestParam String sessionId) {
         sessionService.markSessionForStaff(sessionId);
@@ -96,7 +99,7 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    //kết thúc sp
+    // kết thúc sp
     @PostMapping("/end-support")
     public ResponseEntity<Void> endSupport(@RequestParam String sessionId) {
         sessionService.endStaffSupport(sessionId);
@@ -111,7 +114,7 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    //lấy ds phiên đang chowf
+    // lấy ds phiên đang chowf
     @GetMapping("/active-sessions")
     public ResponseEntity<List<ChatSessionDTO>> getActiveSessions() {
         return ResponseEntity.ok(sessionService.getAllActiveSessions());

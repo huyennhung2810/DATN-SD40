@@ -742,36 +742,66 @@ const PosPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: "#f0f2f5", minHeight: "100vh" }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
-          Bán Hàng Tại Quầy (POS)
-        </Title>
-        <Space>
-          <Text type="secondary" style={{ fontSize: 13 }}>
-            Hóa đơn chờ:{" "}
-            <Text
-              strong
-              style={{ color: orders.length >= 10 ? "#f5222d" : undefined }}
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
+      >
+        <Row justify="space-between" align="middle">
+          {/* LEFT: Icon + Title */}
+          <Space align="center" size={16}>
+            <div
+              style={{
+                backgroundColor: "var(--color-primary-light)",
+                padding: "12px",
+                borderRadius: "var(--radius-md)",
+              }}
             >
-              {orders.length}/10
+              <ShoppingCartOutlined
+                style={{ fontSize: "24px", color: "var(--color-primary)" }}
+              />
+            </div>
+
+            <div>
+              <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                Bán Hàng Tại Quầy (POS)
+              </Title>
+              <Text type="secondary" style={{ fontSize: "13px" }}>
+                Hệ thống tạo và quản lý hóa đơn
+              </Text>
+            </div>
+          </Space>
+
+          {/* RIGHT: Action */}
+          <Space>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Hóa đơn chờ:{" "}
+              <Text
+                strong
+                style={{ color: orders.length >= 10 ? "#f5222d" : undefined }}
+              >
+                {orders.length}/10
+              </Text>
             </Text>
-          </Text>
-          <Tooltip
-            title={orders.length >= 10 ? "Đã đạt giới hạn 10 hóa đơn chờ" : ""}
-          >
-            <Button
-              type="primary"
-              size="large"
-              icon={<PlusOutlined />}
-              onClick={createNewOrder}
-              disabled={orders.length >= 10}
+
+            <Tooltip
+              title={
+                orders.length >= 10 ? "Đã đạt giới hạn 10 hóa đơn chờ" : ""
+              }
             >
-              Tạo Hóa đơn Mới
-            </Button>
-          </Tooltip>
-        </Space>
-      </Row>
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={createNewOrder}
+                disabled={orders.length >= 10}
+              >
+                Tạo Hóa đơn Mới
+              </Button>
+            </Tooltip>
+          </Space>
+        </Row>
+      </div>
 
       <Row gutter={[16, 16]}>
         {/* Left Column: Cart (Top) & Product List (Bottom) */}

@@ -10,6 +10,7 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   sessionId: string;
+  userId?: string;
 }
 
 export interface ChatResponse {

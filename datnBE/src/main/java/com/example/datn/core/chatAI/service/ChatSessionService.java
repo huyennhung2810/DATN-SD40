@@ -22,15 +22,21 @@ public class ChatSessionService {
     private final ChatMessageRepository messageRepository;
 
     @Transactional
-    public void saveMessage(String sessionId, String content, String sender) {
+
+        public void saveMessage(String sessionId, String content, String sender, String userId) {
         ChatSession session = sessionRepository.findById(sessionId)
-                .orElseGet(() -> sessionRepository.save(
-                        ChatSession.builder()
-                                .sessionId(sessionId)
-                                .isAiActive(true)
-                                .createdAt(LocalDateTime.now())
-                                .build()
-                ));
+            .orElseGet(() -> sessionRepository.save(
+                ChatSession.builder()
+                    .sessionId(sessionId)
+                    .userId(userId)
+                    .isAiActive(true)
+                    .createdAt(LocalDateTime.now())
+                    .build()
+            ));
+        // Nếu session đã tồn tại nhưng chưa có userId thì cập nhật
+        if (session.getUserId() == null && userId != null) {
+            session.setUserId(userId);
+        }
 
         ChatMessage message = ChatMessage.builder()
                 .session(session)
@@ -45,8 +51,19 @@ public class ChatSessionService {
         sessionRepository.save(session);
     }
 
-    // Lấy lịch sử tin nhắn để hiển thị khi load lại trang
-    public List<ChatMessage> getChatHistory(String sessionId) {
+
+    // Lấy lịch sử tin nhắn cho user (nếu có userId, ưu tiên lấy sessionId đúng user)
+    public List<ChatMessage> getChatHistory(String sessionId, String userId) {
+        if (userId != null && !userId.isEmpty()) {
+            // Tìm session đúng userId
+            List<ChatSession> sessions = sessionRepository.findByUserIdOrderByUpdatedAtDesc(userId);
+            if (!sessions.isEmpty()) {
+                // Ưu tiên sessionId truyền vào nếu đúng user, nếu không lấy session mới nhất
+                ChatSession session = sessions.stream().filter(s -> s.getSessionId().equals(sessionId)).findFirst().orElse(sessions.get(0));
+                return messageRepository.findBySession_SessionIdOrderByCreatedAtAsc(session.getSessionId());
+            }
+        }
+        // Fallback: lấy theo sessionId cũ
         return messageRepository.findBySession_SessionIdOrderByCreatedAtAsc(sessionId);
     }
 

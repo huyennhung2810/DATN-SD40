@@ -16,6 +16,7 @@ import {
   Table,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
@@ -27,8 +28,8 @@ import type {
   AccountSearchParams,
 } from "../../../models/account";
 import { ACCOUNT_PROVIDERS, ACCOUNT_ROLES } from "../../../models/account";
-import ResetPasswordModal from "./ResetPasswordModal";
 import type { CommonStatus } from "../../../models/base";
+import ResetPasswordModal from "./ResetPasswordModal";
 
 const { Search } = Input;
 
@@ -233,7 +234,32 @@ const AccountList: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div>
+      <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <KeyOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
+          </div>
+
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý tài khoản
+            </Typography.Title>
+
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý tài khoản hệ thống
+            </Typography.Text>
+          </div>
+        </Space>
+      </div>
       <Card
         title="Quản lý Tài khoản"
         extra={
