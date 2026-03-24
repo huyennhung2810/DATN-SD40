@@ -502,7 +502,13 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         }
 
         // Update Order status
-        order.setOrderStatus(OrderStatus.HOAN_THANH);
+        // GIAO_HANG: đã xác nhận + đã thanh toán nhưng chưa giao → DA_XAC_NHAN
+        // OFFLINE: khách lấy hàng ngay tại quầy → HOAN_THANH
+        if (orderType == TypeInvoice.GIAO_HANG) {
+            order.setOrderStatus(OrderStatus.DA_XAC_NHAN);
+        } else {
+            order.setOrderStatus(OrderStatus.HOAN_THANH);
+        }
         order.setPaymentDate(new Date().getTime());
         // Gán trạng thái thanh toán
         order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
@@ -549,9 +555,11 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         OrderHistory lichSu = new OrderHistory();
         lichSu.setOrder(order);
         lichSu.setHoaDon(order);
-        lichSu.setTrangThai(OrderStatus.HOAN_THANH);
+        lichSu.setTrangThai(order.getOrderStatus());
         lichSu.setThoiGian(LocalDateTime.now());
-        lichSu.setNote("Thanh toán tại quầy");
+        lichSu.setNote(orderType == TypeInvoice.GIAO_HANG
+                ? "Xác nhận đơn giao hàng tại quầy, đã thanh toán"
+                : "Thanh toán tại quầy");
         lichSu.setNhanVien(getCurrentEmployee());
         orderHistoryRepository.save(lichSu);
 
@@ -739,8 +747,9 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         Order order = posOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + orderId));
 
-        // Idempotency: nếu đơn đã HOAN_THANH thì bỏ qua (VNPay gọi lại lần 2)
-        if (order.getOrderStatus() == OrderStatus.HOAN_THANH) {
+        // Idempotency: nếu đơn đã được xử lý rồi thì bỏ qua (VNPay gọi lại lần 2)
+        if (order.getOrderStatus() == OrderStatus.HOAN_THANH
+                || order.getOrderStatus() == OrderStatus.DA_XAC_NHAN) {
             return ResponseObject.success(null, "Thanh toán thành công");
         }
 
@@ -767,7 +776,11 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 }
             }
 
-            order.setOrderStatus(OrderStatus.HOAN_THANH);
+            // GIAO_HANG → DA_XAC_NHAN (cần giao hàng tiếp), OFFLINE → HOAN_THANH
+            OrderStatus finalStatus = order.getOrderType() == TypeInvoice.GIAO_HANG
+                    ? OrderStatus.DA_XAC_NHAN
+                    : OrderStatus.HOAN_THANH;
+            order.setOrderStatus(finalStatus);
             order.setPaymentStatus(PaymentStatus.DA_THANH_TOAN);
             order.setPaymentDate(System.currentTimeMillis());
             order.setCustomerPaid(amount);
@@ -776,9 +789,11 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             OrderHistory lichSu = new OrderHistory();
             lichSu.setOrder(order);
             lichSu.setHoaDon(order);
-            lichSu.setTrangThai(OrderStatus.HOAN_THANH);
+            lichSu.setTrangThai(finalStatus);
             lichSu.setThoiGian(LocalDateTime.now());
-            lichSu.setNote("Thanh toán tại quầy qua VNPay, mã GD: " + transactionNo);
+            lichSu.setNote(order.getOrderType() == TypeInvoice.GIAO_HANG
+                    ? "Xác nhận đơn giao hàng qua VNPay POS, mã GD: " + transactionNo
+                    : "Thanh toán tại quầy qua VNPay, mã GD: " + transactionNo);
             lichSu.setNhanVien(getCurrentEmployee());
             orderHistoryRepository.save(lichSu);
         } else {
