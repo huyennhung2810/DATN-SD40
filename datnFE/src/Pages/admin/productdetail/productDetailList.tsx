@@ -118,6 +118,7 @@ const ProductDetailPage: React.FC = () => {
       productDetailActions.getById({
         id: record.id,
         onSuccess: (data: ProductDetailResponse) => {
+          console.log("DỮ LIỆU TRẢ VỀ", data);
           const serialText = data.serials?.map((s) => s.serialNumber).join('\n') || "";
 
           formManager.setFieldsValue({
@@ -177,33 +178,52 @@ const handleImportExcel = (file: any) => {
 
   // Xử lý khi Submit Form
   const onFinish = (values: any) => {
-    const rawSerials = values.serialList
-    ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
-    : [];
+    // 1. GIỮ NGUYÊN KIỂU STRING CHO CÁC ID (Vì BE dùng UUID)
+    const formattedValues = {
+      ...values,
+      productId: values.productId || null,
+      colorId: values.colorId || null,
+      storageCapacityId: values.storageCapacityId || null,
+      salePrice: Number(values.salePrice), // Chú ý: Chỉ ép kiểu số cho Giá bán
+    };
 
-  // 2. Loại bỏ các mã trùng lặp do người dùng nhập nhầm trong form
-  const uniqueSerials = Array.from(new Set<string>(rawSerials));
+    let payload: any = { ...formattedValues };
 
-  if (uniqueSerials.length !== rawSerials.length) {
-    notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
-  }
+    // --- NẾU LÀ THÊM MỚI (ADD) ---
+    if (!editingId) {
+      const rawSerials = values.serialList
+        ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
+        : [];
 
-  const serials = uniqueSerials.map((sn: string) => ({
-    serialNumber: sn,
-    status: "ACTIVE"
-  }));
+      const uniqueSerials = Array.from(new Set<string>(rawSerials));
 
-  // 4. Đóng gói Payload
-  const payload = {
-    ...values,
-    quantity: serials.length, // Số lượng tồn kho TỰ ĐỘNG BẰNG số lượng Serial
-    serials: serials // Gửi kèm mảng Serial
-  };
+      if (uniqueSerials.length !== rawSerials.length) {
+        notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
+      }
 
-  // Xóa rác
-  delete payload.serialList;
-  delete payload.serialCode;
+      const serials = uniqueSerials.map((sn: string) => ({
+        serialNumber: sn,
+        status: "ACTIVE"
+      }));
 
+      payload = {
+        ...payload,
+        quantity: serials.length, 
+        serials: serials 
+      };
+    } 
+    // --- NẾU LÀ CẬP NHẬT (UPDATE) ---
+    else {
+      payload.quantity = values.quantity; 
+      // Xóa mảng serials để không gửi lên BE gây lỗi 400
+      delete payload.serials; 
+    }
+
+    // Xóa rác (các trường chỉ dùng cho Frontend)
+    delete payload.serialList;
+    delete payload.serialCode;
+
+    // --- GỌI API ---
     if (editingId) {
       dispatch(productDetailActions.update({ 
         id: editingId, 
@@ -217,7 +237,7 @@ const handleImportExcel = (file: any) => {
       }));
     }
   };
-
+  
   // Cấu hình cột cho bảng
   const columns: ColumnsType<ProductDetailResponse> = [
     { title: "STT", align: "center", width: 60, render: (_, __, i) => filter.page * filter.size + i + 1 },
@@ -237,8 +257,7 @@ const handleImportExcel = (file: any) => {
       // LEVEL 1: version đã được backend auto-generate: "{VariantVersion} / {Color} / {Storage}"
       render: r => (
         <Space direction="vertical" size={0}>
-          <Text strong style={{ color: '#1890ff' }}>{r.version}</Text>
-          <Tag color="blue">{r.colorName || "---"} | {r.storageCapacityName || "---"}</Tag>
+          <Text strong style={{ color: '#1890ff' }}>{r.colorName} / {r.storageCapacityName}</Text>
         </Space>
       ),
     },
