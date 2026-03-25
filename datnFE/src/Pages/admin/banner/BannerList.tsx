@@ -10,6 +10,7 @@ import {
   Select,
   message,
   Popconfirm,
+  Typography,
 } from "antd";
 import {
   PlusOutlined,
@@ -17,11 +18,16 @@ import {
   DeleteOutlined,
   StopOutlined,
   CheckOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import bannerApi from "../../../api/bannerApi";
-import type { BannerResponse, BannerSearchParams, CommonStatus } from "../../../models/banner";
+import type {
+  BannerResponse,
+  BannerSearchParams,
+  CommonStatus,
+} from "../../../models/banner";
 import { BANNER_POSITIONS, BANNER_TYPES } from "../../../models/banner";
 
 const { Search } = Input;
@@ -47,7 +53,7 @@ const BannerList: React.FC = () => {
         page: params.page || 0,
         size: params.size || 10,
       };
-      
+
       if (params.keyword && params.keyword.trim()) {
         searchParams.keyword = params.keyword.trim();
       }
@@ -60,7 +66,7 @@ const BannerList: React.FC = () => {
       if (params.type) {
         searchParams.type = params.type;
       }
-      
+
       const response = await bannerApi.search(searchParams);
       setData(response.data || []);
       setTotalElements(response.totalElements || 0);
@@ -122,7 +128,8 @@ const BannerList: React.FC = () => {
       title: "STT",
       key: "index",
       width: 60,
-      render: (_: any, __: any, index: number) => params.page! * params.size! + index + 1,
+      render: (_: any, __: any, index: number) =>
+        params.page! * params.size! + index + 1,
     },
     {
       title: "Tiêu đề",
@@ -178,7 +185,8 @@ const BannerList: React.FC = () => {
       title: "Ngày tạo",
       dataIndex: "createdDate",
       key: "createdDate",
-      render: (createdDate: number) => dayjs(createdDate).format("DD/MM/YYYY HH:mm"),
+      render: (createdDate: number) =>
+        dayjs(createdDate).format("DD/MM/YYYY HH:mm"),
     },
     {
       title: "Thao tác",
@@ -193,7 +201,9 @@ const BannerList: React.FC = () => {
               onClick={() => navigate(`/admin/banners/${record.id}/edit`)}
             />
           </Tooltip>
-          <Tooltip title={record.status === "ACTIVE" ? "Vô hiệu hóa" : "Kích hoạt"}>
+          <Tooltip
+            title={record.status === "ACTIVE" ? "Vô hiệu hóa" : "Kích hoạt"}
+          >
             {record.status === "ACTIVE" ? (
               <Button
                 type="text"
@@ -225,19 +235,62 @@ const BannerList: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
-      <Card
-        title="Quản lý Banner"
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/admin/banners/create")}
-          >
-            Thêm Banner
-          </Button>
-        }
+    <div>
+      <div
+        className="solid-card"
+        style={{
+          padding: "16px 20px",
+          marginBottom: "12px",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
       >
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <PictureOutlined
+              style={{
+                fontSize: "22px",
+                color: "var(--color-primary)",
+              }}
+            />
+          </div>
+
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý Banner
+            </Typography.Title>
+
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý hiển thị banner trên hệ thống
+            </Typography.Text>
+          </div>
+        </Space>
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate("/admin/banners/create")}
+          style={{
+            borderRadius: "8px",
+            height: "36px",
+            padding: "0 16px",
+          }}
+        >
+          Thêm Banner
+        </Button>
+      </div>
+      <Card>
         <Space
           direction="vertical"
           style={{ width: "100%", marginBottom: 16 }}

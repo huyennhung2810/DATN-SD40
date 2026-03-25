@@ -1,8 +1,10 @@
+
 import { useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import { over, Client } from "stompjs";
 import { useDispatch } from "react-redux";
 import { receiveMessage } from "../redux/chat/chatSlice";
+import { message as antdMessage } from "antd";
 
 export const useWebSocket = (sessionId: string) => {
   const dispatch = useDispatch();
@@ -36,6 +38,7 @@ export const useWebSocket = (sessionId: string) => {
       });
     }, (error) => {
       console.error(" Lỗi kết nối Socket:", error);
+      antdMessage.error("Mất kết nối tới máy chủ hỗ trợ. Vui lòng kiểm tra mạng hoặc thử lại sau.");
     });
 
     return () => {

@@ -1,29 +1,30 @@
 import {
   EyeOutlined,
+  FileExcelOutlined,
   FilterOutlined,
   ReloadOutlined,
   SearchOutlined,
-  FileExcelOutlined,
+  ShoppingCartOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
   Button,
   Card,
   Col,
+  DatePicker,
   Input,
   Row,
+  Select,
   Space,
   Table,
   Tabs,
   Tag,
   Typography,
-  Select,
-  DatePicker,
 } from "antd";
 import dayjs from "dayjs";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { orderActions } from "../../../redux/order/OrderSlice";
 
 const { Title, Text } = Typography;
@@ -194,18 +195,38 @@ const OrderPage: React.FC = () => {
   );
 
   return (
-    <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
-      {/* 1. Header Card */}
-      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          Quản lý Hóa Đơn
-        </Title>
-        <Text type="secondary">
-          Quản lý và theo dõi danh sách Hóa Đơn của cửa hàng
-        </Text>
-      </Card>
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
+      >
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <ShoppingCartOutlined
+              style={{
+                fontSize: "24px",
+                color: "var(--color-primary)",
+              }}
+            />
+          </div>
 
-      {/* 2. Filter Card */}
+          <div>
+            <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý Hóa Đơn
+            </Title>
+            <Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý và theo dõi danh sách hóa đơn của cửa hàng
+            </Text>
+          </div>
+        </Space>
+      </div>
+
       <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
         <Row
           justify="space-between"

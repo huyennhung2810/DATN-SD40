@@ -1,5 +1,7 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useReactToPrint } from "react-to-print";
+import OrderReceiptTemplate from "./OrderReceiptTemplate";
 import {
   Avatar,
   Button,
@@ -22,6 +24,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import {
   ArrowLeftOutlined,
+  BarcodeOutlined,
   CarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -31,12 +34,15 @@ import {
   EyeOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  PlusOutlined,
   PrinterOutlined,
   ReloadOutlined,
   ShoppingCartOutlined,
   SwapOutlined,
   TagOutlined,
-  TeamOutlined,
+  UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -49,8 +55,6 @@ import type {
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-// ── Status maps ───────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
   CHO_XAC_NHAN: "Chờ xác nhận",
@@ -87,8 +91,6 @@ const ONLINE_STEPS = [
   { key: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 const fmt = (n?: number | null) =>
   n == null
     ? "0 đ"
@@ -109,8 +111,6 @@ const parseHistory = (raw?: string): OrderHistoryType[] => {
     return [];
   }
 };
-
-// ── Flat row type ─────────────────────────────────────────────────────────────
 
 interface FlatRow {
   rowKey: string;
@@ -171,18 +171,22 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
   return rows;
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: `HoaDon_${id}`,
+  });
 
   // State
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [items, setItems] = useState<OrderDetailResponse[]>([]);
   const [historyList, setHistoryList] = useState<OrderHistoryType[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "serial">("list");
 
   // Status modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -217,13 +221,13 @@ const OrderDetailPage: React.FC = () => {
     order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
-  const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
+  const canChangeSerial =
+    isOnline &&
+    (currentStatus === "CHO_XAC_NHAN" || currentStatus === "DA_XAC_NHAN");
   const showCancelButton = !isCompleted && !isCancelled;
   const nextStatusKey = NEXT_STATUS[currentStatus] ?? "";
   const totalProductAmount = items.reduce((s, r) => s + (r.tongTien ?? 0), 0);
   const flatRows = buildFlatRows(items);
-
-  // ── Data fetch ────────────────────────────────────────────────────────────
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -247,8 +251,6 @@ const OrderDetailPage: React.FC = () => {
     fetchOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openStatusModal = (status: string) => {
     setNextStatus(status);
@@ -317,15 +319,24 @@ const OrderDetailPage: React.FC = () => {
     setLoadingSerials(true);
     try {
       const res = await posApi.getAvailableSerials(row.productDetailId);
-      const data = (res as any)?.data ?? res;
-      const list: any[] = Array.isArray(data) ? data : (data?.content ?? []);
+      // axiosClient returns AxiosResponse; backend wraps list in ResponseObject.data
+      const responseBody = (res as any)?.data;
+      console.log("[openSerialChange] productDetailId:", row.productDetailId);
+      console.log("[openSerialChange] raw response:", responseBody);
+      const list: any[] = Array.isArray(responseBody?.data)
+        ? responseBody.data
+        : Array.isArray(responseBody)
+          ? responseBody
+          : [];
+      console.log("[openSerialChange] parsed list:", list);
       setAvailableSerials(
         list.map((s: any) => ({
           id: String(s.id ?? s.serialId ?? ""),
-          code: String(s.code ?? s.serialCode ?? ""),
+          code: String(s.serialNumber ?? s.code ?? s.serialCode ?? ""),
         })),
       );
-    } catch {
+    } catch (err) {
+      console.error("[openSerialChange] error:", err);
       message.error("Không thể tải danh sách serial");
     } finally {
       setLoadingSerials(false);
@@ -339,22 +350,42 @@ const OrderDetailPage: React.FC = () => {
     }
     setChangingSerial(true);
     try {
-      await orderApi.assignSerials({
+      console.log("[assignSerials] request:", {
         hoaDonChiTietId: serialChangeRow.detailId,
-        oldImeiId: serialChangeRow.serialId,
+        oldImeiId: serialChangeRow.serialId || "",
         newImeiId: selectedNewSerial,
       });
-      message.success("Đổi serial thành công");
+      const res = await orderApi.assignSerials({
+        hoaDonChiTietId: serialChangeRow.detailId,
+        oldImeiId: serialChangeRow.serialId || "",
+        newImeiId: selectedNewSerial,
+      });
+      console.log("[assignSerials] response:", res);
+      // res is now ResponseObject body (unwrapped in orderApi)
+      const ok = res?.success ?? (res as any)?.isSuccess ?? true;
+      if (!ok) {
+        message.error((res as any)?.message || "Đổi serial thất bại");
+        return;
+      }
+      message.success(
+        serialChangeRow.serialId
+          ? "Đổi serial thành công"
+          : "Gán serial thành công",
+      );
       setSerialChangeOpen(false);
-      fetchOrder();
-    } catch {
-      message.error("Đổi serial thất bại");
+      await fetchOrder();
+    } catch (err: any) {
+      console.error("[assignSerials] error:", err);
+      const errMsg =
+        err?.message ||
+        err?.data?.message ||
+        err?.error ||
+        "Đổi serial thất bại";
+      message.error(errMsg);
     } finally {
       setChangingSerial(false);
     }
   };
-
-  // ── Column definitions ────────────────────────────────────────────────────
 
   const productColumns: ColumnsType<FlatRow> = [
     {
@@ -393,7 +424,7 @@ const OrderDetailPage: React.FC = () => {
       ),
     },
     {
-      title: "Serial / IMEI",
+      title: "Serial",
       key: "serial",
       width: 180,
       align: "center",
@@ -446,6 +477,15 @@ const OrderDetailPage: React.FC = () => {
                   onClick={() => openSerialInfo(r)}
                   title="Xem serial"
                 />
+                {!r.serialId && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => openSerialChange(r)}
+                    title="Gán serial"
+                  />
+                )}
                 {r.serialId && (
                   <Button
                     size="small"
@@ -461,6 +501,131 @@ const OrderDetailPage: React.FC = () => {
       : []),
   ];
 
+  const listColumns: ColumnsType<OrderDetailResponse> = [
+    {
+      title: "STT",
+      width: 55,
+      align: "center",
+      render: (_: unknown, __: unknown, i: number) => i + 1,
+    },
+    {
+      title: "Sản phẩm",
+      key: "sp",
+      render: (_: unknown, r: OrderDetailResponse) => (
+        <Space align="start">
+          <Avatar
+            shape="square"
+            size={60}
+            src={r.anhSanPham}
+            style={{ border: "1px solid #f0f0f0", flexShrink: 0 }}
+          />
+          <div>
+            <Text strong style={{ display: "block" }}>
+              {r.tenSanPham}
+            </Text>
+            <div style={{ marginTop: 4 }}>
+              {r.thuongHieu && (
+                <Tag style={{ fontSize: 11, marginRight: 4 }}>
+                  {r.thuongHieu.toLowerCase()}
+                </Tag>
+              )}
+              {r.mauSac && <Tag style={{ marginRight: 4 }}>{r.mauSac}</Tag>}
+              {r.size && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  | Size: {r.size}
+                </Text>
+              )}
+            </div>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      title: "Mã Serial",
+      key: "serial",
+      width: 180,
+      align: "center",
+      render: (_: unknown, r: OrderDetailResponse) => {
+        const serials = parseSerials(r.danhSachImei);
+        if (serials.length === 0) return <Tag color="warning">Chưa có mã</Tag>;
+        return (
+          <Space direction="vertical" size={2}>
+            {serials.map((s) => (
+              <Tag key={s.id} color="blue" style={{ fontFamily: "monospace" }}>
+                {s.code}
+              </Tag>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Đơn giá",
+      key: "giaBan",
+      align: "right",
+      width: 130,
+      render: (_: unknown, r: OrderDetailResponse) => fmt(r.giaBan),
+    },
+    {
+      title: "Thành tiền",
+      key: "tongTien",
+      align: "right",
+      width: 140,
+      render: (_: unknown, r: OrderDetailResponse) => (
+        <Text strong style={{ color: "#cf1322" }}>
+          {fmt(r.tongTien)}
+        </Text>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "center" as const,
+      width: 100,
+      render: (_: unknown, r: OrderDetailResponse) => {
+        if (!canChangeSerial) return <Text type="secondary">—</Text>;
+        const serials = parseSerials(r.danhSachImei);
+        const firstSerial = serials[0];
+        const flatRow: FlatRow = {
+          rowKey: r.maHoaDonChiTiet,
+          detailId: r.maHoaDonChiTiet,
+          productDetailId: r.productDetailId,
+          tenSanPham: r.tenSanPham,
+          thuongHieu: r.thuongHieu,
+          mauSac: r.mauSac,
+          size: r.size,
+          anhSanPham: r.anhSanPham,
+          giaBan: r.giaBan,
+          soLuong: r.soLuong,
+          tongTien: r.tongTien,
+          serialId: firstSerial?.id || "",
+          serialCode: firstSerial?.code || "Chưa gán",
+        };
+        return (
+          <Space>
+            {!firstSerial && (
+              <Button
+                size="small"
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openSerialChange(flatRow)}
+                title="Gán serial"
+              />
+            )}
+            {firstSerial && (
+              <Button
+                size="small"
+                icon={<SwapOutlined />}
+                onClick={() => openSerialChange(flatRow)}
+                title="Đổi serial"
+              />
+            )}
+          </Space>
+        );
+      },
+    },
+  ];
+
   const availableSerialColumns: ColumnsType<{ id: string; code: string }> = [
     {
       title: "",
@@ -473,7 +638,7 @@ const OrderDetailPage: React.FC = () => {
         />
       ),
     },
-    { title: "Serial / IMEI", dataIndex: "code" },
+    { title: "Serial", dataIndex: "code" },
   ];
 
   const historyColumns: ColumnsType<OrderHistoryType> = [
@@ -492,8 +657,6 @@ const OrderDetailPage: React.FC = () => {
     { title: "Nhân viên", dataIndex: "nhanVien" },
     { title: "Ghi chú", dataIndex: "ghiChu" },
   ];
-
-  // ── Progress tracker (Vue-style circles with connecting lines) ────────────
 
   const renderProgressTracker = () => {
     if (isCancelled) {
@@ -641,8 +804,6 @@ const OrderDetailPage: React.FC = () => {
     );
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
@@ -652,8 +813,7 @@ const OrderDetailPage: React.FC = () => {
   }
 
   return (
-    <div style={{ background: "#f0f2f5", minHeight: "100vh", padding: 24 }}>
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
       <Card bordered={false} style={{ marginBottom: 16, borderRadius: 12 }}>
         <Row justify="space-between" align="middle" wrap>
           <Col>
@@ -688,13 +848,14 @@ const OrderDetailPage: React.FC = () => {
               <Button icon={<ReloadOutlined />} onClick={fetchOrder}>
                 Làm mới
               </Button>
-              <Button icon={<PrinterOutlined />}>In hóa đơn</Button>
+              <Button icon={<PrinterOutlined />} onClick={() => handlePrint()}>
+                In hóa đơn
+              </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* ── Progress tracker ─────────────────────────────────────────────── */}
       {currentStatus !== "LUU_TAM" && (
         <Card
           bordered={false}
@@ -726,7 +887,6 @@ const OrderDetailPage: React.FC = () => {
         </Card>
       )}
 
-      {/* ── Info cards ───────────────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         {/* Customer */}
         <Col xs={24} lg={8}>
@@ -751,20 +911,50 @@ const OrderDetailPage: React.FC = () => {
               ) : null
             }
           >
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Tên khách hàng">
-                {order?.tenKhachHang || <Text type="secondary">Khách lẻ</Text>}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {order?.sdtKH || "---"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {order?.email || "---"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Địa chỉ giao hàng">
-                {order?.diaChi || <Text type="secondary">Mua tại quầy</Text>}
-              </Descriptions.Item>
-            </Descriptions>
+            <Space align="start" style={{ marginBottom: 16, width: "100%" }}>
+              <Avatar
+                size={52}
+                icon={<UserOutlined />}
+                style={{
+                  background: "#e6f4ff",
+                  color: "#1677ff",
+                  flexShrink: 0,
+                }}
+              />
+              <div>
+                <Text strong style={{ fontSize: 15, display: "block" }}>
+                  {order?.tenKhachHang || "Khách lẻ"}
+                </Text>
+                <Space
+                  size={12}
+                  style={{ marginTop: 4, flexWrap: "wrap" as const }}
+                >
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    <PhoneOutlined style={{ marginRight: 4 }} />
+                    {order?.sdtKH || "---"}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    <MailOutlined style={{ marginRight: 4 }} />
+                    {order?.email || "Chưa có email"}
+                  </Text>
+                </Space>
+              </div>
+            </Space>
+            <Divider style={{ margin: "12px 0" }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Địa chỉ giao hàng:
+            </Text>
+            <div
+              style={{
+                marginTop: 6,
+                padding: "8px 12px",
+                background: "#f5f5f5",
+                borderRadius: 6,
+                minHeight: 36,
+              }}
+            >
+              <Text>{order?.diaChi || "Mua tại quầy"}</Text>
+            </div>
           </Card>
         </Col>
 
@@ -780,32 +970,293 @@ const OrderDetailPage: React.FC = () => {
               </Space>
             }
           >
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Nhân viên xử lý">
-                <Space>
-                  <TeamOutlined />
-                  {order?.tenNhanVien || <Text type="secondary">Chưa có</Text>}
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Voucher">
-                {order?.maVoucher ? (
-                  <Tag icon={<TagOutlined />} color="volcano">
-                    {order.maVoucher}
-                  </Tag>
-                ) : (
-                  <Text type="secondary">Không áp dụng</Text>
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Giá trị giảm">
+            <Row gutter={12} style={{ marginBottom: 16 }}>
+              <Col span={12}>
+                <div
+                  style={{
+                    background: "#f5f5f5",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Tổng sản phẩm
+                  </Text>
+                  <div>
+                    <Text strong style={{ fontSize: 16 }}>
+                      {items.length} sản phẩm
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div
+                  style={{
+                    background: "#f5f5f5",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Tổng số lượng
+                  </Text>
+                  <div>
+                    <Text strong style={{ fontSize: 16 }}>
+                      {items.reduce((s, r) => s + (r.soLuong ?? 0), 0)}
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <Text type="secondary">Tổng tiền hàng:</Text>
+              <Text>{fmt(totalProductAmount)}</Text>
+            </div>
+            {(order?.giaTriVoucher ?? 0) > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text type="secondary">Giảm giá voucher:</Text>
                 <Text style={{ color: "#52c41a" }}>
                   -{fmt(order?.giaTriVoucher)}
                 </Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Phí vận chuyển">
-                {fmt(order?.phiVanChuyen)}
-              </Descriptions.Item>
-            </Descriptions>
+              </div>
+            )}
+            {(order?.phiVanChuyen ?? 0) > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text type="secondary">Phí vận chuyển:</Text>
+                <Text>{fmt(order?.phiVanChuyen)}</Text>
+              </div>
+            )}
             <Divider style={{ margin: "12px 0" }} />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text strong style={{ fontSize: 15 }}>
+                TỔNG CỘNG:
+              </Text>
+              <Text strong style={{ fontSize: 18, color: "#cf1322" }}>
+                {fmt(order?.tongTienSauGiam)}
+              </Text>
+            </div>
+            {order?.maVoucher && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  background: "#f6ffed",
+                  border: "1px solid #b7eb8f",
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#52c41a", fontSize: 12 }}>
+                  <TagOutlined style={{ marginRight: 6 }} />
+                  Voucher áp dụng
+                </Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text strong style={{ color: "#389e0d", display: "block" }}>
+                    {order.maVoucher}
+                    {order.tenVoucher ? ` - ${order.tenVoucher}` : ""}
+                  </Text>
+                </div>
+                <Text style={{ color: "#52c41a", fontSize: 12 }}>
+                  Giảm: {fmt(order.giaTriVoucher)}
+                </Text>
+              </div>
+            )}
+          </Card>
+        </Col>
+
+        {/* Payment */}
+        <Col xs={24} lg={8}>
+          <Card
+            bordered={false}
+            style={{ borderRadius: 12, height: "100%" }}
+            title={
+              <Space>
+                <CreditCardOutlined />
+                <span>Thông tin thanh toán</span>
+              </Space>
+            }
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "10px 0",
+                borderBottom: "1px solid #f0f0f0",
+                marginBottom: 16,
+              }}
+            >
+              <Space>
+                <Avatar
+                  icon={<CreditCardOutlined />}
+                  style={{ background: "#e6f4ff", color: "#1677ff" }}
+                />
+                <div>
+                  <Text style={{ display: "block" }}>
+                    {order?.phuongThucThanhToan || "Chưa xác định"}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Phương thức
+                  </Text>
+                </div>
+              </Space>
+              <Tag
+                color={
+                  order?.trangThaiThanhToan === "PAID" ||
+                  order?.trangThaiThanhToan === "DA_THANH_TOAN"
+                    ? "green"
+                    : "default"
+                }
+              >
+                {order?.trangThaiThanhToan === "PAID" ||
+                order?.trangThaiThanhToan === "DA_THANH_TOAN"
+                  ? "Đã thanh toán"
+                  : "Không xác định"}
+              </Tag>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <Text type="secondary">Tổng tiền thanh toán:</Text>
+              <Text strong style={{ color: "#cf1322" }}>
+                {fmt(order?.tongTienSauGiam)}
+              </Text>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text type="secondary">Thời gian thanh toán:</Text>
+              <Text type="secondary">
+                <ClockCircleOutlined style={{ marginRight: 4 }} />
+                {order?.ngayThanhToan
+                  ? dayjs(order.ngayThanhToan).format("HH:mm DD/MM/YYYY")
+                  : "Chưa thanh toán"}
+              </Text>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Card
+        bordered={false}
+        style={{ marginBottom: 16, borderRadius: 12 }}
+        title={
+          <Space>
+            <ShoppingCartOutlined />
+            <span>Danh sách sản phẩm</span>
+          </Space>
+        }
+        extra={
+          <Space>
+            <Button
+              type={viewMode === "list" ? "primary" : "default"}
+              icon={<UnorderedListOutlined />}
+              size="small"
+              onClick={() => setViewMode("list")}
+            >
+              Danh sách
+            </Button>
+            <Button
+              type={viewMode === "serial" ? "primary" : "default"}
+              icon={<BarcodeOutlined />}
+              size="small"
+              onClick={() => setViewMode("serial")}
+            >
+              Chi tiết Serial
+            </Button>
+          </Space>
+        }
+      >
+        {viewMode === "list" ? (
+          <Table<OrderDetailResponse>
+            dataSource={items}
+            rowKey="maHoaDonChiTiet"
+            columns={listColumns}
+            pagination={false}
+            scroll={{ x: 900 }}
+            size="middle"
+          />
+        ) : (
+          <Table<FlatRow>
+            dataSource={flatRows}
+            rowKey="rowKey"
+            columns={productColumns}
+            pagination={false}
+            scroll={{ x: 900 }}
+            size="middle"
+          />
+        )}
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}
+        >
+          <div style={{ minWidth: 320 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <Text type="secondary">Tạm tính:</Text>
+              <Text>{fmt(totalProductAmount)}</Text>
+            </div>
+            {(order?.giaTriVoucher ?? 0) > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text type="secondary">Giảm giá voucher:</Text>
+                <Text style={{ color: "#52c41a" }}>
+                  -{fmt(order?.giaTriVoucher)}
+                </Text>
+              </div>
+            )}
+            {(order?.phiVanChuyen ?? 0) > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text type="secondary">Phí vận chuyển:</Text>
+                <Text>{fmt(order?.phiVanChuyen)}</Text>
+              </div>
+            )}
+            <Divider style={{ margin: "8px 0" }} />
             <div
               style={{
                 display: "flex",
@@ -820,75 +1271,10 @@ const OrderDetailPage: React.FC = () => {
                 {fmt(order?.tongTienSauGiam)}
               </Text>
             </div>
-          </Card>
-        </Col>
-
-        {/* Payment */}
-        <Col xs={24} lg={8}>
-          <Card
-            bordered={false}
-            style={{ borderRadius: 12, height: "100%" }}
-            title={
-              <Space>
-                <CreditCardOutlined />
-                <span>Thanh toán</span>
-              </Space>
-            }
-          >
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Phương thức">
-                {order?.phuongThucThanhToan || "---"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                <Tag
-                  color={
-                    order?.trangThaiThanhToan === "PAID" ||
-                    order?.trangThaiThanhToan === "DA_THANH_TOAN"
-                      ? "green"
-                      : "orange"
-                  }
-                >
-                  {order?.trangThaiThanhToan === "PAID" ||
-                  order?.trangThaiThanhToan === "DA_THANH_TOAN"
-                    ? "Đã thanh toán"
-                    : "Chưa thanh toán"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày thanh toán">
-                {order?.ngayThanhToan
-                  ? dayjs(order.ngayThanhToan).format("HH:mm DD/MM/YYYY")
-                  : "---"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tổng tiền hàng">
-                {fmt(totalProductAmount)}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* ── Product table ─────────────────────────────────────────────────── */}
-      <Card
-        bordered={false}
-        style={{ marginBottom: 16, borderRadius: 12 }}
-        title={
-          <Space>
-            <ShoppingCartOutlined />
-            <span>Danh sách sản phẩm ({flatRows.length} dòng)</span>
-          </Space>
-        }
-      >
-        <Table<FlatRow>
-          dataSource={flatRows}
-          rowKey="rowKey"
-          columns={productColumns}
-          pagination={false}
-          scroll={{ x: 900 }}
-          size="middle"
-        />
+          </div>
+        </div>
       </Card>
 
-      {/* ── History modal ─────────────────────────────────────────────────── */}
       <Modal
         title="Lịch sử xử lý đơn hàng"
         open={historyModalOpen}
@@ -907,7 +1293,6 @@ const OrderDetailPage: React.FC = () => {
         />
       </Modal>
 
-      {/* ── Status change modal ───────────────────────────────────────────── */}
       <Modal
         title="Xác nhận thay đổi trạng thái"
         open={statusModalOpen}
@@ -948,7 +1333,6 @@ const OrderDetailPage: React.FC = () => {
         />
       </Modal>
 
-      {/* ── Customer edit modal ───────────────────────────────────────────── */}
       <Modal
         title="Cập nhật thông tin khách hàng"
         open={customerModalOpen}
@@ -988,7 +1372,6 @@ const OrderDetailPage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* ── Serial info modal ─────────────────────────────────────────────── */}
       <Modal
         title="Thông tin Serial / IMEI"
         open={serialInfoOpen}
@@ -1017,26 +1400,31 @@ const OrderDetailPage: React.FC = () => {
         )}
       </Modal>
 
-      {/* ── Serial change modal ───────────────────────────────────────────── */}
       <Modal
-        title="Đổi Serial / IMEI"
+        title={serialChangeRow?.serialId ? "Đổi Serial" : "Gán Serial"}
         open={serialChangeOpen}
         onOk={handleSaveSerialChange}
         onCancel={() => setSerialChangeOpen(false)}
         confirmLoading={changingSerial}
-        okText="Xác nhận đổi"
+        okText={serialChangeRow?.serialId ? "Xác nhận đổi" : "Xác nhận gán"}
         cancelText="Hủy"
         width={580}
       >
         {serialChangeRow && (
           <div style={{ marginTop: 8 }}>
-            <p>
-              Serial hiện tại:{" "}
-              <Tag color="orange" style={{ fontFamily: "monospace" }}>
-                {serialChangeRow.serialCode}
-              </Tag>
+            {serialChangeRow.serialId && (
+              <p>
+                Serial hiện tại:{" "}
+                <Tag color="orange" style={{ fontFamily: "monospace" }}>
+                  {serialChangeRow.serialCode}
+                </Tag>
+              </p>
+            )}
+            <p style={{ marginBottom: 8 }}>
+              {serialChangeRow.serialId
+                ? "Chọn serial thay thế:"
+                : "Chọn serial để gán:"}
             </p>
-            <p style={{ marginBottom: 8 }}>Chọn serial thay thế:</p>
             {loadingSerials ? (
               <div style={{ textAlign: "center", padding: 32 }}>
                 <Spin />
@@ -1063,6 +1451,10 @@ const OrderDetailPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {order && (
+        <OrderReceiptTemplate ref={receiptRef} order={order} items={items} />
+      )}
     </div>
   );
 };

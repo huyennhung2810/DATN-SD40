@@ -1,4 +1,5 @@
 package com.example.datn.core.admin.order.service.impl;
+
 import com.example.datn.core.admin.order.model.request.*;
 import com.example.datn.core.admin.order.model.response.ADOrderDetailResponse;
 import com.example.datn.core.admin.order.model.response.OrderPageResponse;
@@ -51,28 +52,24 @@ public class ADOrderServiceImpl implements ADOrderService {
         try {
             log.info("Bắt đầu cập nhật trạng thái hóa đơn: {}", request.getMaHoaDon());
 
-            // 1. Lấy hóa đơn theo mã
+            //Lấy hóa đơn theo mã
             Order hoaDon = adOrderRepository.findByMa(request.getMaHoaDon())
-                    .orElseThrow(() ->
-                            new RuntimeException("Không tìm thấy hóa đơn: " + request.getMaHoaDon())
-                    );
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + request.getMaHoaDon()));
 
             OrderStatus trangThaiCu = hoaDon.getOrderStatus();
             OrderStatus trangThaiMoi = request.getStatusTrangThaiHoaDon();
 
             log.info("Trạng thái cũ: {}, Trạng thái mới: {}", trangThaiCu, trangThaiMoi);
 
-            // 2. Kiểm tra luồng trạng thái hợp lệ
+            //Kiểm tra luồng trạng thái hợp lệ
             kiemTraChuyenTrangThai(trangThaiCu, trangThaiMoi);
 
             Employee nhanVien;
             // Nếu request có gửi id nhân viên → lấy theo ID
             if (request.getIdNhanVien() != null) {
                 nhanVien = employeeRepository.findById(request.getIdNhanVien())
-                        .orElseThrow(() ->
-                                new RuntimeException("Không tìm thấy nhân viên ID = "
-                                        + request.getIdNhanVien())
-                        );
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên ID = "
+                                + request.getIdNhanVien()));
             } else {
                 // Nếu không gửi → lấy nhân viên đang đăng nhập
                 nhanVien = getCurrentEmployee();
@@ -86,14 +83,15 @@ public class ADOrderServiceImpl implements ADOrderService {
 
                     if (caDangMo.isPresent()) {
                         hoaDon.setShiftHandover(caDangMo.get());
-                        log.info("Đã tự động gán hóa đơn {} vào ca làm việc {}", hoaDon.getCode(), caDangMo.get().getId());
+                        log.info("Đã tự động gán hóa đơn {} vào ca làm việc {}", hoaDon.getCode(),
+                                caDangMo.get().getId());
                     }
                 } catch (Exception e) {
                     log.warn("Không thể gán ca làm việc cho hóa đơn: {}", e.getMessage());
                 }
             }
 
-            // 4. Cập nhật trạng thái hóa đơn
+            // Cập nhật trạng thái hóa đơn
             hoaDon.setOrderStatus(trangThaiMoi);
             hoaDon.setLastModifiedDate(System.currentTimeMillis());
 
@@ -109,15 +107,14 @@ public class ADOrderServiceImpl implements ADOrderService {
 
             Order hoaDonDaCapNhat = adOrderRepository.save(hoaDon);
 
-            // 5. Lưu lịch sử trạng thái vào bảng lịch sử
+            // Lưu lịch sử trạng thái vào bảng lịch sử
             OrderHistory lichSu = luuOrderHistory(
                     hoaDonDaCapNhat,
                     trangThaiMoi,
                     request.getNote(),
-                    nhanVien
-            );
+                    nhanVien);
 
-            // 6. XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
+            //  XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
             switch (trangThaiMoi) {
 
                 case CHO_XAC_NHAN:
@@ -147,12 +144,12 @@ public class ADOrderServiceImpl implements ADOrderService {
                 default:
                     break;
             }
-            // 7. Gửi email thông báo (bất đồng bộ)
+            //Gửi email thông báo (bất đồng bộ)
             sendStatusUpdateEmailAsync(hoaDonDaCapNhat, trangThaiMoi);
 
             log.info("Cập nhật trạng thái thành công cho hóa đơn: {}", request.getMaHoaDon());
 
-            // 8. Trả về thông tin chi tiết bao gồm thời gian từ lịch sử
+            // Trả về thông tin chi tiết bao gồm thời gian từ lịch sử
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("maHoaDon", hoaDonDaCapNhat.getCode());
             responseData.put("trangThaiCu", trangThaiCu);
@@ -177,9 +174,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private void doiTrangThaiImel(Order hoaDonDaCapNhat) {
     }
 
-    /**
-     * Lưu lịch sử thay đổi trạng thái hóa đơn
-     */
+    //luu ls thay doi trạng thía hóa đơn
     private OrderHistory luuOrderHistory(
             Order hoaDon,
             OrderStatus trangThai,
@@ -187,8 +182,8 @@ public class ADOrderServiceImpl implements ADOrderService {
             Employee nhanVien) {
 
         OrderHistory lichSu = new OrderHistory();
-        lichSu.setOrder(hoaDon);   // id_order column - used by native SQL query in ADOrderDetailRepository
-        lichSu.setHoaDon(hoaDon);  // id_hoa_don column - used by JPA repository methods
+        lichSu.setOrder(hoaDon);
+        lichSu.setHoaDon(hoaDon);
         lichSu.setTrangThai(trangThai);
         lichSu.setThoiGian(LocalDateTime.now());
         lichSu.setNote(ghiChu != null ? ghiChu : "Cập nhật từ hệ thống quản trị");
@@ -200,9 +195,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         return saved;
     }
 
-    /**
-     * Lấy danh sách lịch sử trạng thái của hóa đơn
-     */
+   //Lấy danh sách lịch sử trạng thái của hóa đơn
     public List<OrderHistory> getOrderHistory(String maHoaDon) {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
@@ -210,9 +203,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         return orderHistoryRepository.findByHoaDonOrderByThoiGianDesc(hoaDon);
     }
 
-    /**
-     * Lấy thời gian của một trạng thái cụ thể từ lịch sử
-     */
+    // Lấy thời gian của một trạng thái cụ thể từ lịch sử
     public LocalDateTime getThoiGianTrangThai(String maHoaDon, OrderStatus trangThai) {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
@@ -223,9 +214,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElse(null);
     }
 
-    /**
-     * Lấy thông tin timeline của hóa đơn
-     */
+    //Lấy thông tin timeline của hóa đơn
     public Map<String, Object> getTimelineHoaDon(String maHoaDon) {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
@@ -248,9 +237,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         return timeline;
     }
 
-    /**
-     * Kiểm tra hóa đơn có được phép chuyển sang trạng thái mới hay không
-     */
+    // Kiểm tra hóa đơn có được phép chuyển sang trạng thái mới hay không
     private void kiemTraChuyenTrangThai(
             OrderStatus trangThaiCu,
             OrderStatus trangThaiMoi) {
@@ -281,14 +268,11 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .contains(trangThaiMoi)) {
 
             throw new RuntimeException(
-                    "Không thể chuyển từ " + trangThaiCu + " → " + trangThaiMoi
-            );
+                    "Không thể chuyển từ " + trangThaiCu + " → " + trangThaiMoi);
         }
     }
 
-    /**
-     * Lấy nhân viên hiện tại từ Security Context
-     */
+    //Lấy nhân viên hiện tại từ Security Context
     private Employee getCurrentEmployee() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -300,12 +284,9 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin nhân viên: " + username));
     }
 
-    /**
-     * Khóa IMEI khi hóa đơn chờ xác nhận / đã xác nhận
-     */
+    //Khóa IMEI khi hóa đơn chờ xác nhận / đã xác nhận
     private void khoaIMEIKhiChoXacNhan(Order hoaDon) {
-        List<OrderDetail> danhSachChiTiet =
-                adOrderDetailRepository.findByOrderId(hoaDon.getId());
+        List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
         int imeiCount = 0;
         for (OrderDetail chiTiet : danhSachChiTiet) {
@@ -321,12 +302,9 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã khóa {} IMEI cho hóa đơn {}", imeiCount, hoaDon.getCode());
     }
 
-    /**
-     * Đánh dấu IMEI đã bán khi chuyển sang chờ giao
-     */
+    // Đánh dấu IMEI đã bán khi chuyển sang chờ giao
     private void danhDauIMEIDaBan(Order hoaDon) {
-        List<OrderDetail> danhSachChiTiet =
-                adOrderDetailRepository.findByOrderId(hoaDon.getId());
+        List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
         int imeiCount = 0;
         for (OrderDetail chiTiet : danhSachChiTiet) {
@@ -342,12 +320,9 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã đánh dấu {} IMEI là đã bán cho hóa đơn {}", imeiCount, hoaDon.getCode());
     }
 
-    /**
-     * Trả toàn bộ IMEI về trạng thái AVAILABLE khi hủy hóa đơn
-     */
+    //Trả toàn bộ IMEI về trạng thái AVAILABLE khi hủy hóa đơn
     private void traIMEIVeKho(Order hoaDon) {
-        List<OrderDetail> danhSachChiTiet =
-                adOrderDetailRepository.findByOrderId(hoaDon.getId());
+        List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
         int imeiCount = 0;
         for (OrderDetail chiTiet : danhSachChiTiet) {
@@ -365,28 +340,19 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã trả {} IMEI về kho cho hóa đơn {}", imeiCount, hoaDon.getCode());
     }
 
-    /**
-     * Đánh dấu voucher đã được sử dụng khi chuyển sang CHỜ GIAO
-     */
-    /**
-     * Đánh dấu voucher đã được sử dụng khi chuyển sang CHỜ GIAO
-     */
+    //Đánh dấu voucher đã được sử dụng khi chuyển sang CHỜ GIAO
     private void danhDauVoucherDaSuDung(Order hoaDon) {
         Voucher voucher = hoaDon.getVoucher();
         if (voucher == null) {
             return;
         }
-
-        // Tùy theo repository của bạn, dùng findByOrder_Id hoặc truyền thẳng object hoaDon vào findByOrder
         VoucherDetail voucherDetail = voucherDetailRepository.findByOrder_Id(hoaDon.getId());
 
-        // Kiểm tra tồn tại và trạng thái chưa sử dụng (giả sử 0 là chưa sử dụng, 1 là đã sử dụng)
         if (voucherDetail != null && (voucherDetail.getUsageStatus() == null || voucherDetail.getUsageStatus() == 0)) {
 
             // Đánh dấu đã sử dụng
             voucherDetail.setUsageStatus(1);
             voucherDetail.setUsedDate(System.currentTimeMillis());
-            // voucherDetail.setOrder(hoaDon); // Thường lúc add voucher vào order đã set rồi, nếu chưa có thể mở comment dòng này
 
             voucherDetailRepository.save(voucherDetail);
 
@@ -400,9 +366,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-    /**
-     * Hoàn trả voucher khi hủy hóa đơn
-     */
+    // Hoàn trả voucher khi hủy hóa đơn
     private void hoanTraVoucher(Order hoaDon) {
         Voucher voucher = hoaDon.getVoucher();
         if (voucher == null) {
@@ -431,9 +395,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-    /**
-     * Lưu lịch sử thanh toán khi chuyển sang chờ giao
-     */
+    //Lưu lịch sử thanh toán khi chuyển sang chờ giao
     private void luuLichSuThanhToan(Order hoaDon, Employee nhanVien) {
         if (hoaDon.getPaymentDate() != null) {
             return; // Đã thanh toán rồi
@@ -441,8 +403,8 @@ public class ADOrderServiceImpl implements ADOrderService {
 
         PaymentHistory payment = new PaymentHistory();
         payment.setOrder(hoaDon);
-        payment.setAmount(hoaDon.getTotalAfterDiscount() != null ?
-                hoaDon.getTotalAfterDiscount() : hoaDon.getTotalAmount());
+        payment.setAmount(
+                hoaDon.getTotalAfterDiscount() != null ? hoaDon.getTotalAfterDiscount() : hoaDon.getTotalAmount());
         payment.setTransactionType("THANH_TOAN");
         payment.setTransactionCode("PAY-" + hoaDon.getCode() + "-" + System.currentTimeMillis());
         payment.setEmployee(nhanVien);
@@ -450,16 +412,13 @@ public class ADOrderServiceImpl implements ADOrderService {
 
         paymentHistoryRepository.save(payment);
 
-
         hoaDon.setPaymentDate(System.currentTimeMillis());
         adOrderRepository.save(hoaDon);
 
         log.info("Đã lưu lịch sử thanh toán cho hóa đơn {}", hoaDon.getCode());
     }
 
-    /**
-     * Hoàn tiền khi hủy hóa đơn đã thanh toán
-     */
+   //Hoàn tiền khi hủy hóa đơn đã thanh toán
     private void hoanTienNeuCan(Order hoaDon, Employee nhanVien) {
         if (hoaDon.getPaymentDate() == null) {
             return; // Chưa thanh toán thì không hoàn
@@ -468,9 +427,8 @@ public class ADOrderServiceImpl implements ADOrderService {
         PaymentHistory refund = new PaymentHistory();
         refund.setOrder(hoaDon);
         // Lưu số âm để thể hiện dòng tiền đi ra
-        refund.setAmount(hoaDon.getTotalAfterDiscount() != null ?
-                hoaDon.getTotalAfterDiscount().negate() :
-                hoaDon.getTotalAmount().negate());
+        refund.setAmount(hoaDon.getTotalAfterDiscount() != null ? hoaDon.getTotalAfterDiscount().negate()
+                : hoaDon.getTotalAmount().negate());
         refund.setTransactionType("HOAN_TIEN");
         refund.setTransactionCode("REFUND-" + hoaDon.getCode() + "-" + System.currentTimeMillis());
         refund.setEmployee(nhanVien);
@@ -483,9 +441,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã hoàn tiền cho hóa đơn {}", hoaDon.getCode());
     }
 
-    /**
-     * Gửi email thông báo thay đổi trạng thái (bất đồng bộ)
-     */
+    //Gửi email thông báo thay đổi trạng thái (bất đồng bộ)
     @Async
     public void sendStatusUpdateEmailAsync(Order Order, OrderStatus newStatus) {
         try {
@@ -527,56 +483,54 @@ public class ADOrderServiceImpl implements ADOrderService {
     private String buildEmailContent(Order Order, OrderStatus newStatus) {
         String trackingUrl = "http://localhost:6788/hoa-don/" + Order.getCode();
         String statusText = getStatusText(newStatus);
-        String customerName = Order.getCustomer() != null ?
-                Order.getCustomer().getName() :
-                Order.getRecipientName();
+        String customerName = Order.getCustomer() != null ? Order.getCustomer().getName() : Order.getRecipientName();
 
         return """
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: #f9f9f9;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; color: white;">
-                <h2 style="margin: 0; font-size: 28px;">MyLaptop Store</h2>
-                <p style="margin: 8px 0 0; font-size: 16px; opacity: 0.9;">Thông báo cập nhật đơn hàng</p>
-            </div>
-            
-            <div style="padding: 30px; background: white;">
-                <h3 style="color: #333; margin-top: 0; font-size: 20px;">${statusText}</h3>
-                <p style="color: #555; font-size: 16px; line-height: 1.6;">
-                    Xin chào <b>${customerName}</b>,<br>
-                    Đơn hàng <b style="color: #667eea;">${OrderCode}</b> của bạn đã được cập nhật trạng thái.
-                </p>
-                
-                <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                    <p style="margin: 0; color: #333;">
-                        <strong>Mã đơn hàng:</strong> ${OrderCode}<br>
-                        <strong>Trạng thái mới:</strong> ${statusText}<br>
-                        <strong>Ngày cập nhật:</strong> ${currentDate}
-                    </p>
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: #f9f9f9;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; color: white;">
+                        <h2 style="margin: 0; font-size: 28px;">MyLaptop Store</h2>
+                        <p style="margin: 8px 0 0; font-size: 16px; opacity: 0.9;">Thông báo cập nhật đơn hàng</p>
+                    </div>
+
+                    <div style="padding: 30px; background: white;">
+                        <h3 style="color: #333; margin-top: 0; font-size: 20px;">${statusText}</h3>
+                        <p style="color: #555; font-size: 16px; line-height: 1.6;">
+                            Xin chào <b>${customerName}</b>,<br>
+                            Đơn hàng <b style="color: #667eea;">${OrderCode}</b> của bạn đã được cập nhật trạng thái.
+                        </p>
+
+                        <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                            <p style="margin: 0; color: #333;">
+                                <strong>Mã đơn hàng:</strong> ${OrderCode}<br>
+                                <strong>Trạng thái mới:</strong> ${statusText}<br>
+                                <strong>Ngày cập nhật:</strong> ${currentDate}
+                            </p>
+                        </div>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${trackingUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                               color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px;
+                               font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                                Theo dõi đơn hàng
+                            </a>
+                        </div>
+
+                        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+                            <p style="color: #777; font-size: 14px; text-align: center;">
+                                Cảm ơn bạn đã mua hàng tại MyLaptop!<br>
+                                Mọi thắc mắc vui lòng liên hệ: 1800-xxxx (Miễn phí)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="margin: 0; color: #666; font-size: 12px;">
+                            © 2024 MyLaptop Store. All rights reserved.<br>
+                            Địa chỉ: 123 Nguyễn Văn Linh, Quận 7, TP.HCM
+                        </p>
+                    </div>
                 </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${trackingUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                       color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; 
-                       font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                        Theo dõi đơn hàng
-                    </a>
-                </div>
-                
-                <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-                    <p style="color: #777; font-size: 14px; text-align: center;">
-                        Cảm ơn bạn đã mua hàng tại MyLaptop!<br>
-                        Mọi thắc mắc vui lòng liên hệ: 1800-xxxx (Miễn phí)
-                    </p>
-                </div>
-            </div>
-            
-            <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
-                <p style="margin: 0; color: #666; font-size: 12px;">
-                    © 2024 MyLaptop Store. All rights reserved.<br>
-                    Địa chỉ: 123 Nguyễn Văn Linh, Quận 7, TP.HCM
-                </p>
-            </div>
-        </div>
-        """
+                """
                 .replace("${statusText}", statusText)
                 .replace("${customerName}", customerName != null ? customerName : "Quý khách")
                 .replace("${OrderCode}", Order.getCode())
@@ -586,13 +540,20 @@ public class ADOrderServiceImpl implements ADOrderService {
 
     private String getStatusText(OrderStatus status) {
         switch (status) {
-            case CHO_XAC_NHAN: return "Chờ xác nhận";
-            case DA_XAC_NHAN: return "Đã xác nhận";
-            case CHO_GIAO: return "Chờ giao hàng";
-            case DANG_GIAO: return "Đang giao hàng";
-            case HOAN_THANH: return "Hoàn thành";
-            case DA_HUY: return "Đã hủy";
-            default: return "Đang xử lý";
+            case CHO_XAC_NHAN:
+                return "Chờ xác nhận";
+            case DA_XAC_NHAN:
+                return "Đã xác nhận";
+            case CHO_GIAO:
+                return "Chờ giao hàng";
+            case DANG_GIAO:
+                return "Đang giao hàng";
+            case HOAN_THANH:
+                return "Hoàn thành";
+            case DA_HUY:
+                return "Đã hủy";
+            default:
+                return "Đang xử lý";
         }
     }
 
@@ -607,7 +568,8 @@ public class ADOrderServiceImpl implements ADOrderService {
         } catch (Exception e) {
             log.error("Lỗi khi lấy danh sách hóa đơn: {}", e.getMessage(), e);
 
-            return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy danh sách hóa đơn: " + e.getMessage());
+            return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Lỗi khi lấy danh sách hóa đơn: " + e.getMessage());
         }
     }
 
@@ -616,19 +578,16 @@ public class ADOrderServiceImpl implements ADOrderService {
         try {
             Pageable pageable = Helper.createPageable(request, "created_date");
 
-
-
-            Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(), pageable);
+            Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(),
+                    pageable);
             return ResponseObject.success(
                     page,
-                    "Lấy danh sách chi tiết hóa đơn thành công"
-            );
+                    "Lấy danh sách chi tiết hóa đơn thành công");
         } catch (Exception e) {
             log.error("Lỗi khi lấy chi tiết hóa đơn: {}", e.getMessage(), e);
             return ResponseObject.error(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Lỗi khi lấy chi tiết hóa đơn: " + e.getMessage()
-            );
+                    "Lỗi khi lấy chi tiết hóa đơn: " + e.getMessage());
         }
     }
 
@@ -636,79 +595,90 @@ public class ADOrderServiceImpl implements ADOrderService {
     @Transactional
     public ResponseObject<?> doiImei(ADAssignSerialRequest request) {
         try {
-            log.info("Bắt đầu đổi IMEI: oldImeiId={}, newImeiId={}, hoaDonChiTietId={}",
+            boolean hasOldSerial = request.getOldImeiId() != null && !request.getOldImeiId().isBlank();
+            log.info("Bắt đầu {} IMEI: oldImeiId={}, newImeiId={}, hoaDonChiTietId={}",
+                    hasOldSerial ? "đổi" : "gán",
                     request.getOldImeiId(), request.getNewImeiId(), request.getHoaDonChiTietId());
 
-            // 1. Tìm OrderDetail
+            // Tìm OrderDetail
             OrderDetail chiTiet = adOrderDetailRepository.findById(request.getHoaDonChiTietId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết hóa đơn: "
                             + request.getHoaDonChiTietId()));
 
-            // 2. Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN mới cho đổi
+            // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN hoặc CHỜ GIAO mới cho đổi/gán
             Order hoaDon = chiTiet.getOrder();
-            if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN) {
+            if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN
+                    && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN
+                    && hoaDon.getOrderStatus() != OrderStatus.CHO_GIAO) {
                 throw new RuntimeException(
-                        "Chỉ có thể thay đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận'"
-                );
+                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận', 'Đã xác nhận' hoặc 'Chờ giao hàng'");
             }
 
-            // 3. Tìm IMEI cũ và kiểm tra nó thuộc OrderDetail này
-            Serial imeiCu = serialRepository.findById(request.getOldImeiId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy Serial cũ: "
-                            + request.getOldImeiId()));
+            // Xử lý IMEI cũ (nếu có)
+            Serial imeiCu = null;
+            if (hasOldSerial) {
+                imeiCu = serialRepository.findById(request.getOldImeiId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy Serial cũ: "
+                                + request.getOldImeiId()));
 
-            boolean imeiCuThuocChiTiet = chiTiet.getSerials().stream()
-                    .anyMatch(imei -> imei.getId().equals(request.getOldImeiId()));
-            if (!imeiCuThuocChiTiet) {
-                throw new RuntimeException("Serial cũ không thuộc dòng hóa đơn này");
+                boolean imeiCuThuocChiTiet = chiTiet.getSerials().stream()
+                        .anyMatch(imei -> imei.getId().equals(request.getOldImeiId()));
+                if (!imeiCuThuocChiTiet) {
+                    throw new RuntimeException("Serial cũ không thuộc dòng hóa đơn này");
+                }
             }
 
-            // 4. Tìm IMEI mới và kiểm tra còn AVAILABLE
+            // Tìm IMEI mới và kiểm tra còn AVAILABLE
             Serial imeiMoi = serialRepository.findById(request.getNewImeiId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy Serial mới: "
                             + request.getNewImeiId()));
 
             if (imeiMoi.getSerialStatus() != SerialStatus.AVAILABLE) {
                 throw new RuntimeException(
-                        "Serial mới không ở trạng thái khả dụng (hiện tại: "
-                                + imeiMoi.getSerialStatus() + ")"
-                );
+                        "Serial không ở trạng thái khả dụng (hiện tại: "
+                                + imeiMoi.getSerialStatus() + ")");
             }
 
-            // 5. Kiểm tra 2 IMEI cùng ProductDetail
-            if (!imeiCu.getProductDetail().getId().equals(imeiMoi.getProductDetail().getId())) {
+            // Nếu đổi serial: kiểm tra 2 IMEI cùng ProductDetail
+            if (hasOldSerial && !imeiCu.getProductDetail().getId().equals(imeiMoi.getProductDetail().getId())) {
                 throw new RuntimeException("Serial mới không thuộc cùng sản phẩm với Serial cũ");
             }
 
-            // 6. Giải phóng IMEI cũ → trả về AVAILABLE
-            imeiCu.setSerialStatus(SerialStatus.AVAILABLE);
-            imeiCu.setOrderDetail(null);
-            imeiCu.setOrderHolding(null);
-            imeiCu.setLockedAt(null);
-            serialRepository.save(imeiCu);
-            log.info("Đã giải phóng Serial cũ: {}", imeiCu.getCode());
+            // Giải phóng IMEI cũ → trả về AVAILABLE (chỉ khi đổi)
+            if (hasOldSerial) {
+                imeiCu.setSerialStatus(SerialStatus.AVAILABLE);
+                imeiCu.setOrderDetail(null);
+                imeiCu.setOrderHolding(null);
+                imeiCu.setLockedAt(null);
+                serialRepository.save(imeiCu);
+                log.info("Đã giải phóng Serial cũ: {}", imeiCu.getCode());
+            }
 
-            // 7. Gán IMEI mới → RESERVED (đang chờ xác nhận)
+            // Gán IMEI mới → RESERVED (đang chờ xác nhận)
             imeiMoi.setSerialStatus(SerialStatus.RESERVED);
             imeiMoi.setOrderDetail(chiTiet);
             imeiMoi.setLockedAt(System.currentTimeMillis());
             serialRepository.save(imeiMoi);
             log.info("Đã gán Serial mới: {}", imeiMoi.getCode());
 
-            // 8. Cập nhật danh sách IMEI trong OrderDetail
-            chiTiet.getSerials().removeIf(imei -> imei.getId().equals(request.getOldImeiId()));
+            // Cập nhật danh sách IMEI trong OrderDetail
+            if (hasOldSerial) {
+                chiTiet.getSerials().removeIf(imei -> imei.getId().equals(request.getOldImeiId()));
+            }
             chiTiet.getSerials().add(imeiMoi);
             adOrderDetailRepository.save(chiTiet);
 
-            // 9. Trả về kết quả
+            // Trả về kết quả
+            String action = hasOldSerial ? "Đổi" : "Gán";
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("hoaDonChiTietId", chiTiet.getId());
-            responseData.put("oldImeiCode", imeiCu.getCode());
+            if (hasOldSerial)
+                responseData.put("oldImeiCode", imeiCu.getCode());
             responseData.put("newImeiCode", imeiMoi.getCode());
-            responseData.put("message", "Đổi Serial thành công");
+            responseData.put("message", action + " Serial thành công");
 
-            log.info("Đổi Serial thành công: {} → {}", imeiCu.getCode(), imeiMoi.getCode());
-            return ResponseObject.success(responseData,  "Đổi Serial thành công");
+            log.info("{} Serial thành công: {}", action, imeiMoi.getCode());
+            return ResponseObject.success(responseData, action + " Serial thành công");
 
         } catch (RuntimeException e) {
             log.error("Lỗi đổi Serial: {}", e.getMessage(), e);
@@ -719,21 +689,18 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-
     @Override
     @Transactional
     public ResponseObject<?> capNhatThongTinKhachHang(ADUpdateCustomerRequest request) {
         try {
             Order hoaDon = adOrderRepository.findByMa(request.getMaHoaDon())
                     .orElseThrow(() -> new RuntimeException(
-                            "Không tìm thấy hóa đơn: " + request.getMaHoaDon()
-                    ));
+                            "Không tìm thấy hóa đơn: " + request.getMaHoaDon()));
 
             // Chỉ cho phép cập nhật khi đơn ở trạng thái CHỜ XÁC NHẬN
             if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN) {
                 throw new RuntimeException(
-                        "Chỉ được cập nhật thông tin khi đơn hàng ở trạng thái Chờ xác nhận"
-                );
+                        "Chỉ được cập nhật thông tin khi đơn hàng ở trạng thái Chờ xác nhận");
             }
 
             if (request.getTenKhachHang() != null && !request.getTenKhachHang().isBlank())
@@ -752,7 +719,7 @@ public class ADOrderServiceImpl implements ADOrderService {
 
             log.info("Đã cập nhật thông tin khách hàng cho hóa đơn: {}", request.getMaHoaDon());
 
-            return ResponseObject.success( HttpStatus.OK,
+            return ResponseObject.success(HttpStatus.OK,
                     "Cập nhật thông tin khách hàng thành công");
 
         } catch (RuntimeException e) {

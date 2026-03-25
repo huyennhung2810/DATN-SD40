@@ -20,6 +20,7 @@ import VoucherForm from "../Pages/admin/voucher/VoucherForm";
 import DiscountForm from "../Pages/admin/discount/DiscountForm";
 import BannerForm from "../Pages/admin/banner/BannerForm";
 import OrderDetailPage from "../Pages/admin/order/OrderDetail";
+import AdminProfilePage from "../Pages/admin/profile/AdminProfilePage";
 
 export const EmployeeRoutes = () => [
   <Route
@@ -63,6 +64,9 @@ export const EmployeeRoutes = () => [
     <Route path="/admin/banners/create" element={<BannerForm />} />
     <Route path="/admin/banners/:id/edit" element={<BannerForm />} />
     <Route path="/admin/banners/:id" element={<BannerForm />} />
+
+    {/* Hồ sơ cá nhân */}
+    <Route path="/profile" element={<AdminProfilePage />} />
   </Route>,
 ];
 

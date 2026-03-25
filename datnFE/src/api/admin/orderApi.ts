@@ -26,8 +26,9 @@ export const orderApi = {
     },
 
     //thay đổi mã
-    assignSerials: (data: ADAssignSerialRequest): Promise<ResponseObject<any>> => {
-        return axiosClient.put(`${PREFIX}/doi-imei`, data);
+    assignSerials: async (data: ADAssignSerialRequest): Promise<ResponseObject<any>> => {
+        const res = await axiosClient.put(`${PREFIX}/doi-imei`, data);
+        return res.data;
     },
 
     //cập nhật tt giao hàng

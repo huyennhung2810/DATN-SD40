@@ -11,6 +11,17 @@ import {
 import { useAppSelector } from "../../../app/hook";
 import { ShoppingOutlined } from "@ant-design/icons";
 
+// Map enum backend -> FE chart key (giúp biểu đồ luôn hiển thị đúng màu)
+const STATUS_KEY_MAP: Record<string, string> = {
+  CHO_XAC_NHAN: "PENDING",
+  DA_XAC_NHAN: "CONFIRMED",
+  CHO_GIAO: "PACKAGING",
+  DANG_GIAO: "SHIPPING",
+  HOAN_THANH: "COMPLETED",
+  DA_HUY: "CANCELED",
+  LUU_TAM: "RETURNED",
+};
+
 const { Text } = Typography;
 
 interface ChartDataItem {
@@ -32,12 +43,11 @@ interface CustomLegendProps {
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Chờ xác nhận", color: "#ffcb2f" },
   CONFIRMED: { label: "Đã xác nhận", color: "#297eff" },
-  PACKAGING: { label: "Đang đóng gói", color: "#2de3ff" },
-  SHIPPING: { label: "Đang vận chuyển", color: "#7f3bff" },
-  DELIVERY_FAILED: { label: "Giao hàng thất bại", color: "#ff4834" },
+  PACKAGING: { label: "Chờ giao", color: "#2de3ff" },
+  SHIPPING: { label: "Đang giao", color: "#7f3bff" },
   COMPLETED: { label: "Đã hoàn thành", color: "#01af5e" },
   CANCELED: { label: "Đã huỷ", color: "#ff243a" },
-  RETURNED: { label: "Đã trả hàng", color: "#ff9137" },
+  RETURNED: { label: "Lưu tạm", color: "#ff9137" },
 };
 
 const OrderStatusChart: React.FC = () => {
@@ -48,7 +58,8 @@ const OrderStatusChart: React.FC = () => {
       return { chartData: [], totalOrders: 0 };
 
     const data: ChartDataItem[] = orderStatus.map((item) => {
-      const config = ORDER_STATUS_CONFIG[item.status] || {
+      const mappedKey = STATUS_KEY_MAP[item.status] || item.status;
+      const config = ORDER_STATUS_CONFIG[mappedKey] || {
         label: item.status,
         color: "#6c757d",
       };

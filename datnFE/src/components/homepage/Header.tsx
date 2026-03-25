@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, Badge, Drawer, List, Dropdown } from "antd";
+import { Input, Button, Badge, Drawer, List, Dropdown, Avatar } from "antd";
 import {
   ShoppingCartOutlined,
   SearchOutlined,
@@ -8,12 +8,15 @@ import {
   HeartOutlined,
   PhoneOutlined,
   CloseOutlined,
+  LogoutOutlined,
+  LoginOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import type { RootState } from "../../redux/store";
 import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient"; // Nơi bạn cấu hình Axios gọi API
 import { useSelector, useDispatch } from "react-redux";
+import { authActions } from "../../redux/auth/authSlice";
 interface HeaderProps {
   onMenuClick?: () => void;
 }
@@ -24,14 +27,14 @@ const Header: React.FC<HeaderProps> = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
- // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
+  // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
 
   useEffect(() => {
-    if (user && user.userId) {
-      // Gọi API lấy giỏ hàng ngay khi có user đăng nhập
+    if (user && user.userId && user.roles?.includes("CUSTOMER")) {
+      // Gọi API lấy giỏ hàng ngay khi có user đăng nhập (chỉ dành cho CUSTOMER)
       axiosClient
         .get(`/client/cart?customerId=${user.userId}`)
         .then((response) => {
@@ -44,11 +47,26 @@ const Header: React.FC<HeaderProps> = () => {
           console.error("Lỗi lấy số lượng giỏ hàng:", error);
         });
     } else {
-      // Chưa đăng nhập thì reset số 0
+      // Chưa đăng nhập hoặc không phải CUSTOMER thì reset số 0
       dispatch(clearCartCount());
     }
   }, [user, dispatch]);
   // ====================================================
+
+  const handleUserMenuClick = ({ key }: { key: string }) => {
+    if (key === "logout") {
+      dispatch(authActions.logout({ isAdmin: false }));
+      navigate("/client");
+    } else if (key === "profile") {
+      navigate("/client/profile");
+    } else if (key === "orders") {
+      navigate("/client/orders");
+    } else if (key === "login") {
+      navigate("/login");
+    } else if (key === "register") {
+      navigate("/register");
+    }
+  };
 
   const handleSearch = (value: string) => {
     navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
@@ -63,14 +81,26 @@ const Header: React.FC<HeaderProps> = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const userMenuItems = [
-    { key: "profile", label: "Tài khoản của tôi" },
-    { key: "orders", label: "Đơn hàng của tôi" },
-    { key: "wishlist", label: "Sản phẩm yêu thích" },
-    { type: "divider" as const },
-    { key: "login", label: "Đăng nhập" },
-    { key: "register", label: "Đăng ký" },
-  ];
+  const userMenuItems = isLoggedIn
+    ? [
+        { key: "profile", label: "Tài khoản của tôi", icon: <UserOutlined /> },
+        {
+          key: "orders",
+          label: "Đơn hàng của tôi",
+          icon: <ShoppingCartOutlined />,
+        },
+        { type: "divider" as const },
+        {
+          key: "logout",
+          label: "Đăng xuất",
+          icon: <LogoutOutlined />,
+          danger: true,
+        },
+      ]
+    : [
+        { key: "login", label: "Đăng nhập", icon: <LoginOutlined /> },
+        { key: "register", label: "Đăng ký", icon: <UserOutlined /> },
+      ];
 
   const mainNavItems = [
     {
@@ -170,14 +200,30 @@ const Header: React.FC<HeaderProps> = () => {
 
             {/* User */}
             <Dropdown
-              menu={{ items: userMenuItems }}
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
               trigger={["click"]}
               placement="bottomRight"
             >
-              <Button type="text" className="header-icon-btn">
-                <UserOutlined />
-                <span className="hidden lg:inline action-text">Tài khoản</span>
-              </Button>
+              {isLoggedIn ? (
+                <Button type="text" className="header-icon-btn">
+                  <Avatar
+                    size={28}
+                    src={user?.image ?? user?.pictureUrl}
+                    icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
+                    style={{ backgroundColor: "#D32F2F" }}
+                  />
+                  <span className="hidden lg:inline action-text">
+                    {user?.fullName?.split(" ").pop()}
+                  </span>
+                </Button>
+              ) : (
+                <Button type="text" className="header-icon-btn">
+                  <UserOutlined />
+                  <span className="hidden lg:inline action-text">
+                    Tài khoản
+                  </span>
+                </Button>
+              )}
             </Dropdown>
 
             {/* Cart */}
@@ -252,6 +298,76 @@ const Header: React.FC<HeaderProps> = () => {
           />
         </div>
 
+        {/* Mobile auth section */}
+        {isLoggedIn ? (
+          <div className="mobile-user-section mb-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar
+                size={44}
+                src={user?.image ?? user?.pictureUrl}
+                icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
+                style={{ backgroundColor: "#D32F2F" }}
+              />
+              <div>
+                <div className="font-semibold text-gray-800">
+                  {user?.fullName}
+                </div>
+                <div className="text-xs text-gray-500">{user?.email}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                icon={<UserOutlined />}
+                block
+                onClick={() => {
+                  navigate("/client/profile");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Tài khoản
+              </Button>
+              <Button
+                icon={<LogoutOutlined />}
+                danger
+                block
+                onClick={() => {
+                  dispatch(authActions.logout({ isAdmin: false }));
+                  navigate("/client");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng xuất
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mobile-auth-section mb-4 pb-4 border-b border-gray-100">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="primary"
+                icon={<LoginOutlined />}
+                block
+                onClick={() => {
+                  navigate("/login");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                icon={<UserOutlined />}
+                block
+                onClick={() => {
+                  navigate("/register");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng ký
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Mobile utility links */}
         <div className="mobile-utilities mb-4 pb-4 border-b border-gray-100">
           <div className="grid grid-cols-2 gap-2">
@@ -279,7 +395,7 @@ const Header: React.FC<HeaderProps> = () => {
           )}
         />
 
-       <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-4 pt-4 border-t border-gray-100">
           <Button
             type="primary"
             icon={<ShoppingCartOutlined />}

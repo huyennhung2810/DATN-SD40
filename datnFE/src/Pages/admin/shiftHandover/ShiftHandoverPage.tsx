@@ -1,31 +1,31 @@
-import React, { useEffect, useState, useCallback } from "react";
 import {
-  Card,
-  Button,
-  Typography,
-  Row,
-  Col,
-  Space,
-  Tag,
-  Spin,
-  Alert,
-  Statistic,
-} from "antd";
-import {
-  ContainerOutlined,
-  PlayCircleOutlined,
-  LogoutOutlined,
-  InfoCircleOutlined,
-  DollarCircleOutlined,
   CalendarOutlined,
+  DollarCircleOutlined,
+  InfoCircleOutlined,
+  LogoutOutlined,
+  PlayCircleOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
-import { useSelector } from "react-redux";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Row,
+  Space,
+  Spin,
+  Statistic,
+  Tag,
+  Typography,
+} from "antd";
 import dayjs from "dayjs";
-import type { RootState } from "../../../redux/store";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { workScheduleApi } from "../../../api/workScheduleApi";
+import { getGreeting } from "../../../constants/time";
+import type { RootState } from "../../../redux/store";
 import CheckInModal from "./CheckInModal";
 import CheckOutModal from "./CheckOutModal";
-import { getGreeting } from "../../../constants/time";
 
 const { Title, Text } = Typography;
 
@@ -90,9 +90,7 @@ const ShiftHandoverPage: React.FC = () => {
               }}
               title={
                 <Space>
-                  <ContainerOutlined
-                    style={{ color: "#1890ff", fontSize: 20 }}
-                  />
+                  <SwapOutlined style={{ color: "#1890ff", fontSize: 20 }} />
                   <Title level={4} style={{ margin: 0 }}>
                     Hệ Thống Giao Ca Hikari
                   </Title>

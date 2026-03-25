@@ -2,14 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Spin } from "antd";
 import {
   TopBar,
-  Header,
   Navigation,
   HeroSection,
   FeaturedCategories,
   ProductSection,
   PromotionSection,
   BlogPreview,
-  Footer,
 } from "./index";
 import { customerProductApi } from "../../api/customerProductApi";
 import type { ProductResponse } from "../../models/product";
@@ -31,7 +29,9 @@ const transformProduct = (product: ProductResponse) => ({
   brandName: product.brandName || "",
   rating: 4.5 + Math.random() * 0.5, // Random rating 4.5-5.0
   reviewCount: Math.floor(Math.random() * 200) + 10,
-  isNew: product.createdDate && Date.now() - product.createdDate < 30 * 24 * 60 * 60 * 1000,
+  isNew:
+    product.createdDate &&
+    Date.now() - product.createdDate < 30 * 24 * 60 * 60 * 1000,
   isSale: !!product.hasActiveSaleCampaign,
   inStock: true,
 });
@@ -49,8 +49,18 @@ const ClientHomePage: React.FC = () => {
       try {
         // Fetch products with different parameters
         const [allRes, newRes] = await Promise.all([
-          customerProductApi.getProducts({ page: 1, size: 20, status: "ACTIVE" }),
-          customerProductApi.getProducts({ page: 1, size: 20, status: "ACTIVE", sortBy: "createdDate", orderBy: "desc" }),
+          customerProductApi.getProducts({
+            page: 1,
+            size: 20,
+            status: "ACTIVE",
+          }),
+          customerProductApi.getProducts({
+            page: 1,
+            size: 20,
+            status: "ACTIVE",
+            sortBy: "createdDate",
+            orderBy: "desc",
+          }),
         ]);
 
         const allProductsData = allRes?.data || [];
@@ -67,8 +77,9 @@ const ClientHomePage: React.FC = () => {
         setSaleProducts(saleProds);
 
         // Use first 4 products as bestsellers (in real app would use actual sales data)
-        setBestSellerProducts(allProductsData.slice(0, 4).map(transformProduct));
-
+        setBestSellerProducts(
+          allProductsData.slice(0, 4).map(transformProduct),
+        );
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Không thể tải dữ liệu sản phẩm");
@@ -87,13 +98,15 @@ const ClientHomePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        minHeight: "100vh",
-        background: "#f8f9fa"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          background: "#f8f9fa",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -101,43 +114,52 @@ const ClientHomePage: React.FC = () => {
 
   return (
     <div className="homepage">
-      <TopBar />
-      <Header />
       <Navigation />
-      
+
       <main>
         <HeroSection />
         <FeaturedCategories />
-        
+
         <ProductSection
           title="Sản phẩm mới"
           subtitle="Những sản phẩm mới nhất"
-          products={newProducts.length > 0 ? newProducts : allProducts.slice(0, 6).map(transformProduct)}
+          products={
+            newProducts.length > 0
+              ? newProducts
+              : allProducts.slice(0, 6).map(transformProduct)
+          }
           viewAllLink="/client/catalog?sortBy=createdDate&orderBy=desc"
         />
-        
+
         <PromotionSection />
-        
+
         <ProductSection
           title="Sản phẩm bán chạy"
           subtitle="Top sản phẩm được yêu thích nhất"
-          products={bestSellerProducts.length > 0 ? bestSellerProducts : allProducts.slice(0, 4).map(transformProduct)}
+          products={
+            bestSellerProducts.length > 0
+              ? bestSellerProducts
+              : allProducts.slice(0, 4).map(transformProduct)
+          }
           viewAllLink="/client/catalog?sortBy=price&orderBy=asc"
           backgroundColor="#fff"
         />
-        
+
         <ProductSection
           title="Khuyến mãi hot"
           subtitle="Giảm giá sốc - Limited time"
           products={
             saleProducts.length > 0
               ? saleProducts
-              : allProducts.filter((p) => p.hasActiveSaleCampaign).slice(0, 6).map(transformProduct)
+              : allProducts
+                  .filter((p) => p.hasActiveSaleCampaign)
+                  .slice(0, 6)
+                  .map(transformProduct)
           }
           viewAllLink="/client/catalog?maxPrice=50000000"
           backgroundColor="#f8f9fa"
         />
-        
+
         <ProductSection
           title="Gợi ý cho nhiếp ảnh gia"
           subtitle="Lựa chọn hoàn hảo cho creative"
@@ -145,11 +167,9 @@ const ClientHomePage: React.FC = () => {
           viewAllLink="/client/catalog"
           backgroundColor="#fff"
         />
-        
+
         <BlogPreview />
       </main>
-      
-      <Footer />
 
       <style>{`
         * {

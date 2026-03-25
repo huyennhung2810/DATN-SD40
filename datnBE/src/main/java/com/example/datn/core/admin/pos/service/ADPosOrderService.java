@@ -19,7 +19,8 @@ public interface ADPosOrderService {
 
     ResponseObject<?> setCustomerForOrder(String orderId, String customerId);
 
-    ResponseObject<?> checkoutOrder(String orderId);
+    ResponseObject<?> checkoutOrder(String orderId,
+            com.example.datn.core.admin.pos.model.request.CheckoutPosRequest request);
 
     ResponseObject<?> cancelOrder(String orderId);
 
@@ -30,4 +31,10 @@ public interface ADPosOrderService {
     ResponseObject<?> applyVoucher(String orderId, String voucherId);
 
     ResponseObject<?> removeVoucher(String orderId);
+
+    ResponseObject<?> createVnPayUrl(String orderId,
+            com.example.datn.core.admin.pos.model.request.CheckoutPosRequest body,
+            jakarta.servlet.http.HttpServletRequest request);
+
+    ResponseObject<?> handlePosVnPayReturn(java.util.Map<String, String> params);
 }

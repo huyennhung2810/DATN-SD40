@@ -1,3 +1,10 @@
+// Hàm reset sessionId khi login/logout
+export const resetSessionId = () => {
+  const newSessionId = `client-${Math.random().toString(36).substr(2, 9)}`;
+  localStorage.setItem('hikari_chat_session', newSessionId);
+  return newSessionId;
+};
+
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { ChatMessage } from '../../models/chat';
 
@@ -10,17 +17,22 @@ interface ChatState {
 const initialState: ChatState = {
   messages: [],
   loading: false,
-sessionId: localStorage.getItem('hikari_chat_session') || `client-${Math.random().toString(36).substr(2, 9)}`,};
+  sessionId: localStorage.getItem('hikari_chat_session') || `client-${Math.random().toString(36).substr(2, 9)}`,
+};
 
 if (!localStorage.getItem('hikari_chat_session')) {
   localStorage.setItem('hikari_chat_session', initialState.sessionId);
 }
 
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
-    sendMessageRequest: (state, _action: PayloadAction<{ content: string; sessionId: string }>) => {
+    clearMessages: (state) => {
+      state.messages = [];
+    },
+    sendMessageRequest: (state, _action: PayloadAction<{ content: string; sessionId: string; userId?: string }>) => {
       state.loading = true;
     },
     addMessage: (state, action: PayloadAction<ChatMessage>) => {
@@ -37,19 +49,35 @@ const chatSlice = createSlice({
     },
 
     receiveMessage: (state, action: PayloadAction<ChatMessage>) => {
-      const isDuplicate = state.messages.length > 0 && 
-                          state.messages[state.messages.length - 1].content === action.payload.content &&
-                          state.messages[state.messages.length - 1].sender === action.payload.sender;
-      
+      const lastMsg = state.messages[state.messages.length - 1];
+      const isDuplicate =
+        !!lastMsg &&
+        lastMsg.content === action.payload.content &&
+        lastMsg.sender === action.payload.sender &&
+        ((lastMsg.timestamp && action.payload.timestamp && lastMsg.timestamp === action.payload.timestamp) ||
+         (!lastMsg.timestamp && !action.payload.timestamp));
       if (!isDuplicate) {
         state.messages.push(action.payload);
       }
     },
 
-    requestStaff: (_state, _action: PayloadAction<{ sessionId: string }>) => {
-     },
+    requestStaff: (_state, _action: PayloadAction<{ sessionId: string; userId?: string }>) => {},
+
+    setSessionId: (state, action: PayloadAction<string>) => {
+      state.sessionId = action.payload;
+    },
   },
 });
 
-export const { sendMessageRequest, addMessage, setLoading, requestStaff, receiveMessage, setMessages } = chatSlice.actions;
+// Đồng bộ sessionId giữa các tab
+export const listenSessionIdSync = (dispatch: any) => {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'hikari_chat_session' && typeof e.newValue === 'string') {
+      dispatch(chatSlice.actions.setSessionId(e.newValue));
+    }
+  });
+};
+
+export const { sendMessageRequest, addMessage, setLoading, requestStaff, receiveMessage, setMessages, clearMessages } = chatSlice.actions;
+export { chatSlice };
 export default chatSlice.reducer;

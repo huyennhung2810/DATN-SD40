@@ -18,18 +18,31 @@ interface AuthState {
 const getInitialState = (): AuthState => {
   try {
     const accessToken = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
     const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
 
-    if (!accessToken) {
+    if (!accessToken && !refreshToken) {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
-    // check token expired
-    if (isTokenExpired(accessToken)) {
+    // Access token hết hạn nhưng còn refresh token → giữ đăng nhập
+    // axiosClient interceptor sẽ tự refresh khi có API call đầu tiên
+    if (accessToken && isTokenExpired(accessToken)) {
+      if (refreshToken && storedUser) {
+        // Xóa access token cũ, giữ refresh token và user
+        localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+        return {
+          user: JSON.parse(storedUser),
+          isLoggedIn: true,
+          loading: false,
+          error: null,
+        };
+      }
+      // Không có refresh token → buộc đăng xuất
       localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
       localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
       localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
-
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
@@ -84,7 +97,7 @@ const authSlice = createSlice({
       action: PayloadAction<{
         user: AuthUser;
         accessToken: string;
-        refreshToken: string;
+        refreshToken?: string;
       }>,
     ) => {
       const { user, accessToken, refreshToken } = action.payload;
@@ -94,8 +107,10 @@ const authSlice = createSlice({
       state.error = null;
 
       localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
       localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
+      if (refreshToken) {
+        localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      }
     },
 
     authFailed: (state, action: PayloadAction<string>) => {
@@ -120,6 +135,16 @@ const authSlice = createSlice({
 
     clearError: (state) => {
       state.error = null;
+    },
+
+    setUserImage: (state, action: PayloadAction<string | undefined>) => {
+      if (state.user) {
+        state.user.image = action.payload;
+        localStorage.setItem(
+          AUTH_STORAGE_KEYS.USER,
+          JSON.stringify(state.user),
+        );
+      }
     },
   },
 });

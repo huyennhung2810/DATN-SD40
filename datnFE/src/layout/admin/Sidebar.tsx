@@ -1,24 +1,24 @@
-import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Typography } from "antd";
 import {
-  CameraOutlined,
-  TeamOutlined,
-  GiftOutlined,
-  LineChartOutlined,
-  ShopOutlined,
-  OrderedListOutlined,
-  UsergroupAddOutlined,
-  TagOutlined,
+  BarcodeOutlined,
   CalendarOutlined,
-  UserOutlined,
-  ScheduleOutlined,
-  SwapOutlined,
-  SettingOutlined,
-  PictureOutlined,
+  CameraOutlined,
+  CustomerServiceOutlined,
+  GiftOutlined,
   KeyOutlined,
-  MessageOutlined,
+  LineChartOutlined,
+  PictureOutlined,
+  ScheduleOutlined,
+  ShopOutlined,
+  ShoppingCartOutlined,
+  SwapOutlined,
+  TagOutlined,
+  TeamOutlined,
+  UsergroupAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
+import { Menu, Typography } from "antd";
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const { Text } = Typography;
 
@@ -63,17 +63,17 @@ const Sidebar: React.FC = () => {
     },
     {
       key: "/orders",
-      icon: <OrderedListOutlined />,
+      icon: <ShoppingCartOutlined />,
       label: "Quản lý đơn hàng",
     },
     {
       key: "/serial",
-      icon: <TagOutlined />,
+      icon: <BarcodeOutlined />,
       label: "Quản lý Serial",
     },
     {
       key: "/product",
-      icon: <CameraOutlined />,
+      icon: <ShopOutlined />,
       label: "Quản lý sản phẩm",
       children: [
         {
@@ -81,15 +81,15 @@ const Sidebar: React.FC = () => {
           icon: <TagOutlined />,
           label: "Loại sản phẩm",
         },
-        { key: "/admin/products", icon: <CameraOutlined />, label: "Sản phẩm" },
+        { key: "/admin/products", icon: <ShopOutlined />, label: "Sản phẩm" },
         {
           key: "/admin/tech-spec",
-          icon: <SettingOutlined />,
+          icon: <KeyOutlined />,
           label: "Thông số kỹ thuật",
         },
         {
           key: "/products/product-detail",
-          icon: <CameraOutlined />,
+          icon: <BarcodeOutlined />,
           label: "Sản phẩm chi tiết",
         },
       ],
@@ -145,8 +145,8 @@ const Sidebar: React.FC = () => {
     },
     {
       key: "/EChatAi",
-      icon: <MessageOutlined />,
-      label: "Hỗ trợ KH",
+      icon: <CustomerServiceOutlined />,
+      label: "Hỗ trợ Khách hàng",
     },
   ];
 

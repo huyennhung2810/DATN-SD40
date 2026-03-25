@@ -47,6 +47,7 @@ export interface AuthUser {
     fullName: string;
     email: string;
     pictureUrl?: string;
+    image?: string;
     roles: string[];
 }
 

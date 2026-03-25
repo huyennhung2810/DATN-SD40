@@ -12,6 +12,7 @@ import {
   Carousel,
   Pagination,
   Form,
+  Tag,
 } from "antd";
 import {
   SearchOutlined,
@@ -127,7 +128,6 @@ const BannerSlider: React.FC<{ banners: BannerResponse[] }> = ({ banners }) => {
 
 // Product Card Component
 const ProductCard: React.FC<{ product: ProductResponse; onViewVariants: (product: ProductResponse) => void }> = ({ product, onViewVariants }) => {
-  const navigate = useNavigate();
 
   return (
     <Card
@@ -413,7 +413,6 @@ const ClientHomePage: React.FC = () => {
           {/* Banner Slider */}
           <BannerSlider banners={banners} />
 
-          {/* Main Content */}
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px" }}>
             {/* Products Section */}
             <div style={{ marginBottom: 24 }}>

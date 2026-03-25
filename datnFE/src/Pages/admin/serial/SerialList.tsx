@@ -1,25 +1,33 @@
-import React, { useState, useEffect } from "react";
+import { BarcodeOutlined, SearchOutlined } from "@ant-design/icons";
 import {
-  Table, Card, Input, Tag, Typography,
-  Pagination, Form, Radio
+  Card,
+  Form,
+  Input,
+  Pagination,
+  Radio,
+  Table,
+  Tag,
+  Typography,
 } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
-import { serialActions } from "../../../redux/serial/serialSlice";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
-import type { SerialPageParams, SerialResponse } from "../../../models/serial";
-import type { RootState } from "../../../redux/store";
+import dayjs from "dayjs";
 import { QRCodeSVG } from "qrcode.react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { SerialPageParams, SerialResponse } from "../../../models/serial";
+import { serialActions } from "../../../redux/serial/serialSlice";
+import type { RootState } from "../../../redux/store";
 
 const { Title, Text } = Typography;
 
 const SerialPage: React.FC = () => {
   const dispatch = useDispatch();
 
-  const { list = [], loading, totalElements = 0 } = useSelector(
-    (state: RootState) => state.serial || {}
-  );
+  const {
+    list = [],
+    loading,
+    totalElements = 0,
+  } = useSelector((state: RootState) => state.serial || {});
 
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<SerialPageParams>({
@@ -30,11 +38,11 @@ const SerialPage: React.FC = () => {
   });
 
   const handleStatusChange = (status: string | undefined) => {
-    setFilter(prev => ({
+    setFilter((prev) => ({
       ...prev,
       status: status,
       keyword: keyword.trim(),
-      page: 0
+      page: 0,
     }));
   };
 
@@ -51,7 +59,7 @@ const SerialPage: React.FC = () => {
     },
     {
       title: "Serial Number",
-      render: r => (
+      render: (r) => (
         <div>
           <Text strong>{r.serialNumber}</Text>
         </div>
@@ -60,16 +68,16 @@ const SerialPage: React.FC = () => {
     {
       title: "QR Code",
       align: "center",
-      render: r => (
+      render: (r) => (
         <div style={{ display: "flex", justifyContent: "center" }}>
           <QRCodeSVG value={r.serialNumber} size={64} />
         </div>
-      )
+      ),
     },
     {
       title: "Sản phẩm",
       dataIndex: "productName",
-      render: v => (
+      render: (v) => (
         <div>
           <Text strong>{v || "---"}</Text>
         </div>
@@ -79,7 +87,7 @@ const SerialPage: React.FC = () => {
       title: "Ngày nhập",
       dataIndex: "createdDate",
       align: "center",
-      render: d => (
+      render: (d) => (
         <div>
           {d ? dayjs(d, "DD/MM/YYYY HH:mm:ss").format("DD/MM/YYYY") : "---"}
         </div>
@@ -89,30 +97,82 @@ const SerialPage: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "status",
       align: "center",
-      render: s => (
+      render: (s) => (
         <Tag color={s === "ACTIVE" ? "green" : "red"}>
           {s === "ACTIVE" ? "TRONG KHO" : "ĐÃ BÁN"}
         </Tag>
       ),
-    }
+    },
   ];
-
 
   return (
     <>
-      <Card>
-        <Title level={4}>Quản lý Serial</Title>
-      </Card>
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                backgroundColor: "var(--color-primary-light)",
+                padding: "12px",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <BarcodeOutlined
+                style={{
+                  fontSize: "24px",
+                  color: "var(--color-primary)",
+                }}
+              />
+            </div>
 
-      {/* 2. Card Bộ lọc */}
+            <div>
+              <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                Quản lý Serial
+              </Title>
+              <Text type="secondary" style={{ fontSize: "13px" }}>
+                Quản lý mã Serial và trạng thái sản phẩm
+              </Text>
+            </div>
+          </div>
+
+          <Text type="secondary">
+            Tổng: <b>{totalElements}</b> serial
+          </Text>
+        </div>
+      </div>
+
       <Card
         variant="borderless"
-        style={{ borderRadius: "12px", marginBottom: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+        style={{
+          borderRadius: "12px",
+          marginBottom: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
       >
         <Form layout="vertical">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-
-            <Form.Item label={<Text strong><SearchOutlined /> Tìm kiếm Serial</Text>}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "24px",
+            }}
+          >
+            <Form.Item
+              label={
+                <Text strong>
+                  <SearchOutlined /> Tìm kiếm Serial
+                </Text>
+              }
+            >
               <Input
                 placeholder="Nhập số Serial hoặc mã định danh..."
                 size="large"
@@ -129,16 +189,39 @@ const SerialPage: React.FC = () => {
                 value={filter.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
-                <Radio.Button value={undefined} style={{ minWidth: "100px", textAlign: "center" }}>
+                <Radio.Button
+                  value={undefined}
+                  style={{ minWidth: "100px", textAlign: "center" }}
+                >
                   Tất cả
                 </Radio.Button>
-                <Radio.Button value="ACTIVE" style={{ minWidth: "100px", textAlign: "center" }}>
-                  <Tag color="green" style={{ border: "none", background: "transparent", margin: 0 }}>
+                <Radio.Button
+                  value="ACTIVE"
+                  style={{ minWidth: "100px", textAlign: "center" }}
+                >
+                  <Tag
+                    color="green"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      margin: 0,
+                    }}
+                  >
                     Trong kho
                   </Tag>
                 </Radio.Button>
-                <Radio.Button value="INACTIVE" style={{ minWidth: "100px", textAlign: "center" }}>
-                  <Tag color="red" style={{ border: "none", background: "transparent", margin: 0 }}>
+                <Radio.Button
+                  value="INACTIVE"
+                  style={{ minWidth: "100px", textAlign: "center" }}
+                >
+                  <Tag
+                    color="red"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      margin: 0,
+                    }}
+                  >
                     Đã bán
                   </Tag>
                 </Radio.Button>
@@ -148,8 +231,7 @@ const SerialPage: React.FC = () => {
         </Form>
       </Card>
 
-      <Card title={`Danh sách (${totalElements})`}
-      >
+      <Card title={`Danh sách (${totalElements})`}>
         <Table
           columns={columns}
           dataSource={list}

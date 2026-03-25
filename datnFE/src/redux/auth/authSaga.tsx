@@ -1,6 +1,7 @@
 import { call, put, takeLatest } from "redux-saga/effects";
 import { notification } from "antd";
 import { authActions } from "./authSlice";
+import { resetSessionId, chatSlice, clearMessages } from "../chat/chatSlice";
 import type { AuthResponse } from "../../models/auth";
 import authApi from "../../api/auth/authApi";
 import type { PayloadAction } from "@reduxjs/toolkit";
@@ -26,6 +27,11 @@ function* handleLoginFlow(
         refreshToken: response.refreshToken,
       }),
     );
+
+    // Reset sessionId và xóa sạch tin nhắn chat cũ khi đăng nhập tài khoản mới
+    const newSessionId = resetSessionId();
+    yield put(chatSlice.actions.setSessionId(newSessionId));
+    yield put(clearMessages());
 
     notification.success({
       message: "Thành công",
@@ -69,6 +75,10 @@ function* handleLogout(
     console.error("Lỗi logout API:", e);
   } finally {
     yield put(authActions.logoutAction());
+
+    // Reset sessionId on logout and update Redux state
+    const newSessionId = resetSessionId();
+    yield put(chatSlice.actions.setSessionId(newSessionId));
 
     const isAdmin = action.payload?.isAdmin;
     if (isAdmin) {
