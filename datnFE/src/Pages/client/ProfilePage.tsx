@@ -118,6 +118,7 @@ const ProfilePage: React.FC = () => {
             gender: data.gender,
             dateOfBirth: data.dateOfBirth ? dayjs(data.dateOfBirth) : null,
           });
+          dispatch(authActions.setUserImage(data.image ?? undefined));
         })
         .catch(() => message.error("Không thể tải thông tin hồ sơ"))
         .finally(() => setLoading(false));
@@ -136,6 +137,7 @@ const ProfilePage: React.FC = () => {
         gender: data.gender,
         dateOfBirth: data.dateOfBirth ? dayjs(data.dateOfBirth) : null,
       });
+      dispatch(authActions.setUserImage(data.image ?? undefined));
     });
   };
 

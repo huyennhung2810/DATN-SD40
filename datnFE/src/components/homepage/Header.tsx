@@ -208,8 +208,8 @@ const Header: React.FC<HeaderProps> = () => {
                 <Button type="text" className="header-icon-btn">
                   <Avatar
                     size={28}
-                    src={user?.pictureUrl}
-                    icon={!user?.pictureUrl && <UserOutlined />}
+                    src={user?.image ?? user?.pictureUrl}
+                    icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
                     style={{ backgroundColor: "#D32F2F" }}
                   />
                   <span className="hidden lg:inline action-text">
@@ -304,8 +304,8 @@ const Header: React.FC<HeaderProps> = () => {
             <div className="flex items-center gap-3 mb-3">
               <Avatar
                 size={44}
-                src={user?.pictureUrl}
-                icon={!user?.pictureUrl && <UserOutlined />}
+                src={user?.image ?? user?.pictureUrl}
+                icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
                 style={{ backgroundColor: "#D32F2F" }}
               />
               <div>

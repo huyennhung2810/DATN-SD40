@@ -136,6 +136,16 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+
+    setUserImage: (state, action: PayloadAction<string | undefined>) => {
+      if (state.user) {
+        state.user.image = action.payload;
+        localStorage.setItem(
+          AUTH_STORAGE_KEYS.USER,
+          JSON.stringify(state.user),
+        );
+      }
+    },
   },
 });
 
