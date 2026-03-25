@@ -7,6 +7,7 @@ export interface CheckoutRequest {
   recipientEmail: string;
   recipientAddress: string;
   paymentMethod: "COD" | "VNPAY";
+  voucherCode?: string | null;
   note?: string;
 }
 

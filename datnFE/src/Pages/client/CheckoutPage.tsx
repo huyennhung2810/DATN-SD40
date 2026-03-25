@@ -10,17 +10,23 @@ import {
   Spin,
   message,
   Space,
+  Select,
 } from "antd";
 import {
   CreditCardOutlined,
   CarOutlined,
   ArrowLeftOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../redux/store";
+import { useDispatch, useSelector } from "react-redux";
+
+// Lưu ý: Kiểm tra lại đường dẫn import file store và slice của bạn cho đúng
+import type { RootState, AppDispatch } from "../../redux/store"; 
+import { fetchVouchersRequest } from "../../redux/Voucher/voucherSlice";
 import axiosClient from "../../api/axiosClient";
 import paymentApi from "../../api/paymentApi";
+import type { Voucher } from "../../models/Voucher"; // Import model Voucher
 
 const { Title, Text } = Typography;
 
@@ -33,34 +39,55 @@ interface CartItem {
   quantity: number;
 }
 
+interface AppliedVoucher {
+  code: string;
+  discountValue: number;
+  discountUnit: "PERCENT" | "VND";
+}
+
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
+  
+  // 1. Lấy thông tin User và danh sách Voucher từ Redux
   const { user } = useSelector((state: RootState) => state.auth);
+  const { list: voucherList, loading: loadingVouchers } = useSelector(
+    (state: RootState) => state.voucher
+  );
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
 
+  // State Voucher
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
+  const [appliedVoucher, setAppliedVoucher] = useState<AppliedVoucher | null>(null);
+
   useEffect(() => {
     if (!user?.userId) {
       navigate("/login");
       return;
     }
+    
     fetchCart();
+    
+    // 2. Gọi API lấy danh sách voucher (có thể truyền params để chỉ lấy voucher Đang diễn ra: status = 2)
+    dispatch(fetchVouchersRequest({ page: 0, size: 50, status: 2 }));
+
     form.setFieldsValue({
       recipientName: user.fullName,
       recipientEmail: user.email,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.userId]);
+  }, [user?.userId, dispatch]);
 
   const fetchCart = async () => {
     setLoading(true);
     try {
       const response = await axiosClient.get(
-        `/client/cart?customerId=${user?.userId}`,
+        `/client/cart?customerId=${user?.userId}`
       );
       const data = response.data;
       setCartItems(Array.isArray(data) ? data : []);
@@ -71,16 +98,69 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const totalAmount = cartItems.reduce(
-    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
-    0,
-  );
-
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(price);
+
+  // 3. Chuyển đổi danh sách voucher từ Redux thành dạng options cho Select
+  const voucherOptions = voucherList.map((v: Voucher) => {
+    const isPercent = v.discountUnit === "PERCENT";
+    const valueDisplay = isPercent ? `${v.discountValue}%` : formatPrice(v.discountValue);
+    return {
+      value: v.code,
+      label: `${v.code} - Giảm ${valueDisplay}`, // Hiển thị mã và mức giảm
+      voucherData: v, // Lưu kèm data gốc để dễ dùng
+    };
+  });
+
+  // Tính tiền
+  const subTotal = cartItems.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+    0
+  );
+
+  let discountAmount = 0;
+  if (appliedVoucher) {
+    if (appliedVoucher.discountUnit === "PERCENT") {
+      discountAmount = (subTotal * appliedVoucher.discountValue) / 100;
+      // Nếu có rule giảm tối đa, bạn thêm Math.min() ở đây
+    } else {
+      discountAmount = appliedVoucher.discountValue;
+    }
+  }
+
+  const totalAmount = Math.max(0, subTotal - discountAmount);
+
+  // 4. Xử lý khi bấm nút "Áp dụng"
+  const handleApplyVoucher = () => {
+    if (!voucherCode) {
+      message.warning("Vui lòng chọn mã giảm giá!");
+      return;
+    }
+
+    // Tìm voucher đã chọn trong danh sách Redux
+    const selectedVoucher = voucherList.find((v: Voucher) => v.code === voucherCode);
+
+    if (selectedVoucher) {
+      // Bạn có thể thêm các logic check điều kiện đơn hàng tối thiểu tại đây nếu có
+      setAppliedVoucher({
+        code: selectedVoucher.code,
+        discountValue: selectedVoucher.discountValue,
+        discountUnit: selectedVoucher.discountUnit,
+      });
+      message.success("Áp dụng mã giảm giá thành công!");
+    } else {
+      message.error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherCode(null);
+    message.info("Đã bỏ mã giảm giá.");
+  };
 
   const handleSubmit = async (values: any) => {
     if (cartItems.length === 0) {
@@ -97,10 +177,10 @@ const CheckoutPage: React.FC = () => {
         recipientAddress: values.recipientAddress,
         paymentMethod,
         note: values.note,
+        voucherCode: appliedVoucher?.code ,
       });
 
       if (response.status === "REDIRECT" && response.paymentUrl) {
-        // Chuyển hướng đến VNPay
         window.location.href = response.paymentUrl;
       } else {
         message.success(response.message);
@@ -108,8 +188,7 @@ const CheckoutPage: React.FC = () => {
       }
     } catch (error: any) {
       message.error(
-        error?.response?.data?.message ||
-          "Đặt hàng thất bại, vui lòng thử lại!",
+        error?.response?.data?.message || "Đặt hàng thất bại, vui lòng thử lại!"
       );
     } finally {
       setSubmitting(false);
@@ -119,9 +198,7 @@ const CheckoutPage: React.FC = () => {
   if (!user?.userId) return null;
 
   return (
-    <div
-      style={{ background: "#f5f5f5", minHeight: "80vh", padding: "40px 0" }}
-    >
+    <div style={{ background: "#f5f5f5", minHeight: "80vh", padding: "40px 0" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px" }}>
         <Button
           icon={<ArrowLeftOutlined />}
@@ -141,29 +218,16 @@ const CheckoutPage: React.FC = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              gap: 24,
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-            }}
-          >
+          <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+            
             {/* Form thông tin giao hàng */}
             <div style={{ flex: 1, minWidth: 320 }}>
               <Card title="Thông tin giao hàng" style={{ borderRadius: 12 }}>
-                <Form
-                  form={form}
-                  layout="vertical"
-                  onFinish={handleSubmit}
-                  requiredMark={false}
-                >
+                <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
                   <Form.Item
                     label="Họ và tên người nhận"
                     name="recipientName"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập họ tên!" },
-                    ]}
+                    rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
                   >
                     <Input placeholder="Nguyễn Văn A" size="large" />
                   </Form.Item>
@@ -172,14 +236,8 @@ const CheckoutPage: React.FC = () => {
                     label="Số điện thoại"
                     name="recipientPhone"
                     rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập số điện thoại!",
-                      },
-                      {
-                        pattern: /^(0|\+84)[0-9]{9}$/,
-                        message: "Số điện thoại không hợp lệ!",
-                      },
+                      { required: true, message: "Vui lòng nhập số điện thoại!" },
+                      { pattern: /^(0|\+84)[0-9]{9}$/, message: "Số điện thoại không hợp lệ!" },
                     ]}
                   >
                     <Input placeholder="0987654321" size="large" />
@@ -199,32 +257,17 @@ const CheckoutPage: React.FC = () => {
                   <Form.Item
                     label="Địa chỉ giao hàng"
                     name="recipientAddress"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập địa chỉ giao hàng!",
-                      },
-                    ]}
+                    rules={[{ required: true, message: "Vui lòng nhập địa chỉ giao hàng!" }]}
                   >
-                    <Input.TextArea
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                      rows={3}
-                      size="large"
-                    />
+                    <Input.TextArea placeholder="Số nhà, tên đường..." rows={3} size="large" />
                   </Form.Item>
 
                   <Form.Item label="Ghi chú" name="note">
-                    <Input.TextArea
-                      placeholder="Ghi chú thêm (không bắt buộc)"
-                      rows={2}
-                    />
+                    <Input.TextArea placeholder="Ghi chú thêm..." rows={2} />
                   </Form.Item>
 
-                  {/* Phương thức thanh toán */}
                   <Divider />
-                  <Title level={5} style={{ marginBottom: 12 }}>
-                    Phương thức thanh toán
-                  </Title>
+                  <Title level={5} style={{ marginBottom: 12 }}>Phương thức thanh toán</Title>
                   <Radio.Group
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
@@ -233,32 +276,20 @@ const CheckoutPage: React.FC = () => {
                     <Space direction="vertical" style={{ width: "100%" }}>
                       <Radio value="COD">
                         <Space>
-                          <CarOutlined
-                            style={{ fontSize: 18, color: "#52c41a" }}
-                          />
+                          <CarOutlined style={{ fontSize: 18, color: "#52c41a" }} />
                           <div>
-                            <div style={{ fontWeight: 600 }}>
-                              Thanh toán khi nhận hàng (COD)
-                            </div>
-                            <div style={{ color: "#888", fontSize: 12 }}>
-                              Trả tiền mặt khi nhận hàng
-                            </div>
+                            <div style={{ fontWeight: 600 }}>Thanh toán khi nhận hàng (COD)</div>
+                            <div style={{ color: "#888", fontSize: 12 }}>Trả tiền mặt khi nhận hàng</div>
                           </div>
                         </Space>
                       </Radio>
 
                       <Radio value="VNPAY">
                         <Space>
-                          <CreditCardOutlined
-                            style={{ fontSize: 18, color: "#1677ff" }}
-                          />
+                          <CreditCardOutlined style={{ fontSize: 18, color: "#1677ff" }} />
                           <div>
-                            <div style={{ fontWeight: 600 }}>
-                              Thanh toán qua VNPay
-                            </div>
-                            <div style={{ color: "#888", fontSize: 12 }}>
-                              Thẻ ATM, VISA, MasterCard, QR Code
-                            </div>
+                            <div style={{ fontWeight: 600 }}>Thanh toán qua VNPay</div>
+                            <div style={{ color: "#888", fontSize: 12 }}>Thẻ ATM, VISA, MasterCard...</div>
                           </div>
                         </Space>
                       </Radio>
@@ -271,18 +302,10 @@ const CheckoutPage: React.FC = () => {
                     block
                     htmlType="submit"
                     loading={submitting}
-                    style={{
-                      marginTop: 24,
-                      height: 48,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      borderRadius: 8,
-                    }}
+                    style={{ marginTop: 24, height: 48, fontSize: 16, fontWeight: 600, borderRadius: 8 }}
                     danger={paymentMethod === "VNPAY"}
                   >
-                    {paymentMethod === "VNPAY"
-                      ? "Thanh toán qua VNPay"
-                      : "Đặt hàng (COD)"}
+                    {paymentMethod === "VNPAY" ? "Thanh toán qua VNPay" : "Đặt hàng (COD)"}
                   </Button>
                 </Form>
               </Card>
@@ -290,62 +313,23 @@ const CheckoutPage: React.FC = () => {
 
             {/* Tóm tắt đơn hàng */}
             <div style={{ width: 360, flexShrink: 0 }}>
-              <Card
-                title="Tóm tắt đơn hàng"
-                style={{ borderRadius: 12, position: "sticky", top: 100 }}
-              >
-                <div style={{ maxHeight: 300, overflowY: "auto" }}>
+              <Card title="Tóm tắt đơn hàng" style={{ borderRadius: 12, position: "sticky", top: 100 }}>
+                <div style={{ maxHeight: 300, overflowY: "auto", marginBottom: 16 }}>
                   {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        marginBottom: 16,
-                        alignItems: "center",
-                      }}
-                    >
+                    <div key={item.id} style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
                       <img
                         src={item.imageUrl || "https://via.placeholder.com/60"}
                         alt={item.productName}
-                        style={{
-                          width: 60,
-                          height: 60,
-                          objectFit: "contain",
-                          border: "1px solid #f0f0f0",
-                          borderRadius: 8,
-                          padding: 4,
-                        }}
+                        style={{ width: 60, height: 60, objectFit: "contain", border: "1px solid #f0f0f0", borderRadius: 8, padding: 4 }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            fontSize: 13,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
+                        <div style={{ fontWeight: 600, fontSize: 13, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                           {item.productName}
                         </div>
-                        <div style={{ color: "#888", fontSize: 12 }}>
-                          {item.variantName}
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginTop: 4,
-                          }}
-                        >
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            x{item.quantity}
-                          </Text>
-                          <Text strong style={{ color: "#e53935" }}>
-                            {formatPrice(item.price * item.quantity)}
-                          </Text>
+                        <div style={{ color: "#888", fontSize: 12 }}>{item.variantName}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>x{item.quantity}</Text>
+                          <Text strong style={{ color: "#e53935" }}>{formatPrice(item.price * item.quantity)}</Text>
                         </div>
                       </div>
                     </div>
@@ -354,73 +338,76 @@ const CheckoutPage: React.FC = () => {
 
                 <Divider style={{ margin: "12px 0" }} />
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                  }}
-                >
-                  <Text>Tạm tính:</Text>
-                  <Text>{formatPrice(totalAmount)}</Text>
+                {/* --- KHU VỰC CHỌN VOUCHER TỪ REDUX --- */}
+                <div style={{ marginBottom: 16 }}>
+                  <Text strong style={{ display: "block", marginBottom: 8 }}>
+                    <TagOutlined style={{ marginRight: 6 }} />
+                    Mã giảm giá
+                  </Text>
+                  <Space.Compact style={{ width: "100%" }}>
+                    <Select
+                      style={{ width: "100%" }}
+                      placeholder="Chọn mã giảm giá..."
+                      value={voucherCode || undefined}
+                      onChange={(val) => setVoucherCode(val)}
+                      disabled={!!appliedVoucher}
+                      options={voucherOptions} // <--- Dữ liệu đổ từ Redux
+                      loading={loadingVouchers}
+                      allowClear
+                      showSearch
+                      optionFilterProp="label" // Cho phép tìm kiếm bằng chữ
+                    />
+                    {!appliedVoucher ? (
+                      <Button
+                        type="primary"
+                        onClick={handleApplyVoucher}
+                        disabled={!voucherCode}
+                      >
+                        Áp dụng
+                      </Button>
+                    ) : (
+                      <Button danger onClick={handleRemoveVoucher}>
+                        Hủy
+                      </Button>
+                    )}
+                  </Space.Compact>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                  }}
-                >
+
+                <Divider style={{ margin: "12px 0" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <Text>Tạm tính:</Text>
+                  <Text>{formatPrice(subTotal)}</Text>
+                </div>
+
+                {appliedVoucher && (
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <Text>Giảm giá ({appliedVoucher.code}):</Text>
+                    <Text type="danger">-{formatPrice(discountAmount)}</Text>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <Text>Phí vận chuyển:</Text>
                   <Text style={{ color: "#52c41a" }}>Miễn phí</Text>
                 </div>
 
                 <Divider style={{ margin: "12px 0" }} />
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text strong style={{ fontSize: 16 }}>
-                    Tổng cộng:
-                  </Text>
-                  <Text strong style={{ fontSize: 22, color: "#e53935" }}>
-                    {formatPrice(totalAmount)}
-                  </Text>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text strong style={{ fontSize: 16 }}>Tổng cộng:</Text>
+                  <Text strong style={{ fontSize: 22, color: "#e53935" }}>{formatPrice(totalAmount)}</Text>
                 </div>
-                <Text
-                  type="secondary"
-                  style={{ fontSize: 11, display: "block", textAlign: "right" }}
-                >
-                  (Đã bao gồm VAT)
-                </Text>
+                <Text type="secondary" style={{ fontSize: 11, display: "block", textAlign: "right" }}>(Đã bao gồm VAT)</Text>
 
                 {paymentMethod === "VNPAY" && (
-                  <div
-                    style={{
-                      marginTop: 16,
-                      padding: "10px 14px",
-                      background: "#e8f4ff",
-                      borderRadius: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
+                  <div style={{ marginTop: 16, padding: "10px 14px", background: "#e8f4ff", borderRadius: 8, display: "flex", alignItems: "center", gap: 8 }}>
                     <img
                       src="https://vnpay.vn/s1/statics/img/logo2.bd27729b.svg"
                       alt="VNPay"
                       style={{ height: 24 }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
                     />
-                    <Text style={{ fontSize: 12 }}>
-                      Bạn sẽ được chuyển tới cổng thanh toán VNPay
-                    </Text>
+                    <Text style={{ fontSize: 12 }}>Bạn sẽ được chuyển tới cổng thanh toán VNPay</Text>
                   </div>
                 )}
               </Card>

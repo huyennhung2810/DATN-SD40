@@ -14,4 +14,5 @@ public class CheckoutRequest {
     /** COD hoặc VNPAY */
     private String paymentMethod;
     private String note;
+    private String voucherCode;
 }

@@ -5,26 +5,19 @@ import com.example.datn.core.client.cartDetail.repository.CnCartDetailRepository
 import com.example.datn.core.client.order.model.request.CheckoutRequest;
 import com.example.datn.core.client.order.model.response.CheckoutResponse;
 import com.example.datn.core.client.order.service.CnOrderService;
-import com.example.datn.entity.Cart;
-import com.example.datn.entity.CartDetail;
-import com.example.datn.entity.Customer;
-import com.example.datn.entity.Order;
-import com.example.datn.entity.OrderDetail;
-import com.example.datn.entity.PaymentHistory;
+import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.PaymentStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.infrastructure.payment.VNPayService;
-import com.example.datn.repository.CustomerRepository;
-import com.example.datn.repository.OrderDetailRepository;
-import com.example.datn.repository.OrderRepository;
-import com.example.datn.repository.PaymentHistoryRepository;
+import com.example.datn.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +35,9 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final VNPayService vnPayService;
 
+    // TIÊM THÊM REPOSITORY CỦA VOUCHER VÀO ĐÂY
+    private final VoucherRepository voucherRepository;
+
     @Override
     @Transactional
     public CheckoutResponse checkout(CheckoutRequest request, HttpServletRequest httpRequest) {
@@ -56,7 +52,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             throw new RuntimeException("Giỏ hàng trống, không thể đặt hàng!");
         }
 
-        // 3. Tính tổng tiền
+        // 3. Tính tổng tiền gốc (Subtotal)
         BigDecimal totalAmount = cartItems.stream()
                 .map(item -> {
                     BigDecimal price = item.getProductDetail().getSalePrice();
@@ -64,30 +60,105 @@ public class CnOrderServiceImpl implements CnOrderService {
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 4. Tạo Order
-        Order order = new Order();
-        order.setCustomer(customer);
-        order.setRecipientName(request.getRecipientName());
-        order.setRecipientPhone(request.getRecipientPhone());
-        order.setRecipientEmail(request.getRecipientEmail());
-        order.setRecipientAddress(request.getRecipientAddress());
-        order.setTotalAmount(totalAmount);
-        order.setTotalAfterDiscount(totalAmount);
-        order.setShippingFee(BigDecimal.ZERO);
-        order.setPaymentMethod(request.getPaymentMethod());
-        order.setNote(request.getNote());
-        order.setOrderType(TypeInvoice.ONLINE);
-        order.setOrderStatus(OrderStatus.CHO_XAC_NHAN);
+        // 4. XỬ LÝ VOUCHER & TÍNH TIỀN SAU GIẢM GIÁ
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Voucher appliedVoucher = null;
 
-        if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
-            order.setPaymentStatus(PaymentStatus.CHO_THANH_TOAN_VNPAY);
-        } else {
-            order.setPaymentStatus(PaymentStatus.CHUA_THANH_TOAN);
+        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+            // Lấy Voucher từ DB
+            appliedVoucher = voucherRepository.findByCode(request.getVoucherCode())
+                    .orElseThrow(() -> new RuntimeException("Mã giảm giá không hợp lệ hoặc không tồn tại!"));
+
+            // 4.1. Kiểm tra trạng thái và số lượng
+            if (appliedVoucher.getStatus() != null && appliedVoucher.getStatus() != 2) { // Giả sử 2 là Đang diễn ra
+                throw new RuntimeException("Mã giảm giá không trong thời gian hoạt động!");
+            }
+            if (appliedVoucher.getQuantity() != null && appliedVoucher.getQuantity() <= 0) {
+                throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
+            }
+
+            // 4.2. Kiểm tra thời hạn (startDate, endDate)
+            long currentTime = System.currentTimeMillis();
+            if (appliedVoucher.getStartDate() != null && currentTime < appliedVoucher.getStartDate()) {
+                throw new RuntimeException("Mã giảm giá chưa đến thời gian áp dụng!");
+            }
+            if (appliedVoucher.getEndDate() != null && currentTime > appliedVoucher.getEndDate()) {
+                throw new RuntimeException("Mã giảm giá đã hết hạn sử dụng!");
+            }
+
+            // 4.3. Kiểm tra giá trị đơn hàng tối thiểu (conditions)
+            if (appliedVoucher.getConditions() != null && totalAmount.compareTo(appliedVoucher.getConditions()) < 0) {
+                throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu (" + appliedVoucher.getConditions() + "đ) để áp dụng mã này!");
+            }
+
+            // 4.4. Tính toán số tiền được giảm
+            String unit = appliedVoucher.getDiscountUnit();
+            // Trong Entity bạn comment là // %, VND nên mình check cả 2 trường hợp
+            if ("PERCENT".equalsIgnoreCase(unit) || "%".equals(unit)) {
+                // Tính % giảm (discountValue đã là BigDecimal)
+                discountAmount = totalAmount.multiply(appliedVoucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+
+                // Áp dụng giới hạn giảm tối đa (nếu có)
+                if (appliedVoucher.getMaxDiscountAmount() != null && appliedVoucher.getMaxDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    discountAmount = discountAmount.min(appliedVoucher.getMaxDiscountAmount());
+                }
+            } else {
+                // Giảm thẳng tiền mặt (VND)
+                discountAmount = appliedVoucher.getDiscountValue();
+            }
         }
 
-        Order savedOrder = orderRepository.save(order);
+        // Tiền thực tế khách phải trả (Không được nhỏ hơn 0)
+        BigDecimal totalAfterDiscount = totalAmount.subtract(discountAmount).max(BigDecimal.ZERO);
 
-        // 5. Tạo OrderDetail từ CartDetail
+        // 5. Tạo Order
+        Order order = new Order();
+        // ... (các set thông tin user giữ nguyên như code trước) ...
+
+        // --- Set tiền ---
+        order.setTotalAmount(totalAmount);
+        order.setTotalAfterDiscount(totalAfterDiscount);
+
+        // --- Set Voucher vào Order & Trừ số lượng ---
+        if (appliedVoucher != null) {
+            order.setVoucher(appliedVoucher);
+
+            // Trừ đi 1 lượt sử dụng của Voucher và lưu lại
+            appliedVoucher.setQuantity(appliedVoucher.getQuantity() - 1);
+            voucherRepository.save(appliedVoucher);
+        }
+
+        // 5. Tạo Order
+        Order order1 = new Order();
+        order1.setCustomer(customer);
+        order1.setRecipientPhone(request.getRecipientPhone());
+        order1.setRecipientEmail(request.getRecipientEmail());
+        order1.setRecipientAddress(request.getRecipientAddress());
+
+        // --- Set tiền ---
+        order1.setTotalAmount(totalAmount);
+        order1.setTotalAfterDiscount(totalAfterDiscount);
+
+        // --- Set Voucher vào Order ---
+        if (appliedVoucher != null) {
+            order1.setVoucher(appliedVoucher);
+        }
+
+        order1.setShippingFee(BigDecimal.ZERO);
+        order1.setPaymentMethod(request.getPaymentMethod());
+        order1.setNote(request.getNote());
+        order1.setOrderType(TypeInvoice.ONLINE);
+        order1.setOrderStatus(OrderStatus.CHO_XAC_NHAN);
+
+        if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
+            order1.setPaymentStatus(PaymentStatus.CHO_THANH_TOAN_VNPAY);
+        } else {
+            order1.setPaymentStatus(PaymentStatus.CHUA_THANH_TOAN);
+        }
+
+        Order savedOrder = orderRepository.save(order1);
+
+        // 6. Tạo OrderDetail
         for (CartDetail cartDetail : cartItems) {
             BigDecimal price = cartDetail.getProductDetail().getSalePrice();
 
@@ -101,32 +172,34 @@ public class CnOrderServiceImpl implements CnOrderService {
             orderDetailRepository.save(orderDetail);
         }
 
-        // 6. Xóa giỏ hàng: chỉ xóa ngay cho COD.
+        // 7. Xóa giỏ hàng: chỉ xóa ngay cho COD.
         if (!"VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
             cartDetailRepository.deleteAll(cartItems);
         }
 
-        // 7. Trả về kết quả
+        // 8. Trả về kết quả
         if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
+            // Truyền totalAfterDiscount sang VNPay
             String paymentUrl = vnPayService.createPaymentUrl(
                     savedOrder.getId(),
-                    totalAmount.longValue(),
+                    totalAfterDiscount.longValue(),
                     "Thanh toan don hang " + savedOrder.getId(),
                     httpRequest);
+
             return CheckoutResponse.builder()
                     .orderId(savedOrder.getId())
                     .orderCode(savedOrder.getCode())
-                    .totalAmount(totalAmount)
+                    .totalAmount(totalAfterDiscount) // Trả về frontend số tiền đã giảm
                     .status("REDIRECT")
                     .paymentUrl(paymentUrl)
                     .message("Đang chuyển đến trang thanh toán VNPay...")
                     .build();
         } else {
-            // COD - ghi lịch sử thanh toán
+            // COD - Ghi nhận lịch sử thanh toán với totalAfterDiscount
             PaymentHistory history = new PaymentHistory();
             history.setId(UUID.randomUUID().toString());
             history.setOrder(savedOrder);
-            history.setAmount(totalAmount);
+            history.setAmount(totalAfterDiscount);
             history.setTransactionType("THANH_TOAN");
             history.setTransactionCode("COD-" + savedOrder.getId());
             history.setThoiGian(LocalDateTime.now());
@@ -137,7 +210,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             return CheckoutResponse.builder()
                     .orderId(savedOrder.getId())
                     .orderCode(savedOrder.getCode())
-                    .totalAmount(totalAmount)
+                    .totalAmount(totalAfterDiscount)
                     .status("SUCCESS")
                     .message("Đặt hàng thành công! Chúng tôi sẽ liên hệ xác nhận sớm.")
                     .build();

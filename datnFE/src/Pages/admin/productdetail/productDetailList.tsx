@@ -34,7 +34,7 @@ import { productDetailActions } from "../../../redux/productdetail/productDetail
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
 import type { RootState } from "../../../redux/store";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const ProductDetailPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -317,11 +317,8 @@ const ProductDetailPage: React.FC = () => {
       render: (r) => (
         <Space direction="vertical" size={0}>
           <Text strong style={{ color: "#1890ff" }}>
-            {r.version || `${r.colorName || "---"} / ${r.storageCapacityName || "---"}`}
+            {`${r.colorName || "---"} / ${r.storageCapacityName || "---"}`}
           </Text>
-          <Tag color="blue">
-            {r.colorName || "---"} | {r.storageCapacityName || "---"}
-          </Tag>
         </Space>
       ),
     },
