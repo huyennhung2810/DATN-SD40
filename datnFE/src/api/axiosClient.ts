@@ -58,7 +58,11 @@ axiosClient.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
             const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
             if (!refreshToken) {
-                handleGlobalLogout();
+                message.warning({
+                    content: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
+                    duration: 2,
+                    onClose: handleGlobalLogout,
+                });
                 return Promise.reject(error);
             }
             if (isRefreshing) {
@@ -84,8 +88,11 @@ axiosClient.interceptors.response.use(
                 return axiosClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                message.error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
-                handleGlobalLogout();
+                message.error({
+                    content: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
+                    duration: 2,
+                    onClose: handleGlobalLogout,
+                });
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;
