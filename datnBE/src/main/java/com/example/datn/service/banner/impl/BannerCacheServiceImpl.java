@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,12 @@ public class BannerCacheServiceImpl implements BannerCacheService {
 
     private final BannerRepository bannerRepository;
     private final BannerMapper bannerMapper;
+
+    private List<BannerResponse> filterBannersWithImage(List<BannerResponse> banners) {
+        return banners.stream()
+                .filter(b -> b.getImageUrl() != null && !b.getImageUrl().isBlank())
+                .collect(Collectors.toList());
+    }
 
     @Override
     @Cacheable(value = "banners", key = "#position.name()")
@@ -31,7 +38,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
                 position,
                 now
         );
-        return bannerMapper.toResponseList(banners);
+        return filterBannersWithImage(bannerMapper.toResponseList(banners));
     }
 
     @Override
@@ -39,7 +46,7 @@ public class BannerCacheServiceImpl implements BannerCacheService {
     public List<BannerResponse> getCachedAllActiveBanners() {
         LocalDateTime now = LocalDateTime.now();
         List<Banner> banners = bannerRepository.findAllActiveBanners(EntityStatus.ACTIVE, now);
-        return bannerMapper.toResponseList(banners);
+        return filterBannersWithImage(bannerMapper.toResponseList(banners));
     }
 
     @Override

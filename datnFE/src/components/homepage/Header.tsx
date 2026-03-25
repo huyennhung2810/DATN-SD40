@@ -104,9 +104,9 @@ const Header: React.FC<HeaderProps> = () => {
 
   const mainNavItems = [
     {
-      key: "may-anh",
-      label: "Máy ảnh",
-      href: "/client/catalog?category=may-anh",
+      key: "may-anh-canon",
+      label: "Máy ảnh Canon",
+      href: "/client/catalog?brand=canon&category=may-anh",
     },
     {
       key: "ong-kinh",
@@ -114,11 +114,10 @@ const Header: React.FC<HeaderProps> = () => {
       href: "/client/catalog?category=ong-kinh",
     },
     {
-      key: "may-quay",
-      label: "Máy quay",
-      href: "/client/catalog?category=may-quay",
+      key: "den-flash",
+      label: "Đèn flash",
+      href: "/client/catalog?category=den-flash",
     },
-    { key: "gimbal", label: "Gimbal", href: "/client/catalog?category=gimbal" },
     {
       key: "phu-kien",
       label: "Phụ kiện",
@@ -154,31 +153,34 @@ const Header: React.FC<HeaderProps> = () => {
 
           {/* Search box - desktop */}
           <div className="hidden md:flex header-search">
-            <div className="search-wrapper">
-              <Input
-                placeholder="Tìm kiếm máy ảnh, ống kính, phụ kiện..."
-                allowClear
-                size="large"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onPressEnter={(e) =>
-                  handleSearch((e.target as HTMLInputElement).value)
-                }
-                className="search-input"
-                prefix={<SearchOutlined className="search-icon" />}
-              />
-              <Button
-                type="primary"
-                size="large"
-                className="search-btn"
-                onClick={() => handleSearch(searchValue)}
-              >
-                Tìm kiếm
-              </Button>
-            </div>
+            <Input
+              placeholder="Tìm kiếm"
+              allowClear
+              size="large"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onPressEnter={(e) =>
+                handleSearch((e.target as HTMLInputElement).value)
+              }
+              className="hdr-search-input"
+              suffix={
+                <SearchOutlined
+                  className="hdr-search-suffix"
+                  onClick={() => handleSearch(searchValue)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter" || ev.key === " ") {
+                      ev.preventDefault();
+                      handleSearch(searchValue);
+                    }
+                  }}
+                />
+              }
+            />
           </div>
 
-          {/* Actions */}
+          {/* Actions — căn phải: yêu thích, tài khoản, giỏ hàng */}
           <div className="header-actions">
             {/* Mobile search button */}
             <Button
@@ -226,17 +228,22 @@ const Header: React.FC<HeaderProps> = () => {
               )}
             </Dropdown>
 
-            {/* Cart */}
-            <Badge count={cartCount} showZero={true} className="cart-badge">
-              <Button
-                type="primary"
-                icon={<ShoppingCartOutlined />}
-                className="cart-btn"
-                onClick={() => navigate("/client/cart")} // Nhớ thêm onClick để chuyển trang nhé
+            {/* Cart — chỉ icon + badge */}
+            <button
+              type="button"
+              className="hdr-cart-btn"
+              onClick={() => navigate("/client/cart")}
+              aria-label="Giỏ hàng"
+            >
+              <Badge
+                count={cartCount}
+                showZero
+                offset={[-2, 2]}
+                className="hdr-cart-badge"
               >
-                <span className="hidden lg:inline">Giỏ hàng</span>
-              </Button>
-            </Badge>
+                <ShoppingCartOutlined className="hdr-cart-icon" />
+              </Badge>
+            </button>
           </div>
         </div>
 
@@ -416,21 +423,23 @@ const Header: React.FC<HeaderProps> = () => {
           position: sticky;
           top: 0;
           z-index: 1000;
-          background: #fff;
-          transition: all 0.3s ease;
+          /* Nền xanh-than sẫm: tương phản tốt với logo đỏ, vẫn hòa với UI tối */
+          background: linear-gradient(180deg, #1b222c 0%, #12161c 100%);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          transition: box-shadow 0.3s ease;
         }
 
         .main-header.scrolled {
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
         }
 
         .header-container {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 12px 24px;
+          padding: 14px 24px;
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 28px;
         }
 
         .mobile-menu-btn {
@@ -446,74 +455,68 @@ const Header: React.FC<HeaderProps> = () => {
         .header-logo {
           flex-shrink: 0;
           cursor: pointer;
+          display: flex;
+          align-items: center;
         }
 
         .logo-img {
           height: 44px;
           width: auto;
+          max-height: 48px;
           object-fit: contain;
         }
 
         @media (max-width: 768px) {
           .logo-img {
-            height: 36px;
+            height: 34px;
           }
         }
 
         .header-search {
           flex: 1;
-          max-width: 600px;
+          min-width: 0;
+          max-width: 720px;
         }
 
-        .search-wrapper {
-          display: flex;
-          width: 100%;
-          gap: 0;
-        }
-
-        .search-input {
-          border-radius: 12px 0 0 12px !important;
-          border: 2px solid #e5e5e5 !important;
-          border-right: none !important;
-          background: #f9fafb;
-          padding: 8px 16px;
+        .hdr-search-input {
+          border-radius: 4px !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          background: rgba(30, 36, 46, 0.85) !important;
+          color: #f3f4f6 !important;
           font-size: 14px;
-          transition: all 0.2s;
         }
 
-        .search-input:hover,
-        .search-input:focus {
-          border-color: #D32F2F !important;
-          background: #fff;
+        .hdr-search-input input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
         }
 
-        .search-input:focus {
-          box-shadow: none !important;
+        .hdr-search-input:hover,
+        .hdr-search-input-focused {
+          border-color: rgba(255, 255, 255, 0.22) !important;
         }
 
-        .search-icon {
-          color: #9ca3af;
+        .hdr-search-input.ant-input-affix-wrapper-focused {
+          border-color: #c62828 !important;
+          box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.35) !important;
         }
 
-        .search-btn {
-          border-radius: 0 12px 12px 0 !important;
-          background: #1a1a1a !important;
-          border: 2px solid #1a1a1a !important;
-          padding: 0 24px;
-          font-weight: 600;
-          font-size: 14px;
-          transition: all 0.2s;
+        .hdr-search-suffix {
+          color: rgba(255, 255, 255, 0.65);
+          cursor: pointer;
+          font-size: 16px;
+          padding: 4px;
         }
 
-        .search-btn:hover {
-          background: #333 !important;
-          border-color: #333 !important;
+        .hdr-search-suffix:hover {
+          color: #fff;
         }
 
         .header-actions {
           display: flex;
           align-items: center;
           gap: 8px;
+          margin-left: auto;
+          flex-shrink: 0;
         }
 
         .header-icon-btn {
@@ -521,48 +524,66 @@ const Header: React.FC<HeaderProps> = () => {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          color: #1a1a1a !important;
+          color: rgba(255, 255, 255, 0.88) !important;
           font-weight: 500;
           height: 44px;
-          padding: 0 14px;
-          border-radius: 10px;
+          padding: 0 12px;
+          border-radius: 8px;
           transition: all 0.2s;
         }
 
         .header-icon-btn:hover {
-          background: #f5f5f5 !important;
-          color: #D32F2F !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          color: #fff !important;
         }
 
         .action-text {
           font-size: 13px;
+          color: rgba(255, 255, 255, 0.88);
         }
 
-        .cart-btn {
-          background: #D32F2F !important;
-          border: none !important;
-          border-radius: 10px !important;
-          font-weight: 600;
-          height: 44px;
-          padding: 0 18px;
-          display: flex;
+        .hdr-cart-btn {
+          display: inline-flex;
           align-items: center;
-          gap: 8px;
-          transition: all 0.2s;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          padding: 0;
+          margin: 0;
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          border-radius: 4px;
+          background: transparent;
+          color: #fff;
+          cursor: pointer;
+          transition: border-color 0.2s, background 0.2s;
         }
 
-        .cart-btn:hover {
-          background: #b71c1c !important;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+        .hdr-cart-btn:hover {
+          border-color: rgba(255, 255, 255, 0.55);
+          background: rgba(255, 255, 255, 0.08);
         }
 
-        .cart-badge .ant-badge-count {
-          background: #1a1a1a;
-          font-size: 10px;
+        .hdr-cart-icon {
+          font-size: 22px;
+          color: #fff;
+        }
+
+        .hdr-cart-badge .ant-badge-count {
+          background: #c62828 !important;
+          color: #fff !important;
+          font-size: 11px;
+          font-weight: 700;
           min-width: 18px;
           height: 18px;
           line-height: 18px;
+          box-shadow: 0 0 0 1px #12161c;
+        }
+
+        @media (max-width: 768px) {
+          .hdr-cart-btn {
+            width: 40px;
+            height: 40px;
+          }
         }
 
         /* Mobile Search Overlay */
@@ -573,7 +594,7 @@ const Header: React.FC<HeaderProps> = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(0, 0, 0, 0.55);
           z-index: 1001;
           opacity: 0;
           visibility: hidden;
@@ -590,7 +611,8 @@ const Header: React.FC<HeaderProps> = () => {
           align-items: center;
           gap: 12px;
           padding: 16px;
-          background: #fff;
+          background: #1b222c;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           transform: translateY(-100%);
           transition: transform 0.3s;
         }
@@ -602,14 +624,26 @@ const Header: React.FC<HeaderProps> = () => {
         .mobile-search-input {
           flex: 1;
           height: 48px;
-          border-radius: 12px !important;
+          border-radius: 4px !important;
           font-size: 16px;
+          background: rgba(30, 36, 46, 0.9) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: #fff !important;
+        }
+
+        .mobile-search-input input::placeholder {
+          color: rgba(255, 255, 255, 0.45);
         }
 
         .mobile-search-close {
           width: 48px;
           height: 48px;
-          border-radius: 12px !important;
+          border-radius: 8px !important;
+          color: #fff !important;
+        }
+
+        .mobile-search-close:hover {
+          background: rgba(255, 255, 255, 0.08) !important;
         }
 
         /* Mobile Menu Styles */
@@ -663,11 +697,6 @@ const Header: React.FC<HeaderProps> = () => {
           .header-icon-btn {
             height: 40px;
             padding: 0 10px;
-          }
-
-          .cart-btn {
-            height: 40px;
-            padding: 0 14px;
           }
 
           .mobile-search-overlay {
