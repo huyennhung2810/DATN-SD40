@@ -321,18 +321,22 @@ const OrderDetailPage: React.FC = () => {
       const res = await posApi.getAvailableSerials(row.productDetailId);
       // axiosClient returns AxiosResponse; backend wraps list in ResponseObject.data
       const responseBody = (res as any)?.data;
+      console.log("[openSerialChange] productDetailId:", row.productDetailId);
+      console.log("[openSerialChange] raw response:", responseBody);
       const list: any[] = Array.isArray(responseBody?.data)
         ? responseBody.data
         : Array.isArray(responseBody)
           ? responseBody
           : [];
+      console.log("[openSerialChange] parsed list:", list);
       setAvailableSerials(
         list.map((s: any) => ({
           id: String(s.id ?? s.serialId ?? ""),
-          code: String(s.code ?? s.serialNumber ?? s.serialCode ?? ""),
+          code: String(s.serialNumber ?? s.code ?? s.serialCode ?? ""),
         })),
       );
-    } catch {
+    } catch (err) {
+      console.error("[openSerialChange] error:", err);
       message.error("Không thể tải danh sách serial");
     } finally {
       setLoadingSerials(false);
@@ -346,11 +350,17 @@ const OrderDetailPage: React.FC = () => {
     }
     setChangingSerial(true);
     try {
+      console.log("[assignSerials] request:", {
+        hoaDonChiTietId: serialChangeRow.detailId,
+        oldImeiId: serialChangeRow.serialId || "",
+        newImeiId: selectedNewSerial,
+      });
       const res = await orderApi.assignSerials({
         hoaDonChiTietId: serialChangeRow.detailId,
         oldImeiId: serialChangeRow.serialId || "",
         newImeiId: selectedNewSerial,
       });
+      console.log("[assignSerials] response:", res);
       // res is now ResponseObject body (unwrapped in orderApi)
       const ok = res?.success ?? (res as any)?.isSuccess ?? true;
       if (!ok) {
@@ -365,8 +375,12 @@ const OrderDetailPage: React.FC = () => {
       setSerialChangeOpen(false);
       await fetchOrder();
     } catch (err: any) {
+      console.error("[assignSerials] error:", err);
       const errMsg =
-        err?.message || err?.data?.message || "Đổi serial thất bại";
+        err?.message ||
+        err?.data?.message ||
+        err?.error ||
+        "Đổi serial thất bại";
       message.error(errMsg);
     } finally {
       setChangingSerial(false);
@@ -1387,9 +1401,7 @@ const OrderDetailPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title={
-          serialChangeRow?.serialId ? "Đổi Serial / IMEI" : "Gán Serial / IMEI"
-        }
+        title={serialChangeRow?.serialId ? "Đổi Serial" : "Gán Serial"}
         open={serialChangeOpen}
         onOk={handleSaveSerialChange}
         onCancel={() => setSerialChangeOpen(false)}

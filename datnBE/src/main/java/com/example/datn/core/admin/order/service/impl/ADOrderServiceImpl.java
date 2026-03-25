@@ -605,12 +605,13 @@ public class ADOrderServiceImpl implements ADOrderService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết hóa đơn: "
                             + request.getHoaDonChiTietId()));
 
-            // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN mới cho đổi/gán
+            // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN hoặc CHỜ GIAO mới cho đổi/gán
             Order hoaDon = chiTiet.getOrder();
             if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN
-                    && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN) {
+                    && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN
+                    && hoaDon.getOrderStatus() != OrderStatus.CHO_GIAO) {
                 throw new RuntimeException(
-                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận' hoặc 'Đã xác nhận'");
+                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận', 'Đã xác nhận' hoặc 'Chờ giao hàng'");
             }
 
             // Xử lý IMEI cũ (nếu có)
