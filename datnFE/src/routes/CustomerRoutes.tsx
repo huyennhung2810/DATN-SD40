@@ -6,6 +6,9 @@ import ProductDetail from "../components/homepage/ProductDetail";
 import CartPage from "../Pages/client/CartPage";
 import CheckoutPage from "../Pages/client/CheckoutPage";
 import ProfilePage from "../Pages/client/ProfilePage";
+import OrderListPage from "../Pages/client/OrderListPage";
+import OrderDetailPage from "../Pages/client/OrderDetailPage";
+
 export const CustomerRoutes = () => (
   <Route path="/client" element={<CustomerLayout />}>
     <Route index element={<ClientHomePage />} />
@@ -15,6 +18,8 @@ export const CustomerRoutes = () => (
     <Route path="cart" element={<CartPage />} />
     <Route path="checkout" element={<CheckoutPage />} />
     <Route path="profile" element={<ProfilePage />} />
+    <Route path="orders" element={<OrderListPage />} />
+    <Route path="orders/:id" element={<OrderDetailPage />} />
   </Route>
 );
 

@@ -40,13 +40,13 @@ public class CnOrderServiceImpl implements CnOrderService {
 
     @Override
     @Transactional
-    public CheckoutResponse checkout(CheckoutRequest request, HttpServletRequest httpRequest) {
-        // 1. Lấy khách hàng
-        Customer customer = customerRepository.findById(request.getCustomerId())
+    public CheckoutResponse checkout(CheckoutRequest request, String customerId, HttpServletRequest httpRequest) {
+        // 1. Lấy khách hàng từ customerId (được trích xuất từ JWT)
+        Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
 
         // 2. Lấy giỏ hàng
-        Cart cart = cartService.getOrCreateCart(request.getCustomerId());
+        Cart cart = cartService.getOrCreateCart(customerId);
         List<CartDetail> cartItems = cartDetailRepository.findByCart_Id(cart.getId());
         if (cartItems.isEmpty()) {
             throw new RuntimeException("Giỏ hàng trống, không thể đặt hàng!");
