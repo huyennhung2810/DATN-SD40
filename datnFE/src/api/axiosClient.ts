@@ -57,12 +57,17 @@ axiosClient.interceptors.response.use(
         // 1. Xử lý lỗi 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
             const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+            const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
             if (!refreshToken) {
-                message.warning({
-                    content: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
-                    duration: 2,
-                    onClose: handleGlobalLogout,
-                });
+                // Chỉ hiện thông báo khi người dùng ĐÃ từng đăng nhập (có user trong storage)
+                // Không làm gì khi người dùng chưa đăng nhập lần nào
+                if (storedUser) {
+                    message.warning({
+                        content: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
+                        duration: 2,
+                        onClose: handleGlobalLogout,
+                    });
+                }
                 return Promise.reject(error);
             }
             if (isRefreshing) {

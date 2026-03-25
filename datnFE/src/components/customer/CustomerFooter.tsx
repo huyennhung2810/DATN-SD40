@@ -22,7 +22,10 @@ const CustomerFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   const categories = [
-    { name: "Máy ảnh Mirrorless", href: "/client/catalog?category=may-anh-mirrorless" },
+    {
+      name: "Máy ảnh Mirrorless",
+      href: "/client/catalog?category=may-anh-mirrorless",
+    },
     { name: "Máy ảnh DSLR", href: "/client/catalog?category=may-anh-dslr" },
     { name: "Ống kính", href: "/client/catalog?category=ong-kinh" },
     { name: "Action Camera", href: "/client/catalog?category=action-cam" },
@@ -60,10 +63,18 @@ const CustomerFooter: React.FC = () => {
   ];
 
   const services = [
-    { icon: <SafetyCertificateOutlined />, title: "Hàng chính hãng", desc: "100% authentic" },
+    {
+      icon: <SafetyCertificateOutlined />,
+      title: "Hàng chính hãng",
+      desc: "100% authentic",
+    },
     { icon: <SyncOutlined />, title: "Đổi trả dễ dàng", desc: "Trong 7 ngày" },
     { icon: <CarOutlined />, title: "Giao hàng nhanh", desc: "Toàn quốc" },
-    { icon: <CustomerServiceOutlined />, title: "Hỗ trợ 24/7", desc: "Tư vấn chuyên nghiệp" },
+    {
+      icon: <CustomerServiceOutlined />,
+      title: "Hỗ trợ 24/7",
+      desc: "Tư vấn chuyên nghiệp",
+    },
   ];
 
   return (
@@ -77,8 +88,12 @@ const CustomerFooter: React.FC = () => {
                 <div className="service-item">
                   <div className="service-icon">{service.icon}</div>
                   <div className="service-content">
-                    <Text strong className="service-title">{service.title}</Text>
-                    <Text type="secondary" className="service-desc">{service.desc}</Text>
+                    <Text strong className="service-title">
+                      {service.title}
+                    </Text>
+                    <Text type="secondary" className="service-desc">
+                      {service.desc}
+                    </Text>
                   </div>
                 </div>
               </Col>
@@ -100,12 +115,14 @@ const CustomerFooter: React.FC = () => {
                     alt="Hikari Camera"
                     className="footer-logo-img"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/150x50?text=HIKARI";
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/150x50?text=HIKARI";
                     }}
                   />
                 </div>
                 <Text className="footer-about-text">
-                  HIKARI Camera - Địa chỉ mua sắm máy ảnh, ống kính và phụ kiện nhiếp ảnh uy tín hàng đầu Việt Nam.
+                  HIKARI Camera - Địa chỉ mua sắm máy ảnh, ống kính và phụ kiện
+                  nhiếp ảnh uy tín hàng đầu Việt Nam.
                 </Text>
 
                 {/* Contact Info */}
@@ -113,44 +130,77 @@ const CustomerFooter: React.FC = () => {
                   <div className="contact-item">
                     <EnvironmentOutlined className="contact-icon" />
                     <div>
-                      <Text type="secondary" className="contact-label">Địa chỉ:</Text>
+                      <Text type="secondary" className="contact-label">
+                        Địa chỉ:
+                      </Text>
                       <Text className="contact-text">
-                        123 Nguyễn Trãi, Q.1, TP.HCM
+                        Trường Cao đẳng FPT Polytechnic, Trịnh Văn Bô, Nam Từ
+                        Liêm, Hà Nội
                       </Text>
                     </div>
                   </div>
                   <div className="contact-item">
                     <PhoneOutlined className="contact-icon" />
                     <div>
-                      <Text type="secondary" className="contact-label">Hotline:</Text>
-                      <a href="tel:19001909" className="contact-link">1900 1909</a>
+                      <Text type="secondary" className="contact-label">
+                        Hotline:
+                      </Text>
+                      <a href="tel:19001909" className="contact-link">
+                        1900 1909
+                      </a>
                     </div>
                   </div>
                   <div className="contact-item">
                     <MailOutlined className="contact-icon" />
                     <div>
-                      <Text type="secondary" className="contact-label">Email:</Text>
-                      <a href="mailto:contact@hikaricamera.vn" className="contact-link">contact@hikaricamera.vn</a>
+                      <Text type="secondary" className="contact-label">
+                        Email:
+                      </Text>
+                      <a
+                        href="mailto:contact@hikaricamera.vn"
+                        className="contact-link"
+                      >
+                        contact@hikaricamera.vn
+                      </a>
                     </div>
                   </div>
                   <div className="contact-item">
                     <ClockCircleOutlined className="contact-icon" />
                     <div>
-                      <Text type="secondary" className="contact-label">Giờ mở cửa:</Text>
-                      <Text className="contact-text">8:00 - 21:00 (T2 - CN)</Text>
+                      <Text type="secondary" className="contact-label">
+                        Giờ mở cửa:
+                      </Text>
+                      <Text className="contact-text">
+                        8:00 - 21:00 (T2 - CN)
+                      </Text>
                     </div>
                   </div>
                 </div>
 
                 {/* Social Links */}
                 <div className="footer-social">
-                  <a href="https://facebook.com/hikaricamera" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <a
+                    href="https://facebook.com/hikaricamera"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="social-link"
+                  >
                     <FacebookOutlined />
                   </a>
-                  <a href="https://instagram.com/hikaricamera" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <a
+                    href="https://instagram.com/hikaricamera"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="social-link"
+                  >
                     <InstagramOutlined />
                   </a>
-                  <a href="https://youtube.com/hikaricamera" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <a
+                    href="https://youtube.com/hikaricamera"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="social-link"
+                  >
                     <YoutubeOutlined />
                   </a>
                 </div>
@@ -241,7 +291,11 @@ const CustomerFooter: React.FC = () => {
                       className="newsletter-input"
                       prefix={<MailOutlined />}
                     />
-                    <Button type="primary" icon={<SendOutlined />} className="newsletter-btn">
+                    <Button
+                      type="primary"
+                      icon={<SendOutlined />}
+                      className="newsletter-btn"
+                    >
                       Đăng ký
                     </Button>
                   </div>
@@ -272,16 +326,27 @@ const CustomerFooter: React.FC = () => {
           <div className="footer-bottom-content">
             <div className="footer-copyright">
               <Text className="copyright-text">
-                © {currentYear} <strong>HIKARI Camera</strong>. All rights reserved.
+                © {currentYear} <strong>HIKARI Camera</strong>. All rights
+                reserved.
               </Text>
               <div className="footer-badges mt-2">
-                <img src="https://images.dmca.com/Protected/Approved/123456.png" alt="DMCA" height="20" className="mr-2" />
-                <img src="https://www.google.com/safebrowsing/static/safebrowsing-gen.png" alt="Google Safe Browsing" height="20" />
+                <img
+                  src="https://images.dmca.com/Protected/Approved/123456.png"
+                  alt="DMCA"
+                  height="20"
+                  className="mr-2"
+                />
+                <img
+                  src="https://www.google.com/safebrowsing/static/safebrowsing-gen.png"
+                  alt="Google Safe Browsing"
+                  height="20"
+                />
               </div>
             </div>
             <div className="footer-stats">
               <Text type="secondary" className="text-xs">
-                Đang truy cập: <strong>1,234</strong> | Tổng sản phẩm: <strong>500+</strong>
+                Đang truy cập: <strong>1,234</strong> | Tổng sản phẩm:{" "}
+                <strong>500+</strong>
               </Text>
             </div>
           </div>

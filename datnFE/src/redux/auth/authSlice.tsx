@@ -22,6 +22,7 @@ const getInitialState = (): AuthState => {
     const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
 
     if (!accessToken && !refreshToken) {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 

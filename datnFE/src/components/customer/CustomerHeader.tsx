@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, Badge, Typography, Drawer, List, Dropdown } from "antd";
+import {
+  Input,
+  Button,
+  Badge,
+  Typography,
+  Drawer,
+  List,
+  Dropdown,
+  Avatar,
+} from "antd";
 import {
   ShoppingCartOutlined,
   SearchOutlined,
@@ -12,12 +21,15 @@ import {
   GiftOutlined,
   TruckOutlined,
   SafetyCertificateOutlined,
+  LogoutOutlined,
+  LoginOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
-import axiosClient from "../../api/axiosClient"; // Nơi bạn cấu hình Axios gọi API
+import { authActions } from "../../redux/auth/authSlice";
+import axiosClient from "../../api/axiosClient";
 
 const { Text } = Typography;
 
@@ -31,7 +43,7 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
 
   useEffect(() => {
@@ -57,6 +69,16 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
 
   const handleSearch = (value: string) => {
     navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
+  };
+
+  const handleUserMenuClick = ({ key }: { key: string }) => {
+    if (key === "logout") {
+      dispatch(authActions.logout({ isAdmin: false }));
+    } else if (key === "profile") {
+      navigate("/client/profile");
+    } else if (key === "orders") {
+      navigate("/client/orders");
+    }
   };
 
   // Top bar utilities
@@ -185,11 +207,23 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
   ];
 
   const userMenuItems = [
-    { key: "profile", label: "Tài khoản của tôi" },
-    { key: "orders", label: "Đơn hàng của tôi" },
-    { key: "wishlist", label: "Sản phẩm yêu thích" },
+    {
+      key: "profile",
+      label: "Tài khoản của tôi",
+      icon: <UserOutlined />,
+    },
+    {
+      key: "orders",
+      label: "Đơn hàng của tôi",
+      icon: <ShoppingCartOutlined />,
+    },
     { type: "divider" as const },
-    { key: "logout", label: "Đăng xuất", danger: true },
+    {
+      key: "logout",
+      label: "Đăng xuất",
+      icon: <LogoutOutlined />,
+      danger: true,
+    },
   ];
 
   return (
@@ -296,26 +330,53 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
                 </Button>
 
                 {/* User */}
-                <Dropdown
-                  menu={{ items: userMenuItems }}
-                  trigger={["click"]}
-                  placement="bottomRight"
-                >
-                  <Button type="text" className="header-icon-btn">
-                    <UserOutlined />
-                    <span className="hidden lg:inline text-sm ml-1">
-                      Tài khoản
-                    </span>
-                  </Button>
-                </Dropdown>
+                {isLoggedIn ? (
+                  <Dropdown
+                    menu={{
+                      items: userMenuItems,
+                      onClick: handleUserMenuClick,
+                    }}
+                    trigger={["click"]}
+                    placement="bottomRight"
+                  >
+                    <Button type="text" className="header-icon-btn">
+                      <Avatar
+                        size={28}
+                        src={user?.pictureUrl}
+                        icon={!user?.pictureUrl && <UserOutlined />}
+                        style={{ backgroundColor: "#D32F2F" }}
+                      />
+                      <span className="hidden lg:inline text-sm ml-1">
+                        {user?.fullName || user?.username || "Tài khoản"}
+                      </span>
+                    </Button>
+                  </Dropdown>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="text"
+                      className="header-icon-btn"
+                      icon={<LoginOutlined />}
+                      onClick={() => navigate("/login")}
+                    >
+                      <span className="hidden lg:inline text-sm ml-1">
+                        Đăng nhập
+                      </span>
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="small"
+                      className="!bg-red-600 !border-red-600 hidden lg:inline-flex"
+                      onClick={() => navigate("/register")}
+                    >
+                      Đăng ký
+                    </Button>
+                  </div>
+                )}
 
                 {/* Cart */}
                 {/* SỬA SỐ 0 THÀNH cartCount ở dòng dưới */}
-                <Badge
-                  count={cartCount}
-                  showZero={true}
-                  className="cart-badge"
-                >
+                <Badge count={cartCount} showZero={true} className="cart-badge">
                   <Button
                     type="primary"
                     icon={<ShoppingCartOutlined />}
@@ -471,18 +532,91 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = () => {
           )}
         />
 
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 pt-4 border-t space-y-2">
+          {isLoggedIn ? (
+            <>
+              <div className="flex items-center gap-2 py-2">
+                <Avatar
+                  size={36}
+                  src={user?.pictureUrl}
+                  icon={!user?.pictureUrl && <UserOutlined />}
+                  style={{ backgroundColor: "#D32F2F" }}
+                />
+                <div>
+                  <div className="font-semibold text-sm">
+                    {user?.fullName || user?.username}
+                  </div>
+                  <div className="text-xs text-gray-500">{user?.email}</div>
+                </div>
+              </div>
+              <Button
+                block
+                icon={<UserOutlined />}
+                onClick={() => {
+                  navigate("/client/profile");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Tài khoản của tôi
+              </Button>
+              <Button
+                block
+                icon={<ShoppingCartOutlined />}
+                onClick={() => {
+                  navigate("/client/orders");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đơn hàng của tôi
+              </Button>
+              <Button
+                danger
+                block
+                icon={<LogoutOutlined />}
+                onClick={() => {
+                  dispatch(authActions.logout({ isAdmin: false }));
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng xuất
+              </Button>
+            </>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                block
+                icon={<LoginOutlined />}
+                onClick={() => {
+                  navigate("/login");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                type="primary"
+                block
+                className="!bg-red-600 !border-red-600"
+                onClick={() => {
+                  navigate("/register");
+                  setMobileMenuVisible(false);
+                }}
+              >
+                Đăng ký
+              </Button>
+            </div>
+          )}
           <Button
             type="primary"
             icon={<ShoppingCartOutlined />}
             block
             className="!bg-red-600 !border-red-600 h-12"
             onClick={() => {
-              setMobileMenuVisible(false); // Đóng menu mobile
-              navigate("/client/cart"); // Chuyển sang trang giỏ hàng
+              setMobileMenuVisible(false);
+              navigate("/client/cart");
             }}
           >
-            Giỏ hàng ({cartCount}) {/* SỬA SỐ 0 Ở ĐÂY */}
+            Giỏ hàng ({cartCount})
           </Button>
         </div>
       </Drawer>
