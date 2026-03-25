@@ -5,9 +5,12 @@ import {
   CameraOutlined,
   ClockCircleOutlined,
   CustomerServiceOutlined,
+  IdcardOutlined,
   KeyOutlined,
   LineChartOutlined,
   LogoutOutlined,
+  MailOutlined,
+  PhoneOutlined,
   PictureOutlined,
   ScheduleOutlined,
   SettingOutlined,
@@ -18,12 +21,14 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Badge, Button, Dropdown, Input, type MenuProps } from "antd";
-import React, { useState } from "react";
+import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag } from "antd";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authActions } from "../../redux/auth/authSlice";
 import type { RootState } from "../../redux/store";
+import { getEmployeeById } from "../../api/employeeApi";
+import type { EmployeeResponse } from "../../models/employee";
 
 const { Search } = Input;
 
@@ -143,6 +148,27 @@ const Header: React.FC = () => {
   // Lấy thông tin người dùng hiện tại
   const { user } = useSelector((state: RootState) => state.auth);
 
+  const [employee, setEmployee] = useState<EmployeeResponse | null>(null);
+  const [loadingEmployee] = useState(false);
+
+  useEffect(() => {
+    if (!user?.userId) return;
+    let cancelled = false;
+    getEmployeeById(user.userId)
+      .then((data) => {
+        if (!cancelled) setEmployee(data);
+      })
+      .catch(() => {
+        /* silent */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.userId]);
+
+  const avatarSrc =
+    employee?.employeeImage ?? user?.image ?? user?.pictureUrl ?? undefined;
+
   const defaultPageInfo = {
     title: "Hikari Admin",
     desc: "Chào mừng bạn quay lại hệ thống quản lý máy ảnh",
@@ -169,34 +195,81 @@ const Header: React.FC = () => {
     breadcrumb = [{ title: defaultPageInfo.title, icon: defaultPageInfo.icon }];
 
   //xử lý khi chọn menu
-  const [_settingsModalOpen, setSettingsModalOpen] = useState(false);
-
-  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
-    if (key === "logout") {
-      dispatch(authActions.logout({ isAdmin: true }));
-    } else if (key === "profile") {
-      navigate("/profile");
-    } else if (key === "settings") {
-      setSettingsModalOpen(true);
-    }
-  };
 
   const handleSearch = (value: string) => {
-    // TODO: implement search navigation or filtering
     console.log("Header search:", value);
   };
 
-  const menuItems: MenuProps["items"] = [
-    { key: "profile", label: "Hồ sơ cá nhân", icon: <UserOutlined /> },
+  const profileDropdown = (
+    <div className="profile-dropdown-card">
+      {/* Banner */}
+      <div className="profile-dropdown-banner" />
 
-    { type: "divider" },
-    {
-      key: "logout",
-      label: "Đăng xuất",
-      icon: <LogoutOutlined />,
-      danger: true,
-    },
-  ];
+      {/* Avatar + info */}
+      <div className="profile-dropdown-body">
+        {loadingEmployee ? (
+          <Spin size="small" style={{ margin: "8px auto", display: "block" }} />
+        ) : (
+          <>
+            <Avatar
+              size={64}
+              src={avatarSrc}
+              icon={!avatarSrc ? <UserOutlined /> : undefined}
+              className="profile-dropdown-avatar"
+            />
+            <div className="profile-dropdown-name">
+              {employee?.name ?? user?.fullName ?? "Admin"}
+            </div>
+            <Tag
+              color={employee?.account?.role === "ADMIN" ? "purple" : "blue"}
+              style={{ marginBottom: 12 }}
+            >
+              {employee?.account?.role === "ADMIN"
+                ? "Quản trị viên"
+                : "Nhân viên"}
+            </Tag>
+
+            <div className="profile-dropdown-details">
+              {employee?.code && (
+                <div className="profile-detail-row">
+                  <IdcardOutlined />
+                  <span>{employee.code}</span>
+                </div>
+              )}
+              {(employee?.email ?? user?.email) && (
+                <div className="profile-detail-row">
+                  <MailOutlined />
+                  <span>{employee?.email ?? user?.email}</span>
+                </div>
+              )}
+              {employee?.phoneNumber && (
+                <div className="profile-detail-row">
+                  <PhoneOutlined />
+                  <span>{employee.phoneNumber}</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="profile-dropdown-footer">
+        <button
+          className="profile-footer-btn"
+          onClick={() => navigate("/profile")}
+        >
+          <UserOutlined /> Hồ sơ cá nhân
+        </button>
+        <button
+          className="profile-footer-btn profile-footer-btn--danger"
+          onClick={() => dispatch(authActions.logout({ isAdmin: true }))}
+        >
+          <LogoutOutlined /> Đăng xuất
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -243,19 +316,19 @@ const Header: React.FC = () => {
           </Badge>
 
           <Dropdown
-            menu={{ items: menuItems, onClick: handleMenuClick }}
+            dropdownRender={() => profileDropdown}
             trigger={["click"]}
             placement="bottomRight"
           >
             <div className="header-user">
               <Avatar
-                src={user?.pictureUrl}
-                icon={!user?.pictureUrl && <UserOutlined />}
+                src={avatarSrc}
+                icon={!avatarSrc && <UserOutlined />}
                 className="header-avatar"
               />
               <div className="header-user-info">
                 <div className="header-user-name">
-                  {user?.fullName || "Admin"}
+                  {employee?.name ?? user?.fullName ?? "Admin"}
                 </div>
                 <div className="header-user-role">
                   {user?.roles?.[0] === "ADMIN" ? "Quản trị viên" : "Nhân viên"}
@@ -362,6 +435,106 @@ const Header: React.FC = () => {
             .header-search, .page-desc {
               display: none;
             }
+          }
+
+          /* ===== Profile Dropdown Card ===== */
+          .profile-dropdown-card {
+            width: 280px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+            overflow: hidden;
+            border: 1px solid #f0f0f0;
+          }
+
+          .profile-dropdown-banner {
+            height: 56px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+          }
+
+          .profile-dropdown-body {
+            padding: 0 20px 16px;
+            margin-top: -32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+
+          .profile-dropdown-avatar {
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            background: #1890ff;
+            margin-bottom: 8px;
+          }
+
+          .profile-dropdown-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: #1f2937;
+            margin-bottom: 4px;
+            word-break: break-word;
+          }
+
+          .profile-dropdown-details {
+            width: 100%;
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }
+
+          .profile-detail-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 4px 8px;
+            background: #f9fafb;
+            border-radius: 6px;
+            overflow: hidden;
+          }
+
+          .profile-detail-row span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .profile-dropdown-footer {
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+          }
+
+          .profile-footer-btn {
+            flex: 1;
+            padding: 11px 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background 0.15s, color 0.15s;
+          }
+
+          .profile-footer-btn:hover {
+            background: #f3f4f6;
+            color: #1890ff;
+          }
+
+          .profile-footer-btn--danger {
+            border-left: 1px solid #f3f4f6;
+          }
+
+          .profile-footer-btn--danger:hover {
+            background: #fff1f2;
+            color: #dc2626;
           }
         `}</style>
       </header>
