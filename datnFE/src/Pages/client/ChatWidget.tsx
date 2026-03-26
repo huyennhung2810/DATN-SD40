@@ -97,6 +97,7 @@ const ChatWidget: React.FC = () => {
     (state: RootState) => state.chat,
   );
   const userId = useSelector((state: RootState) => state.auth.user?.userId);
+  const customerName = useSelector((state: RootState) => state.auth.user?.fullName);
 
   // Kích hoạt kết nối WebSocket
   useWebSocket(sessionId);
@@ -128,7 +129,7 @@ const ChatWidget: React.FC = () => {
   const handleSend = async () => {
     if (!inputValue.trim() || loading) return;
     try {
-      dispatch(sendMessageRequest({ content: inputValue, sessionId, userId }));
+      dispatch(sendMessageRequest({ content: inputValue, sessionId, userId, customerName: customerName ?? undefined }));
       setInputValue("");
     } catch (error) {
       console.error("Lỗi gửi tin nhắn:", error);
@@ -136,7 +137,7 @@ const ChatWidget: React.FC = () => {
   };
 
   const handleRequestStaff = () => {
-    dispatch(requestStaff({ sessionId, userId }));
+    dispatch(requestStaff({ sessionId, userId, customerName: customerName ?? undefined }));
   };
 
   return (

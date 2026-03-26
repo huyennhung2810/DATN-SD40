@@ -35,9 +35,10 @@ public class ChatController {
         String sessionId = request.getSessionId();
         String messageContent = request.getMessage();
         String userId = request.getUserId();
+        String customerName = request.getCustomerName();
 
         // Lưu tin nhắn của khách vào Database
-        sessionService.saveMessage(sessionId, messageContent, "CUSTOMER", userId);
+        sessionService.saveMessage(sessionId, messageContent, "CUSTOMER", userId, customerName);
 
         // NHÂN VIÊN ĐANG TRỰC
         if (sessionService.checkIfStaffHandling(sessionId)) {
@@ -59,7 +60,7 @@ public class ChatController {
 
         // AI TRỰC (Dùng Gemini RAG tư vấn máy ảnh)
         String aiReply = geminiService.getChatResponse(messageContent, sessionId);
-        sessionService.saveMessage(sessionId, aiReply, "AI", userId);
+        sessionService.saveMessage(sessionId, aiReply, "AI", userId, null);
 
         return ResponseEntity.ok(ChatResponse.builder()
                 .content(aiReply)
@@ -72,7 +73,7 @@ public class ChatController {
     @MessageMapping("/chat.staffReply/{sessionId}")
     public void handleStaffReply(@DestinationVariable String sessionId, String content) {
         // Lưu tin nhắn của nhân viên vào DB
-        sessionService.saveMessage(sessionId, content, "STAFF", null);
+        sessionService.saveMessage(sessionId, content, "STAFF", null, null);
 
         // Gửi xuống cho Khách hàng qua WebSocket topic chung
         messagingTemplate.convertAndSend("/topic/messages/" + sessionId,
@@ -92,15 +93,24 @@ public class ChatController {
 
     // y cầu nvien
     @PostMapping("/request-staff")
-    public ResponseEntity<Void> requestStaff(@RequestParam String sessionId) {
+    public ResponseEntity<Void> requestStaff(@RequestParam String sessionId,
+                                             @RequestParam(required = false) String customerName) {
         sessionService.markSessionForStaff(sessionId);
+
+        // Cập nhật tên khách hàng vào session nếu có
+        if (customerName != null && !customerName.isBlank()) {
+            sessionService.updateCustomerName(sessionId, customerName);
+        }
 
         // Bắn thông báo JSON cho Dashboard Admin/Staff biết có khách đang đợi
         Map<String, Object> notif = new HashMap<>();
         notif.put("type", "CHAT_REQUEST");
         notif.put("title", "Yêu cầu hỗ trợ mới");
-        notif.put("message", "Khách hàng đang cần hỗ trợ trực tiếp!");
+        notif.put("message", (customerName != null && !customerName.isBlank())
+                ? customerName + " đang cần hỗ trợ trực tiếp!"
+                : "Khách hàng đang cần hỗ trợ trực tiếp!");
         notif.put("refId", sessionId);
+        notif.put("refCode", customerName);
         notif.put("timestamp", System.currentTimeMillis());
         messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
 

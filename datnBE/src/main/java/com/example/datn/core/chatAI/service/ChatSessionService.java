@@ -23,12 +23,13 @@ public class ChatSessionService {
 
     @Transactional
 
-        public void saveMessage(String sessionId, String content, String sender, String userId) {
+        public void saveMessage(String sessionId, String content, String sender, String userId, String customerName) {
         ChatSession session = sessionRepository.findById(sessionId)
             .orElseGet(() -> sessionRepository.save(
                 ChatSession.builder()
                     .sessionId(sessionId)
                     .userId(userId)
+                    .customerName(customerName)
                     .isAiActive(true)
                     .createdAt(LocalDateTime.now())
                     .build()
@@ -36,6 +37,9 @@ public class ChatSessionService {
         // Nếu session đã tồn tại nhưng chưa có userId thì cập nhật
         if (session.getUserId() == null && userId != null) {
             session.setUserId(userId);
+        }
+        if (session.getCustomerName() == null && customerName != null) {
+            session.setCustomerName(customerName);
         }
 
         ChatMessage message = ChatMessage.builder()
@@ -73,7 +77,9 @@ public class ChatSessionService {
                         s.getSessionId(),
                         s.getLastMessage(),
                         0,
-                        s.isAiActive()
+                        s.isAiActive(),
+                        s.getCustomerName(),
+                        s.getUserId()
                 ))
                 .collect(Collectors.toList());
     }
@@ -99,6 +105,17 @@ public class ChatSessionService {
         session.setAiActive(false);
         session.setUpdatedAt(LocalDateTime.now());
         sessionRepository.save(session);
+    }
+
+    // Cập nhật tên khách hàng cho session
+    @Transactional
+    public void updateCustomerName(String sessionId, String customerName) {
+        sessionRepository.findById(sessionId).ifPresent(s -> {
+            if (s.getCustomerName() == null || s.getCustomerName().isBlank()) {
+                s.setCustomerName(customerName);
+                sessionRepository.save(s);
+            }
+        });
     }
 
     // Cập nhật tin nhắn cuối cùng để nhân viên xem ở danh sách

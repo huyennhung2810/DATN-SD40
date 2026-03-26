@@ -32,7 +32,7 @@ const chatSlice = createSlice({
     clearMessages: (state) => {
       state.messages = [];
     },
-    sendMessageRequest: (state, _action: PayloadAction<{ content: string; sessionId: string; userId?: string }>) => {
+    sendMessageRequest: (state, _action: PayloadAction<{ content: string; sessionId: string; userId?: string; customerName?: string }>) => {
       state.loading = true;
     },
     addMessage: (state, action: PayloadAction<ChatMessage>) => {
@@ -61,7 +61,7 @@ const chatSlice = createSlice({
       }
     },
 
-    requestStaff: (_state, _action: PayloadAction<{ sessionId: string; userId?: string }>) => {},
+    requestStaff: (_state, _action: PayloadAction<{ sessionId: string; userId?: string; customerName?: string }>) => {},
 
     setSessionId: (state, action: PayloadAction<string>) => {
       state.sessionId = action.payload;
