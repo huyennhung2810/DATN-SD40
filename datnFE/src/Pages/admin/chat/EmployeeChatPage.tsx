@@ -71,20 +71,31 @@ const EmployeeChatPage: React.FC = () => {
           stompClientRef.current = client;
           // Lắng nghe thông báo có khách hàng mới cần hỗ trợ
           client.subscribe("/topic/admin/notifications", (payload: any) => {
-            const sessionId = payload.body;
-            message.info(`Khách hàng ${sessionId} đang cần hỗ trợ!`);
-            setSessions((prev) => {
-              if (prev.find((s) => s.sessionId === sessionId)) return prev;
-              return [
-                {
-                  sessionId,
-                  lastMessage: "Đang đợi hỗ trợ...",
-                  unreadCount: 1,
-                  isAiActive: false,
-                },
-                ...prev,
-              ];
-            });
+            try {
+              const notif = JSON.parse(payload.body);
+              if (notif.type !== "CHAT_REQUEST") return;
+              const sessionId: string = notif.refId;
+              message.info(`Khách hàng đang cần hỗ trợ!`);
+              setSessions((prev) => {
+                if (prev.find((s) => s.sessionId === sessionId)) return prev;
+                return [
+                  {
+                    sessionId,
+                    lastMessage: "Đang đợi hỗ trợ...",
+                    unreadCount: 1,
+                    isAiActive: false,
+                  },
+                  ...prev,
+                ];
+              });
+            } catch {
+              // legacy plain-text fallback
+              const sessionId = payload.body;
+              setSessions((prev) => {
+                if (prev.find((s) => s.sessionId === sessionId)) return prev;
+                return [{ sessionId, lastMessage: "Đang đợi hỗ trợ...", unreadCount: 1, isAiActive: false }, ...prev];
+              });
+            }
           });
         },
         (error: any) => {

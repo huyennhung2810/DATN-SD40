@@ -14,12 +14,14 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/support")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:6688")
+@CrossOrigin(origins = {"http://localhost:6688", "http://localhost:5173", "http://localhost:3000"})
 public class ChatController {
 
     private final GeminiService geminiService;
@@ -93,8 +95,14 @@ public class ChatController {
     public ResponseEntity<Void> requestStaff(@RequestParam String sessionId) {
         sessionService.markSessionForStaff(sessionId);
 
-        // Bắn thông báo cho Dashboard Admin/Staff biết có khách đang đợi
-        messagingTemplate.convertAndSend("/topic/admin/notifications", sessionId);
+        // Bắn thông báo JSON cho Dashboard Admin/Staff biết có khách đang đợi
+        Map<String, Object> notif = new HashMap<>();
+        notif.put("type", "CHAT_REQUEST");
+        notif.put("title", "Yêu cầu hỗ trợ mới");
+        notif.put("message", "Khách hàng đang cần hỗ trợ trực tiếp!");
+        notif.put("refId", sessionId);
+        notif.put("timestamp", System.currentTimeMillis());
+        messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
 
         return ResponseEntity.ok().build();
     }

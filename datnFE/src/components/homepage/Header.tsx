@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, Badge, Drawer, List, Dropdown, Avatar } from "antd";
+import {
+  Input,
+  Button,
+  Badge,
+  Drawer,
+  List,
+  Dropdown,
+  Avatar,
+  Popover,
+  Empty,
+} from "antd";
 import {
   ShoppingCartOutlined,
   SearchOutlined,
@@ -10,13 +20,20 @@ import {
   CloseOutlined,
   LogoutOutlined,
   LoginOutlined,
+  BellOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import type { RootState } from "../../redux/store";
 import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
-import axiosClient from "../../api/axiosClient"; // Nơi bạn cấu hình Axios gọi API
+import axiosClient from "../../api/axiosClient";
 import { useSelector, useDispatch } from "react-redux";
 import { authActions } from "../../redux/auth/authSlice";
+import {
+  notificationActions,
+  type AppNotification,
+} from "../../redux/notification/notificationSlice";
+import { useNotifications } from "../../app/useNotifications";
 interface HeaderProps {
   onMenuClick?: () => void;
 }
@@ -27,10 +44,110 @@ const Header: React.FC<HeaderProps> = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
-  // === THÊM ĐOẠN CODE REDUX & CALL API NÀY VÀO ĐÂY ===
+  const [notifOpen, setNotifOpen] = useState(false);
+
   const dispatch = useDispatch();
   const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
+  const notifications = useSelector(
+    (state: RootState) => state.notification.items,
+  );
+  const clientNotifs = notifications.filter((n) => n.type === "ORDER_STATUS");
+  const unreadCount = clientNotifs.filter((n) => !n.read).length;
+
+  // Subscribe to order status notifications for this customer
+  const isCustomer = !!(
+    isLoggedIn &&
+    user?.userId &&
+    user.roles?.includes("CUSTOMER")
+  );
+  useNotifications(`/topic/client/notifications/${user?.userId}`, isCustomer);
+
+  const notifContent = (
+    <div style={{ width: 300 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "4px 0 8px",
+        }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 14 }}>
+          Thông báo đơn hàng
+        </span>
+        {unreadCount > 0 && (
+          <Button
+            size="small"
+            type="link"
+            onClick={() => dispatch(notificationActions.markAllRead())}
+          >
+            Đã đọc tất cả
+          </Button>
+        )}
+      </div>
+      {clientNotifs.length === 0 ? (
+        <Empty
+          description="Chưa có thông báo"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ margin: "16px 0" }}
+        />
+      ) : (
+        <List
+          dataSource={clientNotifs.slice(0, 15)}
+          style={{ maxHeight: 380, overflowY: "auto" }}
+          renderItem={(item: AppNotification) => (
+            <List.Item
+              key={item.id}
+              style={{
+                background: item.read ? "transparent" : "#e6f4ff",
+                borderRadius: 6,
+                padding: "8px 10px",
+                cursor: "pointer",
+                marginBottom: 4,
+              }}
+              onClick={() => {
+                dispatch(notificationActions.markRead(item.id));
+                navigate("/client/orders");
+                setNotifOpen(false);
+              }}
+            >
+              <List.Item.Meta
+                avatar={
+                  <CheckCircleOutlined
+                    style={{ color: "#52c41a", fontSize: 18 }}
+                  />
+                }
+                title={
+                  <span
+                    style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}
+                  >
+                    {item.title}
+                  </span>
+                }
+                description={
+                  <div>
+                    <div style={{ fontSize: 12, color: "#595959" }}>
+                      {item.message}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                      <CheckCircleOutlined
+                        style={{ marginRight: 4, opacity: 0.5 }}
+                      />
+                      {new Date(item.timestamp).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      )}
+    </div>
+  );
 
   useEffect(() => {
     if (user && user.userId && user.roles?.includes("CUSTOMER")) {
@@ -51,7 +168,6 @@ const Header: React.FC<HeaderProps> = () => {
       dispatch(clearCartCount());
     }
   }, [user, dispatch]);
-  // ====================================================
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === "logout") {
@@ -211,7 +327,9 @@ const Header: React.FC<HeaderProps> = () => {
                   <Avatar
                     size={28}
                     src={user?.image ?? user?.pictureUrl}
-                    icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
+                    icon={
+                      !(user?.image ?? user?.pictureUrl) && <UserOutlined />
+                    }
                     style={{ backgroundColor: "#D32F2F" }}
                   />
                   <span className="hidden lg:inline action-text">
@@ -227,6 +345,27 @@ const Header: React.FC<HeaderProps> = () => {
                 </Button>
               )}
             </Dropdown>
+
+            {/* Notification Bell — chỉ hiện khi đã đăng nhập là CUSTOMER */}
+            {isCustomer && (
+              <Popover
+                content={notifContent}
+                trigger="click"
+                open={notifOpen}
+                onOpenChange={setNotifOpen}
+                placement="bottomRight"
+              >
+                <button
+                  type="button"
+                  className="hdr-cart-btn"
+                  aria-label="Thông báo"
+                >
+                  <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+                    <BellOutlined className="hdr-cart-icon" />
+                  </Badge>
+                </button>
+              </Popover>
+            )}
 
             {/* Cart — chỉ icon + badge */}
             <button

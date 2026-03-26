@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,6 +46,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final ADOrderRepositoryCustom adOrderRepositoryCustom;
     private final EmailService emailService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -146,6 +148,23 @@ public class ADOrderServiceImpl implements ADOrderService {
             }
             //Gửi email thông báo (bất đồng bộ)
             sendStatusUpdateEmailAsync(hoaDonDaCapNhat, trangThaiMoi);
+
+            // Gửi WebSocket thông báo đến khách hàng
+            try {
+                if (hoaDonDaCapNhat.getCustomer() != null) {
+                    String customerId = hoaDonDaCapNhat.getCustomer().getId();
+                    Map<String, Object> clientNotif = new HashMap<>();
+                    clientNotif.put("type", "ORDER_STATUS");
+                    clientNotif.put("title", "Đơn hàng được cập nhật");
+                    clientNotif.put("message", "Đơn hàng " + hoaDonDaCapNhat.getCode() + " đã chuyển sang: " + getStatusText(trangThaiMoi));
+                    clientNotif.put("refId", hoaDonDaCapNhat.getId());
+                    clientNotif.put("refCode", hoaDonDaCapNhat.getCode());
+                    clientNotif.put("timestamp", System.currentTimeMillis());
+                    messagingTemplate.convertAndSend("/topic/client/notifications/" + customerId, clientNotif);
+                }
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo WebSocket đến khách hàng: {}", e.getMessage());
+            }
 
             log.info("Cập nhật trạng thái thành công cho hóa đơn: {}", request.getMaHoaDon());
 
@@ -466,7 +485,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private String getEmailSubject(OrderStatus status) {
         switch (status) {
             case DA_XAC_NHAN:
-                return "Xác nhận đơn hàng tại MyLaptop";
+                return "Xác nhận đơn hàng tại Hikari Store";
             case DANG_GIAO:
                 return "Đơn hàng của bạn đang được giao";
             case HOAN_THANH:
@@ -476,7 +495,7 @@ public class ADOrderServiceImpl implements ADOrderService {
             case CHO_GIAO:
                 return "Đơn hàng đã sẵn sàng để giao";
             default:
-                return "Cập nhật trạng thái đơn hàng tại MyLaptop";
+                return "Cập nhật trạng thái đơn hàng tại Hikari Store";
         }
     }
 
@@ -525,8 +544,8 @@ public class ADOrderServiceImpl implements ADOrderService {
 
                     <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
                         <p style="margin: 0; color: #666; font-size: 12px;">
-                            © 2024 MyLaptop Store. All rights reserved.<br>
-                            Địa chỉ: 123 Nguyễn Văn Linh, Quận 7, TP.HCM
+                            © 2026 Canon Hikari Store. All rights reserved.<br>
+                            Địa chỉ: Trường Cao đẳng FPT Polytechnic , Trịnh Văn Bô, Nam Từ Liêm, Hà Nội
                         </p>
                     </div>
                 </div>

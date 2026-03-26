@@ -29,6 +29,7 @@ import authReducer from "./auth/authSlice";
 import chatReducer from "./chat/chatSlice";
 import cartReducer from "./cart/cartSlice";
 import orderReducer from "./order/OrderSlice"
+import notificationReducer from "./notification/notificationSlice"
 
 
 export const store = configureStore({
@@ -60,6 +61,7 @@ export const store = configureStore({
     chat: chatReducer,
     cart: cartReducer,
     order: orderReducer,
+    notification: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

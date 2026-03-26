@@ -27,6 +27,8 @@ import org.springframework.util.StringUtils;
 
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -128,8 +130,13 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
 
     private void sendAdminAlert(String empId, BigDecimal diff) {
         try {
-            String message = String.format("Cảnh báo: Nhân viên %s kết ca lệch %s VND", empId, diff);
-            messagingTemplate.convertAndSend("/topic/admin/notifications", message);
+            Map<String, Object> notif = new HashMap<>();
+            notif.put("type", "SHIFT_ALERT");
+            notif.put("title", "Cảnh báo kết ca");
+            notif.put("message", String.format("Nhân viên %s kết ca lệch %,.0f VNĐ", empId, diff));
+            notif.put("refId", empId);
+            notif.put("timestamp", System.currentTimeMillis());
+            messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
         } catch (Exception e) {
             log.error("Lỗi gửi thông báo WebSocket: {}", e.getMessage());
         }

@@ -3,8 +3,10 @@ import {
   BellOutlined,
   CalendarOutlined,
   CameraOutlined,
+  CheckCircleOutlined,
   ClockCircleOutlined,
   CustomerServiceOutlined,
+  ExclamationCircleOutlined,
   IdcardOutlined,
   KeyOutlined,
   LineChartOutlined,
@@ -16,12 +18,13 @@ import {
   SettingOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
+  ShoppingOutlined,
   SwapOutlined,
   TagOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag } from "antd";
+import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag, Popover, List, Empty, Tooltip } from "antd";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,6 +32,8 @@ import { authActions } from "../../redux/auth/authSlice";
 import type { RootState } from "../../redux/store";
 import { getEmployeeById } from "../../api/employeeApi";
 import type { EmployeeResponse } from "../../models/employee";
+import { notificationActions, type AppNotification, type NotificationType } from "../../redux/notification/notificationSlice";
+import { useNotifications } from "../../app/useNotifications";
 
 const { Search } = Input;
 
@@ -150,6 +155,15 @@ const Header: React.FC = () => {
 
   const [employee, setEmployee] = useState<EmployeeResponse | null>(null);
   const [loadingEmployee] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  const notifications = useSelector(
+    (state: RootState) => state.notification.items
+  );
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Subscribe to admin WebSocket notifications
+  useNotifications("/topic/admin/notifications", !!user?.userId);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -168,6 +182,85 @@ const Header: React.FC = () => {
 
   const avatarSrc =
     employee?.employeeImage ?? user?.image ?? user?.pictureUrl ?? undefined;
+
+  // Notification helpers
+  const getNotifIcon = (type: NotificationType) => {
+    switch (type) {
+      case "NEW_ORDER":     return <ShoppingOutlined style={{ color: "#1890ff" }} />;
+      case "ORDER_STATUS":  return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
+      case "CHAT_REQUEST":  return <CustomerServiceOutlined style={{ color: "#fa8c16" }} />;
+      case "SHIFT_ALERT":   return <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />;
+    }
+  };
+
+  const notifContent = (
+    <div style={{ width: 340 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 8px" }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>Thông báo</span>
+        {unreadCount > 0 && (
+          <Button size="small" type="link" onClick={() => dispatch(notificationActions.markAllRead())}>
+            Đánh dấu tất cả đã đọc
+          </Button>
+        )}
+      </div>
+      {notifications.length === 0 ? (
+        <Empty description="Chưa có thông báo" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ margin: "16px 0" }} />
+      ) : (
+        <List
+          dataSource={notifications.slice(0, 20)}
+          style={{ maxHeight: 400, overflowY: "auto" }}
+          renderItem={(item: AppNotification) => (
+            <List.Item
+              key={item.id}
+              style={{
+                background: item.read ? "transparent" : "#e6f4ff",
+                borderRadius: 6,
+                padding: "8px 10px",
+                cursor: item.refCode ? "pointer" : "default",
+                marginBottom: 4,
+              }}
+              onClick={() => {
+                dispatch(notificationActions.markRead(item.id));
+                if (item.type === "NEW_ORDER" || item.type === "ORDER_STATUS") {
+                  navigate("/orders");
+                } else if (item.type === "CHAT_REQUEST") {
+                  navigate("/EChatAi");
+                } else if (item.type === "SHIFT_ALERT") {
+                  navigate("/shift-handover");
+                }
+                setNotifOpen(false);
+              }}
+            >
+              <List.Item.Meta
+                avatar={<span style={{ fontSize: 20 }}>{getNotifIcon(item.type)}</span>}
+                title={
+                  <span style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}>
+                    {item.title}
+                  </span>
+                }
+                description={
+                  <div>
+                    <div style={{ fontSize: 12, color: "#595959", marginBottom: 2 }}>{item.message}</div>
+                    <div style={{ fontSize: 11, color: "#aaa" }}>
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      {new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      )}
+      {notifications.length > 0 && (
+        <div style={{ textAlign: "center", borderTop: "1px solid #f0f0f0", paddingTop: 8, marginTop: 4 }}>
+          <Button size="small" type="link" danger onClick={() => dispatch(notificationActions.clear())}>
+            Xóa tất cả
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   const defaultPageInfo = {
     title: "Hikari Admin",
@@ -194,7 +287,6 @@ const Header: React.FC = () => {
   if (breadcrumb.length === 0)
     breadcrumb = [{ title: defaultPageInfo.title, icon: defaultPageInfo.icon }];
 
-  //xử lý khi chọn menu
 
   const handleSearch = (value: string) => {
     console.log("Header search:", value);
@@ -307,13 +399,25 @@ const Header: React.FC = () => {
         </div>
 
         <div className="header-actions">
-          <Badge count={5} size="small" offset={[-2, 4]}>
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              className="header-action-btn"
-            />
-          </Badge>
+          <Tooltip title="Thông báo">
+            <Popover
+              content={notifContent}
+              trigger="click"
+              placement="bottomRight"
+              open={notifOpen}
+              onOpenChange={setNotifOpen}
+              overlayStyle={{ padding: 0 }}
+              overlayInnerStyle={{ padding: "12px 16px", minWidth: 340 }}
+            >
+              <Badge count={unreadCount} size="small" offset={[-2, 4]}>
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  className="header-action-btn"
+                />
+              </Badge>
+            </Popover>
+          </Tooltip>
 
           <Dropdown
             dropdownRender={() => profileDropdown}

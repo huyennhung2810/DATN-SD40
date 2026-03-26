@@ -13,18 +13,22 @@ import com.example.datn.infrastructure.payment.VNPayService;
 import com.example.datn.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CnOrderServiceImpl implements CnOrderService {
 
     private final CustomerRepository customerRepository;
@@ -35,8 +39,9 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final VNPayService vnPayService;
 
-    // TIÊM THÊM REPOSITORY CỦA VOUCHER VÀO ĐÂY
     private final VoucherRepository voucherRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -177,7 +182,21 @@ public class CnOrderServiceImpl implements CnOrderService {
             cartDetailRepository.deleteAll(cartItems);
         }
 
-        // 8. Trả về kết quả
+        // 8. Gửi thông báo WebSocket cho Admin
+        try {
+            Map<String, Object> notif = new HashMap<>();
+            notif.put("type", "NEW_ORDER");
+            notif.put("title", "Đơn hàng mới");
+            notif.put("message", "Khách hàng " + customer.getName() + " vừa đặt đơn hàng " + savedOrder.getCode());
+            notif.put("refId", savedOrder.getId());
+            notif.put("refCode", savedOrder.getCode());
+            notif.put("timestamp", System.currentTimeMillis());
+            messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
+        } catch (Exception e) {
+            log.warn("Không thể gửi thông báo WebSocket: {}", e.getMessage());
+        }
+
+        // 9. Trả về kết quả
         if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
             // Truyền totalAfterDiscount sang VNPay
             String paymentUrl = vnPayService.createPaymentUrl(
