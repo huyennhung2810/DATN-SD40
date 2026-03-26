@@ -23,9 +23,21 @@ const AUTH_WHITELIST = [
     "/auth/verify-otp"
 ];
 
+// Đọc token: sessionStorage trước (admin tab), rồi localStorage (client)
+const readToken = (key: string): string | null =>
+    sessionStorage.getItem(key) ?? localStorage.getItem(key);
+
+// Ghi token vào đúng storage sau khi refresh (giữ nguyên loại storage ban đầu)
+const writeRefreshedTokens = (accessToken: string, newRefreshToken?: string) => {
+    const useSession = !!sessionStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    const storage = useSession ? sessionStorage : localStorage;
+    storage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    if (newRefreshToken) storage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+};
+
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+        const token = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
         const isAuthApi = AUTH_WHITELIST.some(url => 
             config.url === url || config.url?.endsWith(url)
         );
@@ -56,11 +68,9 @@ axiosClient.interceptors.response.use(
 
         // 1. Xử lý lỗi 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
-            const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-            const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
+            const refreshToken = readToken(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+            const storedUser = readToken(AUTH_STORAGE_KEYS.USER);
             if (!refreshToken) {
-                // Chỉ hiện thông báo khi người dùng ĐÃ từng đăng nhập (có user trong storage)
-                // Không làm gì khi người dùng chưa đăng nhập lần nào
                 if (storedUser) {
                     message.warning({
                         content: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
@@ -81,13 +91,9 @@ axiosClient.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
             try {
-                // Dùng axios (global instance) để tránh interceptor của axiosClient gây loop
                 const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-                localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-                if (newRefreshToken) {
-                    localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-                }
+                writeRefreshedTokens(accessToken, newRefreshToken);
                 processQueue(null, accessToken);
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return axiosClient(originalRequest);
@@ -120,11 +126,18 @@ axiosClient.interceptors.response.use(
 );
 
 function handleGlobalLogout() {
-    // Dispatch action này sẽ xóa localStorage và reset Redux State cùng lúc
     store.dispatch(authActions.logoutAction());
-    
-    if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+
+    // Phân biệt admin vs client để redirect đúng trang đăng nhập
+    const path = window.location.pathname;
+    const isAdminPath = path.startsWith('/admin') || (
+        !path.startsWith('/client') &&
+        !path.startsWith('/login') &&
+        !path.startsWith('/register')
+    );
+    const redirectPath = isAdminPath ? '/admin/login' : '/login';
+    if (path !== redirectPath) {
+        window.location.href = redirectPath;
     }
 }
 

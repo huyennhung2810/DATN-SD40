@@ -14,24 +14,38 @@ interface AuthState {
   error: string | null;
 }
 
-// Khôi phục trạng thái an toàn từ localStorage
+// Admin dùng sessionStorage (cô lập theo tab), Client dùng localStorage
+const ADMIN_ROLES = ["ADMIN", "STAFF"];
+
+const getAuthStorage = (user?: AuthUser | null): Storage => {
+  if (user?.roles?.some((r) => ADMIN_ROLES.includes(r))) return sessionStorage;
+  return localStorage;
+};
+
+// Đọc từ sessionStorage trước (tab admin), rồi localStorage (client)
+const readToken = (key: string): string | null =>
+  sessionStorage.getItem(key) ?? localStorage.getItem(key);
+
+const clearAllStorage = (key: string) => {
+  sessionStorage.removeItem(key);
+  localStorage.removeItem(key);
+};
+
+// Khôi phục trạng thái an toàn – ưu tiên sessionStorage (admin tab)
 const getInitialState = (): AuthState => {
   try {
-    const accessToken = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-    const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-    const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
+    const accessToken = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = readToken(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    const storedUser = readToken(AUTH_STORAGE_KEYS.USER);
 
     if (!accessToken && !refreshToken) {
-      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+      clearAllStorage(AUTH_STORAGE_KEYS.USER);
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
-    // Access token hết hạn nhưng còn refresh token → giữ đăng nhập
-    // axiosClient interceptor sẽ tự refresh khi có API call đầu tiên
     if (accessToken && isTokenExpired(accessToken)) {
       if (refreshToken && storedUser) {
-        // Xóa access token cũ, giữ refresh token và user
-        localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+        clearAllStorage(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
         return {
           user: JSON.parse(storedUser),
           isLoggedIn: true,
@@ -39,10 +53,9 @@ const getInitialState = (): AuthState => {
           error: null,
         };
       }
-      // Không có refresh token → buộc đăng xuất
-      localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+      clearAllStorage(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      clearAllStorage(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      clearAllStorage(AUTH_STORAGE_KEYS.USER);
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
@@ -106,10 +119,12 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
 
-      localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
+      // Admin/Staff → sessionStorage (cô lập tab), Customer → localStorage
+      const storage = getAuthStorage(user);
+      storage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      storage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
       if (refreshToken) {
-        localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        storage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
       }
     },
 
@@ -124,9 +139,10 @@ const authSlice = createSlice({
       state.isLoggedIn = false;
       state.loading = false;
       state.error = null;
-      localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-      localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+      // Xóa cả 2 storage để đảm bảo sạch hoàn toàn trong tab hiện tại
+      clearAllStorage(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      clearAllStorage(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      clearAllStorage(AUTH_STORAGE_KEYS.USER);
     },
 
     registerSuccess: (state) => {
@@ -140,10 +156,8 @@ const authSlice = createSlice({
     setUserImage: (state, action: PayloadAction<string | undefined>) => {
       if (state.user) {
         state.user.image = action.payload;
-        localStorage.setItem(
-          AUTH_STORAGE_KEYS.USER,
-          JSON.stringify(state.user),
-        );
+        const storage = getAuthStorage(state.user);
+        storage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(state.user));
       }
     },
   },
