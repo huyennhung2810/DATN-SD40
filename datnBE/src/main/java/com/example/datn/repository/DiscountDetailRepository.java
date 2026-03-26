@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface DiscountDetailRepository  extends JpaRepository<DiscountDetail, String> {
+
+    // Thêm duy nhất dòng này:
+    DiscountDetail findFirstByProductDetail_IdAndStatus(String productDetailId, Integer status);
+
 }

@@ -7,13 +7,16 @@ import com.example.datn.core.client.cartDetail.repository.CnCartDetailRepository
 import com.example.datn.core.client.cartDetail.service.CnCartDetailService;
 import com.example.datn.entity.Cart;
 import com.example.datn.entity.CartDetail;
+import com.example.datn.entity.DiscountDetail;
 import com.example.datn.entity.ProductDetail;
+import com.example.datn.repository.DiscountDetailRepository;
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.repository.ProductImageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +30,7 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
     private final CartService CartService;
     private final ProductDetailRepository productDetailRepository;
     private final ProductImageRepository productImageRepository;
-
+    private final DiscountDetailRepository discountDetailRepository;
     @Override
     @Transactional
     public CartDetail addToCart(String customerId, AddToCartRequest request) {
@@ -90,47 +93,47 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             return cnCartDetailRepository.save(newDetail);
         }
     }
-        @Override
-        @Transactional
-        public List<CartItemResponse> getCartDetails (String customerId){
-            // 1. Tìm giỏ hàng của khách này
-            Cart cart = CartService.getOrCreateCart(customerId);
+    @Override
+    @Transactional
+    public List<CartItemResponse> getCartDetails (String customerId){
+        // 1. Tìm giỏ hàng của khách này
+        Cart cart = CartService.getOrCreateCart(customerId);
 
-            // 2. Tìm tất cả chi tiết giỏ hàng (CartDetail) thuộc về Giỏ hàng này
-            // (Bạn cần có hàm findByCart_Id trong CnCartDetailRepository nhé)
-            List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
+        // 2. Tìm tất cả chi tiết giỏ hàng
+        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
 
-            // 3. Biến đổi dữ liệu (Map) từ Entity lằng nhằng sang DTO gọn nhẹ cho Frontend dễ đọc
-            List<CartItemResponse> responseList = new ArrayList<>();
+        List<CartItemResponse> responseList = new ArrayList<>();
 
-            for (CartDetail cd : cartDetails) {
-                CartItemResponse dto = new CartItemResponse();
+        for (CartDetail cd : cartDetails) {
+            CartItemResponse dto = new CartItemResponse();
 
-                dto.setId(cd.getId()); // Cực kỳ quan trọng: Đây là ID của CartDetail, không phải Product
+            dto.setId(cd.getId());
+            dto.setProductId(cd.getProductDetail().getProduct().getId());
+            dto.setProductName(cd.getProductDetail().getProduct().getName());
+            dto.setVersion(cd.getProductDetail().getVersion());
+            String Image = productImageRepository.findUrlById(cd.getProductDetail().getSelectedImageId());
+            dto.setImageUrl(Image);
 
-                // Lấy thông tin từ ProductDetail và Product
-                // (Tuỳ vào Entity của bạn, hãy sửa lại getProductDetail().getProduct()... cho đúng)
-                dto.setProductId(cd.getProductDetail().getProduct().getId());
-                dto.setProductName(cd.getProductDetail().getProduct().getName());
+            // Gán giá gốc
+            BigDecimal originalPrice = cd.getProductDetail().getSalePrice();
+            dto.setPrice(originalPrice);
 
-                // Ghép tên phân loại (Ví dụ chỉ lấy màu sắc)
-                dto.setVariantName(cd.getProductDetail().getColor().getName());
+            dto.setQuantity(cd.getQuantity());
+            dto.setStock(cd.getProductDetail().getQuantity());
+            String productDetailId = cd.getProductDetail().getId();
 
-                // Lấy ảnh: Chỗ này tuỳ vào logic lưu ảnh của bạn (VD lấy ảnh đầu tiên của Product)
-                // Tạm thời mình set 1 ảnh mặc định để test, bạn có thể gọi ProductImageRepository để lấy ảnh thật sau
-
-
-               String Image = productImageRepository.findUrlById(cd.getProductDetail().getSelectedImageId());
-                dto.setImageUrl(Image);
-                dto.setPrice(cd.getProductDetail().getSalePrice());
-                dto.setQuantity(cd.getQuantity()); // Số lượng trong giỏ
-                dto.setStock(cd.getProductDetail().getQuantity()); // Tồn kho thực tế
-
-                responseList.add(dto);
+            DiscountDetail activeDiscount = discountDetailRepository.findFirstByProductDetail_IdAndStatus(productDetailId, 1);
+            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+            } else {
+                dto.setDiscountedPrice(originalPrice);
             }
 
-            return responseList;
+            responseList.add(dto);
         }
+
+        return responseList;
+    }
     @Override
     @Transactional
     public void updateQuantity(String cartDetailId, Integer quantity) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col, Button, InputNumber, Typography, Tag, Divider, Breadcrumb, message, Spin } from "antd";
-import { ShoppingCartOutlined, HomeOutlined, SafetyCertificateOutlined, TruckOutlined } from "@ant-design/icons";
+import { Row, Col, Button, InputNumber, Typography, Tag, Divider, Breadcrumb, message, Spin, Descriptions } from "antd";
+import { ShoppingCartOutlined, HomeOutlined, SafetyCertificateOutlined, TruckOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { increaseCartCount } from "../../redux/cart/cartSlice";
@@ -84,6 +84,9 @@ const ProductDetail: React.FC = () => {
   const displayOriginalPrice = activeVariant ? (activeVariant.originalPrice ?? activeVariant.salePrice) : product.originalPrice;
   const maxStock = activeVariant ? activeVariant.stock : 1;
 
+  // LẤY TRỰC TIẾP TỪ BACKEND (Nếu BE chưa trả về hoặc sản phẩm ko có thông số thì dùng mảng rỗng)
+  const specifications = product.specifications || [];
+
   return (
     <div className="hikari-product-detail">
       <div className="hikari-container">
@@ -99,7 +102,7 @@ const ProductDetail: React.FC = () => {
             <Col xs={24} md={10} lg={10}>
               <div className="image-showcase">
                 <div className="main-image-box">
-                  <img src={mainImage} alt={product.name} />
+                  <img src={mainImage || "https://via.placeholder.com/400"} alt={product.name} />
                 </div>
                 <div className="thumbnail-list">
                   {product.images?.map((img: string, index: number) => (
@@ -214,6 +217,35 @@ const ProductDetail: React.FC = () => {
               </div>
             </Col>
           </Row>
+
+          {/* ========================================= */}
+          {/* KHU VỰC THÔNG SỐ KỸ THUẬT NẰM Ở ĐÂY */}
+          {/* ========================================= */}
+          {specifications.length > 0 && (
+            <>
+              <Divider style={{ marginTop: '40px' }} />
+              <div className="specifications-section">
+                <Title level={4} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                  <SettingOutlined /> Thông số kỹ thuật
+                </Title>
+                
+                <Descriptions 
+                  bordered 
+                  column={1} /* <--- SỬA CHỖ NÀY: Ép bảng chỉ có 1 cột thông số mỗi dòng (1 Tên - 1 Data) */
+                  size="middle"
+                  labelStyle={{ width: '30%', minWidth: '150px', fontWeight: '600', backgroundColor: '#fafafa', color: '#555' }}
+                  contentStyle={{ backgroundColor: '#fff' }} /* Bỏ width ở content để nó tự kéo dãn hết phần còn lại */
+                >
+                  {specifications.map((spec: any, index: number) => (
+                    <Descriptions.Item key={index} label={spec.name}>
+                      {spec.value}
+                    </Descriptions.Item>
+                  ))}
+                </Descriptions>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
 
@@ -271,6 +303,9 @@ const ProductDetail: React.FC = () => {
         .icon { font-size: 20px; }
         .icon.green { color: #52c41a; }
         .icon.blue { color: #1890ff; }
+
+        /* Thông số kỹ thuật */
+        .specifications-section { background: #fff; border-radius: 12px; padding: 10px 0; }
 
         @media (max-width: 768px) {
           .action-buttons { flex-direction: column; }

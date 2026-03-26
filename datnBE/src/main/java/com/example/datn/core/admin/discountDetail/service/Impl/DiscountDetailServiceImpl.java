@@ -64,9 +64,19 @@
         }
 
         private BigDecimal calculatePriceAfter(BigDecimal originalPrice, BigDecimal discountPercent) {
-            BigDecimal discountFactor = BigDecimal.valueOf(100).subtract(discountPercent);
-            // Thêm RoundingMode.HALF_UP để làm tròn số tiền một cách an toàn
+
+            if (originalPrice == null) {
+                return BigDecimal.ZERO;
+            }
+            if (discountPercent == null || discountPercent.compareTo(BigDecimal.ZERO) <= 0) {
+                return originalPrice;
+            }
+            if (discountPercent.compareTo(new BigDecimal("100")) >= 0) {
+                return BigDecimal.ZERO;
+            }
+            BigDecimal discountFactor = new BigDecimal("100").subtract(discountPercent);
+
             return originalPrice.multiply(discountFactor)
-                    .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
+                    .divide(new BigDecimal("100"), 0, java.math.RoundingMode.HALF_UP);
         }
     }

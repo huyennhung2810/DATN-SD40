@@ -11,6 +11,7 @@ import com.example.datn.core.client.product.service.ProductPricingService;
 import com.example.datn.entity.Product;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
+import com.example.datn.entity.TechSpec;
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.repository.ProductImageRepository;
 import com.example.datn.repository.ProductRepository;
@@ -77,6 +78,61 @@ public class CnProductServiceImpl implements CnProductService {
         List<CnVariantResponse> variants = details.stream()
                 .map(detail -> mapToVariantResponse(detail, activeDiscounts))
                 .collect(Collectors.toList());
+// ==========================================
+        // 6.5 LẤY CÁC THÔNG SỐ KỸ THUẬT TỪ BẢNG TECH_SPEC
+        // ==========================================
+        List<CnProductResponse.TechSpecDto> specDtos = new ArrayList<>();
+
+        // Kiểm tra xem sản phẩm có thông số kỹ thuật (tech_spec) không
+        if (product.getTechSpec() != null) {
+            TechSpec ts = product.getTechSpec();
+
+            // Ghi chú: Nếu các trường này trong file TechSpec.java của bạn là kiểu String, thì code dưới đây chạy ngay lập tức.
+            // NẾU chúng là dạng Object (@ManyToOne), bạn chỉ cần thêm .getName() vào cuối. VD: ts.getSensorType().getName()
+
+            if (ts.getSensorType() != null && !ts.getSensorType().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Loại cảm biến", ts.getSensorType()));
+            }
+
+            if (ts.getResolution() != null && !ts.getResolution().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Độ phân giải", ts.getResolution()));
+            }
+
+            if (ts.getProcessor() != null && !ts.getProcessor().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Bộ xử lý", ts.getProcessor()));
+            }
+
+            if (ts.getImageFormat() != null && !ts.getImageFormat().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Định dạng ảnh", ts.getImageFormat()));
+            }
+
+            if (ts.getVideoFormat() != null && !ts.getVideoFormat().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Định dạng video", ts.getVideoFormat()));
+            }
+
+            if (ts.getIso() != null && !ts.getIso().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("ISO", ts.getIso()));
+            }
+
+            if (ts.getLensMount() != null && !ts.getLensMount().isEmpty()) {
+                specDtos.add(new CnProductResponse.TechSpecDto("Mount ống kính", ts.getLensMount()));
+            }
+        }
+
+    /* // [TÙY CHỌN NÂNG CAO]
+    // Nếu sau này bạn muốn lấy thêm các "Thông số động" từ bảng tech_spec_value thì mở comment đoạn này:
+
+    List<TechSpecValue> dynamicValues = techSpecValueRepository.findByProduct_Id(product.getId());
+    if (dynamicValues != null && !dynamicValues.isEmpty()) {
+        for (TechSpecValue val : dynamicValues) {
+            String specName = val.getTechSpecDefinition().getName();
+            String specValue = val.getDisplayValue(); // Cột display_value trong DB của bạn
+            specDtos.add(new CnProductResponse.TechSpecDto(specName, specValue));
+        }
+    }
+    */
+
+
 
         // 7. Build Response
         CnProductResponse response = new CnProductResponse();
@@ -91,7 +147,7 @@ public class CnProductServiceImpl implements CnProductService {
         response.setDiscountPercent(productPricing.getDiscountPercent());
         response.setImages(imageUrls);
         response.setVariants(variants);
-
+        response.setSpecifications(specDtos);
         return response;
     }
 

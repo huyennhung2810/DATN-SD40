@@ -4,7 +4,7 @@ import { DeleteOutlined, ShoppingOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
-import { setCartCount } from "../../redux/cart/cartSlice"; // Cập nhật lại tổng số loại SP trên Header
+import { setCartCount } from "../../redux/cart/cartSlice"; 
 import axiosClient from "../../api/axiosClient";
 
 const { Title, Text } = Typography;
@@ -16,29 +16,30 @@ const CartPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
+  
+  // 1. STATE MỚI: Lưu danh sách ID các sản phẩm được tích chọn (Checkbox)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const fetchCartItems = async () => {
     if (!user || !user.userId) return;
     setLoading(true);
     try {
       const response = await axiosClient.get(`/client/cart?customerId=${user.userId}`);
-      
-      // KIỂM TRA ĐẢM BẢO DATA LÀ MỘT MẢNG (ARRAY)
-      const data = response.data;
+      const data = response.data;    
+      console.log(data);
       if (Array.isArray(data)) {
         setCartItems(data);
         dispatch(setCartCount(data.length));
+        // Mặc định chọn tất cả sản phẩm khi mới vào giỏ hàng (nếu muốn)
+        // setSelectedRowKeys(data.map(item => item.id));
       } else {
-        // Nếu BE trả về null hoặc chuỗi chữ, gán tạm mảng rỗng để không bị sập
-        console.warn("API không trả về một mảng:", data);
         setCartItems([]);
-        dispatch(setCartCount(0));
+        dispatch(setCartCount(0));  
       }
-      
     } catch (error) {
       console.error("Lỗi khi tải giỏ hàng:", error);
       message.error("Không thể tải giỏ hàng!");
-      setCartItems([]); // Gặp lỗi cũng gán mảng rỗng
+      setCartItems([]);
     } finally {
       setLoading(false);
     }
@@ -48,34 +49,28 @@ const CartPage: React.FC = () => {
     fetchCartItems();
   }, [user]);
 
- // 2. CẬP NHẬT SỐ LƯỢNG (Gọi API Update)
   const handleUpdateQuantity = async (cartDetailId: string, newQuantity: number | null) => {
     if (!newQuantity || newQuantity < 1) return;
     try {
-      // Đã mở khóa gọi API Backend
       await axiosClient.put(`/client/cart/update/${cartDetailId}?quantity=${newQuantity}`);
-      
-      // Cập nhật State ở FE để nhìn thấy thay đổi ngay lập tức
       const updatedCart = cartItems.map(item => 
         item.id === cartDetailId ? { ...item, quantity: newQuantity } : item
       );
       setCartItems(updatedCart);
-      message.success("Đã cập nhật số lượng");
     } catch (error) {
       message.error("Lỗi cập nhật số lượng!");
     }
   };
 
-  // 3. XÓA SẢN PHẨM KHỎI GIỎ (Gọi API Delete)
   const handleDeleteItem = async (cartDetailId: string) => {
     try {
-      // Đã mở khóa gọi API Backend
       await axiosClient.delete(`/client/cart/remove/${cartDetailId}`);
-      
-      // Xóa ở FE và cập nhật lại số đếm trên Header
       const newCart = cartItems.filter(item => item.id !== cartDetailId);
       setCartItems(newCart);
       dispatch(setCartCount(newCart.length)); 
+      
+      // Xóa luôn ID đó khỏi danh sách đang chọn (nếu có)
+      setSelectedRowKeys(prev => prev.filter(key => key !== cartDetailId));
       message.success("Đã xóa sản phẩm khỏi giỏ hàng");
     } catch (error) {
       message.error("Lỗi khi xóa sản phẩm!");
@@ -86,14 +81,31 @@ const CartPage: React.FC = () => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
   };
 
-// Tính tổng tiền giỏ hàng (Chống sập nếu cartItems bị undefined)
-  const totalPrice = (cartItems || []).reduce((sum, item) => sum + ((item?.price || 0) * (item?.quantity || 0)), 0);
+  // 2. LOGIC TÍNH TIỀN MỚI: Chỉ tính tổng tiền của những sản phẩm ĐƯỢC CHỌN (có trong selectedRowKeys)
+  const selectedCartItems = cartItems.filter(item => selectedRowKeys.includes(item.id));
+  const totalPrice = selectedCartItems.reduce((sum, item) => {
+    const currentPrice = (item.discountedPrice && item.discountedPrice < item.price) 
+                          ? item.discountedPrice 
+                          : (item.price || 0);
+    return sum + (currentPrice * (item.quantity || 0));
+  }, 0);
 
-  // Cấu hình các cột cho Bảng Giỏ Hàng
+  // 3. XỬ LÝ THANH TOÁN: Bắt lỗi nếu chưa chọn gì
+  const handleCheckout = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!");
+      return;
+    }
+    // Chuyển sang trang thanh toán, truyền theo danh sách ID sản phẩm đã chọn
+    navigate('/client/checkout', { state: { selectedCartItemIds: selectedRowKeys } });
+  };
+
+  // 4. CẤU HÌNH CỘT: Thêm width (%) để bảng tự co giãn, không bị tràn ngang
   const columns = [
     {
       title: 'Sản phẩm',
       key: 'product',
+      width: '40%', // Chiếm 40% chiều rộng
       render: (record: any) => (
         <div className="cart-product-col">
           <img 
@@ -103,7 +115,7 @@ const CartPage: React.FC = () => {
           />
           <div className="cart-product-info">
             <div className="cart-product-name">{record.productName || "Tên sản phẩm"}</div>
-            <div className="cart-product-variant">{record.variantName || "Phân loại"}</div>
+            <div className="cart-product-variant">{record.version || "Version"}</div>
           </div>
         </div>
       ),
@@ -112,15 +124,32 @@ const CartPage: React.FC = () => {
       title: 'Đơn giá',
       dataIndex: 'price',
       key: 'price',
-      render: (price: number) => <span className="cart-price">{formatPrice(price || 0)}</span>,
+      width: '20%',
+      render: (price: number, record: any) => {
+        const hasDiscount = record.discountedPrice && record.discountedPrice < price;
+        if (hasDiscount) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span className="cart-price" style={{ color: '#ff4d4f', fontWeight: '600' }}>
+                {formatPrice(record.discountedPrice)}
+              </span>
+              <span style={{ textDecoration: 'line-through', color: '#8c8c8c', fontSize: '13px' }}>
+                {formatPrice(price || 0)}
+              </span>
+            </div>
+          );
+        }
+        return <span className="cart-price">{formatPrice(price || 0)}</span>;
+      },
     },
     {
       title: 'Số lượng',
       key: 'quantity',
+      width: '15%',
       render: (record: any) => (
         <InputNumber 
           min={1} 
-          max={record.stock || 99} // Tồn kho tối đa
+          max={record.stock || 99} 
           value={record.quantity} 
           onChange={(val) => handleUpdateQuantity(record.id, val)}
         />
@@ -129,13 +158,23 @@ const CartPage: React.FC = () => {
     {
       title: 'Thành tiền',
       key: 'total',
-      render: (record: any) => (
-        <span className="cart-total-price">{formatPrice((record.price || 0) * (record.quantity || 1))}</span>
-      ),
+      width: '15%',
+      render: (record: any) => {
+        const currentPrice = (record.discountedPrice && record.discountedPrice < record.price) 
+                              ? record.discountedPrice 
+                              : (record.price || 0);
+        return (
+          <span className="cart-total-price">
+            {formatPrice(currentPrice * (record.quantity || 1))}
+          </span>
+        );
+      },
     },
     {
       title: 'Thao tác',
       key: 'action',
+      width: '10%',
+      align: 'center' as const,
       render: (record: any) => (
         <Popconfirm
           title="Xóa sản phẩm này?"
@@ -150,6 +189,14 @@ const CartPage: React.FC = () => {
       ),
     },
   ];
+
+  // 5. CẤU HÌNH CHECKBOX CHO BẢNG
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+  };
 
   if (!user || !user.userId) {
     return (
@@ -182,37 +229,35 @@ const CartPage: React.FC = () => {
           <div className="cart-layout">
             <div className="cart-table-section">
               <Table 
+                rowSelection={rowSelection} // Kích hoạt Checkbox
                 dataSource={cartItems} 
                 columns={columns} 
                 rowKey="id" 
                 pagination={false}
-                scroll={{ x: 800 }} // Cuộn ngang trên mobile
+            
               />
             </div>
             <div className="cart-summary-section">
               <div className="summary-card">
                 <Title level={4} className="summary-title">Tổng đơn hàng</Title>
+                <Text type="secondary">Đã chọn {selectedRowKeys.length} sản phẩm</Text>
                 <Divider className="my-3" />
                 <div className="summary-row">
                   <Text>Tạm tính:</Text>
                   <Text strong>{formatPrice(totalPrice)}</Text>
-                </div>
-                <div className="summary-row">
-                  <Text>Phí vận chuyển:</Text>
-                  <Text type="success">Miễn phí</Text>
-                </div>
+                </div>              
                 <Divider className="my-3" />
                 <div className="summary-row total-row">
                   <Text strong className="text-lg">Tổng cộng:</Text>
                   <Text strong className="text-2xl text-red-600">{formatPrice(totalPrice)}</Text>
                 </div>
-                <Text type="secondary" className="text-xs text-right block mb-4">(Đã bao gồm VAT)</Text>
+               
                 <Button 
                   type="primary" 
                   size="large" 
                   block 
                   className="checkout-btn"
-                  onClick={() => navigate('/client/checkout')}
+                  onClick={handleCheckout} // Sử dụng hàm handleCheckout có bắt lỗi
                 >
                   TIẾN HÀNH THANH TOÁN
                 </Button>
@@ -240,7 +285,8 @@ const CartPage: React.FC = () => {
         .empty-icon { font-size: 64px; color: #ccc; margin-bottom: 20px; }
 
         .cart-layout { display: flex; gap: 30px; align-items: flex-start; }
-        .cart-table-section { flex: 1; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        /* Tối ưu lại phần bảng để không bị tràn */
+        .cart-table-section { flex: 1; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; min-width: 0; }
         .cart-summary-section { width: 350px; flex-shrink: 0; position: sticky; top: 100px; }
         
         /* Table Styles */

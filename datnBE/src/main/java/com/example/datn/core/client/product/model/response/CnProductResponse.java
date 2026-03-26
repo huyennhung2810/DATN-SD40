@@ -49,4 +49,19 @@ public class CnProductResponse {
     private List<String> images;
 
     private List<CnVariantResponse> variants;
+    // 1. Khai báo danh sách thông số kỹ thuật trả về cho Frontend
+    private List<TechSpecDto> specifications;
+
+    // 2. Tạo một DTO nhỏ bên trong (hoặc tạo file TechSpecDto.java riêng lẻ tùy bạn) để chứa cặp Tên - Giá trị
+    @Getter
+    @Setter
+    public static class TechSpecDto {
+        private String name;
+        private String value;
+
+        public TechSpecDto(String name, String value) {
+            this.name = name;
+            this.value = value;
+        }
+    }
 }
