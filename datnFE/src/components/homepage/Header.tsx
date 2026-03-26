@@ -22,6 +22,8 @@ import {
   LoginOutlined,
   BellOutlined,
   CheckCircleOutlined,
+  FileSearchOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import type { RootState } from "../../redux/store";
@@ -305,6 +307,26 @@ const Header: React.FC<HeaderProps> = () => {
               className="md:hidden header-icon-btn"
               onClick={() => setMobileSearchVisible(true)}
             />
+
+            {/* Tra cứu đơn hàng */}
+            <button
+              type="button"
+              className="hdr-shortcut-btn hidden lg:flex"
+              onClick={() => navigate("/client/orders")}
+            >
+              <FileSearchOutlined className="hdr-shortcut-icon" />
+              <span className="hdr-shortcut-text">Tra cứu đơn hàng</span>
+            </button>
+
+            {/* Phiếu giảm giá */}
+            <button
+              type="button"
+              className="hdr-shortcut-btn hidden lg:flex"
+              onClick={() => navigate("/client/vouchers")}
+            >
+              <TagOutlined className="hdr-shortcut-icon" />
+              <span className="hdr-shortcut-text">Phiếu giảm giá</span>
+            </button>
 
             {/* Wishlist */}
             <Button
@@ -679,6 +701,38 @@ const Header: React.FC<HeaderProps> = () => {
         .action-text {
           font-size: 13px;
           color: rgba(255, 255, 255, 0.88);
+        }
+
+        .hdr-shortcut-btn {
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.88);
+          cursor: pointer;
+          padding: 6px 10px;
+          border-radius: 8px;
+          transition: background 0.2s, color 0.2s;
+          min-width: 72px;
+        }
+
+        .hdr-shortcut-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+        }
+
+        .hdr-shortcut-icon {
+          font-size: 22px;
+          line-height: 1;
+        }
+
+        .hdr-shortcut-text {
+          font-size: 11px;
+          line-height: 1.2;
+          white-space: nowrap;
+          color: inherit;
         }
 
         .hdr-cart-btn {
