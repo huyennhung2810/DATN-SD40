@@ -273,7 +273,7 @@ const Header: React.FC<HeaderProps> = () => {
                 <button
                   type="button"
                   className="utility-btn"
-                  onClick={() => navigate("/client/vouchers")}
+                  onClick={() => navigate("/client/profile?tab=vouchers")}
                 >
                   <TagOutlined /> Khuyến mãi
                 </button>

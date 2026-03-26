@@ -28,24 +28,25 @@ import {
   LogoutOutlined,
   TagOutlined,
   CalendarOutlined,
-  IdcardOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   CheckCircleFilled,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { RootState } from "../../redux/store";
 import type { CustomerResponse } from "../../models/customer";
 import type { AddressRequest, AddressResponse } from "../../models/address";
 import { getProfile, updateProfile } from "../../api/clientProfileApi";
 import { authActions } from "../../redux/auth/authSlice";
+import VoucherPage from "./VoucherPage";
 
 const ProfilePage: React.FC = () => {
   const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [profileForm] = Form.useForm();
   const [addrForm] = Form.useForm();
 
@@ -53,7 +54,10 @@ const ProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [savingAddr, setSavingAddr] = useState(false);
   const [profile, setProfile] = useState<CustomerResponse | null>(null);
-  const [activeMenu, setActiveMenu] = useState("profile");
+  const [activeMenu, setActiveMenu] = useState(() => {
+    const tab = searchParams.get("tab");
+    return tab === "vouchers" ? "vouchers" : "profile";
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -320,7 +324,9 @@ const ProfilePage: React.FC = () => {
 
   const menuItems = [
     { key: "profile", label: "Hồ sơ", icon: <UserOutlined /> },
-    { key: "orders", label: "Đơn mua", icon: <ShoppingOutlined /> },
+    { key: "addresses", label: "Địa chỉ", icon: <EnvironmentOutlined /> },
+    { key: "orders", label: "Quản lý đơn hàng", icon: <ShoppingOutlined /> },
+
     { key: "vouchers", label: "Phiếu giảm giá", icon: <TagOutlined /> },
     { key: "password", label: "Đổi mật khẩu", icon: <LockOutlined /> },
   ];
@@ -419,35 +425,6 @@ const ProfilePage: React.FC = () => {
                       border: "4px solid #fff",
                       boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                     }}
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      right: 0,
-                      background: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "50%",
-                      width: 28,
-                      height: 28,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
-                    }}
-                  >
-                    <CameraOutlined
-                      style={{ fontSize: 12, color: "#D32F2F" }}
-                    />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handleImageChange}
                   />
                 </div>
                 <div style={{ marginTop: 12 }}>
@@ -605,30 +582,44 @@ const ProfilePage: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               gap: 20,
+              alignSelf: "flex-start",
             }}
           >
             {/* ---- Hồ sơ tab ---- */}
             {activeMenu === "profile" && (
-              <>
-                {/* Profile form card */}
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 16,
+                  border: "1px solid #f0f0f0",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                }}
+              >
+                {/* Header bar */}
                 <div
                   style={{
-                    background: "#fff",
-                    borderRadius: 16,
-                    border: "1px solid #f3f4f6",
-                    overflow: "hidden",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                    padding: "18px 28px",
+                    borderBottom: "1px solid #f3f4f6",
+                    background: "linear-gradient(90deg,#fff 70%,#fff8f8 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
                   }}
                 >
                   <div
                     style={{
-                      padding: "20px 32px",
-                      borderBottom: "1px solid #f3f4f6",
+                      width: 4,
+                      height: 22,
+                      borderRadius: 4,
+                      background: "#D32F2F",
+                      flexShrink: 0,
                     }}
-                  >
+                  />
+                  <div>
                     <h2
                       style={{
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: 700,
                         color: "#111827",
                         margin: 0,
@@ -636,91 +627,300 @@ const ProfilePage: React.FC = () => {
                     >
                       Hồ sơ của tôi
                     </h2>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        color: "#9ca3af",
-                        margin: "4px 0 0",
-                      }}
-                    >
-                      Quản lý thông tin hồ sơ để bảo mật tài khoản
+                    <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>
+                      Quản lý thông tin cá nhân
                     </p>
                   </div>
-                  <div style={{ padding: "28px 32px" }}>
+                </div>
+
+                {/* Body: avatar panel + form */}
+                <div style={{ display: "flex", gap: 0 }}>
+                  {/* Left: avatar panel */}
+                  <div
+                    style={{
+                      width: 200,
+                      flexShrink: 0,
+                      borderRight: "1px solid #f3f4f6",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "32px 20px",
+                      background: "#fafafa",
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ position: "relative" }}>
+                      <Avatar
+                        size={96}
+                        src={getAvatarSrc()}
+                        icon={!getAvatarSrc() ? <UserOutlined /> : undefined}
+                        style={{
+                          backgroundColor: "#D32F2F",
+                          border: "3px solid #fff",
+                          boxShadow: "0 2px 12px rgba(211,47,47,0.2)",
+                        }}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Đổi ảnh đại diện"
+                        style={{
+                          position: "absolute",
+                          bottom: 2,
+                          right: 2,
+                          background: "#D32F2F",
+                          border: "2px solid #fff",
+                          borderRadius: "50%",
+                          width: 28,
+                          height: 28,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+                        }}
+                      >
+                        <CameraOutlined
+                          style={{ fontSize: 13, color: "#fff" }}
+                        />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handleImageChange}
+                      />
+                    </div>
+
+                    <div style={{ textAlign: "center" }}>
+                      <p
+                        style={{
+                          fontWeight: 700,
+                          color: "#111827",
+                          fontSize: 14,
+                          margin: 0,
+                        }}
+                      >
+                        {profile?.name ?? user?.fullName}
+                      </p>
+                      {profile?.account?.username && (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "#9ca3af",
+                            margin: "2px 0 0",
+                          }}
+                        >
+                          @{profile.account.username}
+                        </p>
+                      )}
+                    </div>
+
+                    {profile?.code && (
+                      <div
+                        style={{
+                          background: "#fff1f2",
+                          border: "1px dashed #fca5a5",
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          textAlign: "center",
+                          width: "100%",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: 10,
+                            color: "#9ca3af",
+                            margin: 0,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          Mã khách hàng
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: "#D32F2F",
+                            margin: 0,
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {profile.code}
+                        </p>
+                      </div>
+                    )}
+
+                    {profile?.createdDate && (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#9ca3af",
+                          margin: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <CalendarOutlined />
+                        Từ {dayjs(profile.createdDate).format("MM/YYYY")}
+                      </p>
+                    )}
+
+                    {pendingImage && (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#f59e0b",
+                          margin: 0,
+                          textAlign: "center",
+                        }}
+                      >
+                        Ảnh chưa lưu — nhấn "Lưu thay đổi"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: form */}
+                  <div style={{ flex: 1, padding: "28px 32px" }}>
                     <Form
                       form={profileForm}
-                      layout="horizontal"
+                      layout="vertical"
                       onFinish={handleSave}
-                      labelCol={{ span: 6 }}
-                      wrapperCol={{ span: 18 }}
-                      labelAlign="right"
-                      colon={false}
+                      size="middle"
+                      style={{ maxWidth: 480 }}
                     >
-                      <Form.Item
-                        label={
-                          <span style={{ color: "#4b5563", fontWeight: 500 }}>
-                            Tên
-                          </span>
-                        }
-                        name="name"
-                        rules={[
-                          { required: true, message: "Vui lòng nhập tên" },
-                        ]}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "0 20px",
+                        }}
                       >
-                        <Input
-                          placeholder="Nhập họ và tên"
-                          size="large"
-                          maxLength={100}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label={
-                          <span style={{ color: "#4b5563", fontWeight: 500 }}>
-                            Email
-                          </span>
-                        }
-                        name="email"
-                        rules={[
-                          { type: "email", message: "Email không hợp lệ" },
-                        ]}
-                      >
-                        <Input
-                          placeholder="Nhập địa chỉ email"
-                          size="large"
-                          prefix={
-                            <MailOutlined
-                              style={{ color: "#d1d5db", marginRight: 4 }}
-                            />
+                        <Form.Item
+                          label={
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#6b7280",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              Họ và tên
+                            </span>
                           }
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label={
-                          <span style={{ color: "#4b5563", fontWeight: 500 }}>
-                            Số điện thoại
-                          </span>
-                        }
-                        name="phoneNumber"
-                        rules={[
-                          {
-                            pattern: /^0(3|5|7|8|9)\d{8}$/,
-                            message: "Số điện thoại không hợp lệ",
-                          },
-                        ]}
-                      >
-                        <Input
-                          placeholder="Nhập số điện thoại"
-                          size="large"
-                          prefix={
-                            <PhoneOutlined
-                              style={{ color: "#d1d5db", marginRight: 4 }}
-                            />
+                          name="name"
+                          rules={[
+                            { required: true, message: "Vui lòng nhập tên" },
+                          ]}
+                          style={{ gridColumn: "1 / -1" }}
+                        >
+                          <Input
+                            placeholder="Nguyễn Văn A"
+                            maxLength={100}
+                            style={{ borderRadius: 8 }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          label={
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#6b7280",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              Email
+                            </span>
                           }
-                        />
-                      </Form.Item>
+                          name="email"
+                          rules={[
+                            { type: "email", message: "Email không hợp lệ" },
+                          ]}
+                          style={{ gridColumn: "1 / -1" }}
+                        >
+                          <Input
+                            placeholder="example@email.com"
+                            prefix={
+                              <MailOutlined style={{ color: "#d1d5db" }} />
+                            }
+                            style={{ borderRadius: 8 }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          label={
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#6b7280",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              Số điện thoại
+                            </span>
+                          }
+                          name="phoneNumber"
+                          rules={[
+                            {
+                              pattern: /^0(3|5|7|8|9)\d{8}$/,
+                              message: "SĐT không hợp lệ",
+                            },
+                          ]}
+                        >
+                          <Input
+                            placeholder="0901 234 567"
+                            prefix={
+                              <PhoneOutlined style={{ color: "#d1d5db" }} />
+                            }
+                            style={{ borderRadius: 8 }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          label={
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#6b7280",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              Ngày sinh
+                            </span>
+                          }
+                          name="dateOfBirth"
+                        >
+                          <DatePicker
+                            style={{ width: "100%", borderRadius: 8 }}
+                            format="DD/MM/YYYY"
+                            placeholder="DD/MM/YYYY"
+                            disabledDate={(d) => d && d.isAfter(dayjs())}
+                          />
+                        </Form.Item>
+                      </div>
+
                       <Form.Item
                         label={
-                          <span style={{ color: "#4b5563", fontWeight: 500 }}>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
                             Giới tính
                           </span>
                         }
@@ -731,336 +931,38 @@ const ProfilePage: React.FC = () => {
                           <Radio value={false}>Nữ</Radio>
                         </Radio.Group>
                       </Form.Item>
-                      <Form.Item
-                        label={
-                          <span style={{ color: "#4b5563", fontWeight: 500 }}>
-                            Ngày sinh
-                          </span>
-                        }
-                        name="dateOfBirth"
+
+                      <div
+                        style={{
+                          borderTop: "1px solid #f3f4f6",
+                          paddingTop: 20,
+                          marginTop: 4,
+                        }}
                       >
-                        <DatePicker
-                          size="large"
-                          style={{ width: "100%" }}
-                          format="DD/MM/YYYY"
-                          placeholder="Chọn ngày sinh"
-                          disabledDate={(d) => d && d.isAfter(dayjs())}
-                        />
-                      </Form.Item>
-                      <Form.Item wrapperCol={{ offset: 6, span: 18 }}>
                         <Button
                           type="primary"
                           htmlType="submit"
                           loading={saving}
-                          size="large"
                           style={{
                             backgroundColor: "#D32F2F",
                             borderColor: "#D32F2F",
-                            minWidth: 140,
+                            borderRadius: 8,
+                            paddingInline: 28,
+                            fontWeight: 600,
+                            height: 38,
                           }}
                         >
                           Lưu thay đổi
                         </Button>
-                      </Form.Item>
+                      </div>
                     </Form>
                   </div>
                 </div>
-
-                {/* Quick stats row */}
-                <div style={{ display: "flex", gap: 16 }}>
-                  {[
-                    {
-                      icon: (
-                        <IdcardOutlined
-                          style={{ fontSize: 20, color: "#D32F2F" }}
-                        />
-                      ),
-                      label: "Mã khách hàng",
-                      value: profile?.code ?? "—",
-                      bg: "#fff1f2",
-                    },
-                    {
-                      icon: (
-                        <EnvironmentOutlined
-                          style={{ fontSize: 20, color: "#1976D2" }}
-                        />
-                      ),
-                      label: "Địa chỉ đã lưu",
-                      value: `${profile?.addresses?.length ?? 0} địa chỉ`,
-                      bg: "#eff6ff",
-                    },
-                    {
-                      icon: (
-                        <TagOutlined
-                          style={{ fontSize: 20, color: "#388E3C" }}
-                        />
-                      ),
-                      label: "Vai trò",
-                      value: profile?.account?.role ?? "CUSTOMER",
-                      bg: "#f0fdf4",
-                    },
-                  ].map((s) => (
-                    <div
-                      key={s.label}
-                      style={{
-                        flex: 1,
-                        background: "#fff",
-                        border: "1px solid #f3f4f6",
-                        borderRadius: 12,
-                        padding: "16px 20px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: s.bg,
-                          borderRadius: 10,
-                          padding: 10,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {s.icon}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <p
-                          style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}
-                        >
-                          {s.label}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: "#1f2937",
-                            margin: 0,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {s.value}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ---- Địa chỉ section ---- */}
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 16,
-                    border: "1px solid #f3f4f6",
-                    overflow: "hidden",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "20px 32px",
-                      borderBottom: "1px solid #f3f4f6",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div>
-                      <h2
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: "#111827",
-                          margin: 0,
-                        }}
-                      >
-                        Địa chỉ của tôi
-                      </h2>
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "#9ca3af",
-                          margin: "3px 0 0",
-                        }}
-                      >
-                        {profile?.addresses?.length ?? 0} địa chỉ đã lưu
-                      </p>
-                    </div>
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={openAddModal}
-                      size="small"
-                      style={{
-                        backgroundColor: "#D32F2F",
-                        borderColor: "#D32F2F",
-                      }}
-                    >
-                      Thêm địa chỉ
-                    </Button>
-                  </div>
-                  <div style={{ padding: "20px 32px" }}>
-                    {(profile?.addresses ?? []).length === 0 ? (
-                      <div
-                        style={{
-                          textAlign: "center",
-                          padding: "40px 0",
-                          color: "#d1d5db",
-                        }}
-                      >
-                        <EnvironmentOutlined
-                          style={{
-                            fontSize: 40,
-                            display: "block",
-                            marginBottom: 12,
-                          }}
-                        />
-                        <p
-                          style={{
-                            fontSize: 15,
-                            color: "#6b7280",
-                            fontWeight: 500,
-                            margin: 0,
-                          }}
-                        >
-                          Chưa có địa chỉ nào
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            color: "#9ca3af",
-                            marginTop: 4,
-                          }}
-                        >
-                          Thêm địa chỉ để thuận tiện hơn khi đặt hàng
-                        </p>
-                        <Button
-                          onClick={openAddModal}
-                          icon={<PlusOutlined />}
-                          style={{ marginTop: 16 }}
-                        >
-                          Thêm ngay
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 12,
-                        }}
-                      >
-                        {(profile?.addresses ?? []).map((addr, idx) => (
-                          <div
-                            key={addr.id ?? idx}
-                            style={{
-                              border: `1.5px solid ${addr.isDefault ? "#fca5a5" : "#e5e7eb"}`,
-                              borderRadius: 12,
-                              padding: "16px 20px",
-                              background: addr.isDefault ? "#fff9f9" : "#fff",
-                              display: "flex",
-                              alignItems: "flex-start",
-                              justifyContent: "space-between",
-                              gap: 12,
-                            }}
-                          >
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  marginBottom: 4,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <span
-                                  style={{ fontWeight: 600, color: "#1f2937" }}
-                                >
-                                  {addr.name}
-                                </span>
-                                <span style={{ color: "#d1d5db" }}>|</span>
-                                <span
-                                  style={{ fontSize: 13, color: "#6b7280" }}
-                                >
-                                  {addr.phoneNumber}
-                                </span>
-                                {addr.isDefault && (
-                                  <Tag color="red" style={{ margin: 0 }}>
-                                    <CheckCircleFilled
-                                      style={{ marginRight: 3 }}
-                                    />
-                                    Mặc định
-                                  </Tag>
-                                )}
-                              </div>
-                              <p
-                                style={{
-                                  fontSize: 13,
-                                  color: "#6b7280",
-                                  margin: 0,
-                                  lineHeight: 1.6,
-                                }}
-                              >
-                                {addr.addressDetail}, {addr.wardCommune},{" "}
-                                {addr.provinceCity}
-                              </p>
-                              {!addr.isDefault && (
-                                <button
-                                  onClick={() => handleSetDefault(addr)}
-                                  style={{
-                                    marginTop: 6,
-                                    fontSize: 12,
-                                    color: "#D32F2F",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: 0,
-                                    textDecoration: "underline",
-                                  }}
-                                >
-                                  Đặt làm mặc định
-                                </button>
-                              )}
-                            </div>
-                            <div
-                              style={{ display: "flex", gap: 8, flexShrink: 0 }}
-                            >
-                              <Button
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => openEditModal(addr)}
-                              >
-                                Sửa
-                              </Button>
-                              <Popconfirm
-                                title="Xóa địa chỉ này?"
-                                description="Hành động này không thể hoàn tác."
-                                onConfirm={() => handleDeleteAddr(addr)}
-                                okText="Xóa"
-                                cancelText="Hủy"
-                                okButtonProps={{ danger: true }}
-                              >
-                                <Button
-                                  size="small"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                />
-                              </Popconfirm>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
-            {/* ---- Phiếu giảm giá tab ---- */}
-            {activeMenu === "vouchers" && (
+            {/* ---- Địa chỉ tab ---- */}
+            {activeMenu === "addresses" && (
               <div
                 style={{
                   background: "#fff",
@@ -1072,61 +974,204 @@ const ProfilePage: React.FC = () => {
               >
                 <div
                   style={{
-                    padding: "20px 32px",
+                    padding: "16px 24px",
                     borderBottom: "1px solid #f3f4f6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <h2
+                  <div>
+                    <h2
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#111827",
+                        margin: 0,
+                      }}
+                    >
+                      Địa chỉ của tôi
+                    </h2>
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        margin: "3px 0 0",
+                      }}
+                    >
+                      {profile?.addresses?.length ?? 0} địa chỉ đã lưu
+                    </p>
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={openAddModal}
+                    size="small"
                     style={{
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color: "#111827",
-                      margin: 0,
+                      backgroundColor: "#D32F2F",
+                      borderColor: "#D32F2F",
                     }}
                   >
-                    Phiếu giảm giá
-                  </h2>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "#9ca3af",
-                      margin: "4px 0 0",
-                    }}
-                  >
-                    Các voucher hiện có của bạn
-                  </p>
+                    Thêm địa chỉ
+                  </Button>
                 </div>
-                <div
-                  style={{
-                    padding: "64px 32px",
-                    textAlign: "center",
-                    color: "#d1d5db",
-                  }}
-                >
-                  <TagOutlined
-                    style={{ fontSize: 48, display: "block", marginBottom: 16 }}
-                  />
-                  <p
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 500,
-                      color: "#6b7280",
-                      margin: 0,
-                    }}
-                  >
-                    Bạn chưa có phiếu giảm giá nào
-                  </p>
-                  <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 6 }}>
-                    Hãy khám phá các ưu đãi của chúng tôi
-                  </p>
+                <div style={{ padding: "20px 24px" }}>
+                  {(profile?.addresses ?? []).length === 0 ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px 0",
+                        color: "#d1d5db",
+                      }}
+                    >
+                      <EnvironmentOutlined
+                        style={{
+                          fontSize: 40,
+                          display: "block",
+                          marginBottom: 12,
+                        }}
+                      />
+                      <p
+                        style={{
+                          fontSize: 15,
+                          color: "#6b7280",
+                          fontWeight: 500,
+                          margin: 0,
+                        }}
+                      >
+                        Chưa có địa chỉ nào
+                      </p>
+                      <p
+                        style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}
+                      >
+                        Thêm địa chỉ để thuận tiện hơn khi đặt hàng
+                      </p>
+                      <Button
+                        onClick={openAddModal}
+                        icon={<PlusOutlined />}
+                        style={{ marginTop: 16 }}
+                      >
+                        Thêm ngay
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                    >
+                      {(profile?.addresses ?? []).map((addr, idx) => (
+                        <div
+                          key={addr.id ?? idx}
+                          style={{
+                            border: `1.5px solid ${addr.isDefault ? "#fca5a5" : "#e5e7eb"}`,
+                            borderRadius: 12,
+                            padding: "14px 18px",
+                            background: addr.isDefault ? "#fff9f9" : "#fff",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            justifyContent: "space-between",
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginBottom: 4,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <span
+                                style={{ fontWeight: 600, color: "#1f2937" }}
+                              >
+                                {addr.name}
+                              </span>
+                              <span style={{ color: "#d1d5db" }}>|</span>
+                              <span style={{ fontSize: 13, color: "#6b7280" }}>
+                                {addr.phoneNumber}
+                              </span>
+                              {addr.isDefault && (
+                                <Tag color="red" style={{ margin: 0 }}>
+                                  <CheckCircleFilled
+                                    style={{ marginRight: 3 }}
+                                  />
+                                  Mặc định
+                                </Tag>
+                              )}
+                            </div>
+                            <p
+                              style={{
+                                fontSize: 13,
+                                color: "#6b7280",
+                                margin: 0,
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {addr.addressDetail}, {addr.wardCommune},{" "}
+                              {addr.provinceCity}
+                            </p>
+                            {!addr.isDefault && (
+                              <button
+                                onClick={() => handleSetDefault(addr)}
+                                style={{
+                                  marginTop: 6,
+                                  fontSize: 12,
+                                  color: "#D32F2F",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                Đặt làm mặc định
+                              </button>
+                            )}
+                          </div>
+                          <div
+                            style={{ display: "flex", gap: 8, flexShrink: 0 }}
+                          >
+                            <Button
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => openEditModal(addr)}
+                            >
+                              Sửa
+                            </Button>
+                            <Popconfirm
+                              title="Xóa địa chỉ này?"
+                              description="Hành động này không thể hoàn tác."
+                              onConfirm={() => handleDeleteAddr(addr)}
+                              okText="Xóa"
+                              cancelText="Hủy"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                              />
+                            </Popconfirm>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
+
+            {/* ---- Phiếu giảm giá tab ---- */}
+            {activeMenu === "vouchers" && <VoucherPage />}
           </div>
         </div>
       </div>
 
-      {/* ========== ADDRESS MODAL ========== */}
       <Modal
         title={
           <span style={{ fontWeight: 700 }}>

@@ -21,7 +21,9 @@ public class CnVoucherController {
 
     @GetMapping
     public ResponseEntity<List<VoucherResponse>> getActiveVouchers() {
-        List<Voucher> vouchers = voucherRepository.findAllByStatus(2);
+        long now = System.currentTimeMillis();
+        List<Voucher> vouchers = voucherRepository
+                .findByStatusNotAndStartDateLessThanEqualAndEndDateGreaterThanEqual(0, now, now);
         List<VoucherResponse> responses = vouchers.stream()
                 .map(v -> {
                     VoucherResponse r = new VoucherResponse();

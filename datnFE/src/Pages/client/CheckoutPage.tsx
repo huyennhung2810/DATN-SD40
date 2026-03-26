@@ -10,23 +10,22 @@ import {
   Spin,
   message,
   Space,
-  Select,
+  Tag,
 } from "antd";
 import {
   CreditCardOutlined,
   CarOutlined,
   ArrowLeftOutlined,
   TagOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-
-// Lưu ý: Kiểm tra lại đường dẫn import file store và slice của bạn cho đúng
-import type { RootState, AppDispatch } from "../../redux/store"; 
-import { fetchVouchersRequest } from "../../redux/Voucher/voucherSlice";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../redux/store";
 import axiosClient from "../../api/axiosClient";
 import paymentApi from "../../api/paymentApi";
-import type { Voucher } from "../../models/Voucher"; // Import model Voucher
+import type { Voucher } from "../../models/Voucher";
+import VoucherPickerModal from "../../components/customer/VoucherPickerModal";
 
 const { Title, Text } = Typography;
 
@@ -43,18 +42,15 @@ interface AppliedVoucher {
   code: string;
   discountValue: number;
   discountUnit: "PERCENT" | "VND";
+  maxDiscountAmount?: number;
 }
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
   
   // 1. Lấy thông tin User và danh sách Voucher từ Redux
   const { user } = useSelector((state: RootState) => state.auth);
-  const { list: voucherList, loading: loadingVouchers } = useSelector(
-    (state: RootState) => state.voucher
-  );
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,26 +58,21 @@ const CheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
 
   // State Voucher
-  const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [appliedVoucher, setAppliedVoucher] = useState<AppliedVoucher | null>(null);
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.userId) {
       navigate("/login");
       return;
     }
-    
     fetchCart();
-    
-    // 2. Gọi API lấy danh sách voucher (có thể truyền params để chỉ lấy voucher Đang diễn ra: status = 2)
-    dispatch(fetchVouchersRequest({ page: 0, size: 50, status: 2 }));
-
     form.setFieldsValue({
       recipientName: user.fullName,
       recipientEmail: user.email,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.userId, dispatch]);
+  }, [user?.userId]);
 
   const fetchCart = async () => {
     setLoading(true);
@@ -104,17 +95,6 @@ const CheckoutPage: React.FC = () => {
       currency: "VND",
     }).format(price);
 
-  // 3. Chuyển đổi danh sách voucher từ Redux thành dạng options cho Select
-  const voucherOptions = voucherList.map((v: Voucher) => {
-    const isPercent = v.discountUnit === "PERCENT";
-    const valueDisplay = isPercent ? `${v.discountValue}%` : formatPrice(v.discountValue);
-    return {
-      value: v.code,
-      label: `${v.code} - Giảm ${valueDisplay}`, // Hiển thị mã và mức giảm
-      voucherData: v, // Lưu kèm data gốc để dễ dùng
-    };
-  });
-
   // Tính tiền
   const subTotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
@@ -125,7 +105,9 @@ const CheckoutPage: React.FC = () => {
   if (appliedVoucher) {
     if (appliedVoucher.discountUnit === "PERCENT") {
       discountAmount = (subTotal * appliedVoucher.discountValue) / 100;
-      // Nếu có rule giảm tối đa, bạn thêm Math.min() ở đây
+      if (appliedVoucher.maxDiscountAmount) {
+        discountAmount = Math.min(discountAmount, appliedVoucher.maxDiscountAmount);
+      }
     } else {
       discountAmount = appliedVoucher.discountValue;
     }
@@ -133,32 +115,18 @@ const CheckoutPage: React.FC = () => {
 
   const totalAmount = Math.max(0, subTotal - discountAmount);
 
-  // 4. Xử lý khi bấm nút "Áp dụng"
-  const handleApplyVoucher = () => {
-    if (!voucherCode) {
-      message.warning("Vui lòng chọn mã giảm giá!");
-      return;
-    }
-
-    // Tìm voucher đã chọn trong danh sách Redux
-    const selectedVoucher = voucherList.find((v: Voucher) => v.code === voucherCode);
-
-    if (selectedVoucher) {
-      // Bạn có thể thêm các logic check điều kiện đơn hàng tối thiểu tại đây nếu có
-      setAppliedVoucher({
-        code: selectedVoucher.code,
-        discountValue: selectedVoucher.discountValue,
-        discountUnit: selectedVoucher.discountUnit,
-      });
-      message.success("Áp dụng mã giảm giá thành công!");
-    } else {
-      message.error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
-    }
+  const handleApplyVoucher = (v: Voucher) => {
+    setAppliedVoucher({
+      code: v.code,
+      discountValue: v.discountValue,
+      discountUnit: v.discountUnit,
+      maxDiscountAmount: v.maxDiscountAmount,
+    });
+    message.success(`Áp dụng mã "${v.code}" thành công!`);
   };
 
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null);
-    setVoucherCode(null);
     message.info("Đã bỏ mã giảm giá.");
   };
 
@@ -338,40 +306,76 @@ const CheckoutPage: React.FC = () => {
 
                 <Divider style={{ margin: "12px 0" }} />
 
-                {/* --- KHU VỰC CHỌN VOUCHER TỪ REDUX --- */}
+                {/* --- KHU VỰC CHỌN VOUCHER --- */}
                 <div style={{ marginBottom: 16 }}>
                   <Text strong style={{ display: "block", marginBottom: 8 }}>
                     <TagOutlined style={{ marginRight: 6 }} />
                     Mã giảm giá
                   </Text>
-                  <Space.Compact style={{ width: "100%" }}>
-                    <Select
-                      style={{ width: "100%" }}
-                      placeholder="Chọn mã giảm giá..."
-                      value={voucherCode || undefined}
-                      onChange={(val) => setVoucherCode(val)}
-                      disabled={!!appliedVoucher}
-                      options={voucherOptions} // <--- Dữ liệu đổ từ Redux
-                      loading={loadingVouchers}
-                      allowClear
-                      showSearch
-                      optionFilterProp="label" // Cho phép tìm kiếm bằng chữ
-                    />
-                    {!appliedVoucher ? (
-                      <Button
-                        type="primary"
-                        onClick={handleApplyVoucher}
-                        disabled={!voucherCode}
-                      >
-                        Áp dụng
-                      </Button>
-                    ) : (
-                      <Button danger onClick={handleRemoveVoucher}>
-                        Hủy
-                      </Button>
-                    )}
-                  </Space.Compact>
+                  {appliedVoucher ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        background: "#fff5f5",
+                        border: "1.5px dashed #D32F2F",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Space>
+                        <TagOutlined style={{ color: "#D32F2F" }} />
+                        <Tag
+                          style={{
+                            fontFamily: "monospace",
+                            fontWeight: 700,
+                            fontSize: 13,
+                            background: "#fff",
+                            border: "1px solid #D32F2F",
+                            color: "#D32F2F",
+                          }}
+                        >
+                          {appliedVoucher.code}
+                        </Tag>
+                        <Text style={{ fontSize: 12, color: "#374151" }}>
+                          {appliedVoucher.discountUnit === "PERCENT"
+                            ? `Giảm ${appliedVoucher.discountValue}%${
+                                appliedVoucher.maxDiscountAmount
+                                  ? ` (tối đa ${formatPrice(appliedVoucher.maxDiscountAmount)})`
+                                  : ""
+                              }`
+                            : `Giảm ${formatPrice(appliedVoucher.discountValue)}`}
+                        </Text>
+                      </Space>
+                      <CloseCircleOutlined
+                        style={{ color: "#9ca3af", cursor: "pointer", fontSize: 16 }}
+                        onClick={handleRemoveVoucher}
+                      />
+                    </div>
+                  ) : (
+                    <Button
+                      block
+                      icon={<TagOutlined />}
+                      onClick={() => setVoucherModalOpen(true)}
+                      style={{
+                        borderStyle: "dashed",
+                        color: "#D32F2F",
+                        borderColor: "#D32F2F",
+                      }}
+                    >
+                      Chọn hoặc nhập mã giảm giá
+                    </Button>
+                  )}
                 </div>
+
+                <VoucherPickerModal
+                  open={voucherModalOpen}
+                  onClose={() => setVoucherModalOpen(false)}
+                  subTotal={subTotal}
+                  onApply={handleApplyVoucher}
+                  appliedCode={appliedVoucher?.code}
+                />
 
                 <Divider style={{ margin: "12px 0" }} />
 

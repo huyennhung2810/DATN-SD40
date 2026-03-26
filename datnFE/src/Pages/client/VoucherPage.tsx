@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Spin, message, Empty, Tooltip } from "antd";
-import { TagOutlined, CopyOutlined, CheckOutlined } from "@ant-design/icons";
+﻿import React, { useState, useEffect } from "react";
+import { Spin, message, Empty, Tooltip, Pagination } from "antd";
+import { CopyOutlined, CheckOutlined, TagOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getClientVouchers } from "../../api/voucherApi";
 
@@ -40,10 +39,11 @@ const formatDiscount = (v: Voucher): string => {
 };
 
 const VoucherPage: React.FC = () => {
-  const navigate = useNavigate();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   useEffect(() => {
     const load = async () => {
@@ -69,226 +69,199 @@ const VoucherPage: React.FC = () => {
     });
   };
 
+  const paged = vouchers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div
       style={{
-        minHeight: "100vh",
-        backgroundColor: "#f9fafb",
-        paddingTop: 32,
-        paddingBottom: 48,
+        background: "#fff",
+        borderRadius: 16,
+        padding: "24px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+        border: "1px solid #f0f0f0",
+        alignSelf: "flex-start",
+        width: "100%",
       }}
     >
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-        {/* Breadcrumb */}
-        <div
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 20,
+          paddingBottom: 16,
+          borderBottom: "1px solid #f3f4f6",
+        }}
+      >
+        <TagOutlined style={{ fontSize: 18, color: "#D32F2F" }} />
+        <span style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
+          Phiếu giảm giá
+        </span>
+        <span
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 13,
+            marginLeft: "auto",
+            fontSize: 12,
             color: "#9ca3af",
-            marginBottom: 24,
+            background: "#f3f4f6",
+            borderRadius: 12,
+            padding: "2px 10px",
           }}
         >
-          <span
-            style={{ cursor: "pointer" }}
-            onClick={() => navigate("/client")}
-          >
-            Trang chủ
-          </span>
-          <span>/</span>
-          <span style={{ color: "#374151", fontWeight: 500 }}>
-            Phiếu giảm giá
-          </span>
-        </div>
+          {vouchers.length} mã
+        </span>
+      </div>
 
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 28,
-          }}
-        >
-          <TagOutlined style={{ fontSize: 24, color: "#D32F2F" }} />
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 22,
-                fontWeight: 700,
-                color: "#111827",
-              }}
-            >
-              Phiếu giảm giá
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
-              Các mã giảm giá đang áp dụng
-            </p>
-          </div>
+      {loading ? (
+        <div style={{ textAlign: "center", paddingTop: 40 }}>
+          <Spin size="large" />
         </div>
-
-        {loading ? (
-          <div style={{ textAlign: "center", paddingTop: 80 }}>
-            <Spin size="large" />
-          </div>
-        ) : vouchers.length === 0 ? (
-          <div style={{ textAlign: "center", paddingTop: 80 }}>
-            <Empty description="Hiện không có phiếu giảm giá nào" />
-          </div>
-        ) : (
+      ) : vouchers.length === 0 ? (
+        <div style={{ textAlign: "center", paddingTop: 40 }}>
+          <Empty description="Hiện không có phiếu giảm giá nào" />
+        </div>
+      ) : (
+        <>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: 20,
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 12,
             }}
           >
-            {vouchers.map((v) => (
+            {paged.map((v) => (
               <div
                 key={v.id}
                 style={{
                   background: "#fff",
-                  borderRadius: 12,
+                  borderRadius: 10,
                   overflow: "hidden",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
                   border: "1px solid #f0f0f0",
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
-                {/* Red top accent */}
-                <div style={{ background: "#D32F2F", height: 6 }} />
-
-                <div style={{ padding: "16px 20px 20px" }}>
-                  {/* Name */}
+                <div style={{ background: "#D32F2F", height: 4 }} />
+                <div
+                  style={{
+                    flex: 1,
+                    padding: "12px 14px 10px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 3,
+                  }}
+                >
                   <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 15,
-                      color: "#111827",
-                      marginBottom: 6,
-                    }}
+                    style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}
                   >
                     {v.name}
                   </div>
-
-                  {/* Discount amount */}
                   <div
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 800,
-                      color: "#D32F2F",
-                      marginBottom: 14,
-                    }}
+                    style={{ fontSize: 16, fontWeight: 800, color: "#D32F2F" }}
                   >
                     {formatDiscount(v)}
                   </div>
-
-                  {/* Details */}
                   <div
                     style={{
+                      fontSize: 11,
+                      color: "#6b7280",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 6,
-                      fontSize: 13,
-                      color: "#6b7280",
-                      marginBottom: 16,
+                      gap: 2,
+                      marginTop: 2,
                     }}
                   >
                     {v.conditions != null && v.conditions > 0 && (
-                      <div>
-                        Đơn hàng tối thiểu:{" "}
-                        <span style={{ color: "#374151", fontWeight: 600 }}>
+                      <span>
+                        Tối thiểu{" "}
+                        <strong style={{ color: "#374151" }}>
                           {formatPrice(v.conditions)}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      Còn lại:{" "}
-                      <span style={{ color: "#374151", fontWeight: 600 }}>
-                        {v.quantity} lượt
+                        </strong>
                       </span>
-                    </div>
-                    <div>
-                      Hiệu lực:{" "}
-                      <span style={{ color: "#374151" }}>
-                        {dayjs(v.startDate).format("DD/MM/YYYY")} –{" "}
+                    )}
+                    <span>
+                      HSD:{" "}
+                      <strong style={{ color: "#374151" }}>
                         {dayjs(v.endDate).format("DD/MM/YYYY")}
-                      </span>
-                    </div>
-                    {v.note && (
-                      <div
-                        style={{
-                          color: "#9ca3af",
-                          fontStyle: "italic",
-                          fontSize: 12,
-                        }}
-                      >
-                        {v.note}
-                      </div>
-                    )}
+                      </strong>
+                    </span>
+                    <span>
+                      Còn{" "}
+                      <strong style={{ color: "#374151" }}>
+                        {v.quantity} lượt
+                      </strong>
+                    </span>
                   </div>
-
-                  {/* Code + Copy */}
-                  <div
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 14px",
+                    background: "#fef2f2",
+                    borderTop: "1px dashed #fca5a5",
+                  }}
+                >
+                  <span
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      background: "#fef2f2",
-                      border: "1px dashed #fca5a5",
-                      borderRadius: 8,
-                      padding: "10px 14px",
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: 1.5,
+                      color: "#DC2626",
                     }}
                   >
-                    <span
+                    {v.code}
+                  </span>
+                  <Tooltip
+                    title={copiedId === v.id ? "Đã sao chép!" : "Sao chép mã"}
+                  >
+                    <button
+                      onClick={() => handleCopy(v.code, v.id)}
                       style={{
-                        fontFamily: "monospace",
-                        fontSize: 16,
-                        fontWeight: 700,
-                        letterSpacing: 2,
-                        color: "#DC2626",
+                        background: copiedId === v.id ? "#16a34a" : "#D32F2F",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 5,
+                        padding: "3px 10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        transition: "background 0.2s",
                       }}
                     >
-                      {v.code}
-                    </span>
-                    <Tooltip
-                      title={copiedId === v.id ? "Đã sao chép!" : "Sao chép mã"}
-                    >
-                      <button
-                        onClick={() => handleCopy(v.code, v.id)}
-                        style={{
-                          background: copiedId === v.id ? "#16a34a" : "#D32F2F",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: 6,
-                          padding: "6px 14px",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          transition: "background 0.2s",
-                        }}
-                      >
-                        {copiedId === v.id ? (
-                          <CheckOutlined />
-                        ) : (
-                          <CopyOutlined />
-                        )}
-                        {copiedId === v.id ? "Đã sao chép" : "Sao chép"}
-                      </button>
-                    </Tooltip>
-                  </div>
+                      {copiedId === v.id ? <CheckOutlined /> : <CopyOutlined />}
+                      {copiedId === v.id ? "Đã sao chép" : "Sao chép"}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </div>
+
+          {vouchers.length > PAGE_SIZE && (
+            <div
+              style={{
+                marginTop: 20,
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <Pagination
+                current={page}
+                pageSize={PAGE_SIZE}
+                total={vouchers.length}
+                onChange={(p) => setPage(p)}
+                showSizeChanger={false}
+                size="small"
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

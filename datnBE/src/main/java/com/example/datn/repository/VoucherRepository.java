@@ -12,4 +12,8 @@ public interface VoucherRepository extends JpaRepository<Voucher, String> {
     Optional<Voucher> findByCode(String code);
 
     List<Voucher> findAllByStatus(Integer status);
+
+    // Vouchers actually active by date range, excluding force-stopped (status != 0)
+    List<Voucher> findByStatusNotAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Integer status, Long startDate, Long endDate);
 }
