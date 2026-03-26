@@ -98,6 +98,7 @@ const ChatWidget: React.FC = () => {
   );
   const userId = useSelector((state: RootState) => state.auth.user?.userId);
   const customerName = useSelector((state: RootState) => state.auth.user?.fullName);
+  const customerImage = useSelector((state: RootState) => state.auth.user?.pictureUrl ?? state.auth.user?.image);
 
   // Kích hoạt kết nối WebSocket
   useWebSocket(sessionId);
@@ -137,7 +138,7 @@ const ChatWidget: React.FC = () => {
   };
 
   const handleRequestStaff = () => {
-    dispatch(requestStaff({ sessionId, userId, customerName: customerName ?? undefined }));
+    dispatch(requestStaff({ sessionId, userId, customerName: customerName ?? undefined, customerImage: customerImage ?? undefined }));
   };
 
   return (

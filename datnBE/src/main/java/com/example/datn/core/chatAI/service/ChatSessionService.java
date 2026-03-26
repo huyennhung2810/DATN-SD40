@@ -5,6 +5,7 @@ import com.example.datn.entity.ChatMessage;
 import com.example.datn.entity.ChatSession;
 import com.example.datn.repository.ChatMessageRepository;
 import com.example.datn.repository.ChatSessionRepository;
+import com.example.datn.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,8 @@ public class ChatSessionService {
     private final ChatSessionRepository sessionRepository;
 
     private final ChatMessageRepository messageRepository;
+
+    private final CustomerRepository customerRepository;
 
     @Transactional
 
@@ -40,6 +43,10 @@ public class ChatSessionService {
         }
         if (session.getCustomerName() == null && customerName != null) {
             session.setCustomerName(customerName);
+        }
+        if (session.getCustomerImage() == null && userId != null) {
+            customerRepository.findByAccount_Id(userId)
+                    .ifPresent(c -> session.setCustomerImage(c.getImage()));
         }
 
         ChatMessage message = ChatMessage.builder()
@@ -79,7 +86,8 @@ public class ChatSessionService {
                         0,
                         s.isAiActive(),
                         s.getCustomerName(),
-                        s.getUserId()
+                        s.getUserId(),
+                        s.getCustomerImage()
                 ))
                 .collect(Collectors.toList());
     }
@@ -107,14 +115,18 @@ public class ChatSessionService {
         sessionRepository.save(session);
     }
 
-    // Cập nhật tên khách hàng cho session
+    // Cập nhật tên và ảnh khách hàng cho session
     @Transactional
-    public void updateCustomerName(String sessionId, String customerName) {
+    public void updateCustomerInfo(String sessionId, String customerName, String customerImage) {
         sessionRepository.findById(sessionId).ifPresent(s -> {
-            if (s.getCustomerName() == null || s.getCustomerName().isBlank()) {
+            if (customerName != null && !customerName.isBlank()
+                    && (s.getCustomerName() == null || s.getCustomerName().isBlank())) {
                 s.setCustomerName(customerName);
-                sessionRepository.save(s);
             }
+            if (customerImage != null && !customerImage.isBlank() && s.getCustomerImage() == null) {
+                s.setCustomerImage(customerImage);
+            }
+            sessionRepository.save(s);
         });
     }
 

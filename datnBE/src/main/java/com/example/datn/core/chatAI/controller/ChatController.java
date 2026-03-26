@@ -94,13 +94,12 @@ public class ChatController {
     // y cầu nvien
     @PostMapping("/request-staff")
     public ResponseEntity<Void> requestStaff(@RequestParam String sessionId,
-                                             @RequestParam(required = false) String customerName) {
+                                             @RequestParam(required = false) String customerName,
+                                             @RequestParam(required = false) String customerImage) {
         sessionService.markSessionForStaff(sessionId);
 
-        // Cập nhật tên khách hàng vào session nếu có
-        if (customerName != null && !customerName.isBlank()) {
-            sessionService.updateCustomerName(sessionId, customerName);
-        }
+        // Cập nhật tên và ảnh khách hàng vào session nếu có
+        sessionService.updateCustomerInfo(sessionId, customerName, customerImage);
 
         // Bắn thông báo JSON cho Dashboard Admin/Staff biết có khách đang đợi
         Map<String, Object> notif = new HashMap<>();
@@ -111,6 +110,7 @@ public class ChatController {
                 : "Khách hàng đang cần hỗ trợ trực tiếp!");
         notif.put("refId", sessionId);
         notif.put("refCode", customerName);
+        notif.put("customerImage", customerImage);
         notif.put("timestamp", System.currentTimeMillis());
         messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
 

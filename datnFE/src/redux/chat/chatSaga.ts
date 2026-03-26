@@ -33,11 +33,12 @@ function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: 
   }
 }
 
-function* handleRequestStaffSaga(action: PayloadAction<{ sessionId: string; customerName?: string }>) {
+function* handleRequestStaffSaga(action: PayloadAction<{ sessionId: string; customerName?: string; customerImage?: string }>) {
   try {
-    const { sessionId, customerName } = action.payload;
+    const { sessionId, customerName, customerImage } = action.payload;
     const params = new URLSearchParams({ sessionId });
     if (customerName) params.append('customerName', customerName);
+    if (customerImage) params.append('customerImage', customerImage);
     yield call(axiosClient.post, `/support/request-staff?${params.toString()}`);
     yield put(addMessage({
       content: "_Yêu cầu của bạn đã được gửi tới nhân viên hỗ trợ. Vui lòng chờ trong giây lát!_",

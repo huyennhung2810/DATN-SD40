@@ -22,6 +22,8 @@ public class ChatSession {
 
     private String customerName;
 
+    private String customerImage;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean isAiActive = true;

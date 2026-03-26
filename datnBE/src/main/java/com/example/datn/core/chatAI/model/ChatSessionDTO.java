@@ -13,4 +13,5 @@ public class ChatSessionDTO {
     private boolean isAiActive;
     private String customerName;
     private String userId;
+    private String customerImage;
 }

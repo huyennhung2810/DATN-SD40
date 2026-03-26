@@ -33,6 +33,7 @@ interface ChatSession {
   isAiActive: boolean;
   customerName?: string;
   userId?: string;
+  customerImage?: string;
 }
 
 function getInitials(name?: string): string {
@@ -43,10 +44,19 @@ function getInitials(name?: string): string {
 }
 
 /** Màu avatar ngẫu nhiên nhưng cố định theo sessionId */
-const AVATAR_COLORS = ["#f56a00","#7265e6","#ffbf00","#00a2ae","#87d068","#ff4d4f","#1890ff"];
+const AVATAR_COLORS = [
+  "#f56a00",
+  "#7265e6",
+  "#ffbf00",
+  "#00a2ae",
+  "#87d068",
+  "#ff4d4f",
+  "#1890ff",
+];
 function avatarColor(sessionId: string): string {
   let hash = 0;
-  for (let i = 0; i < sessionId.length; i++) hash = sessionId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < sessionId.length; i++)
+    hash = sessionId.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
@@ -94,7 +104,10 @@ const EmployeeChatPage: React.FC = () => {
               const notif = JSON.parse(payload.body);
               if (notif.type !== "CHAT_REQUEST") return;
               const sessionId: string = notif.refId;
-              const customerName: string | undefined = notif.refCode || undefined;
+              const customerName: string | undefined =
+                notif.refCode || undefined;
+              const customerImage: string | undefined =
+                notif.customerImage || undefined;
               message.info(notif.message || "Khách hàng đang cần hỗ trợ!");
               setSessions((prev) => {
                 if (prev.find((s) => s.sessionId === sessionId)) return prev;
@@ -105,6 +118,7 @@ const EmployeeChatPage: React.FC = () => {
                     unreadCount: 1,
                     isAiActive: false,
                     customerName,
+                    customerImage,
                   },
                   ...prev,
                 ];
@@ -114,7 +128,15 @@ const EmployeeChatPage: React.FC = () => {
               const sessionId = payload.body;
               setSessions((prev) => {
                 if (prev.find((s) => s.sessionId === sessionId)) return prev;
-                return [{ sessionId, lastMessage: "Đang đợi hỗ trợ...", unreadCount: 1, isAiActive: false }, ...prev];
+                return [
+                  {
+                    sessionId,
+                    lastMessage: "Đang đợi hỗ trợ...",
+                    unreadCount: 1,
+                    isAiActive: false,
+                  },
+                  ...prev,
+                ];
               });
             }
           });
@@ -234,14 +256,26 @@ const EmployeeChatPage: React.FC = () => {
   }, [messages]);
 
   const activeSession = sessions.find((s) => s.sessionId === selectedSession);
-  const displayName = (s: ChatSession) => s.customerName || `Khách #${s.sessionId.slice(-6)}`;
+  const displayName = (s: ChatSession) =>
+    s.customerName || `Khách #${s.sessionId.slice(-6)}`;
 
   return (
-    <>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "calc(100vh - 104px)",
+        overflow: "hidden",
+      }}
+    >
       {/* HEADER CARD */}
       <div
         className="solid-card"
-        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
+        style={{
+          padding: "var(--spacing-lg)",
+          marginBottom: 16,
+          flexShrink: 0,
+        }}
       >
         <Space align="center" size={16}>
           <div
@@ -270,7 +304,8 @@ const EmployeeChatPage: React.FC = () => {
       {/* MAIN CHAT */}
       <Layout
         style={{
-          height: "85vh",
+          flex: 1,
+          minHeight: 0,
           background: "#fff",
           borderRadius: "12px",
           overflow: "hidden",
@@ -293,7 +328,9 @@ const EmployeeChatPage: React.FC = () => {
               gap: 8,
             }}
           >
-            <CustomerServiceOutlined style={{ color: "#ff4d4f", fontSize: 18 }} />
+            <CustomerServiceOutlined
+              style={{ color: "#ff4d4f", fontSize: 18 }}
+            />
             <Title level={5} style={{ margin: 0, color: "#ff4d4f" }}>
               Khách đang chờ ({sessions.length})
             </Title>
@@ -308,7 +345,7 @@ const EmployeeChatPage: React.FC = () => {
           ) : (
             <List
               dataSource={sessions}
-              style={{ overflowY: "auto", height: "calc(85vh - 57px)" }}
+              style={{ overflowY: "auto", height: "calc(100% - 57px)" }}
               renderItem={(item) => {
                 const isSelected = selectedSession === item.sessionId;
                 const initials = getInitials(item.customerName);
@@ -320,7 +357,9 @@ const EmployeeChatPage: React.FC = () => {
                       cursor: "pointer",
                       padding: "14px 16px",
                       background: isSelected ? "#fff2f0" : "transparent",
-                      borderLeft: isSelected ? "4px solid #ff4d4f" : "4px solid transparent",
+                      borderLeft: isSelected
+                        ? "4px solid #ff4d4f"
+                        : "4px solid transparent",
                       transition: "background 0.2s",
                     }}
                   >
@@ -329,10 +368,25 @@ const EmployeeChatPage: React.FC = () => {
                         <Badge count={item.unreadCount} size="small">
                           <Avatar
                             size={44}
-                            style={{ backgroundColor: color, fontWeight: 600, fontSize: 16 }}
-                            icon={!item.customerName ? <UserOutlined /> : undefined}
+                            src={item.customerImage || undefined}
+                            style={
+                              item.customerImage
+                                ? undefined
+                                : {
+                                    backgroundColor: color,
+                                    fontWeight: 600,
+                                    fontSize: 16,
+                                  }
+                            }
+                            icon={
+                              !item.customerImage && !item.customerName ? (
+                                <UserOutlined />
+                              ) : undefined
+                            }
                           >
-                            {item.customerName ? initials : undefined}
+                            {!item.customerImage && item.customerName
+                              ? initials
+                              : undefined}
                           </Avatar>
                         </Badge>
                       }
@@ -345,7 +399,11 @@ const EmployeeChatPage: React.FC = () => {
                         <Text
                           ellipsis
                           type="secondary"
-                          style={{ fontSize: 12, maxWidth: 180, display: "block" }}
+                          style={{
+                            fontSize: 12,
+                            maxWidth: 180,
+                            display: "block",
+                          }}
                         >
                           {item.lastMessage}
                         </Text>
@@ -375,13 +433,27 @@ const EmployeeChatPage: React.FC = () => {
                 <Space size={12}>
                   <Avatar
                     size={40}
-                    style={{
-                      backgroundColor: avatarColor(activeSession.sessionId),
-                      fontWeight: 600,
-                    }}
-                    icon={!activeSession.customerName ? <UserOutlined /> : undefined}
+                    src={activeSession.customerImage || undefined}
+                    style={
+                      activeSession.customerImage
+                        ? undefined
+                        : {
+                            backgroundColor: avatarColor(
+                              activeSession.sessionId,
+                            ),
+                            fontWeight: 600,
+                          }
+                    }
+                    icon={
+                      !activeSession.customerImage &&
+                      !activeSession.customerName ? (
+                        <UserOutlined />
+                      ) : undefined
+                    }
                   >
-                    {activeSession.customerName ? getInitials(activeSession.customerName) : undefined}
+                    {!activeSession.customerImage && activeSession.customerName
+                      ? getInitials(activeSession.customerName)
+                      : undefined}
                   </Avatar>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>
@@ -425,12 +497,19 @@ const EmployeeChatPage: React.FC = () => {
                 {Array.isArray(messages) && messages.length > 0 ? (
                   messages.map((msg, index) => {
                     const isStaff = msg.sender === "STAFF";
-                    const isSystem = msg.sender === "SYSTEM" || msg.sender === "AI";
+                    const isSystem =
+                      msg.sender === "SYSTEM" || msg.sender === "AI";
                     if (isSystem) {
                       return (
                         <div
                           key={index}
-                          style={{ textAlign: "center", color: "#999", fontSize: 12, margin: "8px 0", fontStyle: "italic" }}
+                          style={{
+                            textAlign: "center",
+                            color: "#999",
+                            fontSize: 12,
+                            margin: "8px 0",
+                            fontStyle: "italic",
+                          }}
                         >
                           {msg.content}
                         </div>
@@ -450,17 +529,37 @@ const EmployeeChatPage: React.FC = () => {
                         {!isStaff && (
                           <Avatar
                             size={28}
-                            style={{ backgroundColor: avatarColor(activeSession.sessionId), flexShrink: 0 }}
-                            icon={!activeSession.customerName ? <UserOutlined /> : undefined}
+                            src={activeSession.customerImage || undefined}
+                            style={
+                              activeSession.customerImage
+                                ? undefined
+                                : {
+                                    backgroundColor: avatarColor(
+                                      activeSession.sessionId,
+                                    ),
+                                    flexShrink: 0,
+                                  }
+                            }
+                            icon={
+                              !activeSession.customerImage &&
+                              !activeSession.customerName ? (
+                                <UserOutlined />
+                              ) : undefined
+                            }
                           >
-                            {activeSession.customerName ? getInitials(activeSession.customerName) : undefined}
+                            {!activeSession.customerImage &&
+                            activeSession.customerName
+                              ? getInitials(activeSession.customerName)
+                              : undefined}
                           </Avatar>
                         )}
                         <Card
                           size="small"
                           style={{
                             maxWidth: "72%",
-                            borderRadius: isStaff ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                            borderRadius: isStaff
+                              ? "16px 16px 4px 16px"
+                              : "16px 16px 16px 4px",
                             background: isStaff ? "#ff4d4f" : "#fff",
                             color: isStaff ? "#fff" : "#333",
                             boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
@@ -469,24 +568,42 @@ const EmployeeChatPage: React.FC = () => {
                           styles={{ body: { padding: "8px 14px" } }}
                         >
                           {!isStaff && (
-                            <div style={{ fontSize: 11, fontWeight: 600, color: "#ff4d4f", marginBottom: 2 }}>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: "#ff4d4f",
+                                marginBottom: 2,
+                              }}
+                            >
                               {displayName(activeSession)}
                             </div>
                           )}
-                          <div style={{ fontSize: 14, lineHeight: 1.5 }}>{msg.content}</div>
+                          <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                            {msg.content}
+                          </div>
                         </Card>
                         {isStaff && (
                           <Avatar
                             size={28}
                             icon={<CustomerServiceOutlined />}
-                            style={{ backgroundColor: "#ff4d4f", flexShrink: 0 }}
+                            style={{
+                              backgroundColor: "#ff4d4f",
+                              flexShrink: 0,
+                            }}
                           />
                         )}
                       </div>
                     );
                   })
                 ) : (
-                  <div style={{ textAlign: "center", color: "#999", marginTop: 60 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "#999",
+                      marginTop: 60,
+                    }}
+                  >
                     Chưa có tin nhắn...
                   </div>
                 )}
@@ -525,7 +642,7 @@ const EmployeeChatPage: React.FC = () => {
           )}
         </Content>
       </Layout>
-    </>
+    </div>
   );
 };
 

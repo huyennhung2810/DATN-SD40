@@ -61,7 +61,7 @@ const chatSlice = createSlice({
       }
     },
 
-    requestStaff: (_state, _action: PayloadAction<{ sessionId: string; userId?: string; customerName?: string }>) => {},
+    requestStaff: (_state, _action: PayloadAction<{ sessionId: string; userId?: string; customerName?: string; customerImage?: string }>) => {},
 
     setSessionId: (state, action: PayloadAction<string>) => {
       state.sessionId = action.payload;
