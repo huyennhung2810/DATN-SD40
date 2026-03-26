@@ -40,6 +40,7 @@ import type { CustomerResponse } from "../../models/customer";
 import type { AddressRequest, AddressResponse } from "../../models/address";
 import { getProfile, updateProfile } from "../../api/clientProfileApi";
 import { authActions } from "../../redux/auth/authSlice";
+import authApi from "../../api/auth/authApi";
 import VoucherPage from "./VoucherPage";
 import OrderListEmbed from "./OrderListEmbed";
 import OrderDetailEmbed from "./OrderDetailEmbed";
@@ -69,6 +70,8 @@ const ProfilePage: React.FC = () => {
   const [addrModalOpen, setAddrModalOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState<AddressResponse | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [pwdForm] = Form.useForm();
+  const [savingPwd, setSavingPwd] = useState(false);
 
   const [provinces, setProvinces] = useState<{ name: string; code: number }[]>(
     [],
@@ -336,12 +339,29 @@ const ProfilePage: React.FC = () => {
     { key: "password", label: "Đổi mật khẩu", icon: <LockOutlined /> },
   ];
 
-  const handleMenuClick = (key: string) => {
-    if (key === "password") navigate(`/change-password/${user?.username}`);
-    else {
-      setActiveMenu(key);
-      setSelectedOrderId(null);
+  const handleChangePassword = async () => {
+    const values = await pwdForm.validateFields();
+    if (!user) return;
+    setSavingPwd(true);
+    try {
+      await authApi.changePassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+      });
+      message.success("Đổi mật khẩu thành công");
+      pwdForm.resetFields();
+    } catch {
+      message.error(
+        "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.",
+      );
+    } finally {
+      setSavingPwd(false);
     }
+  };
+
+  const handleMenuClick = (key: string) => {
+    setActiveMenu(key);
+    setSelectedOrderId(null);
   };
 
   if (loading) {
@@ -1184,8 +1204,188 @@ const ProfilePage: React.FC = () => {
                 <OrderListEmbed onViewDetail={(id) => setSelectedOrderId(id)} />
               ))}
 
-            {/* ---- Phiếu giảm giá tab ---- */}
+            {/* Phiếu giảm giá */}
             {activeMenu === "vouchers" && <VoucherPage />}
+
+            {/* Đổi mật khẩu */}
+            {activeMenu === "password" && (
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 16,
+                  border: "1px solid #f0f0f0",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "18px 28px",
+                    borderBottom: "1px solid #f3f4f6",
+                    background: "linear-gradient(90deg,#fff 70%,#fff8f8 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 4,
+                      height: 22,
+                      borderRadius: 4,
+                      background: "#D32F2F",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div>
+                    <h2
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#111827",
+                        margin: 0,
+                      }}
+                    >
+                      Đổi mật khẩu
+                    </h2>
+                    <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>
+                      Cập nhật mật khẩu để bảo vệ tài khoản
+                    </p>
+                  </div>
+                </div>
+                <div style={{ padding: "32px" }}>
+                  <Form
+                    form={pwdForm}
+                    layout="vertical"
+                    onFinish={handleChangePassword}
+                    style={{ maxWidth: 420 }}
+                  >
+                    <Form.Item
+                      label={
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          Mật khẩu hiện tại
+                        </span>
+                      }
+                      name="oldPassword"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập mật khẩu hiện tại",
+                        },
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder="Nhập mật khẩu hiện tại"
+                        prefix={<LockOutlined style={{ color: "#d1d5db" }} />}
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label={
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          Mật khẩu mới
+                        </span>
+                      }
+                      name="newPassword"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập mật khẩu mới",
+                        },
+                        { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder="Nhập mật khẩu mới"
+                        prefix={<LockOutlined style={{ color: "#d1d5db" }} />}
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label={
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          Xác nhận mật khẩu mới
+                        </span>
+                      }
+                      name="confirmPassword"
+                      dependencies={["newPassword"]}
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng xác nhận mật khẩu mới",
+                        },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (
+                              !value ||
+                              getFieldValue("newPassword") === value
+                            ) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(
+                              new Error("Mật khẩu xác nhận không khớp"),
+                            );
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder="Nhập lại mật khẩu mới"
+                        prefix={<LockOutlined style={{ color: "#d1d5db" }} />}
+                        style={{ borderRadius: 8 }}
+                      />
+                    </Form.Item>
+                    <div
+                      style={{
+                        borderTop: "1px solid #f3f4f6",
+                        paddingTop: 20,
+                        marginTop: 4,
+                      }}
+                    >
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={savingPwd}
+                        style={{
+                          backgroundColor: "#D32F2F",
+                          borderColor: "#D32F2F",
+                          borderRadius: 8,
+                          paddingInline: 28,
+                          fontWeight: 600,
+                          height: 38,
+                        }}
+                      >
+                        Đổi mật khẩu
+                      </Button>
+                    </div>
+                  </Form>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

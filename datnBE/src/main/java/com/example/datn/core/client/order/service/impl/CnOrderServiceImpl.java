@@ -93,7 +93,8 @@ public class CnOrderServiceImpl implements CnOrderService {
 
             // 4.3. Kiểm tra giá trị đơn hàng tối thiểu (conditions)
             if (appliedVoucher.getConditions() != null && totalAmount.compareTo(appliedVoucher.getConditions()) < 0) {
-                throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu (" + appliedVoucher.getConditions() + "đ) để áp dụng mã này!");
+                throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu (" + appliedVoucher.getConditions()
+                        + "đ) để áp dụng mã này!");
             }
 
             // 4.4. Tính toán số tiền được giảm
@@ -101,10 +102,12 @@ public class CnOrderServiceImpl implements CnOrderService {
             // Trong Entity bạn comment là // %, VND nên mình check cả 2 trường hợp
             if ("PERCENT".equalsIgnoreCase(unit) || "%".equals(unit)) {
                 // Tính % giảm (discountValue đã là BigDecimal)
-                discountAmount = totalAmount.multiply(appliedVoucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+                discountAmount = totalAmount.multiply(appliedVoucher.getDiscountValue()).divide(BigDecimal.valueOf(100),
+                        0, RoundingMode.HALF_UP);
 
                 // Áp dụng giới hạn giảm tối đa (nếu có)
-                if (appliedVoucher.getMaxDiscountAmount() != null && appliedVoucher.getMaxDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                if (appliedVoucher.getMaxDiscountAmount() != null
+                        && appliedVoucher.getMaxDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
                     discountAmount = discountAmount.min(appliedVoucher.getMaxDiscountAmount());
                 }
             } else {
