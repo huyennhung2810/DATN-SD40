@@ -6,8 +6,6 @@ import ProductDetail from "../components/homepage/ProductDetail";
 import CartPage from "../Pages/client/CartPage";
 import CheckoutPage from "../Pages/client/CheckoutPage";
 import ProfilePage from "../Pages/client/ProfilePage";
-import OrderListPage from "../Pages/client/OrderListPage";
-import OrderDetailPage from "../Pages/client/OrderDetailPage";
 import VoucherPage from "../Pages/client/VoucherPage";
 
 export const CustomerRoutes = () => (
@@ -18,9 +16,8 @@ export const CustomerRoutes = () => (
     <Route path="product/:id" element={<ProductDetail />} />
     <Route path="cart" element={<CartPage />} />
     <Route path="checkout" element={<CheckoutPage />} />
+
     <Route path="profile" element={<ProfilePage />} />
-    <Route path="orders" element={<OrderListPage />} />
-    <Route path="orders/:id" element={<OrderDetailPage />} />
     <Route path="vouchers" element={<VoucherPage />} />
   </Route>
 );

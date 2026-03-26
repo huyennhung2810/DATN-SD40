@@ -54,7 +54,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         try {
             log.info("Bắt đầu cập nhật trạng thái hóa đơn: {}", request.getMaHoaDon());
 
-            //Lấy hóa đơn theo mã
+            // Lấy hóa đơn theo mã
             Order hoaDon = adOrderRepository.findByMa(request.getMaHoaDon())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + request.getMaHoaDon()));
 
@@ -63,7 +63,7 @@ public class ADOrderServiceImpl implements ADOrderService {
 
             log.info("Trạng thái cũ: {}, Trạng thái mới: {}", trangThaiCu, trangThaiMoi);
 
-            //Kiểm tra luồng trạng thái hợp lệ
+            // Kiểm tra luồng trạng thái hợp lệ
             kiemTraChuyenTrangThai(trangThaiCu, trangThaiMoi);
 
             Employee nhanVien;
@@ -116,7 +116,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                     request.getNote(),
                     nhanVien);
 
-            //  XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
+            // XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
             switch (trangThaiMoi) {
 
                 case CHO_XAC_NHAN:
@@ -146,7 +146,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 default:
                     break;
             }
-            //Gửi email thông báo (bất đồng bộ)
+            // Gửi email thông báo (bất đồng bộ)
             sendStatusUpdateEmailAsync(hoaDonDaCapNhat, trangThaiMoi);
 
             // Gửi WebSocket thông báo đến khách hàng
@@ -156,7 +156,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                     Map<String, Object> clientNotif = new HashMap<>();
                     clientNotif.put("type", "ORDER_STATUS");
                     clientNotif.put("title", "Đơn hàng được cập nhật");
-                    clientNotif.put("message", "Đơn hàng " + hoaDonDaCapNhat.getCode() + " đã chuyển sang: " + getStatusText(trangThaiMoi));
+                    clientNotif.put("message", "Đơn hàng " + hoaDonDaCapNhat.getCode() + " đã chuyển sang: "
+                            + getStatusText(trangThaiMoi));
                     clientNotif.put("refId", hoaDonDaCapNhat.getId());
                     clientNotif.put("refCode", hoaDonDaCapNhat.getCode());
                     clientNotif.put("timestamp", System.currentTimeMillis());
@@ -193,7 +194,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private void doiTrangThaiImel(Order hoaDonDaCapNhat) {
     }
 
-    //luu ls thay doi trạng thía hóa đơn
+    // luu ls thay doi trạng thía hóa đơn
     private OrderHistory luuOrderHistory(
             Order hoaDon,
             OrderStatus trangThai,
@@ -214,7 +215,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         return saved;
     }
 
-   //Lấy danh sách lịch sử trạng thái của hóa đơn
+    // Lấy danh sách lịch sử trạng thái của hóa đơn
     public List<OrderHistory> getOrderHistory(String maHoaDon) {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
@@ -233,7 +234,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElse(null);
     }
 
-    //Lấy thông tin timeline của hóa đơn
+    // Lấy thông tin timeline của hóa đơn
     public Map<String, Object> getTimelineHoaDon(String maHoaDon) {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
@@ -291,7 +292,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-    //Lấy nhân viên hiện tại từ Security Context
+    // Lấy nhân viên hiện tại từ Security Context
     private Employee getCurrentEmployee() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -303,7 +304,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin nhân viên: " + username));
     }
 
-    //Khóa IMEI khi hóa đơn chờ xác nhận / đã xác nhận
+    // Khóa IMEI khi hóa đơn chờ xác nhận / đã xác nhận
     private void khoaIMEIKhiChoXacNhan(Order hoaDon) {
         List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
@@ -339,7 +340,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã đánh dấu {} IMEI là đã bán cho hóa đơn {}", imeiCount, hoaDon.getCode());
     }
 
-    //Trả toàn bộ IMEI về trạng thái AVAILABLE khi hủy hóa đơn
+    // Trả toàn bộ IMEI về trạng thái AVAILABLE khi hủy hóa đơn
     private void traIMEIVeKho(Order hoaDon) {
         List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
@@ -359,7 +360,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã trả {} IMEI về kho cho hóa đơn {}", imeiCount, hoaDon.getCode());
     }
 
-    //Đánh dấu voucher đã được sử dụng khi chuyển sang CHỜ GIAO
+    // Đánh dấu voucher đã được sử dụng khi chuyển sang CHỜ GIAO
     private void danhDauVoucherDaSuDung(Order hoaDon) {
         Voucher voucher = hoaDon.getVoucher();
         if (voucher == null) {
@@ -414,7 +415,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-    //Lưu lịch sử thanh toán khi chuyển sang chờ giao
+    // Lưu lịch sử thanh toán khi chuyển sang chờ giao
     private void luuLichSuThanhToan(Order hoaDon, Employee nhanVien) {
         if (hoaDon.getPaymentDate() != null) {
             return; // Đã thanh toán rồi
@@ -437,7 +438,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã lưu lịch sử thanh toán cho hóa đơn {}", hoaDon.getCode());
     }
 
-   //Hoàn tiền khi hủy hóa đơn đã thanh toán
+    // Hoàn tiền khi hủy hóa đơn đã thanh toán
     private void hoanTienNeuCan(Order hoaDon, Employee nhanVien) {
         if (hoaDon.getPaymentDate() == null) {
             return; // Chưa thanh toán thì không hoàn
@@ -460,7 +461,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         log.info("Đã hoàn tiền cho hóa đơn {}", hoaDon.getCode());
     }
 
-    //Gửi email thông báo thay đổi trạng thái (bất đồng bộ)
+    // Gửi email thông báo thay đổi trạng thái (bất đồng bộ)
     @Async
     public void sendStatusUpdateEmailAsync(Order Order, OrderStatus newStatus) {
         try {
@@ -500,25 +501,25 @@ public class ADOrderServiceImpl implements ADOrderService {
     }
 
     private String buildEmailContent(Order Order, OrderStatus newStatus) {
-        String trackingUrl = "http://localhost:6788/hoa-don/" + Order.getCode();
+        String trackingUrl = "http://localhost:5173/client/profile?tab=orders";
         String statusText = getStatusText(newStatus);
         String customerName = Order.getCustomer() != null ? Order.getCustomer().getName() : Order.getRecipientName();
 
         return """
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: #f9f9f9;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; color: white;">
-                        <h2 style="margin: 0; font-size: 28px;">MyLaptop Store</h2>
-                        <p style="margin: 8px 0 0; font-size: 16px; opacity: 0.9;">Thông báo cập nhật đơn hàng</p>
+                    <div style="background: linear-gradient(135deg, #B71C1C 0%, #D32F2F 100%); padding: 30px 20px; text-align: center; color: white;">
+                        <h2 style="margin: 0; font-size: 28px; letter-spacing: 1px;">📷 Canon Hikari Store</h2>
+                        <p style="margin: 8px 0 0; font-size: 15px; opacity: 0.9;">Chuyên máy ảnh, ống kính &amp; phụ kiện nhiếp ảnh</p>
                     </div>
 
                     <div style="padding: 30px; background: white;">
-                        <h3 style="color: #333; margin-top: 0; font-size: 20px;">${statusText}</h3>
+                        <h3 style="color: #B71C1C; margin-top: 0; font-size: 20px;">${statusText}</h3>
                         <p style="color: #555; font-size: 16px; line-height: 1.6;">
                             Xin chào <b>${customerName}</b>,<br>
-                            Đơn hàng <b style="color: #667eea;">${OrderCode}</b> của bạn đã được cập nhật trạng thái.
+                            Đơn hàng <b style="color: #D32F2F;">${OrderCode}</b> của bạn đã được cập nhật trạng thái.
                         </p>
 
-                        <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <div style="background: #fff5f5; border-left: 4px solid #D32F2F; padding: 15px; margin: 20px 0; border-radius: 4px;">
                             <p style="margin: 0; color: #333;">
                                 <strong>Mã đơn hàng:</strong> ${OrderCode}<br>
                                 <strong>Trạng thái mới:</strong> ${statusText}<br>
@@ -527,17 +528,17 @@ public class ADOrderServiceImpl implements ADOrderService {
                         </div>
 
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${trackingUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            <a href="${trackingUrl}" style="background: linear-gradient(135deg, #B71C1C 0%, #D32F2F 100%);
                                color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px;
-                               font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                                Theo dõi đơn hàng
+                               font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(211, 47, 47, 0.35);">
+                                🔍 Xem đơn hàng của bạn
                             </a>
                         </div>
 
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
                             <p style="color: #777; font-size: 14px; text-align: center;">
-                                Cảm ơn bạn đã mua hàng tại MyLaptop!<br>
-                                Mọi thắc mắc vui lòng liên hệ: 1800-xxxx (Miễn phí)
+                                Cảm ơn bạn đã tin tưởng Canon Hikari Store!<br>
+                                Mọi thắc mắc vui lòng liên hệ hotline hỗ trợ của chúng tôi.
                             </p>
                         </div>
                     </div>
@@ -545,7 +546,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                     <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
                         <p style="margin: 0; color: #666; font-size: 12px;">
                             © 2026 Canon Hikari Store. All rights reserved.<br>
-                            Địa chỉ: Trường Cao đẳng FPT Polytechnic , Trịnh Văn Bô, Nam Từ Liêm, Hà Nội
+                            Địa chỉ: Trường Cao đẳng FPT Polytechnic, Trịnh Văn Bô, Nam Từ Liêm, Hà Nội
                         </p>
                     </div>
                 </div>
@@ -624,7 +625,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết hóa đơn: "
                             + request.getHoaDonChiTietId()));
 
-            // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN hoặc CHỜ GIAO mới cho đổi/gán
+            // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN hoặc CHỜ GIAO
+            // mới cho đổi/gán
             Order hoaDon = chiTiet.getOrder();
             if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN
                     && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN

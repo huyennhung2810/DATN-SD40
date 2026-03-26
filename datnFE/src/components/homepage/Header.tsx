@@ -96,7 +96,7 @@ const Header: React.FC<HeaderProps> = () => {
               className={`notif-item ${item.read ? "read" : "unread"}`}
               onClick={() => {
                 dispatch(notificationActions.markRead(item.id));
-                navigate("/client/orders");
+                navigate("/client/profile?tab=orders");
                 setNotifOpen(false);
               }}
             >
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = () => {
         navigate("/client/profile");
         break;
       case "orders":
-        navigate("/client/orders");
+        navigate("/client/profile?tab=orders");
         break;
       case "login":
         navigate("/login");
@@ -266,7 +266,7 @@ const Header: React.FC<HeaderProps> = () => {
                 <button
                   type="button"
                   className="utility-btn"
-                  onClick={() => navigate("/client/orders")}
+                  onClick={() => navigate("/client/profile?tab=orders")}
                 >
                   <FileSearchOutlined /> Tra cứu đơn hàng
                 </button>
@@ -438,7 +438,7 @@ const Header: React.FC<HeaderProps> = () => {
 
         <div className="mobile-nav-list">
           <div className="nav-title">Hỗ trợ khách hàng</div>
-          <a href="/client/orders" className="nav-item-link">
+          <a href="/client/profile?tab=orders" className="nav-item-link">
             <FileSearchOutlined /> Tra cứu đơn hàng
           </a>
           <a href="/client/vouchers" className="nav-item-link">

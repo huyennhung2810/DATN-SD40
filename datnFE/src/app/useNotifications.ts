@@ -41,15 +41,19 @@ export function useNotifications(topic: string, enabled = true) {
   useEffect(() => {
     if (!enabled || !topic) return;
 
+    let cancelled = false;
+
     const socket = new SockJS(`${SERVER_URL}/ws-chat`);
     const client = over(socket);
     client.debug = () => {};
+    ref.current = client;
 
     client.connect(
       {},
       () => {
-        ref.current = client;
+        if (cancelled) return;
         client.subscribe(topic, (frame) => {
+          if (cancelled) return;
           const notif = parsePayload(frame.body);
           if (notif) {
             dispatch(
@@ -77,6 +81,7 @@ export function useNotifications(topic: string, enabled = true) {
     );
 
     return () => {
+      cancelled = true;
       if (ref.current) {
         try { ref.current.disconnect(() => {}); } catch { /**/ }
         ref.current = null;

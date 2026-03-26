@@ -41,6 +41,8 @@ import type { AddressRequest, AddressResponse } from "../../models/address";
 import { getProfile, updateProfile } from "../../api/clientProfileApi";
 import { authActions } from "../../redux/auth/authSlice";
 import VoucherPage from "./VoucherPage";
+import OrderListEmbed from "./OrderListEmbed";
+import OrderDetailEmbed from "./OrderDetailEmbed";
 
 const ProfilePage: React.FC = () => {
   const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
@@ -56,7 +58,9 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<CustomerResponse | null>(null);
   const [activeMenu, setActiveMenu] = useState(() => {
     const tab = searchParams.get("tab");
-    return tab === "vouchers" ? "vouchers" : "profile";
+    if (tab === "vouchers") return "vouchers";
+    if (tab === "orders") return "orders";
+    return "profile";
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
@@ -64,6 +68,7 @@ const ProfilePage: React.FC = () => {
 
   const [addrModalOpen, setAddrModalOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState<AddressResponse | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const [provinces, setProvinces] = useState<{ name: string; code: number }[]>(
     [],
@@ -332,9 +337,11 @@ const ProfilePage: React.FC = () => {
   ];
 
   const handleMenuClick = (key: string) => {
-    if (key === "orders") navigate("/client/orders");
-    else if (key === "password") navigate(`/change-password/${user?.username}`);
-    else setActiveMenu(key);
+    if (key === "password") navigate(`/change-password/${user?.username}`);
+    else {
+      setActiveMenu(key);
+      setSelectedOrderId(null);
+    }
   };
 
   if (loading) {
@@ -1165,6 +1172,17 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* ---- Đơn mua tab ---- */}
+            {activeMenu === "orders" &&
+              (selectedOrderId ? (
+                <OrderDetailEmbed
+                  orderId={selectedOrderId}
+                  onBack={() => setSelectedOrderId(null)}
+                />
+              ) : (
+                <OrderListEmbed onViewDetail={(id) => setSelectedOrderId(id)} />
+              ))}
 
             {/* ---- Phiếu giảm giá tab ---- */}
             {activeMenu === "vouchers" && <VoucherPage />}

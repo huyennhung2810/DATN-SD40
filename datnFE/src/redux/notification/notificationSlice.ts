@@ -28,6 +28,17 @@ const notificationSlice = createSlice({
   initialState: { items: [] } as NotificationState,
   reducers: {
     push(state, action: PayloadAction<Omit<AppNotification, "id" | "read">>) {
+      // Deduplicate: ignore if same type+refId arrived within the last 2 s
+      if (action.payload.refId) {
+        const cutoff = Date.now() - 2000;
+        const isDuplicate = state.items.some(
+          (n) =>
+            n.type === action.payload.type &&
+            n.refId === action.payload.refId &&
+            n.timestamp >= cutoff
+        );
+        if (isDuplicate) return;
+      }
       const item: AppNotification = {
         ...action.payload,
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
