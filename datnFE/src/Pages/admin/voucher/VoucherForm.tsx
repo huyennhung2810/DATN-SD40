@@ -92,11 +92,12 @@ const VoucherForm: React.FC = () => {
       if (id) {
         dispatch(getVoucherByIdRequest(id));
       }
-    } catch (error) {
-      console.error(error);
-      message.error("Không thể cập nhật trạng thái");
+    }catch (error) {
+      const err = error as any;
+      const errorMessage = err?.message || "Không thể cập nhật trạng thái";
+      message.error(errorMessage);
     }
-  };
+  };  
 
   // Logic tính toán số lượng Quantity hiển thị
   useEffect(() => {
@@ -258,26 +259,29 @@ const VoucherForm: React.FC = () => {
                 </Radio.Group>
               </Form.Item>
 
-           
               {voucherTypeWatch === "INDIVIDUAL" && (
                 <div
                   style={{
                     marginBottom: 24,
                     padding: "16px 20px",
-                    backgroundColor: "#fafafa", 
+                    backgroundColor: "#fafafa",
                     borderRadius: "8px",
-                    border: "1px solid #d9d9d9", 
+                    border: "1px solid #d9d9d9",
                   }}
                 >
-                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                  <Space
+                    direction="vertical"
+                    style={{ width: "100%" }}
+                    size="middle"
+                  >
                     <Text type="secondary" italic>
-                      * Voucher này sẽ chỉ áp dụng cho danh sách khách hàng được chọn bên dưới.
+                      * Voucher này sẽ chỉ áp dụng cho danh sách khách hàng được
+                      chọn bên dưới.
                     </Text>
-                    
+
                     <Space size="middle" align="center">
                       <Button
                         type="primary"
-                    
                         icon={<UsergroupAddOutlined />}
                         onClick={() => setIsModalVisible(true)}
                       >
@@ -285,11 +289,17 @@ const VoucherForm: React.FC = () => {
                       </Button>
 
                       {selectedCustomerIds.length > 0 && (
-                        <Tag 
-                          color="success" 
-                          style={{ margin: 0, padding: "4px 12px", fontSize: "14px", borderRadius: "4px" }}
+                        <Tag
+                          color="success"
+                          style={{
+                            margin: 0,
+                            padding: "4px 12px",
+                            fontSize: "14px",
+                            borderRadius: "4px",
+                          }}
                         >
-                          Đã chọn: <b>{selectedCustomerIds.length}</b> khách hàng
+                          Đã chọn: <b>{selectedCustomerIds.length}</b> khách
+                          hàng
                         </Tag>
                       )}
                     </Space>
@@ -297,17 +307,17 @@ const VoucherForm: React.FC = () => {
                 </div>
               )}
               <Form.Item
-  name="code"
-  label={<Text strong>Mã Voucher</Text>}
-  // TÀI LIỆU: Đã xóa bỏ mảng 'rules' chứa API checkCodeExists 
-  // vì hệ thống tự sinh mã, người dùng không thể nhập sai được nữa.
->
-  <Input
-    size="large"
-    disabled={true} // TÀI LIỆU: Luôn luôn khóa ô nhập (true) bất kể là Thêm mới hay Sửa
-    placeholder="Hệ thống đang tự động tạo mã..." 
-  />
-</Form.Item>
+                name="code"
+                label={<Text strong>Mã Voucher</Text>}
+                // TÀI LIỆU: Đã xóa bỏ mảng 'rules' chứa API checkCodeExists
+                // vì hệ thống tự sinh mã, người dùng không thể nhập sai được nữa.
+              >
+                <Input
+                  size="large"
+                  disabled={true} // TÀI LIỆU: Luôn luôn khóa ô nhập (true) bất kể là Thêm mới hay Sửa
+                  placeholder="Hệ thống đang tự động tạo mã..."
+                />
+              </Form.Item>
 
               <Form.Item
                 name="name"

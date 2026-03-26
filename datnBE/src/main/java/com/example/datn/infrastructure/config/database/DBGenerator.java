@@ -1884,15 +1884,15 @@ public class DBGenerator implements CommandLineRunner {
         long oneDay = 24 * 60 * 60 * 1000L;
 
         // Create vouchers
-        vouchers.add(createVoucher("WELCOME10", "Chào mừng khách hàng mới", "PERCENT", "%",
+        vouchers.add(createVoucher("WELCOME10", "Chào mừng khách hàng mới", "ALL", "PERCENT",
             new BigDecimal("10"), new BigDecimal("100000"), now, now + 30 * oneDay, 100, 1));
-        vouchers.add(createVoucher("SUMMER20", "Mùa hè giảm giá", "PERCENT", "%",
+        vouchers.add(createVoucher("SUMMER20", "Mùa hè giảm giá", "ALL", "PERCENT",
             new BigDecimal("20"), new BigDecimal("500000"), now, now + 15 * oneDay, 50, 1));
-        vouchers.add(createVoucher("VND200K", "Giảm 200.000đ", "FIXED", "VND",
+        vouchers.add(createVoucher("VND200K", "Giảm 200.000đ", "ALL", "VND",
             new BigDecimal("200000"), new BigDecimal("2000000"), now, now + 20 * oneDay, 30, 1));
-        vouchers.add(createVoucher("VIP50", "VIP giảm 50%", "PERCENT", "%",
+        vouchers.add(createVoucher("VIP50", "VIP giảm 50%", "ALL", "PERCENT",
             new BigDecimal("50"), new BigDecimal("1000000"), now, now + 10 * oneDay, 10, 1));
-        vouchers.add(createVoucher("NEWYEAR", "Năm mới giảm giá", "PERCENT", "%",
+        vouchers.add(createVoucher("NEWYEAR", "Năm mới giảm giá", "ALL", "PERCENT",
             new BigDecimal("15"), new BigDecimal("300000"), now, now + 45 * oneDay, 200, 1));
 
         vouchers = voucherRepository.saveAll(vouchers);

@@ -78,7 +78,6 @@ public class Voucher implements Serializable {
     @ToString.Exclude
     private List<VoucherDetail> details;
 
-    @Enumerated(EnumType.ORDINAL)
-    private TypeVoucher typeVoucher;
+
 
 }
