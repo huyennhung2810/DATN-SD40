@@ -8,6 +8,7 @@ import CheckoutPage from "../Pages/client/CheckoutPage";
 import ProfilePage from "../Pages/client/ProfilePage";
 import OrderListPage from "../Pages/client/OrderListPage";
 import OrderDetailPage from "../Pages/client/OrderDetailPage";
+import VoucherPage from "../Pages/client/VoucherPage";
 
 export const CustomerRoutes = () => (
   <Route path="/client" element={<CustomerLayout />}>
@@ -20,6 +21,7 @@ export const CustomerRoutes = () => (
     <Route path="profile" element={<ProfilePage />} />
     <Route path="orders" element={<OrderListPage />} />
     <Route path="orders/:id" element={<OrderDetailPage />} />
+    <Route path="vouchers" element={<VoucherPage />} />
   </Route>
 );
 

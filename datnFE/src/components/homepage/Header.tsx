@@ -1,41 +1,40 @@
-import React, { useState, useEffect } from "react";
 import {
-  Input,
-  Button,
-  Badge,
-  Drawer,
-  List,
-  Dropdown,
-  Avatar,
-  Popover,
-  Empty,
-} from "antd";
-import {
-  ShoppingCartOutlined,
-  SearchOutlined,
-  UserOutlined,
-  MenuOutlined,
-  HeartOutlined,
-  PhoneOutlined,
-  CloseOutlined,
-  LogoutOutlined,
-  LoginOutlined,
   BellOutlined,
   CheckCircleOutlined,
+  CloseOutlined,
   FileSearchOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  MenuOutlined,
+  PhoneOutlined,
+  SearchOutlined,
+  ShoppingCartOutlined,
   TagOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Drawer,
+  Dropdown,
+  Empty,
+  List,
+  Popover,
+} from "antd";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import type { RootState } from "../../redux/store";
-import { setCartCount, clearCartCount } from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient";
-import { useSelector, useDispatch } from "react-redux";
+import { useNotifications } from "../../app/useNotifications";
 import { authActions } from "../../redux/auth/authSlice";
+import { clearCartCount, setCartCount } from "../../redux/cart/cartSlice";
 import {
   notificationActions,
   type AppNotification,
 } from "../../redux/notification/notificationSlice";
-import { useNotifications } from "../../app/useNotifications";
+import type { RootState } from "../../redux/store";
+
 interface HeaderProps {
   onMenuClick?: () => void;
 }
@@ -67,14 +66,7 @@ const Header: React.FC<HeaderProps> = () => {
 
   const notifContent = (
     <div style={{ width: 300 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "4px 0 8px",
-        }}
-      >
+      <div className="notif-header">
         <span style={{ fontWeight: 600, fontSize: 14 }}>
           Thông báo đơn hàng
         </span>
@@ -101,13 +93,7 @@ const Header: React.FC<HeaderProps> = () => {
           renderItem={(item: AppNotification) => (
             <List.Item
               key={item.id}
-              style={{
-                background: item.read ? "transparent" : "#e6f4ff",
-                borderRadius: 6,
-                padding: "8px 10px",
-                cursor: "pointer",
-                marginBottom: 4,
-              }}
+              className={`notif-item ${item.read ? "read" : "unread"}`}
               onClick={() => {
                 dispatch(notificationActions.markRead(item.id));
                 navigate("/client/orders");
@@ -132,7 +118,7 @@ const Header: React.FC<HeaderProps> = () => {
                     <div style={{ fontSize: 12, color: "#595959" }}>
                       {item.message}
                     </div>
-                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
                       <CheckCircleOutlined
                         style={{ marginRight: 4, opacity: 0.5 }}
                       />
@@ -153,48 +139,48 @@ const Header: React.FC<HeaderProps> = () => {
 
   useEffect(() => {
     if (user && user.userId && user.roles?.includes("CUSTOMER")) {
-      // Gọi API lấy giỏ hàng ngay khi có user đăng nhập (chỉ dành cho CUSTOMER)
       axiosClient
         .get(`/client/cart?customerId=${user.userId}`)
         .then((response) => {
-          const cartItems = response.data;
-          // Hiển thị số lượng "Loại sản phẩm" (Mỗi mặt hàng là 1)
-          const count = cartItems.length;
+          const count = response.data.length;
           dispatch(setCartCount(count));
         })
-        .catch((error) => {
-          console.error("Lỗi lấy số lượng giỏ hàng:", error);
-        });
+        .catch((error) => console.error("Lỗi lấy số lượng giỏ hàng:", error));
     } else {
-      // Chưa đăng nhập hoặc không phải CUSTOMER thì reset số 0
       dispatch(clearCartCount());
     }
   }, [user, dispatch]);
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
-    if (key === "logout") {
-      dispatch(authActions.logout({ isAdmin: false }));
-      navigate("/client");
-    } else if (key === "profile") {
-      navigate("/client/profile");
-    } else if (key === "orders") {
-      navigate("/client/orders");
-    } else if (key === "login") {
-      navigate("/login");
-    } else if (key === "register") {
-      navigate("/register");
+    switch (key) {
+      case "logout":
+        dispatch(authActions.logout({ isAdmin: false }));
+        navigate("/client");
+        break;
+      case "profile":
+        navigate("/client/profile");
+        break;
+      case "orders":
+        navigate("/client/orders");
+        break;
+      case "login":
+        navigate("/login");
+        break;
+      case "register":
+        navigate("/register");
+        break;
     }
   };
 
   const handleSearch = (value: string) => {
-    navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
-    setMobileSearchVisible(false);
+    if (value.trim()) {
+      navigate(`/client/catalog?q=${encodeURIComponent(value)}`);
+      setMobileSearchVisible(false);
+    }
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -202,11 +188,6 @@ const Header: React.FC<HeaderProps> = () => {
   const userMenuItems = isLoggedIn
     ? [
         { key: "profile", label: "Tài khoản của tôi", icon: <UserOutlined /> },
-        {
-          key: "orders",
-          label: "Đơn hàng của tôi",
-          icon: <ShoppingCartOutlined />,
-        },
         { type: "divider" as const },
         {
           key: "logout",
@@ -220,681 +201,626 @@ const Header: React.FC<HeaderProps> = () => {
         { key: "register", label: "Đăng ký", icon: <UserOutlined /> },
       ];
 
-  const mainNavItems = [
-    {
-      key: "may-anh-canon",
-      label: "Máy ảnh Canon",
-      href: "/client/catalog?brand=canon&category=may-anh",
-    },
-    {
-      key: "ong-kinh",
-      label: "Ống kính",
-      href: "/client/catalog?category=ong-kinh",
-    },
-    {
-      key: "den-flash",
-      label: "Đèn flash",
-      href: "/client/catalog?category=den-flash",
-    },
-    {
-      key: "phu-kien",
-      label: "Phụ kiện",
-      href: "/client/catalog?category=phu-kien",
-    },
-    { key: "tin-tuc", label: "Tin tức", href: "/client/news" },
-  ];
-
   return (
     <>
       <header className={`main-header ${isScrolled ? "scrolled" : ""}`}>
-        <div className="header-container">
-          {/* Mobile menu button */}
-          <Button
-            type="text"
-            icon={<MenuOutlined />}
-            className="lg:hidden header-icon-btn mobile-menu-btn"
-            onClick={() => setMobileMenuVisible(true)}
-          />
-
-          {/* Logo */}
-          <div className="header-logo" onClick={() => navigate("/client")}>
-            <img
-              src="/logo_hikari.png"
-              alt="Hikari Camera"
-              className="logo-img"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://via.placeholder.com/150x50?text=HIKARI";
-              }}
+        <div className="header-top-wrapper">
+          <div className="header-container">
+            {/* Mobile menu button */}
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              className="lg:hidden header-icon-btn mobile-menu-btn"
+              onClick={() => setMobileMenuVisible(true)}
             />
-          </div>
 
-          {/* Search box - desktop */}
-          <div className="hidden md:flex header-search">
-            <Input
-              placeholder="Tìm kiếm"
-              allowClear
-              size="large"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onPressEnter={(e) =>
-                handleSearch((e.target as HTMLInputElement).value)
-              }
-              className="hdr-search-input"
-              suffix={
-                <SearchOutlined
-                  className="hdr-search-suffix"
-                  onClick={() => handleSearch(searchValue)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(ev) => {
-                    if (ev.key === "Enter" || ev.key === " ") {
-                      ev.preventDefault();
-                      handleSearch(searchValue);
-                    }
+            {/* Logo */}
+            <div className="header-logo" onClick={() => navigate("/client")}>
+              <img
+                src="/logo_hikari.png"
+                alt="Hikari Camera"
+                className="logo-img"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    "https://via.placeholder.com/160x50?text=HIKARI";
+                }}
+              />
+            </div>
+
+            {/* Search box - desktop */}
+            <div className="header-search">
+              <div className="search-wrapper">
+                <SearchOutlined className="search-icon-prefix" />
+                <input
+                  type="text"
+                  placeholder="Bạn đang tìm máy ảnh, ống kính nào?"
+                  className="search-input-field"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch(searchValue);
                   }}
                 />
-              }
-            />
-          </div>
-
-          {/* Actions — căn phải: yêu thích, tài khoản, giỏ hàng */}
-          <div className="header-actions">
-            {/* Mobile search button */}
-            <Button
-              type="text"
-              icon={<SearchOutlined />}
-              className="md:hidden header-icon-btn"
-              onClick={() => setMobileSearchVisible(true)}
-            />
-
-            {/* Tra cứu đơn hàng */}
-            <button
-              type="button"
-              className="hdr-shortcut-btn hidden lg:flex"
-              onClick={() => navigate("/client/orders")}
-            >
-              <FileSearchOutlined className="hdr-shortcut-icon" />
-              <span className="hdr-shortcut-text">Tra cứu đơn hàng</span>
-            </button>
-
-            {/* Phiếu giảm giá */}
-            <button
-              type="button"
-              className="hdr-shortcut-btn hidden lg:flex"
-              onClick={() => navigate("/client/vouchers")}
-            >
-              <TagOutlined className="hdr-shortcut-icon" />
-              <span className="hdr-shortcut-text">Phiếu giảm giá</span>
-            </button>
-
-            {/* Wishlist */}
-            <Button
-              type="text"
-              icon={<HeartOutlined />}
-              className="header-icon-btn hidden sm:flex"
-              onClick={() => navigate("/client/wishlist")}
-            >
-              <span className="hidden lg:inline action-text">Yêu thích</span>
-            </Button>
-
-            {/* User */}
-            <Dropdown
-              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
-              trigger={["click"]}
-              placement="bottomRight"
-            >
-              {isLoggedIn ? (
-                <Button type="text" className="header-icon-btn">
-                  <Avatar
-                    size={28}
-                    src={user?.image ?? user?.pictureUrl}
-                    icon={
-                      !(user?.image ?? user?.pictureUrl) && <UserOutlined />
-                    }
-                    style={{ backgroundColor: "#D32F2F" }}
-                  />
-                  <span className="hidden lg:inline action-text">
-                    {user?.fullName?.split(" ").pop()}
-                  </span>
-                </Button>
-              ) : (
-                <Button type="text" className="header-icon-btn">
-                  <UserOutlined />
-                  <span className="hidden lg:inline action-text">
-                    Tài khoản
-                  </span>
-                </Button>
-              )}
-            </Dropdown>
-
-            {/* Notification Bell — chỉ hiện khi đã đăng nhập là CUSTOMER */}
-            {isCustomer && (
-              <Popover
-                content={notifContent}
-                trigger="click"
-                open={notifOpen}
-                onOpenChange={setNotifOpen}
-                placement="bottomRight"
-              >
                 <button
                   type="button"
-                  className="hdr-cart-btn"
-                  aria-label="Thông báo"
+                  className="search-submit-btn"
+                  onClick={() => handleSearch(searchValue)}
                 >
-                  <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-                    <BellOutlined className="hdr-cart-icon" />
-                  </Badge>
+                  Tìm kiếm
                 </button>
-              </Popover>
-            )}
+              </div>
+            </div>
 
-            {/* Cart — chỉ icon + badge */}
-            <button
-              type="button"
-              className="hdr-cart-btn"
-              onClick={() => navigate("/client/cart")}
-              aria-label="Giỏ hàng"
-            >
-              <Badge
-                count={cartCount}
-                showZero
-                offset={[-2, 2]}
-                className="hdr-cart-badge"
+            {/* Actions */}
+            <div className="header-actions">
+              {/* Mobile search button */}
+              <Button
+                type="text"
+                icon={<SearchOutlined />}
+                className="md:hidden mobile-search-trigger"
+                onClick={() => setMobileSearchVisible(true)}
+              />
+
+              {/* Tra cứu đơn hàng & Phiếu giảm giá (Desktop Only) */}
+              <div className="header-utilities hidden-on-mobile">
+                <button
+                  type="button"
+                  className="utility-btn"
+                  onClick={() => navigate("/client/orders")}
+                >
+                  <FileSearchOutlined /> Tra cứu đơn hàng
+                </button>
+                <button
+                  type="button"
+                  className="utility-btn"
+                  onClick={() => navigate("/client/vouchers")}
+                >
+                  <TagOutlined /> Khuyến mãi
+                </button>
+              </div>
+
+              <div className="header-divider hidden-on-mobile"></div>
+
+              {/* Account */}
+              <Dropdown
+                menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+                trigger={["click"]}
+                placement="bottomRight"
               >
-                <ShoppingCartOutlined className="hdr-cart-icon" />
-              </Badge>
-            </button>
-          </div>
-        </div>
+                <button type="button" className="action-btn">
+                  {isLoggedIn ? (
+                    <Avatar
+                      size={28}
+                      src={user?.image ?? user?.pictureUrl}
+                      icon={
+                        !(user?.image ?? user?.pictureUrl) && <UserOutlined />
+                      }
+                      style={{ backgroundColor: "#D32F2F" }}
+                    />
+                  ) : (
+                    <div className="action-icon-wrapper">
+                      <UserOutlined />
+                    </div>
+                  )}
+                  <div className="action-text-wrapper hidden-on-tablet">
+                    <span className="action-label">Tài khoản</span>
+                    <span className="action-value">
+                      {isLoggedIn
+                        ? user?.fullName?.split(" ").pop()
+                        : "Đăng nhập"}
+                    </span>
+                  </div>
+                </button>
+              </Dropdown>
 
-        {/* Mobile Search Overlay */}
-        <div
-          className={`mobile-search-overlay ${mobileSearchVisible ? "active" : ""}`}
-        >
-          <div className="mobile-search-container">
-            <Input
-              placeholder="Tìm kiếm sản phẩm..."
-              prefix={<SearchOutlined />}
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onPressEnter={() => handleSearch(searchValue)}
-              autoFocus
-              className="mobile-search-input"
-            />
-            <Button
-              type="text"
-              icon={<CloseOutlined />}
-              className="mobile-search-close"
-              onClick={() => setMobileSearchVisible(false)}
-            />
+              {/* Notification Bell */}
+              {isCustomer && (
+                <Popover
+                  content={notifContent}
+                  trigger="click"
+                  open={notifOpen}
+                  onOpenChange={setNotifOpen}
+                  placement="bottomRight"
+                >
+                  <button type="button" className="action-btn">
+                    <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+                      <div className="action-icon-wrapper">
+                        <BellOutlined />
+                      </div>
+                    </Badge>
+                  </button>
+                </Popover>
+              )}
+
+              {/* Cart */}
+              <button
+                type="button"
+                className="action-btn cart-btn"
+                onClick={() => navigate("/client/cart")}
+              >
+                <Badge count={cartCount} showZero offset={[-4, 4]}>
+                  <div className="action-icon-wrapper">
+                    <ShoppingCartOutlined />
+                  </div>
+                </Badge>
+                <span className="cart-text hidden-on-tablet">Giỏ hàng</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
+      {/* Mobile Search Overlay */}
+      {mobileSearchVisible && (
+        <div className="mobile-search-overlay">
+          <div className="mobile-search-bar">
+            <SearchOutlined className="mobile-search-prefix" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Tìm kiếm sản phẩm..."
+              className="mobile-search-field"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch(searchValue);
+              }}
+            />
+            <button
+              type="button"
+              className="mobile-search-submit"
+              onClick={() => handleSearch(searchValue)}
+            >
+              Tìm
+            </button>
+            <button
+              type="button"
+              className="mobile-search-close"
+              onClick={() => setMobileSearchVisible(false)}
+            >
+              <CloseOutlined />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Menu Drawer */}
       <Drawer
         title={
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo_hikari.png"
-              alt="Hikari"
-              className="h-8"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://via.placeholder.com/100x30?text=HIKARI";
-              }}
-            />
-          </div>
+          <img
+            src="/logo_hikari.png"
+            alt="Hikari"
+            className="h-8"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src =
+                "https://via.placeholder.com/100x30?text=HIKARI";
+            }}
+          />
         }
         placement="left"
         onClose={() => setMobileMenuVisible(false)}
         open={mobileMenuVisible}
-        width={320}
+        width={300}
         className="mobile-menu-drawer"
       >
-        <div className="mobile-search mb-4">
-          <Input
-            placeholder="Tìm kiếm sản phẩm..."
-            prefix={<SearchOutlined />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={() => {
-              handleSearch(searchValue);
-              setMobileMenuVisible(false);
-            }}
-          />
-        </div>
-
-        {/* Mobile auth section */}
         {isLoggedIn ? (
-          <div className="mobile-user-section mb-4 pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar
-                size={44}
-                src={user?.image ?? user?.pictureUrl}
-                icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
-                style={{ backgroundColor: "#D32F2F" }}
-              />
-              <div>
-                <div className="font-semibold text-gray-800">
-                  {user?.fullName}
-                </div>
-                <div className="text-xs text-gray-500">{user?.email}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                icon={<UserOutlined />}
-                block
-                onClick={() => {
-                  navigate("/client/profile");
-                  setMobileMenuVisible(false);
-                }}
-              >
-                Tài khoản
-              </Button>
-              <Button
-                icon={<LogoutOutlined />}
-                danger
-                block
-                onClick={() => {
-                  dispatch(authActions.logout({ isAdmin: false }));
-                  navigate("/client");
-                  setMobileMenuVisible(false);
-                }}
-              >
-                Đăng xuất
-              </Button>
+          <div className="mobile-user-card">
+            <Avatar
+              size={48}
+              src={user?.image ?? user?.pictureUrl}
+              icon={!(user?.image ?? user?.pictureUrl) && <UserOutlined />}
+              style={{ backgroundColor: "#D32F2F" }}
+            />
+            <div className="user-info">
+              <h4>{user?.fullName}</h4>
+              <p>{user?.email}</p>
             </div>
           </div>
         ) : (
-          <div className="mobile-auth-section mb-4 pb-4 border-b border-gray-100">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="primary"
-                icon={<LoginOutlined />}
-                block
-                onClick={() => {
-                  navigate("/login");
-                  setMobileMenuVisible(false);
-                }}
-              >
-                Đăng nhập
-              </Button>
-              <Button
-                icon={<UserOutlined />}
-                block
-                onClick={() => {
-                  navigate("/register");
-                  setMobileMenuVisible(false);
-                }}
-              >
-                Đăng ký
-              </Button>
-            </div>
+          <div className="mobile-auth-grid">
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              block
+              onClick={() => navigate("/login")}
+            >
+              Đăng nhập
+            </Button>
+            <Button
+              icon={<UserOutlined />}
+              block
+              onClick={() => navigate("/register")}
+            >
+              Đăng ký
+            </Button>
           </div>
         )}
 
-        {/* Mobile utility links */}
-        <div className="mobile-utilities mb-4 pb-4 border-b border-gray-100">
-          <div className="grid grid-cols-2 gap-2">
-            <a href="tel:19001909" className="mobile-utility-item">
-              <PhoneOutlined /> Gọi tư vấn
-            </a>
-            <a href="/client/wishlist" className="mobile-utility-item">
-              <HeartOutlined /> Yêu thích
-            </a>
-          </div>
+        <div className="mobile-nav-list">
+          <div className="nav-title">Hỗ trợ khách hàng</div>
+          <a href="/client/orders" className="nav-item-link">
+            <FileSearchOutlined /> Tra cứu đơn hàng
+          </a>
+          <a href="/client/vouchers" className="nav-item-link">
+            <TagOutlined /> Phiếu giảm giá
+          </a>
+          <a href="tel:19001909" className="nav-item-link">
+            <PhoneOutlined /> Gọi tư vấn (1900 1909)
+          </a>
         </div>
 
-        <List
-          dataSource={mainNavItems}
-          renderItem={(item) => (
-            <List.Item className="!px-0">
-              <a
-                href={item.href}
-                className="mobile-nav-link"
-                onClick={() => setMobileMenuVisible(false)}
-              >
-                {item.label}
-              </a>
-            </List.Item>
-          )}
-        />
-
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        {isLoggedIn && (
           <Button
-            type="primary"
-            icon={<ShoppingCartOutlined />}
+            icon={<LogoutOutlined />}
+            danger
             block
-            className="!bg-red-600 !border-red-600 h-12"
+            className="mt-4"
             onClick={() => {
-              navigate("/client/cart");
+              dispatch(authActions.logout({ isAdmin: false }));
+              navigate("/client");
               setMobileMenuVisible(false);
             }}
           >
-            Giỏ hàng ({cartCount}) {/* Thay số 0 bằng biến cartCount */}
+            Đăng xuất
           </Button>
-        </div>
+        )}
       </Drawer>
 
       <style>{`
+        /* Core Layout */
         .main-header {
           position: sticky;
           top: 0;
           z-index: 1000;
-          /* Nền xanh-than sẫm: tương phản tốt với logo đỏ, vẫn hòa với UI tối */
           background: linear-gradient(180deg, #1b222c 0%, #12161c 100%);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          transition: box-shadow 0.3s ease;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.3s ease;
         }
-
         .main-header.scrolled {
-          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
-
+        .header-top-wrapper {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
         .header-container {
-          max-width: 1400px;
+          max-width: 1300px;
           margin: 0 auto;
-          padding: 14px 24px;
+          padding: 12px 24px;
           display: flex;
           align-items: center;
-          gap: 28px;
+          gap: 32px;
         }
 
-        .mobile-menu-btn {
-          display: none !important;
-        }
-
-        @media (max-width: 1023px) {
-          .mobile-menu-btn {
-            display: flex !important;
-          }
-        }
-
+        /* Logo */
         .header-logo {
-          flex-shrink: 0;
           cursor: pointer;
-          display: flex;
-          align-items: center;
+          flex-shrink: 0;
         }
-
         .logo-img {
-          height: 44px;
-          width: auto;
-          max-height: 48px;
+          height: 40px;
           object-fit: contain;
         }
 
-        @media (max-width: 768px) {
-          .logo-img {
-            height: 34px;
-          }
-        }
-
+        /* Advanced Search Bar */
         .header-search {
           flex: 1;
-          min-width: 0;
-          max-width: 720px;
+          max-width: 600px;
+          margin: 0 auto;
         }
-
-        .hdr-search-input {
-          border-radius: 4px !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          background: rgba(30, 36, 46, 0.85) !important;
-          color: #f3f4f6 !important;
-          font-size: 14px;
+        .search-wrapper {
+          display: flex;
+          align-items: center;
+          background: #fff;
+          border-radius: 24px;
+          padding: 4px 4px 4px 16px;
+          height: 44px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          transition: box-shadow 0.2s;
         }
-
-        .hdr-search-input input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
+        .search-wrapper:focus-within {
+          box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.5);
         }
-
-        .hdr-search-input:hover,
-        .hdr-search-input-focused {
-          border-color: rgba(255, 255, 255, 0.22) !important;
-        }
-
-        .hdr-search-input.ant-input-affix-wrapper-focused {
-          border-color: #c62828 !important;
-          box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.35) !important;
-        }
-
-        .hdr-search-suffix {
-          color: rgba(255, 255, 255, 0.65);
-          cursor: pointer;
+        .search-icon-prefix {
+          color: #9ca3af;
           font-size: 16px;
-          padding: 4px;
         }
-
-        .hdr-search-suffix:hover {
+        .search-input-field {
+          flex: 1;
+          border: none;
+          outline: none;
+          padding: 0 12px;
+          font-size: 14px;
+          color: #1a1a1a;
+          background: transparent;
+        }
+        .search-input-field::placeholder {
+          color: #9ca3af;
+        }
+        .search-submit-btn {
+          background: #c62828;
           color: #fff;
+          border: none;
+          border-radius: 20px;
+          padding: 0 20px;
+          height: 100%;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .search-submit-btn:hover {
+          background: #b71c1c;
         }
 
+        /* Action Area */
         .header-actions {
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-left: auto;
+          gap: 16px;
           flex-shrink: 0;
         }
+        .header-utilities {
+          display: flex;
+          gap: 16px;
+        }
+        .utility-btn {
+          background: transparent;
+          border: none;
+          color: #a1a1aa;
+          font-size: 13px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: color 0.2s;
+        }
+        .utility-btn:hover {
+          color: #fff;
+        }
+        .header-divider {
+          width: 1px;
+          height: 24px;
+          background: rgba(255,255,255,0.15);
+        }
 
-        .header-icon-btn {
+        /* Profile & Cart Buttons */
+        .action-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 6px 8px;
+          border-radius: 8px;
+          transition: background 0.2s;
+          text-align: left;
+        }
+        .action-btn:hover {
+          background: rgba(255,255,255,0.08);
+        }
+        .action-icon-wrapper {
+          width: 36px;
+          height: 36px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          color: rgba(255, 255, 255, 0.88) !important;
-          font-weight: 500;
-          height: 44px;
-          padding: 0 12px;
-          border-radius: 8px;
-          transition: all 0.2s;
-        }
-
-        .header-icon-btn:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
-          color: #fff !important;
-        }
-
-        .action-text {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.88);
-        }
-
-        .hdr-shortcut-btn {
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          background: transparent;
-          border: none;
-          color: rgba(255, 255, 255, 0.88);
-          cursor: pointer;
-          padding: 6px 10px;
-          border-radius: 8px;
-          transition: background 0.2s, color 0.2s;
-          min-width: 72px;
-        }
-
-        .hdr-shortcut-btn:hover {
-          background: rgba(255, 255, 255, 0.08);
           color: #fff;
+          font-size: 18px;
         }
-
-        .hdr-shortcut-icon {
-          font-size: 22px;
-          line-height: 1;
+        .action-text-wrapper {
+          display: flex;
+          flex-direction: column;
         }
-
-        .hdr-shortcut-text {
+        .action-label {
           font-size: 11px;
+          color: #a1a1aa;
+          line-height: 1.2;
+        }
+        .action-value {
+          font-size: 13px;
+          font-weight: 600;
+          color: #fff;
           line-height: 1.2;
           white-space: nowrap;
-          color: inherit;
+        }
+        .cart-btn .action-icon-wrapper {
+          background: #c62828;
+        }
+        .cart-btn .cart-text {
+          font-size: 14px;
+          font-weight: 600;
+          color: #fff;
         }
 
-        .hdr-cart-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 44px;
-          height: 44px;
-          padding: 0;
-          margin: 0;
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          border-radius: 4px;
+        /* Desktop Navigation */
+        .header-nav-wrapper {
           background: transparent;
+        }
+        .desktop-nav {
+          max-width: 1300px;
+          margin: 0 auto;
+          padding: 0 24px;
+          display: flex;
+          gap: 32px;
+        }
+        .desktop-nav-item {
+          color: #d4d4d8;
+          font-size: 14px;
+          font-weight: 500;
+          padding: 12px 0;
+          text-decoration: none;
+          position: relative;
+          transition: color 0.2s;
+        }
+        .desktop-nav-item:hover {
           color: #fff;
+        }
+        .desktop-nav-item::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: #c62828;
+          transition: width 0.3s ease;
+        }
+        .desktop-nav-item:hover::after {
+          width: 100%;
+        }
+
+        /* Notification Popover Styles */
+        .notif-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #f0f0f0;
+          margin-bottom: 8px;
+        }
+        .notif-item {
+          border-radius: 6px;
+          padding: 10px;
           cursor: pointer;
-          transition: border-color 0.2s, background 0.2s;
+          margin-bottom: 4px;
+          transition: background 0.2s;
+        }
+        .notif-item.unread {
+          background: #f0f8ff;
+        }
+        .notif-item:hover {
+          background: #f5f5f5;
         }
 
-        .hdr-cart-btn:hover {
-          border-color: rgba(255, 255, 255, 0.55);
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        .hdr-cart-icon {
-          font-size: 22px;
-          color: #fff;
-        }
-
-        .hdr-cart-badge .ant-badge-count {
-          background: #c62828 !important;
+        /* Mobile Adjustments */
+        .mobile-search-trigger {
           color: #fff !important;
-          font-size: 11px;
-          font-weight: 700;
-          min-width: 18px;
-          height: 18px;
-          line-height: 18px;
-          box-shadow: 0 0 0 1px #12161c;
+          font-size: 20px;
         }
-
-        @media (max-width: 768px) {
-          .hdr-cart-btn {
-            width: 40px;
-            height: 40px;
-          }
+        .mobile-user-card {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          padding: 16px 0;
+          border-bottom: 1px solid #f0f0f0;
+          margin-bottom: 16px;
+        }
+        .mobile-user-card h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+        }
+        .mobile-user-card p {
+          margin: 0;
+          font-size: 13px;
+          color: #666;
+        }
+        .mobile-auth-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #f0f0f0;
+          margin-bottom: 16px;
+        }
+        .mobile-nav-list {
+          margin-bottom: 24px;
+        }
+        .nav-title {
+          font-size: 12px;
+          text-transform: uppercase;
+          color: #999;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        .nav-item-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 0;
+          color: #333;
+          font-size: 15px;
+          text-decoration: none;
         }
 
         /* Mobile Search Overlay */
         .mobile-search-overlay {
-          display: none;
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.55);
-          z-index: 1001;
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.3s;
-        }
-
-        .mobile-search-overlay.active {
-          opacity: 1;
-          visibility: visible;
-        }
-
-        .mobile-search-container {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
+          z-index: 1100;
           background: #1b222c;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          transform: translateY(-100%);
-          transition: transform 0.3s;
+          border-bottom: 2px solid #c62828;
+          padding: 10px 16px;
+          animation: slideDown 0.2s ease;
         }
-
-        .mobile-search-overlay.active .mobile-search-container {
-          transform: translateY(0);
+        @keyframes slideDown {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
         }
-
-        .mobile-search-input {
-          flex: 1;
-          height: 48px;
-          border-radius: 4px !important;
-          font-size: 16px;
-          background: rgba(30, 36, 46, 0.9) !important;
-          border-color: rgba(255, 255, 255, 0.1) !important;
-          color: #fff !important;
-        }
-
-        .mobile-search-input input::placeholder {
-          color: rgba(255, 255, 255, 0.45);
-        }
-
-        .mobile-search-close {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px !important;
-          color: #fff !important;
-        }
-
-        .mobile-search-close:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
-        }
-
-        /* Mobile Menu Styles */
-        .mobile-menu-drawer .ant-drawer-header {
-          border-bottom: 1px solid #e5e5ea;
-        }
-
-        .mobile-nav-link {
-          display: block;
-          padding: 14px 0;
-          color: #1a1a1a;
-          text-decoration: none;
-          font-weight: 500;
-          font-size: 15px;
-          transition: color 0.2s;
-        }
-
-        .mobile-nav-link:hover {
-          color: #D32F2F;
-        }
-
-        .mobile-utility-item {
+        .mobile-search-bar {
           display: flex;
           align-items: center;
-          justify-content: center;
+          background: #fff;
+          border-radius: 24px;
+          padding: 4px 4px 4px 14px;
+          height: 44px;
           gap: 8px;
-          padding: 12px;
-          background: #f9fafb;
-          border-radius: 10px;
-          color: #4b5563;
+        }
+        .mobile-search-prefix {
+          color: #9ca3af;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+        .mobile-search-field {
+          flex: 1;
+          border: none;
+          outline: none;
+          font-size: 15px;
+          color: #1a1a1a;
+          background: transparent;
+        }
+        .mobile-search-field::placeholder { color: #9ca3af; }
+        .mobile-search-submit {
+          background: #c62828;
+          color: #fff;
+          border: none;
+          border-radius: 20px;
+          padding: 0 16px;
+          height: 36px;
+          font-weight: 600;
           font-size: 13px;
-          text-decoration: none;
-          transition: all 0.2s;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .mobile-search-close {
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          font-size: 16px;
+          cursor: pointer;
+          padding: 4px 8px;
+          flex-shrink: 0;
         }
 
-        .mobile-utility-item:hover {
-          background: #f3f4f6;
-          color: #D32F2F;
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+          .hidden-on-tablet { display: none !important; }
+          .header-container { gap: 16px; }
+          .search-wrapper { max-width: 400px; }
         }
-
         @media (max-width: 768px) {
-          .header-container {
-            padding: 10px 16px;
-            gap: 12px;
-          }
-
-          .header-actions {
-            gap: 4px;
-          }
-
-          .header-icon-btn {
-            height: 40px;
-            padding: 0 10px;
-          }
-
-          .mobile-search-overlay {
-            display: block;
-          }
+          .hidden-on-mobile { display: none !important; }
+          .header-search { display: none; }
+          .mobile-menu-btn { display: flex !important; color: #fff !important; }
+          .header-container { padding: 10px 16px; }
+          .logo-img { height: 32px; }
+          .action-icon-wrapper { width: 32px; height: 32px; font-size: 16px; }
+          .action-btn { padding: 4px; }
         }
       `}</style>
     </>

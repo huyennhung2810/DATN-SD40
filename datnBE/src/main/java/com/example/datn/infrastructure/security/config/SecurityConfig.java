@@ -98,6 +98,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/support/**", "/ws-chat/**").permitAll()
                         .requestMatchers("/api/v1/client/payment/vnpay-return").permitAll()
                         .requestMatchers("/api/v1/admin/pos/orders/vnpay-return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/client/vouchers").permitAll()
 
                         // 2. Quyền xem sản phẩm cho khách vãng lai (Public Read)
                         .requestMatchers(HttpMethod.GET, MappingConstants.ADMIN_PRODUCT_CATEGORY + "/**").permitAll()
