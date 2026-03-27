@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
-import { Spin, message, Empty, Tooltip, Pagination } from "antd";
+import { Spin, message, Empty, Tooltip, Pagination, Tabs } from "antd";
 import { CopyOutlined, CheckOutlined, TagOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getClientVouchers } from "../../api/voucherApi";
@@ -29,7 +29,7 @@ const formatPrice = (value: number | null | undefined): string => {
 };
 
 const formatDiscount = (v: Voucher): string => {
-  if (v.discountUnit === "%" || v.voucherType === "PERCENTAGE") {
+  if (v.discountUnit === "PERCENT") {
     const pct = `${v.discountValue}%`;
     return v.maxDiscountAmount
       ? `${pct} (tối đa ${formatPrice(v.maxDiscountAmount)})`
@@ -42,6 +42,8 @@ const VoucherPage: React.FC = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState("ALL");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 6;
 
@@ -69,7 +71,23 @@ const VoucherPage: React.FC = () => {
     });
   };
 
-  const paged = vouchers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    setPage(1);
+  };
+
+  const filteredVouchers = vouchers.filter((v) => {
+    if (activeTab === "ALL") {
+      return v.voucherType === "ALL";
+    } else {
+      return v.voucherType !== "ALL";
+    }
+  });
+
+  const paged = filteredVouchers.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div
@@ -88,7 +106,7 @@ const VoucherPage: React.FC = () => {
           display: "flex",
           alignItems: "center",
           gap: 10,
-          marginBottom: 20,
+          marginBottom: 10,
           paddingBottom: 16,
           borderBottom: "1px solid #f3f4f6",
         }}
@@ -107,17 +125,33 @@ const VoucherPage: React.FC = () => {
             padding: "2px 10px",
           }}
         >
-          {vouchers.length} mã
+          {filteredVouchers.length} mã
         </span>
       </div>
+
+      <Tabs
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={[
+          { key: "ALL", label: "Tất cả voucher" },
+          { key: "PERSONAL", label: "Dành riêng cho bạn" },
+        ]}
+        style={{ marginBottom: 16 }}
+      />
 
       {loading ? (
         <div style={{ textAlign: "center", paddingTop: 40 }}>
           <Spin size="large" />
         </div>
-      ) : vouchers.length === 0 ? (
+      ) : filteredVouchers.length === 0 ? (
         <div style={{ textAlign: "center", paddingTop: 40 }}>
-          <Empty description="Hiện không có phiếu giảm giá nào" />
+          <Empty
+            description={
+              activeTab === "ALL"
+                ? "Hiện không có phiếu giảm giá nào"
+                : "Bạn chưa có voucher đặc quyền nào"
+            }
+          />
         </div>
       ) : (
         <>
@@ -156,7 +190,11 @@ const VoucherPage: React.FC = () => {
                     {v.name}
                   </div>
                   <div
-                    style={{ fontSize: 16, fontWeight: 800, color: "#D32F2F" }}
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: "#D32F2F",
+                    }}
                   >
                     {formatDiscount(v)}
                   </div>
@@ -242,7 +280,7 @@ const VoucherPage: React.FC = () => {
             ))}
           </div>
 
-          {vouchers.length > PAGE_SIZE && (
+          {filteredVouchers.length > PAGE_SIZE && (
             <div
               style={{
                 marginTop: 20,
@@ -253,7 +291,7 @@ const VoucherPage: React.FC = () => {
               <Pagination
                 current={page}
                 pageSize={PAGE_SIZE}
-                total={vouchers.length}
+                total={filteredVouchers.length}
                 onChange={(p) => setPage(p)}
                 showSizeChanger={false}
                 size="small"
