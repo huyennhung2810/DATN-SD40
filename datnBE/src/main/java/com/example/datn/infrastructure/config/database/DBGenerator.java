@@ -176,20 +176,23 @@ public class DBGenerator implements CommandLineRunner {
             serialRepository.deleteAll();
 
             paymentHistoryRepository.deleteAll();
-            // 3. Xóa order details -> orders (order có FK đến customer, voucher)
+
+            // 3. Xóa voucher_detail TRƯỚC khi xóa order (voucher_detail có FK đến order)
+            voucherDetailRepository.deleteAll();
+
+            // 4. Xóa order details -> orders (order có FK đến customer, voucher)
             orderDetailRepository.deleteAll();
             orderRepository.deleteAll();
 
-            // 4. Xóa cart details -> carts (cart có FK đến customer)
+            // 5. Xóa cart details -> carts (cart có FK đến customer)
             cartDetailRepository.deleteAll();
             cartRepository.deleteAll();
 
-            // 5. Xóa discount details -> discounts
+            // 6. Xóa discount details -> discounts
             discountDetailRepository.deleteAll();
             discountRepository.deleteAll();
 
-            // 6. Xóa voucher details -> vouchers (voucher_detail có FK đến customer và voucher)
-            voucherDetailRepository.deleteAll();
+            // 7. Xóa vouchers (voucher_detail đã xóa ở bước 3)
             voucherRepository.deleteAll();
 
             // 7. Xóa addresses (có FK đến customer)

@@ -50,6 +50,6 @@ public class VoucherResponse {
         this.lastModifiedDate = v.getLastModifiedDate();
         this.createdBy = v.getCreatedBy();
         this.createdDate = v.getCreatedDate();
-        this.details = v.getDetails();
+
     }
 }

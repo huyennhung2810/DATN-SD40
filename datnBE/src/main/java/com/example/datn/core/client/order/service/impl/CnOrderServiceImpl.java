@@ -40,6 +40,7 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final VNPayService vnPayService;
 
     private final VoucherRepository voucherRepository;
+    private final VoucherDetailRepository voucherDetailRepository;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -82,6 +83,13 @@ public class CnOrderServiceImpl implements CnOrderService {
                 throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
             }
 
+            // 4.1b. Kiểm tra voucher cá nhân: phải thuộc khách hàng và chưa sử dụng
+            if ("INDIVIDUAL".equals(appliedVoucher.getVoucherType())) {
+                voucherDetailRepository.findUnusedByVoucherAndCustomer(appliedVoucher.getId(), customerId)
+                        .orElseThrow(() -> new RuntimeException(
+                                "Mã giảm giá này không áp dụng cho tài khoản của bạn hoặc đã được sử dụng!"));
+            }
+
             // 4.2. Kiểm tra thời hạn (startDate, endDate)
             long currentTime = System.currentTimeMillis();
             if (appliedVoucher.getStartDate() != null && currentTime < appliedVoucher.getStartDate()) {
@@ -119,19 +127,8 @@ public class CnOrderServiceImpl implements CnOrderService {
         // Tiền thực tế khách phải trả (Không được nhỏ hơn 0)
         BigDecimal totalAfterDiscount = totalAmount.subtract(discountAmount).max(BigDecimal.ZERO);
 
-        // 5. Tạo Order
-        Order order = new Order();
-        // ... (các set thông tin user giữ nguyên như code trước) ...
-
-        // --- Set tiền ---
-        order.setTotalAmount(totalAmount);
-        order.setTotalAfterDiscount(totalAfterDiscount);
-
-        // --- Set Voucher vào Order & Trừ số lượng ---
+        // --- Trừ số lượng voucher (thực hiện trước khi tạo order) ---
         if (appliedVoucher != null) {
-            order.setVoucher(appliedVoucher);
-
-            // Trừ đi 1 lượt sử dụng của Voucher và lưu lại
             appliedVoucher.setQuantity(appliedVoucher.getQuantity() - 1);
             voucherRepository.save(appliedVoucher);
         }
@@ -165,6 +162,18 @@ public class CnOrderServiceImpl implements CnOrderService {
         }
 
         Order savedOrder = orderRepository.save(order1);
+
+        // Đánh dấu VoucherDetail là đã sử dụng (usageStatus = 1) nếu là INDIVIDUAL
+        final Voucher finalAppliedVoucher = appliedVoucher;
+        if (finalAppliedVoucher != null && "INDIVIDUAL".equals(finalAppliedVoucher.getVoucherType())) {
+            voucherDetailRepository.findUnusedByVoucherAndCustomer(finalAppliedVoucher.getId(), customerId)
+                    .ifPresent(vd -> {
+                        vd.setUsageStatus(1);
+                        vd.setUsedDate(System.currentTimeMillis());
+                        vd.setOrder(savedOrder);
+                        voucherDetailRepository.save(vd);
+                    });
+        }
 
         // 6. Tạo OrderDetail
         for (CartDetail cartDetail : cartItems) {
@@ -282,8 +291,28 @@ public class CnOrderServiceImpl implements CnOrderService {
                 }
             }
         } else {
+            // Thanh toán thất bại / quá thời gian → hoàn lại voucher
             order.setPaymentStatus(PaymentStatus.THANH_TOAN_THAT_BAI);
             history.setTrangThaiThanhToan(PaymentStatus.THANH_TOAN_THAT_BAI);
+
+            Voucher voucher = order.getVoucher();
+            if (voucher != null) {
+                // Hoàn lại 1 lượt sử dụng
+                if (voucher.getQuantity() != null) {
+                    voucher.setQuantity(voucher.getQuantity() + 1);
+                    voucherRepository.save(voucher);
+                }
+                // Nếu là INDIVIDUAL: hoàn lại VoucherDetail về chưa sử dụng
+                if ("INDIVIDUAL".equals(voucher.getVoucherType())) {
+                    VoucherDetail vd = voucherDetailRepository.findByOrder_Id(order.getId());
+                    if (vd != null && Integer.valueOf(1).equals(vd.getUsageStatus())) {
+                        vd.setUsageStatus(0);
+                        vd.setUsedDate(null);
+                        vd.setOrder(null);
+                        voucherDetailRepository.save(vd);
+                    }
+                }
+            }
         }
 
         orderRepository.save(order);

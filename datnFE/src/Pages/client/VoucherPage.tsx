@@ -29,7 +29,7 @@ const formatPrice = (value: number | null | undefined): string => {
 };
 
 const formatDiscount = (v: Voucher): string => {
-  if (v.discountUnit === "PERCENT") {
+  if (v.discountUnit === "PERCENT" || v.discountUnit === "%") {
     const pct = `${v.discountValue}%`;
     return v.maxDiscountAmount
       ? `${pct} (tối đa ${formatPrice(v.maxDiscountAmount)})`
@@ -80,7 +80,7 @@ const VoucherPage: React.FC = () => {
     if (activeTab === "ALL") {
       return v.voucherType === "ALL";
     } else {
-      return v.voucherType !== "ALL";
+      return v.voucherType === "INDIVIDUAL";
     }
   });
 
@@ -184,6 +184,26 @@ const VoucherPage: React.FC = () => {
                     gap: 3,
                   }}
                 >
+                  {v.voucherType === "INDIVIDUAL" && (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        background: "#fff7e6",
+                        border: "1px solid #ffd591",
+                        borderRadius: 4,
+                        padding: "1px 7px",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: "#d46b08",
+                        width: "fit-content",
+                        marginBottom: 2,
+                      }}
+                    >
+                      ★ Dành riêng cho bạn
+                    </div>
+                  )}
                   <div
                     style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}
                   >

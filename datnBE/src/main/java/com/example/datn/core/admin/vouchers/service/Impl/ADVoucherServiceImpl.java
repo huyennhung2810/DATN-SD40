@@ -41,21 +41,13 @@ public class ADVoucherServiceImpl implements ADVoucherService {
         // 1. Tạo đối tượng phân trang từ Helper (lấy page và size từ request)
         Pageable pageable = Helper.createPageable(request);
 
-        Page<Voucher> page = adVouchersRepository.getAllVouchers(
-                pageable,
-                request.getKeyword(),
-                request.getStatus(),
-                request.getVoucherType(),
-                request.getStartDate(), // Tham số mới
-                request.getEndDate()    // Tham số mới
-        );
-
+        // 2. Cập nhật trạng thái theo thời gian cho toàn bộ voucher (before query)
         long now = System.currentTimeMillis();
-        List<Voucher> vouchers = adVouchersRepository.findAll();
-
-        vouchers.forEach(v -> {
+        List<Voucher> allVouchers = adVouchersRepository.findAll();
+        allVouchers.forEach(v -> {
             // Chỉ cập nhật nếu không bị "Buộc dừng" (status != 0)
-            if (v.getStatus() != 0) {
+            if (v.getStatus() != null && v.getStatus() != 0
+                    && v.getStartDate() != null && v.getEndDate() != null) {
                 if (v.getStartDate() > now) {
                     v.setStatus(1); // Sắp diễn ra
                 } else if (v.getStartDate() <= now && v.getEndDate() >= now) {
@@ -65,11 +57,26 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                 }
             }
         });
+        try {
+            adVouchersRepository.saveAll(allVouchers);
+        } catch (Exception e) {
+            log.warn("Không thể cập nhật trạng thái voucher: {}", e.getMessage());
+        }
 
-        adVouchersRepository.saveAll(vouchers); // Lưu lại trạng thái mới nhất vào DB
+        // 3. Query trang dữ liệu SAU khi đã cập nhật trạng thái
+        Page<Voucher> page = adVouchersRepository.getAllVouchers(
+                pageable,
+                request.getKeyword(),
+                request.getStatus(),
+                request.getVoucherType(),
+                request.getStartDate(),
+                request.getEndDate()
+        );
 
-        // 3. Trả về kết quả bọc trong PageableObject để Frontend xử lý phân trang
-        return ResponseObject.success(PageableObject.of(page), "Lấy danh sách voucher thành công");
+        // 4. Map sang DTO để tránh lazy loading / circular reference khi serialize
+        Page<VoucherResponse> responsePage = page.map(VoucherResponse::new);
+
+        return ResponseObject.success(PageableObject.of(responsePage), "Lấy danh sách voucher thành công");
     }
 
 
@@ -91,7 +98,10 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                             v.setQuantity((int) availableCount);
                         }
                     }
-                    return ResponseObject.success(new VoucherResponse(v), "Lấy chi tiết voucher thành công");
+                    VoucherResponse response = new VoucherResponse(v);
+                    // Chỉ set details cho trang chi tiết (không dùng ở list)
+                    response.setDetails(v.getDetails());
+                    return ResponseObject.success(response, "Lấy chi tiết voucher thành công");
                 })
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy Voucher với ID: " + voucherId));
     }
