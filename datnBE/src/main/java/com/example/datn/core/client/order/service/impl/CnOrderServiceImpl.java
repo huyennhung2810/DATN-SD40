@@ -134,7 +134,8 @@ public class CnOrderServiceImpl implements CnOrderService {
             }
 
             // 4.5. Tính số tiền giảm
-            if ("PERCENT".equalsIgnoreCase(appliedVoucher.getDiscountUnit()) || "%".equals(appliedVoucher.getDiscountUnit())) {
+            if ("PERCENT".equalsIgnoreCase(appliedVoucher.getDiscountUnit())
+                    || "%".equals(appliedVoucher.getDiscountUnit())) {
                 discountAmount = totalAmount.multiply(appliedVoucher.getDiscountValue())
                         .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
                 if (appliedVoucher.getMaxDiscountAmount() != null) {
