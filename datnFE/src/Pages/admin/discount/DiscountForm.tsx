@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"; // 1. Thêm useState vào đây
+﻿import React, { useEffect, useState, useRef } from "react"; // 1. Thêm useState vào đây
 import {
   Form,
   Input,
@@ -177,7 +177,7 @@ const DiscountForm: React.FC = () => {
   };
   return (
     <div style={{ padding: "24px" }}>
-      <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <Space orientation="vertical" style={{ width: "100%" }} size="large">
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate("/discount")}

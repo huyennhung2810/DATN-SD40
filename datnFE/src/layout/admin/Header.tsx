@@ -24,7 +24,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag, Popover, List, Empty, Tooltip } from "antd";
+import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag, Popover, Empty, Tooltip } from "antd";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -206,13 +206,14 @@ const Header: React.FC = () => {
       {notifications.length === 0 ? (
         <Empty description="Chưa có thông báo" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ margin: "16px 0" }} />
       ) : (
-        <List
-          dataSource={notifications.slice(0, 20)}
-          style={{ maxHeight: 400, overflowY: "auto" }}
-          renderItem={(item: AppNotification) => (
-            <List.Item
+        <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          {notifications.slice(0, 20).map((item: AppNotification) => (
+            <div
               key={item.id}
               style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
                 background: item.read ? "transparent" : "#e6f4ff",
                 borderRadius: 6,
                 padding: "8px 10px",
@@ -231,26 +232,18 @@ const Header: React.FC = () => {
                 setNotifOpen(false);
               }}
             >
-              <List.Item.Meta
-                avatar={<span style={{ fontSize: 20 }}>{getNotifIcon(item.type)}</span>}
-                title={
-                  <span style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}>
-                    {item.title}
-                  </span>
-                }
-                description={
-                  <div>
-                    <div style={{ fontSize: 12, color: "#595959", marginBottom: 2 }}>{item.message}</div>
-                    <div style={{ fontSize: 11, color: "#aaa" }}>
-                      <ClockCircleOutlined style={{ marginRight: 4 }} />
-                      {new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
-                  </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{getNotifIcon(item.type)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: "#595959", marginBottom: 2 }}>{item.message}</div>
+                <div style={{ fontSize: 11, color: "#aaa" }}>
+                  <ClockCircleOutlined style={{ marginRight: 4 }} />
+                  {new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
       {notifications.length > 0 && (
         <div style={{ textAlign: "center", borderTop: "1px solid #f0f0f0", paddingTop: 8, marginTop: 4 }}>
@@ -407,7 +400,7 @@ const Header: React.FC = () => {
               open={notifOpen}
               onOpenChange={setNotifOpen}
               overlayStyle={{ padding: 0 }}
-              overlayInnerStyle={{ padding: "12px 16px", minWidth: 340 }}
+              styles={{ body: { padding: "12px 16px", minWidth: 340 } }}
             >
               <Badge count={unreadCount} size="small" offset={[-2, 4]}>
                 <Button
@@ -420,7 +413,7 @@ const Header: React.FC = () => {
           </Tooltip>
 
           <Dropdown
-            dropdownRender={() => profileDropdown}
+            popupRender={() => profileDropdown}
             trigger={["click"]}
             placement="bottomRight"
           >

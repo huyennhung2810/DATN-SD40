@@ -117,11 +117,14 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="hikari-product-detail">
       <div className="hikari-container">
-        <Breadcrumb className="hikari-breadcrumb">
-          <Breadcrumb.Item href="/client"><HomeOutlined /></Breadcrumb.Item>
-          <Breadcrumb.Item href="/client/catalog">Máy ảnh</Breadcrumb.Item>
-          <Breadcrumb.Item>{product.name}</Breadcrumb.Item>
-        </Breadcrumb>
+        <Breadcrumb
+          className="hikari-breadcrumb"
+          items={[
+            { title: <a href="/client"><HomeOutlined /></a> },
+            { title: <a href="/client/catalog">Máy ảnh</a> },
+            { title: product.name },
+          ]}
+        />
 
         <div className="hikari-card">
           <Row gutter={[40, 40]}>
@@ -259,10 +262,12 @@ const ProductDetail: React.FC = () => {
                 
                 <Descriptions 
                   bordered 
-                  column={1} /* <--- SỬA CHỖ NÀY: Ép bảng chỉ có 1 cột thông số mỗi dòng (1 Tên - 1 Data) */
+                  column={1}
                   size="middle"
-                  labelStyle={{ width: '30%', minWidth: '150px', fontWeight: '600', backgroundColor: '#fafafa', color: '#555' }}
-                  contentStyle={{ backgroundColor: '#fff' }} /* Bỏ width ở content để nó tự kéo dãn hết phần còn lại */
+                  styles={{
+                    label: { width: '30%', minWidth: '150px', fontWeight: '600', backgroundColor: '#fafafa', color: '#555' },
+                    content: { backgroundColor: '#fff' },
+                  }}
                 >
                   {specifications.map((spec: any, index: number) => (
                     <Descriptions.Item key={index} label={spec.name}>

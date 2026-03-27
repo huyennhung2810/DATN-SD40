@@ -330,7 +330,7 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                       {step.label}
                     </span>
                   ),
-                  description: ts ? (
+                  subTitle: ts ? (
                     <span style={{ fontSize: 11, color: "#9ca3af" }}>
                       {dayjs(ts).format("DD/MM/YYYY")}
                     </span>

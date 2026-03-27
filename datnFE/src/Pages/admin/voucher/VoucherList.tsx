@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -253,7 +253,7 @@ const VoucherList: React.FC = () => {
             marginBottom: 24,
           }}
         >
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text type="secondary">Phát hành và theo dõi mã giảm giá</Text>
           </Space>
           <Button

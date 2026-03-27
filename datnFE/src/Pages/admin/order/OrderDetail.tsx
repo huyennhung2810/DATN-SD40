@@ -549,7 +549,7 @@ const OrderDetailPage: React.FC = () => {
         const serials = parseSerials(r.danhSachImei);
         if (serials.length === 0) return <Tag color="warning">Chưa có mã</Tag>;
         return (
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             {serials.map((s) => (
               <Tag key={s.id} color="blue" style={{ fontFamily: "monospace" }}>
                 {s.code}
@@ -814,7 +814,7 @@ const OrderDetailPage: React.FC = () => {
 
   return (
     <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
-      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 12 }}>
+      <Card variant="borderless" style={{ marginBottom: 16, borderRadius: 12 }}>
         <Row justify="space-between" align="middle" wrap>
           <Col>
             <Space size="middle" wrap>
@@ -858,7 +858,7 @@ const OrderDetailPage: React.FC = () => {
 
       {currentStatus !== "LUU_TAM" && (
         <Card
-          bordered={false}
+          variant="borderless"
           style={{ marginBottom: 16, borderRadius: 12 }}
           title={
             <div
@@ -891,7 +891,7 @@ const OrderDetailPage: React.FC = () => {
         {/* Customer */}
         <Col xs={24} lg={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12, height: "100%" }}
             title={
               <Space>
@@ -961,7 +961,7 @@ const OrderDetailPage: React.FC = () => {
         {/* Order summary */}
         <Col xs={24} lg={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12, height: "100%" }}
             title={
               <Space>
@@ -1090,7 +1090,7 @@ const OrderDetailPage: React.FC = () => {
         {/* Payment */}
         <Col xs={24} lg={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12, height: "100%" }}
             title={
               <Space>
@@ -1168,7 +1168,7 @@ const OrderDetailPage: React.FC = () => {
       </Row>
 
       <Card
-        bordered={false}
+        variant="borderless"
         style={{ marginBottom: 16, borderRadius: 12 }}
         title={
           <Space>

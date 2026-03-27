@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Result, Button, Spin, Typography, Descriptions } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, CloseCircleOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 
@@ -40,13 +40,17 @@ const VNPayReturnPage: React.FC = () => {
     // Gọi backend xác thực kết quả VNPay
     axiosClient
       .get("/client/payment/vnpay-return", { params })
-      .then((res) => setResult(res.data))
-      .catch(() =>
+      .then((res) => {
+        console.log("[VNPay Return] Response:", res.data);
+        setResult(res.data);
+      })
+      .catch((err) => {
+        console.error("[VNPay Return] Error:", err);
         setResult({
           success: false,
           message: "Không thể xác thực kết quả thanh toán!",
-        }),
-      )
+        });
+      })
       .finally(() => setLoading(false));
   }, [searchParams]);
 
@@ -60,7 +64,7 @@ const VNPayReturnPage: React.FC = () => {
           minHeight: "60vh",
         }}
       >
-        <Spin size="large" tip="Đang xác thực kết quả thanh toán..." />
+        <Spin size="large" description="Đang xác thực kết quả thanh toán..." />
       </div>
     );
   }
@@ -164,6 +168,16 @@ const VNPayReturnPage: React.FC = () => {
           >
             Về trang chủ
           </Button>
+          {isSuccess && result?.orderId && (
+            <Button
+              size="large"
+              icon={<FileTextOutlined />}
+              onClick={() => navigate(`/client/orders/${result.orderId}`)}
+              style={{ borderRadius: 8, borderColor: "#52c41a", color: "#52c41a" }}
+            >
+              Xem đơn hàng
+            </Button>
+          )}
           {!isSuccess && (
             <Button
               size="large"

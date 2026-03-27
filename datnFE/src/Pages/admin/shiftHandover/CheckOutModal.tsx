@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -85,7 +85,7 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId }: any) => {
         open={isOpen}
         onCancel={onClose}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         width={500}
       >
         <Form

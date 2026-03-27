@@ -1400,7 +1400,7 @@ const ProfilePage: React.FC = () => {
         onCancel={() => setAddrModalOpen(false)}
         footer={null}
         width={540}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={addrForm}

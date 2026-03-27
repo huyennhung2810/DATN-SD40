@@ -25,6 +25,9 @@ import {
   CheckCircleFilled,
   PlusOutlined,
   EditOutlined,
+  CheckCircleOutlined,
+  ShoppingOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -100,6 +103,7 @@ const CheckoutPage: React.FC = () => {
     null,
   );
   const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.userId) {
@@ -112,36 +116,38 @@ const CheckoutPage: React.FC = () => {
   }, [user?.userId]);
 
   const fetchCart = async () => {
-  // 1. Kiểm tra xem có phải dữ liệu từ "Mua ngay" truyền sang không
-  const state = location.state as any;
+    // 1. Kiểm tra xem có phải dữ liệu từ "Mua ngay" truyền sang không
+    const state = location.state as any;
 
-  if (state?.isBuyNow && state?.checkoutItems) {
-    setCartItems(state.checkoutItems);
-    setLoading(false);
-    return; // Thoát hàm, không gọi API nữa
-  }
-
-  // 2. Nếu không có state (người dùng vào từ Giỏ hàng), mới gọi API
-  setLoading(true);
-  try {
-    const response = await axiosClient.get(`/client/cart?customerId=${user?.userId}`);
-    const data = response.data;
-
-    // Nếu trang Cart có truyền danh sách ID đã chọn (Checkbox)
-    if (state?.selectedCartItemIds && Array.isArray(data)) {
-      const filteredData = data.filter(item => 
-        state.selectedCartItemIds.includes(item.id)
-      );
-      setCartItems(filteredData);
-    } else {
-      setCartItems(Array.isArray(data) ? data : []);
+    if (state?.isBuyNow && state?.checkoutItems) {
+      setCartItems(state.checkoutItems);
+      setLoading(false);
+      return; // Thoát hàm, không gọi API nữa
     }
-  } catch {
-    message.error("Không thể tải thông tin thanh toán!");
-  } finally {
-    setLoading(false);
-  }
-};
+
+    // 2. Nếu không có state (người dùng vào từ Giỏ hàng), mới gọi API
+    setLoading(true);
+    try {
+      const response = await axiosClient.get(
+        `/client/cart?customerId=${user?.userId}`,
+      );
+      const data = response.data;
+
+      // Nếu trang Cart có truyền danh sách ID đã chọn (Checkbox)
+      if (state?.selectedCartItemIds && Array.isArray(data)) {
+        const filteredData = data.filter((item) =>
+          state.selectedCartItemIds.includes(item.id),
+        );
+        setCartItems(filteredData);
+      } else {
+        setCartItems(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      message.error("Không thể tải thông tin thanh toán!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAddresses = async () => {
     if (!user?.userId) return;
@@ -285,7 +291,7 @@ const CheckoutPage: React.FC = () => {
 
     // 4. Chuẩn bị Payload gửi lên Backend
     setSubmitting(true);
-    
+
     // Kiểm tra xem đơn hàng này đến từ "Mua ngay" hay "Giỏ hàng"
     const isBuyNow = location.state?.isBuyNow || false;
 
@@ -299,7 +305,7 @@ const CheckoutPage: React.FC = () => {
       note: noteValues.note,
       voucherCode: appliedVoucher?.code,
       // Flag để Backend biết có cần xóa giỏ hàng sau khi đặt thành công không
-      isBuyNow: isBuyNow, 
+      isBuyNow: isBuyNow,
       // Danh sách sản phẩm kèm ID chi tiết và số lượng
       items: cartItems.map((item) => ({
         productDetailId: item.id, // ID của variant
@@ -313,13 +319,12 @@ const CheckoutPage: React.FC = () => {
       // 5. Xử lý kết quả sau khi gọi API thành công
       if (response.status === "REDIRECT" && response.paymentUrl) {
         // Nếu chọn VNPay (Chuyển hướng sang cổng thanh toán)
-        if (!isBuyNow) dispatch(clearCartCount()); // Chỉ xóa count nếu mua từ giỏ hàng
+        if (!isBuyNow) dispatch(clearCartCount());
         window.location.href = response.paymentUrl;
       } else {
         // Nếu chọn COD (Đặt hàng thành công ngay)
         if (!isBuyNow) dispatch(clearCartCount());
-        message.success(response.message || "Đặt hàng thành công!");
-        navigate("/client/orders"); // Chuyển hướng về trang lịch sử đơn hàng
+        setSuccessOrderId(response.orderId);
       }
     } catch (error: any) {
       console.error("Lỗi đặt hàng:", error);
@@ -679,7 +684,13 @@ const CheckoutPage: React.FC = () => {
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   style={{ width: "100%" }}
                 >
-                  <Space direction="vertical" style={{ width: "100%" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      width: "100%",
+                    }}
+                  >
                     <Radio value="COD" style={{ padding: "10px 0" }}>
                       <Space>
                         <CarOutlined
@@ -710,7 +721,7 @@ const CheckoutPage: React.FC = () => {
                         </div>
                       </Space>
                     </Radio>
-                  </Space>
+                  </div>
                 </Radio.Group>
               </Card>
 
@@ -1104,6 +1115,59 @@ const CheckoutPage: React.FC = () => {
           >
             Nhập địa chỉ mới
           </Button>
+        </div>
+      </Modal>
+
+      {/* ===== Modal đặt hàng thành công ===== */}
+      <Modal
+        open={!!successOrderId}
+        footer={null}
+        closable={false}
+        centered
+        width={420}
+      >
+        <div style={{ textAlign: "center", padding: "24px 16px 8px" }}>
+          <CheckCircleOutlined
+            style={{ fontSize: 64, color: "#52c41a", marginBottom: 16 }}
+          />
+          <Title level={3} style={{ color: "#1a1a1a", marginBottom: 8 }}>
+            Đặt hàng thành công!
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            Cảm ơn bạn đã mua hàng. Chúng tôi sẽ liên hệ xác nhận đơn hàng sớm
+            nhất.
+          </Text>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              marginTop: 28,
+              justifyContent: "center",
+            }}
+          >
+            <Button
+              size="large"
+              icon={<ShoppingOutlined />}
+              onClick={() => navigate("/client")}
+              style={{ flex: 1 }}
+            >
+              Về trang chủ
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              icon={<FileTextOutlined />}
+              onClick={() => navigate(`/client/orders/${successOrderId}`)}
+              style={{
+                flex: 1,
+                backgroundColor: "#D32F2F",
+                borderColor: "#D32F2F",
+              }}
+            >
+              Xem đơn hàng
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

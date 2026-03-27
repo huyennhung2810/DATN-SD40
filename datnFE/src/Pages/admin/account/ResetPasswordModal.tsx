@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Modal, Form, Input, Button, message, Space } from "antd";
 import { KeyOutlined } from "@ant-design/icons";
 import accountApi from "../../../api/accountApi";
@@ -52,7 +52,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
       open={visible}
       onCancel={handleCancel}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

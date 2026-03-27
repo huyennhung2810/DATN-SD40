@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+﻿import React, { useEffect, useState, useCallback } from "react";
 import {
   Modal,
   Form,
@@ -90,7 +90,7 @@ const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
       onCancel={onClose}
       footer={null}
       maskClosable={false}
-      destroyOnClose
+      destroyOnHidden
       width={450}
     >
       {fetchingStats ? (

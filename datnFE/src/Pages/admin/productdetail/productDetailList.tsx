@@ -1,4 +1,4 @@
-import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+﻿import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -315,7 +315,7 @@ const ProductDetailPage: React.FC = () => {
       title: "Cấu hình",
       // LEVEL 1: version đã được backend auto-generate: "{VariantVersion} / {Color} / {Storage}"
       render: (r) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong style={{ color: "#1890ff" }}>
             {`${r.colorName || "---"} / ${r.storageCapacityName || "---"}`}
           </Text>
@@ -647,7 +647,7 @@ const ProductDetailPage: React.FC = () => {
       >
         {loadingSerials ? (
           <div style={{ textAlign: "center", padding: "20px" }}>
-            <Spin tip="Đang tải danh sách serial..." />
+            <Spin description="Đang tải danh sách serial..." />
           </div>
         ) : (
           <List

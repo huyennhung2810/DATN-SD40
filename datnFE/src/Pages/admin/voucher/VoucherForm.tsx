@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Form,
   Input,
@@ -188,7 +188,7 @@ const VoucherForm: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Title level={3} style={{ margin: 0 }}>
             {isEdit ? "Chỉnh sửa Voucher" : "Tạo Voucher mới"}
             {isEdit && currentVoucher && (
@@ -270,7 +270,7 @@ const VoucherForm: React.FC = () => {
                   }}
                 >
                   <Space
-                    direction="vertical"
+                    orientation="vertical"
                     style={{ width: "100%" }}
                     size="middle"
                   >

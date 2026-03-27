@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Modal,
   Input,
@@ -234,7 +234,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       okText="Xác nhận Gán"
       cancelText="Đóng"
       width={680}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 12 }}>
         <Typography.Text strong>Yêu cầu chọn đủ: </Typography.Text>

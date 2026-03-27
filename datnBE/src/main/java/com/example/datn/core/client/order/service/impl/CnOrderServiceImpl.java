@@ -269,6 +269,11 @@ public class CnOrderServiceImpl implements CnOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + orderId));
 
+        // Idempotency: nếu đơn đã được xử lý rồi thì bỏ qua (VNPay gọi lại lần 2)
+        if (order.getPaymentStatus() == PaymentStatus.DA_THANH_TOAN) {
+            return;
+        }
+
         BigDecimal amount = amountStr != null
                 ? new BigDecimal(amountStr).divide(BigDecimal.valueOf(100))
                 : order.getTotalAmount();

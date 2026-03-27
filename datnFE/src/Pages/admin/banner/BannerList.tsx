@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -292,7 +292,7 @@ const BannerList: React.FC = () => {
       </div>
       <Card>
         <Space
-          direction="vertical"
+          orientation="vertical"
           style={{ width: "100%", marginBottom: 16 }}
           size="middle"
         >

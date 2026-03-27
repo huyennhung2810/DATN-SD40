@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { Modal, message } from "antd";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
@@ -52,7 +52,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
         onClose();
       }}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div id="qr-reader" style={{ width: "100%" }}></div>
     </Modal>

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BankOutlined,
   CarOutlined,
   CheckCircleOutlined,
@@ -1011,7 +1011,7 @@ const PosPage: React.FC = () => {
         const current = record.unitPrice;
         const hasDiscount = original && original > current;
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             {hasDiscount && (
               <Text delete type="secondary" style={{ fontSize: "10px" }}>
                 {original.toLocaleString("vi-VN")} đ
@@ -1051,7 +1051,7 @@ const PosPage: React.FC = () => {
         const req = record.quantity || 0;
         const isComplete = assigned === req;
         return (
-          <Space direction="vertical" size="small">
+          <Space orientation="vertical" size="small">
             {isComplete ? (
               <Tag color="success">
                 Đã gán đủ {assigned}/{req}
@@ -1152,7 +1152,7 @@ const PosPage: React.FC = () => {
         const current = record.discountedPrice;
         const hasDiscount = current && current < original;
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             {hasDiscount && (
               <Text delete type="secondary" style={{ fontSize: "11px" }}>
                 {original?.toLocaleString("vi-VN")} đ
@@ -1254,7 +1254,7 @@ const PosPage: React.FC = () => {
         >
           <Card
             title="Giỏ Hàng (Các Hóa đơn)"
-            bordered={false}
+            variant="borderless"
             style={{ flex: 1, minHeight: "350px" }}
           >
             {orders.length > 0 ? (
@@ -1289,7 +1289,11 @@ const PosPage: React.FC = () => {
             )}
           </Card>
 
-          <Card title="Tìm kiếm Kho Hàng" bordered={false} style={{ flex: 1 }}>
+          <Card
+            title="Tìm kiếm Kho Hàng"
+            variant="borderless"
+            style={{ flex: 1 }}
+          >
             <Input
               placeholder="Nhập tên máy ảnh, dòng máy..."
               size="large"
@@ -1311,7 +1315,7 @@ const PosPage: React.FC = () => {
 
           {orderType === "GIAO_HANG" && activeOrder && (
             <Card
-              bordered={false}
+              variant="borderless"
               title={
                 <Space>
                   <CarOutlined style={{ color: "#1890ff" }} />
@@ -1373,7 +1377,7 @@ const PosPage: React.FC = () => {
 
         <Col span={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{ height: "100%", display: "flex", flexDirection: "column" }}
           >
             <Title level={4}>Thanh Toán</Title>
@@ -1398,7 +1402,7 @@ const PosPage: React.FC = () => {
                     allowClear
                     onSearch={handleSearchCustomer}
                     onChange={handleSelectCustomer}
-                    onDropdownVisibleChange={handleCustomerDropdownOpenChange}
+                    onOpenChange={handleCustomerDropdownOpenChange}
                     filterOption={false}
                     options={customerOptions}
                     loading={fetchingCustomer}
@@ -2228,7 +2232,7 @@ const PosPage: React.FC = () => {
             Trang thanh toán VNPay đã được mở trong tab mới. Đang tự động kiểm
             tra trạng thái thanh toán...
           </Text>
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space orientation="vertical" style={{ width: "100%" }}>
             <Button
               type="primary"
               icon={<LinkOutlined />}

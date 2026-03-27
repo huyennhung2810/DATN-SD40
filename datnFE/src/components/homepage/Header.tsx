@@ -400,7 +400,7 @@ const Header: React.FC<HeaderProps> = () => {
         placement="left"
         onClose={() => setMobileMenuVisible(false)}
         open={mobileMenuVisible}
-        width={300}
+        size="default"
         className="mobile-menu-drawer"
       >
         {isLoggedIn ? (

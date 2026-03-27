@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -125,7 +125,7 @@ const DiscountList: React.FC = () => {
       key: "duration",
       width: 200,
       render: (_: any, record: Discount) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ fontSize: "12px" }}>
             BĐ:{" "}
             {record.startDate
@@ -266,13 +266,13 @@ const DiscountList: React.FC = () => {
         </Button>
       </div>
       <Card
-        bordered={false}
+        variant="borderless"
         style={{ borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
       >
         <Card
           style={{ marginBottom: 16, backgroundColor: "#fafafa" }}
           size="small"
-          bordered={false}
+          variant="borderless"
         >
           <Row gutter={[16, 16]} align="bottom">
             <Col xs={24} md={8}>

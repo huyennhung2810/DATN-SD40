@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Steps, Tooltip } from "antd";
 import type { CustomerOrderHistoryResponse } from "../../models/customerOrder";
 import dayjs from "dayjs";
@@ -44,7 +44,7 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({ timeline }) => {
   return (
     <div style={{ padding: "0 8px" }}>
       <Steps
-        direction="vertical"
+        orientation="vertical"
         size="small"
         current={currentIndex >= 0 ? currentIndex : orderedSteps.length - 1}
         items={orderedSteps.map((step, index) => {

@@ -1,4 +1,4 @@
-import {
+﻿import {
   CameraOutlined,
   CheckCircleOutlined,
   CloseOutlined,
@@ -1640,7 +1640,7 @@ const ProductPage: React.FC = () => {
         open={isModalOpen}
         onCancel={closeModal}
         width={750}
-        destroyOnClose
+        destroyOnHidden
         footer={
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Button onClick={closeModal}>Hủy</Button>
@@ -1722,7 +1722,7 @@ const ProductPage: React.FC = () => {
                     label: cat.name,
                     value: cat.id,
                   }))}
-                  dropdownRender={(menu) => (
+                  popupRender={(menu) => (
                     <>
                       {menu}
                       <Divider style={{ margin: "8px 0" }} />
@@ -1978,7 +1978,7 @@ const ProductPage: React.FC = () => {
         size="large"
         open={isDetailOpen}
         onClose={closeDetail}
-        destroyOnClose
+        destroyOnHidden
         extra={
           <Button
             icon={<EditOutlined />}
@@ -2501,7 +2501,7 @@ const ProductPage: React.FC = () => {
                                   ]}
                                 >
                                   <Space
-                                    direction="vertical"
+                                    orientation="vertical"
                                     size={6}
                                     style={{ width: "100%" }}
                                   >
@@ -2582,7 +2582,7 @@ const ProductPage: React.FC = () => {
 
                                     {/* Khu vực thông tin chi tiết */}
                                     <Space
-                                      direction="vertical"
+                                      orientation="vertical"
                                       size={2}
                                       style={{ width: "100%" }}
                                     >
@@ -2740,7 +2740,7 @@ const ProductPage: React.FC = () => {
         open={isVariantModalOpen}
         onCancel={() => setIsVariantModalOpen(false)}
         width={600}
-        destroyOnClose
+        destroyOnHidden
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button onClick={() => setIsVariantModalOpen(false)}>Hủy</Button>
@@ -2795,7 +2795,7 @@ const ProductPage: React.FC = () => {
                     label: c.name,
                     value: c.id,
                   }))}
-                  dropdownRender={(menu) => (
+                  popupRender={(menu) => (
                     <>
                       {menu}
                       <Divider style={{ margin: "8px 0" }} />
@@ -2831,7 +2831,7 @@ const ProductPage: React.FC = () => {
                     label: s.name,
                     value: s.id,
                   }))}
-                  dropdownRender={(menu) => (
+                  popupRender={(menu) => (
                     <>
                       {menu}
                       <Divider style={{ margin: "8px 0" }} />

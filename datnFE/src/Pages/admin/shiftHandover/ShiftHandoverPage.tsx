@@ -1,4 +1,4 @@
-import {
+﻿import {
   CalendarOutlined,
   DollarCircleOutlined,
   InfoCircleOutlined,
@@ -79,10 +79,10 @@ const ShiftHandoverPage: React.FC = () => {
         <Col xs={24} sm={22} md={18} lg={14} xl={10}>
           <Spin
             spinning={isShiftLoading || fetchingSchedule}
-            tip="Đang tải dữ liệu..."
+            description="Đang tải dữ liệu..."
           >
             <Card
-              bordered={false}
+              variant="borderless"
               style={{
                 borderRadius: 16,
                 boxShadow: "0 10px 30px rgba(0,0,0,0.08)",

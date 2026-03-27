@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Modal, Form, Select, DatePicker, Button, Space, message } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import employeeApi from "../../../api/employeeApi";
@@ -123,7 +123,7 @@ const WorkScheduleModal: React.FC<Props> = ({
       open={isOpen}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

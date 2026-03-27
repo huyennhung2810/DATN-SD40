@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Card,
@@ -312,7 +312,7 @@ const ShiftTemplatePage: React.FC = () => {
         onOk={() => formModal.submit()}
         okText={editingId ? "Cập nhật" : "Lưu lại"}
         cancelText="Hủy bỏ"
-        destroyOnClose // ✅ Xóa sạch data cũ khi đóng
+        destroyOnHidden // ✅ Xóa sạch data cũ khi đóng
       >
         <Form form={formModal} layout="vertical" onFinish={onFinishModal}>
           <Form.Item

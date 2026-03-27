@@ -1,4 +1,4 @@
-import {
+﻿import {
   CheckOutlined,
   EditOutlined,
   EyeOutlined,
@@ -273,7 +273,7 @@ const AccountList: React.FC = () => {
         }
       >
         <Space
-          direction="vertical"
+          orientation="vertical"
           style={{ width: "100%", marginBottom: 16 }}
           size="middle"
         >

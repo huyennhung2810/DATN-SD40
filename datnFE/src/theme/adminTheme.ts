@@ -182,12 +182,12 @@ export const adminTheme: ThemeConfig = {
     
     // Menu
     Menu: {
-      colorItemBg: "transparent",
-      colorItemBgHover: "#F5F7FA",
-      colorItemBgSelected: "#F0F7FF",
-      colorItemText: "#6E6E73",
-      colorItemTextHover: "#1D1D1F",
-      colorItemTextSelected: "#0A84FF",
+      itemBg: "transparent",
+      itemHoverBg: "#F5F7FA",
+      itemSelectedBg: "#F0F7FF",
+      itemColor: "#6E6E73",
+      itemHoverColor: "#1D1D1F",
+      itemSelectedColor: "#0A84FF",
       itemBorderRadius: 8,
       itemMarginInline: 8,
       itemPaddingInline: 12,

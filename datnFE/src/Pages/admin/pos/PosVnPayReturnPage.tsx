@@ -57,7 +57,7 @@ const PosVnPayReturnPage: React.FC = () => {
           minHeight: "60vh",
         }}
       >
-        <Spin size="large" tip="Đang xác thực kết quả thanh toán VNPay..." />
+        <Spin size="large" description="Đang xác thực kết quả thanh toán VNPay..." />
       </div>
     );
   }

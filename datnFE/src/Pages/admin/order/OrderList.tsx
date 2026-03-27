@@ -1,4 +1,4 @@
-import {
+﻿import {
   EyeOutlined,
   FileExcelOutlined,
   FilterOutlined,
@@ -100,7 +100,7 @@ const OrderPage: React.FC = () => {
         title: "Khách hàng",
         key: "customer",
         render: (_: any, record: any) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong>{record.tenKhachHang || "Khách vãng lai"}</Text>
             {record.sdtKhachHang && (
               <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -114,7 +114,7 @@ const OrderPage: React.FC = () => {
         title: "Nhân viên",
         key: "staff",
         render: (_: any, record: any) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>{record.tenNhanVien || "N/A"}</Text>
             <Text
               type="secondary"
@@ -227,7 +227,7 @@ const OrderPage: React.FC = () => {
         </Space>
       </div>
 
-      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
+      <Card variant="borderless" style={{ marginBottom: 16, borderRadius: 8 }}>
         <Row
           justify="space-between"
           align="middle"
@@ -300,7 +300,7 @@ const OrderPage: React.FC = () => {
       </Card>
 
       {/* 3. Table Card */}
-      <Card bordered={false} style={{ borderRadius: 8 }}>
+      <Card variant="borderless" style={{ borderRadius: 8 }}>
         <Row justify="space-between" style={{ marginBottom: 16 }}>
           <Text strong style={{ fontSize: "16px" }}>
             Danh sách Hóa Đơn
