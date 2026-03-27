@@ -71,6 +71,33 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+    const handleCheckout = () => {
+      if (!selectedVariantId) {
+        message.error("Vui lòng chọn phiên bản bạn muốn mua!");
+        return;
+      }
+
+      const activeVariant = product.variants?.find((v: any) => v.id === selectedVariantId);
+      const finalPrice = activeVariant ? (activeVariant.displayPrice ?? activeVariant.salePrice) : product.price;
+
+      // Object này phải giống hệt cấu trúc CartItem ở trang Checkout
+      const buyNowItem = {
+        id: selectedVariantId, 
+        productName: product.name,
+        variantName: activeVariant?.name, // Kiểm tra key này ở trang Checkout là variantName hay version
+        imageUrl: mainImage,
+        price: finalPrice,
+        quantity: quantity, 
+      };
+
+      navigate('/client/checkout', { 
+        state: { 
+          isBuyNow: true, 
+          checkoutItems: [buyNowItem] 
+        } 
+      });
+    };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
   };
@@ -205,6 +232,7 @@ const ProductDetail: React.FC = () => {
                     type="primary" 
                     className="btn-buy-now"
                     disabled={!selectedVariantId || maxStock <= 0}
+                    onClick={handleCheckout}
                   >
                     MUA NGAY
                   </Button>

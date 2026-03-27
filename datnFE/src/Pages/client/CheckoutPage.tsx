@@ -36,6 +36,7 @@ import type { Voucher } from "../../models/Voucher";
 import VoucherPickerModal from "../../components/customer/VoucherPickerModal";
 import { getProfile } from "../../api/clientProfileApi";
 import type { AddressResponse } from "../../models/address";
+import { useLocation } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
@@ -70,6 +71,7 @@ type AddrMode = "saved" | "new";
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
   const [noteForm] = Form.useForm();
   const [newAddrForm] = Form.useForm();
 
@@ -110,19 +112,36 @@ const CheckoutPage: React.FC = () => {
   }, [user?.userId]);
 
   const fetchCart = async () => {
-    setLoading(true);
-    try {
-      const response = await axiosClient.get(
-        `/client/cart?customerId=${user?.userId}`,
+  // 1. Kiểm tra xem có phải dữ liệu từ "Mua ngay" truyền sang không
+  const state = location.state as any;
+
+  if (state?.isBuyNow && state?.checkoutItems) {
+    setCartItems(state.checkoutItems);
+    setLoading(false);
+    return; // Thoát hàm, không gọi API nữa
+  }
+
+  // 2. Nếu không có state (người dùng vào từ Giỏ hàng), mới gọi API
+  setLoading(true);
+  try {
+    const response = await axiosClient.get(`/client/cart?customerId=${user?.userId}`);
+    const data = response.data;
+
+    // Nếu trang Cart có truyền danh sách ID đã chọn (Checkbox)
+    if (state?.selectedCartItemIds && Array.isArray(data)) {
+      const filteredData = data.filter(item => 
+        state.selectedCartItemIds.includes(item.id)
       );
-      const data = response.data;
+      setCartItems(filteredData);
+    } else {
       setCartItems(Array.isArray(data) ? data : []);
-    } catch {
-      message.error("Không thể tải giỏ hàng!");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch {
+    message.error("Không thể tải thông tin thanh toán!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchAddresses = async () => {
     if (!user?.userId) return;
@@ -227,6 +246,7 @@ const CheckoutPage: React.FC = () => {
     savedAddresses.find((a) => a.id === selectedAddressId) ?? null;
 
   const handlePlaceOrder = async () => {
+    // 1. Validate và lấy Ghi chú
     const noteValues = await noteForm
       .validateFields()
       .catch(() => ({ note: "" }));
@@ -235,6 +255,7 @@ const CheckoutPage: React.FC = () => {
     let recipientPhone = "";
     let recipientAddress = "";
 
+    // 2. Xử lý logic Địa chỉ
     if (addrMode === "saved") {
       if (!selectedAddr) {
         message.warning("Vui lòng chọn địa chỉ giao hàng!");
@@ -248,6 +269,7 @@ const CheckoutPage: React.FC = () => {
       try {
         newVals = await newAddrForm.validateFields();
       } catch {
+        // Form validate fail (ví dụ chưa nhập SĐT) sẽ dừng tại đây
         return;
       }
       recipientName = newVals.name;
@@ -255,33 +277,52 @@ const CheckoutPage: React.FC = () => {
       recipientAddress = `${newVals.addressDetail}, ${newVals.wardCommune}, ${newVals.provinceCity}`;
     }
 
+    // 3. Kiểm tra giỏ hàng/sản phẩm chọn mua
     if (cartItems.length === 0) {
-      message.warning("Giỏ hàng trống!");
+      message.warning("Không có sản phẩm nào để thanh toán!");
       return;
     }
 
+    // 4. Chuẩn bị Payload gửi lên Backend
     setSubmitting(true);
-    try {
-      const response = await paymentApi.checkout({
-        customerId: user!.userId,
-        recipientName,
-        recipientPhone,
-        recipientEmail: user!.email ?? "",
-        recipientAddress,
-        paymentMethod,
-        note: noteValues.note,
-        voucherCode: appliedVoucher?.code,
-      });
+    
+    // Kiểm tra xem đơn hàng này đến từ "Mua ngay" hay "Giỏ hàng"
+    const isBuyNow = location.state?.isBuyNow || false;
 
+    const payload = {
+      customerId: user!.userId,
+      recipientName,
+      recipientPhone,
+      recipientEmail: user!.email ?? "",
+      recipientAddress,
+      paymentMethod,
+      note: noteValues.note,
+      voucherCode: appliedVoucher?.code,
+      // Flag để Backend biết có cần xóa giỏ hàng sau khi đặt thành công không
+      isBuyNow: isBuyNow, 
+      // Danh sách sản phẩm kèm ID chi tiết và số lượng
+      items: cartItems.map((item) => ({
+        productDetailId: item.id, // ID của variant
+        quantity: item.quantity,
+      })),
+    };
+
+    try {
+      const response = await paymentApi.checkout(payload);
+
+      // 5. Xử lý kết quả sau khi gọi API thành công
       if (response.status === "REDIRECT" && response.paymentUrl) {
-        dispatch(clearCartCount());
+        // Nếu chọn VNPay (Chuyển hướng sang cổng thanh toán)
+        if (!isBuyNow) dispatch(clearCartCount()); // Chỉ xóa count nếu mua từ giỏ hàng
         window.location.href = response.paymentUrl;
       } else {
-        dispatch(clearCartCount());
-        message.success(response.message);
-        navigate("/client");
+        // Nếu chọn COD (Đặt hàng thành công ngay)
+        if (!isBuyNow) dispatch(clearCartCount());
+        message.success(response.message || "Đặt hàng thành công!");
+        navigate("/client/orders"); // Chuyển hướng về trang lịch sử đơn hàng
       }
     } catch (error: any) {
+      console.error("Lỗi đặt hàng:", error);
       message.error(
         error?.response?.data?.message ||
           "Đặt hàng thất bại, vui lòng thử lại!",
