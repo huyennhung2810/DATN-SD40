@@ -48,32 +48,27 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
             Map.entry(OrderStatus.DANG_GIAO, "Đang giao hàng"),
             Map.entry(OrderStatus.HOAN_THANH, "Hoàn thành"),
             Map.entry(OrderStatus.DA_HUY, "Đã hủy"),
-            Map.entry(OrderStatus.LUU_TAM, "Lưu tạm")
-    );
+            Map.entry(OrderStatus.LUU_TAM, "Lưu tạm"));
 
     private static final Map<PaymentStatus, String> PAYMENT_STATUS_LABELS = Map.ofEntries(
             Map.entry(PaymentStatus.CHUA_THANH_TOAN, "Chưa thanh toán"),
             Map.entry(PaymentStatus.CHO_THANH_TOAN_VNPAY, "Chờ thanh toán VNPay"),
             Map.entry(PaymentStatus.DA_THANH_TOAN, "Đã thanh toán"),
             Map.entry(PaymentStatus.THANH_TOAN_MOT_PHAN, "Thanh toán một phần"),
-            Map.entry(PaymentStatus.THANH_TOAN_THAT_BAI, "Thanh toán thất bại")
-    );
+            Map.entry(PaymentStatus.THANH_TOAN_THAT_BAI, "Thanh toán thất bại"));
 
     private static final Map<String, String> PAYMENT_METHOD_LABELS = Map.ofEntries(
             Map.entry("COD", "Thanh toán khi nhận hàng (COD)"),
             Map.entry("VNPAY", "Thanh toán qua VNPay"),
             Map.entry("TIEN_MAT", "Tiền mặt"),
-            Map.entry("CHUYEN_KHOAN", "Chuyển khoản")
-    );
+            Map.entry("CHUYEN_KHOAN", "Chuyển khoản"));
 
     private static final Set<OrderStatus> CANCELABLE_STATUSES = Set.of(
             OrderStatus.CHO_XAC_NHAN,
-            OrderStatus.DA_XAC_NHAN
-    );
+            OrderStatus.DA_XAC_NHAN);
 
     private static final Set<OrderStatus> BUY_AGAIN_ALLOWED_STATUSES = Set.of(
-            OrderStatus.HOAN_THANH
-    );
+            OrderStatus.HOAN_THANH);
 
     // ===== ORDER LIST =====
 
@@ -209,6 +204,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .canCancel(canCancel)
                 .canConfirmReceived(canConfirmReceived)
                 .canBuyAgain(canBuyAgain)
+                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .build();
     }
 
@@ -251,17 +247,21 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
     }
 
     private String buildVariantLabel(ProductDetail pd) {
-        if (pd == null) return "";
+        if (pd == null)
+            return "";
         StringBuilder sb = new StringBuilder();
         if (pd.getVariantVersion() != null && !pd.getVariantVersion().isBlank()) {
             sb.append(pd.getVariantVersion());
         }
         if (pd.getColor() != null && pd.getColor().getName() != null && !pd.getColor().getName().isBlank()) {
-            if (sb.length() > 0) sb.append(" / ");
+            if (sb.length() > 0)
+                sb.append(" / ");
             sb.append(pd.getColor().getName());
         }
-        if (pd.getStorageCapacity() != null && pd.getStorageCapacity().getName() != null && !pd.getStorageCapacity().getName().isBlank()) {
-            if (sb.length() > 0) sb.append(" / ");
+        if (pd.getStorageCapacity() != null && pd.getStorageCapacity().getName() != null
+                && !pd.getStorageCapacity().getName().isBlank()) {
+            if (sb.length() > 0)
+                sb.append(" / ");
             sb.append(pd.getStorageCapacity().getName());
         }
         return sb.toString();
@@ -286,8 +286,10 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
         Set<OrderStatus> seenStatuses = new LinkedHashSet<>();
 
         for (OrderHistory h : histories) {
-            if (h.getTrangThai() == null) continue;
-            if (seenStatuses.contains(h.getTrangThai())) continue;
+            if (h.getTrangThai() == null)
+                continue;
+            if (seenStatuses.contains(h.getTrangThai()))
+                continue;
             seenStatuses.add(h.getTrangThai());
 
             String performedBy = "Hệ thống";
@@ -420,7 +422,8 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
 
     private void hoanTraVoucher(Order order) {
         Voucher voucher = order.getVoucher();
-        if (voucher == null) return;
+        if (voucher == null)
+            return;
 
         VoucherDetail vd = voucherDetailRepository.findByOrder_Id(order.getId());
         if (vd != null && vd.getUsageStatus() != null && vd.getUsageStatus() == 1) {
@@ -438,15 +441,15 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
     }
 
     private void hoanTienNeuCan(Order order) {
-        if (order.getPaymentDate() == null) return;
+        if (order.getPaymentDate() == null)
+            return;
 
         PaymentHistory refund = new PaymentHistory();
         refund.setOrder(order);
         refund.setAmount(
                 order.getTotalAfterDiscount() != null
                         ? order.getTotalAfterDiscount().negate()
-                        : (order.getTotalAmount() != null ? order.getTotalAmount().negate() : BigDecimal.ZERO)
-        );
+                        : (order.getTotalAmount() != null ? order.getTotalAmount().negate() : BigDecimal.ZERO));
         refund.setTransactionType("HOAN_TIEN");
         refund.setTransactionCode("REFUND-" + order.getCode() + "-" + System.currentTimeMillis());
         refund.setNote("Hoàn tiền do khách hàng hủy đơn hàng");
@@ -524,7 +527,8 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
 
         for (OrderDetail detail : details) {
             ProductDetail pd = detail.getProductDetail();
-            if (pd == null) continue;
+            if (pd == null)
+                continue;
 
             if (pd.getQuantity() == null || pd.getQuantity() < detail.getQuantity()) {
                 String name = pd.getProduct() != null ? pd.getProduct().getName() : "Sản phẩm";
@@ -564,17 +568,20 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
     // ===== HELPERS =====
 
     private String labelOrderStatus(OrderStatus s) {
-        if (s == null) return "Không xác định";
+        if (s == null)
+            return "Không xác định";
         return ORDER_STATUS_LABELS.getOrDefault(s, s.name());
     }
 
     private String labelPaymentStatus(PaymentStatus s) {
-        if (s == null) return "Không xác định";
+        if (s == null)
+            return "Không xác định";
         return PAYMENT_STATUS_LABELS.getOrDefault(s, s.name());
     }
 
     private String labelPaymentMethod(String m) {
-        if (m == null) return "Không xác định";
+        if (m == null)
+            return "Không xác định";
         return PAYMENT_METHOD_LABELS.getOrDefault(m, m);
     }
 }

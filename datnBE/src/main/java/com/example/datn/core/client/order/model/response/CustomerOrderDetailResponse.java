@@ -14,6 +14,9 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CustomerOrderDetailResponse {
 
+    // === ORDER TYPE ===
+    String orderType; // OFFLINE | ONLINE | GIAO_HANG
+
     // === ORDER HEADER ===
     String id;
     String code;
@@ -36,9 +39,9 @@ public class CustomerOrderDetailResponse {
     String shippingMethodName;
 
     // === PRICING ===
-    BigDecimal totalAmount;        // Subtotal before discounts
-    BigDecimal campaignDiscount;   // Total discount from campaigns
-    BigDecimal voucherDiscount;    // Discount from voucher
+    BigDecimal totalAmount; // Subtotal before discounts
+    BigDecimal campaignDiscount; // Total discount from campaigns
+    BigDecimal voucherDiscount; // Discount from voucher
     String voucherCode;
     String voucherName;
     BigDecimal shippingFee;

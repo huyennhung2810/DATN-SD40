@@ -34,6 +34,7 @@ export interface CustomerOrderDetailResponse {
   code: string;
   createdDate: number;
   paymentDate: number | null;
+  orderType: string | null; // OFFLINE | ONLINE | GIAO_HANG
   orderStatus: string;
   orderStatusLabel: string;
   paymentStatus: string;

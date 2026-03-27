@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Spin, Button, Modal, Input, Popconfirm, message, Steps } from "antd";
+import {
+  Spin,
+  Button,
+  Modal,
+  Input,
+  Popconfirm,
+  message,
+  Steps,
+  Tag,
+} from "antd";
 import {
   ArrowLeftOutlined,
   EnvironmentOutlined,
@@ -10,6 +19,9 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   CheckOutlined,
+  ShopOutlined,
+  GlobalOutlined,
+  CarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -173,6 +185,9 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
   }
 
   const isCancelled = order.orderStatus === "DA_HUY";
+  const isPOS = order.orderType === "OFFLINE";
+  const isDelivery =
+    order.orderType === "GIAO_HANG" || order.orderType === "ONLINE";
   const currentStepIndex = isCancelled
     ? -1
     : STEPS_DEF.findIndex((s) => s.status === order.orderStatus);
@@ -250,6 +265,33 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
             >
               {order.orderStatusLabel}
             </span>
+            {isPOS && (
+              <Tag
+                icon={<ShopOutlined />}
+                color="purple"
+                style={{ borderRadius: 6 }}
+              >
+                Tại quầy
+              </Tag>
+            )}
+            {order.orderType === "ONLINE" && (
+              <Tag
+                icon={<GlobalOutlined />}
+                color="blue"
+                style={{ borderRadius: 6 }}
+              >
+                Online
+              </Tag>
+            )}
+            {order.orderType === "GIAO_HANG" && (
+              <Tag
+                icon={<CarOutlined />}
+                color="cyan"
+                style={{ borderRadius: 6 }}
+              >
+                Giao hàng
+              </Tag>
+            )}
           </div>
           <span style={{ fontSize: 20, fontWeight: 800, color: "#D32F2F" }}>
             {formatPrice(order.totalAfterDiscount)}
@@ -305,6 +347,38 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                 )}
               </div>
             </div>
+          ) : isPOS ? (
+            /* POS order — no stepper, just show completion status */
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "16px 20px",
+                background: "#F0FDF4",
+                borderRadius: 10,
+                border: "1px solid #BBF7D0",
+              }}
+            >
+              <ShopOutlined style={{ fontSize: 22, color: "#15803D" }} />
+              <div>
+                <p style={{ fontWeight: 700, color: "#15803D", margin: 0 }}>
+                  Giao dịch tại quầy — {order.orderStatusLabel}
+                </p>
+                {order.paymentDate && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "#9ca3af",
+                      margin: "2px 0 0",
+                    }}
+                  >
+                    Thanh toán:{" "}
+                    {dayjs(order.paymentDate).format("DD/MM/YYYY HH:mm")}
+                  </p>
+                )}
+              </div>
+            </div>
           ) : (
             <Steps
               current={
@@ -356,8 +430,8 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
           )}
         </div>
 
-        {/* ===== NGƯỜI NHẬN ===== */}
-        {(order.recipientName || order.recipientAddress) && (
+        {/* ===== NGƯỜI NHẬN (only for delivery orders) ===== */}
+        {isDelivery && (order.recipientName || order.recipientAddress) && (
           <div
             style={{ padding: "20px 28px", borderBottom: "1px solid #f3f4f6" }}
           >
@@ -527,6 +601,33 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                       {item.variantLabel}
                     </div>
                   )}
+                  {item.serialNumbers && item.serialNumbers.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 4,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 4,
+                      }}
+                    >
+                      {item.serialNumbers.map((sn) => (
+                        <span
+                          key={sn}
+                          style={{
+                            fontSize: 11,
+                            fontFamily: "monospace",
+                            background: "#F3F4F6",
+                            color: "#374151",
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            border: "1px solid #E5E7EB",
+                          }}
+                        >
+                          {sn}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <span
@@ -588,19 +689,21 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                 {formatPrice(order.totalAmount)}
               </span>
             </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 13,
-                color: "#6b7280",
-              }}
-            >
-              <span>Phí vận chuyển</span>
-              <span style={{ color: "#374151" }}>
-                {formatPrice(order.shippingFee)}
-              </span>
-            </div>
+            {!isPOS && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 13,
+                  color: "#6b7280",
+                }}
+              >
+                <span>Phí vận chuyển</span>
+                <span style={{ color: "#374151" }}>
+                  {formatPrice(order.shippingFee)}
+                </span>
+              </div>
+            )}
             {(order.voucherDiscount ?? 0) + (order.campaignDiscount ?? 0) >
               0 && (
               <div
@@ -620,6 +723,21 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                     (order.voucherDiscount ?? 0) +
                       (order.campaignDiscount ?? 0),
                   )}
+                </span>
+              </div>
+            )}
+            {isPOS && order.customerPaid != null && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 13,
+                  color: "#6b7280",
+                }}
+              >
+                <span>Khách đã trả</span>
+                <span style={{ color: "#374151" }}>
+                  {formatPrice(order.customerPaid)}
                 </span>
               </div>
             )}
