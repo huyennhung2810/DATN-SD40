@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface AuthRoleRepository extends AccountRepository {
     @Query("""
-    SELECT a.role
+    SELECT DISTINCT a.role
     FROM Account a
     WHERE a.username = :username
 """)

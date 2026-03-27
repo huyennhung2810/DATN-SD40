@@ -104,8 +104,9 @@ public class CnOrderServiceImpl implements CnOrderService {
                     .orElseThrow(() -> new RuntimeException("Mã giảm giá không hợp lệ!"));
 
             // 4.1. Kiểm tra trạng thái và số lượng
-            if (appliedVoucher.getStatus() != null && appliedVoucher.getStatus() != 2) {
-                throw new RuntimeException("Mã giảm giá không trong thời gian hoạt động!");
+            // Chỉ chặn khi status = 0 (buộc dừng thủ công); timing kiểm tra ở bước 4.3
+            if (appliedVoucher.getStatus() != null && appliedVoucher.getStatus() == 0) {
+                throw new RuntimeException("Mã giảm giá đã bị vô hiệu hoá!");
             }
             if (appliedVoucher.getQuantity() != null && appliedVoucher.getQuantity() <= 0) {
                 throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
