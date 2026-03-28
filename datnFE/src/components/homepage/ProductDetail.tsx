@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col, Button, InputNumber, Typography, Tag, Divider, Breadcrumb, message, Spin, Descriptions } from "antd";
-import { ShoppingCartOutlined, HomeOutlined, SafetyCertificateOutlined, TruckOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  Row,
+  Col,
+  Button,
+  InputNumber,
+  Typography,
+  Tag,
+  Divider,
+  Breadcrumb,
+  message,
+  Spin,
+  Descriptions,
+} from "antd";
+import {
+  ShoppingCartOutlined,
+  HomeOutlined,
+  SafetyCertificateOutlined,
+  TruckOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { increaseCartCount } from "../../redux/cart/cartSlice";
@@ -13,7 +31,7 @@ const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   const { user } = useSelector((state: RootState) => state.auth);
 
   const [loading, setLoading] = useState(false);
@@ -40,7 +58,7 @@ const ProductDetail: React.FC = () => {
       }
     };
     if (id) fetchProductDetail();
-  }, [id]);
+  }, [id, user?.userId]);
 
   const handleAddToCart = async () => {
     if (!user || !user.userId) {
@@ -57,58 +75,79 @@ const ProductDetail: React.FC = () => {
     try {
       const payload = {
         productDetailId: selectedVariantId,
-        quantity: quantity
+        quantity: quantity,
       };
-      await axiosClient.post(`/client/cart/add?customerId=${user.userId}`, payload);
+      await axiosClient.post(
+        `/client/cart/add?customerId=${user.userId}`,
+        payload,
+      );
       message.success("Đã thêm sản phẩm vào giỏ hàng!");
       for (let i = 0; i < quantity; i++) {
-         dispatch(increaseCartCount());
+        dispatch(increaseCartCount());
       }
     } catch (error: any) {
       console.error("Lỗi thêm giỏ hàng:", error);
-      const errorMessage = error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
+      const errorMessage =
+        error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
       message.error(errorMessage);
     }
   };
 
-    const handleCheckout = () => {
-      if (!selectedVariantId) {
-        message.error("Vui lòng chọn phiên bản bạn muốn mua!");
-        return;
-      }
+  const handleCheckout = () => {
+    if (!selectedVariantId) {
+      message.error("Vui lòng chọn phiên bản bạn muốn mua!");
+      return;
+    }
 
-      const activeVariant = product.variants?.find((v: any) => v.id === selectedVariantId);
-      const finalPrice = activeVariant ? (activeVariant.displayPrice ?? activeVariant.salePrice) : product.price;
+    const activeVariant = product.variants?.find(
+      (v: any) => v.id === selectedVariantId,
+    );
+    const finalPrice = activeVariant
+      ? (activeVariant.displayPrice ?? activeVariant.salePrice)
+      : product.price;
 
-      // Object này phải giống hệt cấu trúc CartItem ở trang Checkout
-      const buyNowItem = {
-        id: selectedVariantId, 
-        productName: product.name,
-        variantName: activeVariant?.name, // Kiểm tra key này ở trang Checkout là variantName hay version
-        imageUrl: mainImage,
-        price: finalPrice,
-        quantity: quantity, 
-      };
-
-      navigate('/client/checkout', { 
-        state: { 
-          isBuyNow: true, 
-          checkoutItems: [buyNowItem] 
-        } 
-      });
+    // Object này phải giống hệt cấu trúc CartItem ở trang Checkout
+    const buyNowItem = {
+      id: selectedVariantId,
+      productName: product.name,
+      variantName: activeVariant?.name, // Kiểm tra key này ở trang Checkout là variantName hay version
+      imageUrl: mainImage,
+      price: finalPrice,
+      quantity: quantity,
     };
 
+    navigate("/client/checkout", {
+      state: {
+        isBuyNow: true,
+        checkoutItems: [buyNowItem],
+      },
+    });
+  };
+
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
   };
 
   if (loading || !product) {
-    return <div className="hikari-loading"><Spin size="large" /></div>;
+    return (
+      <div className="hikari-loading">
+        <Spin size="large" />
+      </div>
+    );
   }
 
-  const activeVariant = product.variants?.find((v: any) => v.id === selectedVariantId);
-  const displayPrice = activeVariant ? (activeVariant.displayPrice ?? activeVariant.salePrice) : (product.displayPrice ?? product.price);
-  const displayOriginalPrice = activeVariant ? (activeVariant.originalPrice ?? activeVariant.salePrice) : product.originalPrice;
+  const activeVariant = product.variants?.find(
+    (v: any) => v.id === selectedVariantId,
+  );
+  const displayPrice = activeVariant
+    ? (activeVariant.displayPrice ?? activeVariant.salePrice)
+    : (product.displayPrice ?? product.price);
+  const displayOriginalPrice = activeVariant
+    ? (activeVariant.originalPrice ?? activeVariant.salePrice)
+    : product.originalPrice;
   const maxStock = activeVariant ? activeVariant.stock : 1;
 
   // LẤY TRỰC TIẾP TỪ BACKEND (Nếu BE chưa trả về hoặc sản phẩm ko có thông số thì dùng mảng rỗng)
@@ -120,7 +159,13 @@ const ProductDetail: React.FC = () => {
         <Breadcrumb
           className="hikari-breadcrumb"
           items={[
-            { title: <a href="/client"><HomeOutlined /></a> },
+            {
+              title: (
+                <a href="/client">
+                  <HomeOutlined />
+                </a>
+              ),
+            },
             { title: <a href="/client/catalog">Máy ảnh</a> },
             { title: product.name },
           ]}
@@ -132,13 +177,16 @@ const ProductDetail: React.FC = () => {
             <Col xs={24} md={10} lg={10}>
               <div className="image-showcase">
                 <div className="main-image-box">
-                  <img src={mainImage || "https://via.placeholder.com/400"} alt={product.name} />
+                  <img
+                    src={mainImage || "https://via.placeholder.com/400"}
+                    alt={product.name}
+                  />
                 </div>
                 <div className="thumbnail-list">
                   {product.images?.map((img: string, index: number) => (
-                    <div 
+                    <div
                       key={index}
-                      className={`thumb-item ${mainImage === img ? 'active' : ''}`}
+                      className={`thumb-item ${mainImage === img ? "active" : ""}`}
                       onClick={() => setMainImage(img)}
                     >
                       <img src={img} alt="" />
@@ -151,19 +199,35 @@ const ProductDetail: React.FC = () => {
             {/* CỘT PHẢI: THÔNG TIN SẢN PHẨM */}
             <Col xs={24} md={14} lg={14}>
               <div className="product-info">
-                <Tag color="#D32F2F" className="brand-tag">Chính Hãng 100%</Tag>
-                <Title level={2} className="product-title">{product.name}</Title>
-                
+                <Tag color="#D32F2F" className="brand-tag">
+                  Chính Hãng 100%
+                </Tag>
+                <Title level={2} className="product-title">
+                  {product.name}
+                </Title>
+
                 <div className="price-box">
-                  {displayOriginalPrice && displayOriginalPrice !== displayPrice ? (
+                  {displayOriginalPrice &&
+                  displayOriginalPrice !== displayPrice ? (
                     <>
-                      <span className="current-price">{formatPrice(displayPrice)}</span>
-                      <span className="original-price" style={{ textDecoration: 'line-through', marginLeft: 12, color: '#999' }}>
+                      <span className="current-price">
+                        {formatPrice(displayPrice)}
+                      </span>
+                      <span
+                        className="original-price"
+                        style={{
+                          textDecoration: "line-through",
+                          marginLeft: 12,
+                          color: "#999",
+                        }}
+                      >
                         {formatPrice(displayOriginalPrice)}
                       </span>
                     </>
                   ) : (
-                    <span className="current-price">{formatPrice(displayPrice)}</span>
+                    <span className="current-price">
+                      {formatPrice(displayPrice)}
+                    </span>
                   )}
                 </div>
 
@@ -177,25 +241,49 @@ const ProductDetail: React.FC = () => {
                       const isOutOfStock = variant.stock <= 0;
                       const isSelected = selectedVariantId === variant.id;
                       return (
-                        <div 
+                        <div
                           key={variant.id}
-                          className={`variant-btn ${isSelected ? 'selected' : ''} ${isOutOfStock ? 'disabled' : ''}`}
-                          onClick={() => !isOutOfStock && setSelectedVariantId(variant.id)}
+                          className={`variant-btn ${isSelected ? "selected" : ""} ${isOutOfStock ? "disabled" : ""}`}
+                          onClick={() =>
+                            !isOutOfStock && setSelectedVariantId(variant.id)
+                          }
                         >
                           <div className="variant-name">{variant.name}</div>
                           <div className="variant-stock">
-                            {isOutOfStock ? 'Hết hàng' : `Còn ${variant.stock} sp`}
+                            {isOutOfStock
+                              ? "Hết hàng"
+                              : `Còn ${variant.stock} sp`}
                           </div>
                           {variant.hasActiveSaleCampaign ? (
                             <div className="variant-price">
-                              <span style={{ color: '#ff4d4f', fontWeight: 600 }}>{formatPrice(variant.displayPrice ?? variant.salePrice)}</span>
-                              <span style={{ textDecoration: 'line-through', marginLeft: 6, fontSize: 12, color: '#999' }}>
-                                {formatPrice(variant.originalPrice ?? variant.salePrice)}
+                              <span
+                                style={{ color: "#ff4d4f", fontWeight: 600 }}
+                              >
+                                {formatPrice(
+                                  variant.displayPrice ?? variant.salePrice,
+                                )}
+                              </span>
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  marginLeft: 6,
+                                  fontSize: 12,
+                                  color: "#999",
+                                }}
+                              >
+                                {formatPrice(
+                                  variant.originalPrice ?? variant.salePrice,
+                                )}
                               </span>
                             </div>
                           ) : (
-                            <div className="variant-price" style={{ fontWeight: 600 }}>
-                              {formatPrice(variant.displayPrice ?? variant.salePrice)}
+                            <div
+                              className="variant-price"
+                              style={{ fontWeight: 600 }}
+                            >
+                              {formatPrice(
+                                variant.displayPrice ?? variant.salePrice,
+                              )}
                             </div>
                           )}
                         </div>
@@ -207,32 +295,34 @@ const ProductDetail: React.FC = () => {
                 {/* Chọn số lượng */}
                 <div className="quantity-section">
                   <div className="section-label">Số lượng:</div>
-                  <InputNumber 
-                    min={1} 
-                    max={maxStock} 
-                    value={quantity} 
+                  <InputNumber
+                    min={1}
+                    max={maxStock}
+                    value={quantity}
                     onChange={(val) => setQuantity(val || 1)}
                     size="large"
                     disabled={!selectedVariantId || maxStock <= 0}
                     className="qty-input"
                   />
                   <span className="stock-hint">
-                    {selectedVariantId && maxStock > 0 ? `(Kho còn ${maxStock})` : ''}
+                    {selectedVariantId && maxStock > 0
+                      ? `(Kho còn ${maxStock})`
+                      : ""}
                   </span>
                 </div>
 
                 {/* Nút hành động */}
                 <div className="action-buttons">
-                  <Button 
-                    className="btn-add-cart" 
+                  <Button
+                    className="btn-add-cart"
                     icon={<ShoppingCartOutlined />}
                     onClick={handleAddToCart}
                     disabled={!selectedVariantId || maxStock <= 0}
                   >
                     THÊM VÀO GIỎ HÀNG
                   </Button>
-                  <Button 
-                    type="primary" 
+                  <Button
+                    type="primary"
                     className="btn-buy-now"
                     disabled={!selectedVariantId || maxStock <= 0}
                     onClick={handleCheckout}
@@ -242,8 +332,14 @@ const ProductDetail: React.FC = () => {
                 </div>
 
                 <div className="commitments">
-                  <div className="commit-item"><SafetyCertificateOutlined className="icon green" /> Bảo hành chính hãng 24 tháng</div>
-                  <div className="commit-item"><TruckOutlined className="icon blue" /> Miễn phí vận chuyển toàn quốc</div>
+                  <div className="commit-item">
+                    <SafetyCertificateOutlined className="icon green" /> Bảo
+                    hành chính hãng 24 tháng
+                  </div>
+                  <div className="commit-item">
+                    <TruckOutlined className="icon blue" /> Miễn phí vận chuyển
+                    toàn quốc
+                  </div>
                 </div>
               </div>
             </Col>
@@ -254,19 +350,33 @@ const ProductDetail: React.FC = () => {
           {/* ========================================= */}
           {specifications.length > 0 && (
             <>
-              <Divider style={{ marginTop: '40px' }} />
+              <Divider style={{ marginTop: "40px" }} />
               <div className="specifications-section">
-                <Title level={4} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <Title
+                  level={4}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "20px",
+                  }}
+                >
                   <SettingOutlined /> Thông số kỹ thuật
                 </Title>
-                
-                <Descriptions 
-                  bordered 
+
+                <Descriptions
+                  bordered
                   column={1}
                   size="middle"
                   styles={{
-                    label: { width: '30%', minWidth: '150px', fontWeight: '600', backgroundColor: '#fafafa', color: '#555' },
-                    content: { backgroundColor: '#fff' },
+                    label: {
+                      width: "30%",
+                      minWidth: "150px",
+                      fontWeight: "600",
+                      backgroundColor: "#fafafa",
+                      color: "#555",
+                    },
+                    content: { backgroundColor: "#fff" },
                   }}
                 >
                   {specifications.map((spec: any, index: number) => (
@@ -278,7 +388,6 @@ const ProductDetail: React.FC = () => {
               </div>
             </>
           )}
-
         </div>
       </div>
 
