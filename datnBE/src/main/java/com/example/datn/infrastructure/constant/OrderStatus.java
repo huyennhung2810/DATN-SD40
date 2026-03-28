@@ -8,6 +8,7 @@ public enum OrderStatus {
     DA_XAC_NHAN,
     CHO_GIAO,
     DANG_GIAO,
+    GIAO_HANG_KHONG_THANH_CONG,
     HOAN_THANH,
     DA_HUY,
     LUU_TAM;

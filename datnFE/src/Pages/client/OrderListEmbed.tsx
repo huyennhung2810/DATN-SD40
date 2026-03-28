@@ -13,6 +13,7 @@ const STATUS_TABS = [
   { key: "DA_XAC_NHAN", label: "Đã xác nhận" },
   { key: "CHO_GIAO", label: "Chờ giao hàng" },
   { key: "DANG_GIAO", label: "Đang giao hàng" },
+  { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
   { key: "DA_HUY", label: "Đã hủy" },
 ];
@@ -22,6 +23,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   DA_XAC_NHAN: { bg: "#DBEAFE", text: "#2563EB" },
   CHO_GIAO: { bg: "#EDE9FE", text: "#6D28D9" },
   DANG_GIAO: { bg: "#E0F2FE", text: "#0284C7" },
+  GIAO_HANG_KHONG_THANH_CONG: { bg: "#FFF1F0", text: "#D4380D" },
   HOAN_THANH: { bg: "#DCFCE7", text: "#15803D" },
   DA_HUY: { bg: "#FEE2E2", text: "#DC2626" },
 };

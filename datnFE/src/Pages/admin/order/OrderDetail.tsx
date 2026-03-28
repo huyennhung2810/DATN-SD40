@@ -61,6 +61,7 @@ const STATUS_LABELS: Record<string, string> = {
   DA_XAC_NHAN: "Đã xác nhận",
   CHO_GIAO: "Chờ giao hàng",
   DANG_GIAO: "Đang giao hàng",
+  GIAO_HANG_KHONG_THANH_CONG: "Giao hàng không thành công",
   HOAN_THANH: "Hoàn thành",
   DA_HUY: "Đã hủy",
   LUU_TAM: "Lưu tạm",
@@ -71,6 +72,7 @@ const STATUS_COLORS: Record<string, string> = {
   DA_XAC_NHAN: "blue",
   CHO_GIAO: "cyan",
   DANG_GIAO: "geekblue",
+  GIAO_HANG_KHONG_THANH_CONG: "volcano",
   HOAN_THANH: "green",
   DA_HUY: "red",
   LUU_TAM: "default",
@@ -80,7 +82,6 @@ const NEXT_STATUS: Record<string, string> = {
   CHO_XAC_NHAN: "DA_XAC_NHAN",
   DA_XAC_NHAN: "CHO_GIAO",
   CHO_GIAO: "DANG_GIAO",
-  DANG_GIAO: "HOAN_THANH",
 };
 
 const ONLINE_STEPS = [
@@ -88,6 +89,7 @@ const ONLINE_STEPS = [
   { key: "DA_XAC_NHAN", label: "Đã xác nhận" },
   { key: "CHO_GIAO", label: "Chờ giao hàng" },
   { key: "DANG_GIAO", label: "Đang giao hàng" },
+  { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
@@ -225,7 +227,13 @@ const OrderDetailPage: React.FC = () => {
     isOnline &&
     (currentStatus === "CHO_XAC_NHAN" || currentStatus === "DA_XAC_NHAN");
   const showCancelButton = !isCompleted && !isCancelled;
-  const nextStatusKey = NEXT_STATUS[currentStatus] ?? "";
+  // Nếu đang giao hàng thì cho phép chọn 2 trạng thái tiếp theo
+  const nextStatusKeys =
+    currentStatus === "DANG_GIAO"
+      ? ["HOAN_THANH", "GIAO_HANG_KHONG_THANH_CONG"]
+      : NEXT_STATUS[currentStatus]
+        ? [NEXT_STATUS[currentStatus]]
+        : [];
   const totalProductAmount = items.reduce((s, r) => s + (r.tongTien ?? 0), 0);
   const flatRows = buildFlatRows(items);
 
@@ -260,6 +268,14 @@ const OrderDetailPage: React.FC = () => {
 
   const handleConfirmStatus = async () => {
     if (!order) return;
+    // Nếu chọn GIAO_HANG_KHONG_THANH_CONG thì bắt buộc nhập lý do
+    if (
+      nextStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
+      (!statusNote || !statusNote.trim())
+    ) {
+      message.warning("Vui lòng nhập lý do giao hàng không thành công!");
+      return;
+    }
     setIsUpdating(true);
     try {
       await orderApi.updateOrderStatus({
@@ -776,15 +792,20 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {step.label}
                 </Text>
-                {active && nextStatusKey && !isCompleted && (
-                  <Button
-                    size="small"
-                    type="primary"
-                    style={{ marginTop: 6, fontSize: 11, padding: "0 8px" }}
-                    onClick={() => openStatusModal(nextStatusKey)}
-                  >
-                    Chuyển
-                  </Button>
+                {active && nextStatusKeys.length > 0 && !isCompleted && (
+                  <Space>
+                    {nextStatusKeys.map((status) => (
+                      <Button
+                        key={status}
+                        size="small"
+                        type="primary"
+                        style={{ marginTop: 6, fontSize: 11, padding: "0 8px" }}
+                        onClick={() => openStatusModal(status)}
+                      >
+                        {STATUS_LABELS[status] || status}
+                      </Button>
+                    ))}
+                  </Space>
                 )}
               </div>
               {idx < steps.length - 1 && (
@@ -1327,10 +1348,19 @@ const OrderDetailPage: React.FC = () => {
         </div>
         <TextArea
           rows={3}
-          placeholder="Ghi chú (tùy chọn)..."
+          placeholder={
+            nextStatus === "GIAO_HANG_KHONG_THANH_CONG"
+              ? "Bắt buộc nhập lý do..."
+              : "Ghi chú (tùy chọn)..."
+          }
           value={statusNote}
           onChange={(e) => setStatusNote(e.target.value)}
         />
+        {nextStatus === "GIAO_HANG_KHONG_THANH_CONG" && (
+          <div style={{ color: "#fa541c", marginTop: 8 }}>
+            * Bắt buộc nhập lý do giao hàng không thành công
+          </div>
+        )}
       </Modal>
 
       <Modal

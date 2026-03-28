@@ -30,7 +30,7 @@ public class OrderHistory extends PrimaryEntity implements Serializable {
 
     // Enum trạng thái hóa đơn
     @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai", nullable = false)
+    @Column(name = "trang_thai", nullable = false, length = 50)
     private OrderStatus trangThai;
 
     // Thời gian cập nhật trạng thái

@@ -133,6 +133,14 @@ public class ADOrderServiceImpl implements ADOrderService {
                 case DANG_GIAO:
                     break;
 
+                case GIAO_HANG_KHONG_THANH_CONG:
+                    // Bắt buộc phải có lý do khi chuyển sang trạng thái này
+                    if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+                        throw new RuntimeException("Vui lòng nhập lý do giao hàng không thành công!");
+                    }
+                    // Có thể bổ sung logic hoàn trả hàng, hoàn voucher, v.v. nếu cần
+                    break;
+
                 case HOAN_THANH:
                     danhDauIMEIDaBan(hoaDonDaCapNhat);
                     break;
@@ -282,7 +290,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         validTransitions.put(OrderStatus.CHO_GIAO,
                 Arrays.asList(OrderStatus.DANG_GIAO, OrderStatus.DA_HUY));
         validTransitions.put(OrderStatus.DANG_GIAO,
-                Arrays.asList(OrderStatus.HOAN_THANH));
+                Arrays.asList(OrderStatus.HOAN_THANH, OrderStatus.GIAO_HANG_KHONG_THANH_CONG));
 
         if (!validTransitions.getOrDefault(trangThaiCu, new ArrayList<>())
                 .contains(trangThaiMoi)) {

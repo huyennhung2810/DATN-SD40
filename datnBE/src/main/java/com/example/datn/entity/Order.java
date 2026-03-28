@@ -61,7 +61,7 @@ public class Order extends PrimaryEntity implements Serializable {
     private Customer customer;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "order_status")
+    @Column(name = "order_status", length = 50)
     private OrderStatus orderStatus;
 
     @ManyToOne
