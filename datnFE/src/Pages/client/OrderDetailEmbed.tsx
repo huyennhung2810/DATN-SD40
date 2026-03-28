@@ -50,6 +50,7 @@ const STEPS_DEF = [
   { status: "DA_XAC_NHAN", label: "Đã xác nhận" },
   { status: "CHO_GIAO", label: "Chờ giao hàng" },
   { status: "DANG_GIAO", label: "Đang giao hàng" },
+  { status: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
   { status: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
@@ -345,6 +346,49 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                     {dayjs(timelineMap["DA_HUY"]).format("DD/MM/YYYY HH:mm")}
                   </p>
                 )}
+              </div>
+            </div>
+          ) : order.orderStatus === "GIAO_HANG_KHONG_THANH_CONG" ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "16px 20px",
+                background: "#FEF2F2",
+                borderRadius: 10,
+                border: "1px solid #FECACA",
+              }}
+            >
+              <WarningOutlined style={{ fontSize: 20, color: "#D97706" }} />
+              <div>
+                <p style={{ fontWeight: 700, color: "#D97706", margin: 0 }}>
+                  Giao hàng không thành công
+                </p>
+                {timelineMap["GIAO_HANG_KHONG_THANH_CONG"] && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "#9ca3af",
+                      margin: "2px 0 0",
+                    }}
+                  >
+                    {dayjs(timelineMap["GIAO_HANG_KHONG_THANH_CONG"]).format(
+                      "DD/MM/YYYY HH:mm",
+                    )}
+                  </p>
+                )}
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "#92400E",
+                    margin: 0,
+                    marginTop: 4,
+                  }}
+                >
+                  Đơn hàng của bạn đã được giao nhưng không thành công. Vui lòng
+                  liên hệ CSKH để được hỗ trợ.
+                </p>
               </div>
             </div>
           ) : isPOS ? (
@@ -782,6 +826,22 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
           </Button>
 
           <div style={{ display: "flex", gap: 10 }}>
+            {/* Nút hủy chỉ mất khi đang giao hàng, hoàn thành, đã hủy, hoặc giao hàng không thành công */}
+            {![
+              "DANG_GIAO",
+              "HOAN_THANH",
+              "DA_HUY",
+              "GIAO_HANG_KHONG_THANH_CONG",
+            ].includes(order.orderStatus) && (
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => setCancelModalOpen(true)}
+                style={{ fontWeight: 600, borderRadius: 8 }}
+              >
+                Hủy đơn
+              </Button>
+            )}
             {order.canBuyAgain && (
               <Button
                 icon={<ShoppingCartOutlined />}
@@ -795,16 +855,6 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                 }}
               >
                 Mua lại
-              </Button>
-            )}
-            {order.canCancel && (
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => setCancelModalOpen(true)}
-                style={{ fontWeight: 600, borderRadius: 8 }}
-              >
-                Hủy đơn
               </Button>
             )}
             {order.canConfirmReceived && (

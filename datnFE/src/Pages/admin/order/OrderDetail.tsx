@@ -226,14 +226,20 @@ const OrderDetailPage: React.FC = () => {
   const canChangeSerial =
     isOnline &&
     (currentStatus === "CHO_XAC_NHAN" || currentStatus === "DA_XAC_NHAN");
-  const showCancelButton = !isCompleted && !isCancelled;
+  // Chỉ cho phép hủy ở các trạng thái: CHO_XAC_NHAN, DA_XAC_NHAN, CHO_GIAO
+  const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
+  const showCancelButton = canCancelStatuses.includes(currentStatus);
   // Nếu đang giao hàng thì cho phép chọn 2 trạng thái tiếp theo
-  const nextStatusKeys =
+  let nextStatusKeys =
     currentStatus === "DANG_GIAO"
       ? ["HOAN_THANH", "GIAO_HANG_KHONG_THANH_CONG"]
       : NEXT_STATUS[currentStatus]
         ? [NEXT_STATUS[currentStatus]]
         : [];
+  // Nếu đã giao hàng không thành công thì không còn nút nào (ẩn hết)
+  if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
+    nextStatusKeys = [];
+  }
   const totalProductAmount = items.reduce((s, r) => s + (r.tongTien ?? 0), 0);
   const flatRows = buildFlatRows(items);
 
@@ -731,11 +737,22 @@ const OrderDetailPage: React.FC = () => {
       );
     }
 
-    const steps = isOnline ? ONLINE_STEPS : [ONLINE_STEPS[0], ONLINE_STEPS[4]];
+    // Nếu đã hoàn thành thì ẩn bước GIAO_HANG_KHONG_THANH_CONG khỏi tiến trình
+    let steps = isOnline ? ONLINE_STEPS : [ONLINE_STEPS[0], ONLINE_STEPS[4]];
+    if (currentStatus === "HOAN_THANH") {
+      steps = steps.filter((s) => s.key !== "GIAO_HANG_KHONG_THANH_CONG");
+    }
+    // Nếu giao hàng không thành công thì ẩn luôn bước HOAN_THANH khỏi tiến trình
+    if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
+      steps = steps.filter((s) => s.key !== "HOAN_THANH");
+    }
     const stepKeys = steps.map((s) => s.key);
     const currentIdx = stepKeys.indexOf(currentStatus);
 
-    const stepIcon = (key: string) => {
+    const stepIcon = (key: string, _done: boolean, _active: boolean) => {
+      if (key === "GIAO_HANG_KHONG_THANH_CONG") {
+        return <CloseCircleOutlined />;
+      }
       switch (key) {
         case "CHO_XAC_NHAN":
           return <ClockCircleOutlined />;
@@ -757,7 +774,23 @@ const OrderDetailPage: React.FC = () => {
         {steps.map((step, idx) => {
           const done = idx < currentIdx;
           const active = idx === currentIdx;
-          const circleColor = done ? "#52c41a" : active ? "#1677ff" : "#d9d9d9";
+          let circleColor = done ? "#52c41a" : active ? "#1677ff" : "#d9d9d9";
+          let icon = null;
+          // Special case: delivery failed step
+          if (step.key === "GIAO_HANG_KHONG_THANH_CONG") {
+            if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG" || done) {
+              circleColor = "#fa541c"; // volcano
+              icon = <CloseCircleOutlined />;
+            } else {
+              icon = <CloseCircleOutlined style={{ opacity: 0.3 }} />;
+            }
+          } else {
+            icon = done ? (
+              <CheckCircleOutlined />
+            ) : (
+              stepIcon(step.key, done, active)
+            );
+          }
 
           return (
             <React.Fragment key={step.key}>
@@ -779,7 +812,7 @@ const OrderDetailPage: React.FC = () => {
                       : undefined,
                   }}
                 >
-                  {done ? <CheckCircleOutlined /> : stepIcon(step.key)}
+                  {icon}
                 </div>
                 <Text
                   style={{
@@ -792,21 +825,38 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {step.label}
                 </Text>
-                {active && nextStatusKeys.length > 0 && !isCompleted && (
-                  <Space>
-                    {nextStatusKeys.map((status) => (
-                      <Button
-                        key={status}
-                        size="small"
-                        type="primary"
-                        style={{ marginTop: 6, fontSize: 11, padding: "0 8px" }}
-                        onClick={() => openStatusModal(status)}
-                      >
-                        {STATUS_LABELS[status] || status}
-                      </Button>
-                    ))}
-                  </Space>
-                )}
+                {active &&
+                  nextStatusKeys.length > 0 &&
+                  !isCompleted &&
+                  currentStatus !== "GIAO_HANG_KHONG_THANH_CONG" && (
+                    <Space>
+                      {nextStatusKeys
+                        .filter((status) =>
+                          // Nếu trạng thái hiện tại là DANG_GIAO, loại bỏ nút HOAN_THANH nếu đơn đã giao hàng không thành công
+                          currentStatus === "DANG_GIAO" &&
+                          status === "HOAN_THANH" &&
+                          order?.trangThaiHoaDon ===
+                            "GIAO_HANG_KHONG_THANH_CONG"
+                            ? false
+                            : true,
+                        )
+                        .map((status) => (
+                          <Button
+                            key={status}
+                            size="small"
+                            type="primary"
+                            style={{
+                              marginTop: 6,
+                              fontSize: 11,
+                              padding: "0 8px",
+                            }}
+                            onClick={() => openStatusModal(status)}
+                          >
+                            {STATUS_LABELS[status] || status}
+                          </Button>
+                        ))}
+                    </Space>
+                  )}
               </div>
               {idx < steps.length - 1 && (
                 <div
