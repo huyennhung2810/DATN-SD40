@@ -98,6 +98,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final ADVouchersRepository adVouchersRepository;
     private final EmployeeRepository employeeRepository;
     private final OrderHistoryRepository orderHistoryRepository;
+    private final VoucherDetailRepository voucherDetailRepository;
 
     @Override
     @Transactional
@@ -551,6 +552,26 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         posOrderRepository.save(order);
 
+        // Voucher: giảm số lượng và đánh dấu INDIVIDUAL đã sử dụng khi thanh toán thành
+        // công
+        if (order.getVoucher() != null) {
+            Voucher posVoucher = order.getVoucher();
+            if (posVoucher.getQuantity() != null && posVoucher.getQuantity() > 0) {
+                posVoucher.setQuantity(posVoucher.getQuantity() - 1);
+                adVouchersRepository.save(posVoucher);
+            }
+            if ("INDIVIDUAL".equals(posVoucher.getVoucherType()) && order.getCustomer() != null) {
+                voucherDetailRepository
+                        .findUnusedByVoucherAndCustomer(posVoucher.getId(), order.getCustomer().getId())
+                        .ifPresent(vd -> {
+                            vd.setUsageStatus(1);
+                            vd.setUsedDate(System.currentTimeMillis());
+                            vd.setOrder(order);
+                            voucherDetailRepository.save(vd);
+                        });
+            }
+        }
+
         // Record checkout history
         OrderHistory lichSu = new OrderHistory();
         lichSu.setOrder(order);
@@ -809,6 +830,25 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             order.setPaymentDate(System.currentTimeMillis());
             order.setCustomerPaid(amount);
             posOrderRepository.save(order);
+
+            // Voucher: giảm số lượng và đánh dấu INDIVIDUAL đã sử dụng khi VNPay thành công
+            if (order.getVoucher() != null) {
+                Voucher posVoucher = order.getVoucher();
+                if (posVoucher.getQuantity() != null && posVoucher.getQuantity() > 0) {
+                    posVoucher.setQuantity(posVoucher.getQuantity() - 1);
+                    adVouchersRepository.save(posVoucher);
+                }
+                if ("INDIVIDUAL".equals(posVoucher.getVoucherType()) && order.getCustomer() != null) {
+                    voucherDetailRepository
+                            .findUnusedByVoucherAndCustomer(posVoucher.getId(), order.getCustomer().getId())
+                            .ifPresent(vd -> {
+                                vd.setUsageStatus(1);
+                                vd.setUsedDate(System.currentTimeMillis());
+                                vd.setOrder(order);
+                                voucherDetailRepository.save(vd);
+                            });
+                }
+            }
 
             OrderHistory lichSu = new OrderHistory();
             lichSu.setOrder(order);
