@@ -223,9 +223,8 @@ const OrderDetailPage: React.FC = () => {
     order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
-  const canChangeSerial =
-    isOnline &&
-    (currentStatus === "CHO_XAC_NHAN" || currentStatus === "DA_XAC_NHAN");
+  // Chỉ cho phép gán/đổi serial khi trạng thái là CHO_XAC_NHAN
+  const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
   // Chỉ cho phép hủy ở các trạng thái: CHO_XAC_NHAN, DA_XAC_NHAN, CHO_GIAO
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
   const showCancelButton = canCancelStatuses.includes(currentStatus);
@@ -274,6 +273,20 @@ const OrderDetailPage: React.FC = () => {
 
   const handleConfirmStatus = async () => {
     if (!order) return;
+    // Nếu chuyển sang ĐÃ XÁC NHẬN mà còn sản phẩm chưa gán serial thì chặn lại
+    if (nextStatus === "DA_XAC_NHAN") {
+      // Kiểm tra tất cả items đã có serial
+      const hasMissingSerial = items.some((item) => {
+        const serials = parseSerials(item.danhSachImei);
+        return !serials || serials.length === 0;
+      });
+      if (hasMissingSerial) {
+        message.warning(
+          "Vui lòng gán serial cho tất cả sản phẩm trước khi xác nhận!",
+        );
+        return;
+      }
+    }
     // Nếu chọn GIAO_HANG_KHONG_THANH_CONG thì bắt buộc nhập lý do
     if (
       nextStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
