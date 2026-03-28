@@ -35,8 +35,9 @@ const OrderStatuses = [
   { key: "ALL", label: "Tất cả" },
   { key: "CHO_XAC_NHAN", label: "Chờ xác nhận" },
   { key: "DA_XAC_NHAN", label: "Đã xác nhận" },
-  { key: "CHO_GIAO", label: "Chờ giao" },
-  { key: "DANG_GIAO", label: "Đang giao" },
+  { key: "CHO_GIAO", label: "Chờ giao hàng" },
+  { key: "DANG_GIAO", label: "Đang giao hàng" },
+  { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
   { key: "DA_HUY", label: "Đã hủy" },
 ];
@@ -164,6 +165,12 @@ const OrderPage: React.FC = () => {
           const statusMap: any = {
             CHO_XAC_NHAN: { color: "blue", label: "Chờ xác nhận" },
             DA_XAC_NHAN: { color: "cyan", label: "Đã xác nhận" },
+            CHO_GIAO: { color: "cyan", label: "Chờ giao hàng" },
+            DANG_GIAO: { color: "geekblue", label: "Đang giao hàng" },
+            GIAO_HANG_KHONG_THANH_CONG: {
+              color: "volcano",
+              label: "Giao hàng không thành công",
+            },
             HOAN_THANH: { color: "green", label: "Hoàn thành" },
             DA_HUY: { color: "red", label: "Đã hủy" },
           };
