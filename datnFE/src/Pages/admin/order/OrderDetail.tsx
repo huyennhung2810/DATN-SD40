@@ -750,14 +750,19 @@ const OrderDetailPage: React.FC = () => {
       );
     }
 
-    // Nếu đã hoàn thành thì ẩn bước GIAO_HANG_KHONG_THANH_CONG khỏi tiến trình
-    let steps = isOnline ? ONLINE_STEPS : [ONLINE_STEPS[0], ONLINE_STEPS[4]];
-    if (currentStatus === "HOAN_THANH") {
-      steps = steps.filter((s) => s.key !== "GIAO_HANG_KHONG_THANH_CONG");
-    }
-    // Nếu giao hàng không thành công thì ẩn luôn bước HOAN_THANH khỏi tiến trình
-    if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
-      steps = steps.filter((s) => s.key !== "HOAN_THANH");
+    // Tách logic theo loại đơn
+    let steps;
+    if (order?.loaiHoaDon === "GIAO_HANG" || order?.loaiHoaDon === "ONLINE") {
+      steps = [...ONLINE_STEPS];
+      if (currentStatus === "HOAN_THANH") {
+        steps = steps.filter((s) => s.key !== "GIAO_HANG_KHONG_THANH_CONG");
+      }
+      if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
+        steps = steps.filter((s) => s.key !== "HOAN_THANH");
+      }
+    } else {
+      // POS lấy hàng tại quầy: chỉ 2 bước
+      steps = [ONLINE_STEPS[0], ONLINE_STEPS[5]];
     }
     const stepKeys = steps.map((s) => s.key);
     const currentIdx = stepKeys.indexOf(currentStatus);
