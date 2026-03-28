@@ -107,7 +107,7 @@ const CheckoutPage: React.FC = () => {
 
   useEffect(() => {
     if (!user?.userId) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname }, replace: true });
       return;
     }
     fetchCart();

@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, InputNumber, Typography, Popconfirm, message, Spin, Divider } from "antd";
+import {
+  Table,
+  Button,
+  InputNumber,
+  Typography,
+  Popconfirm,
+  message,
+  Spin,
+  Divider,
+} from "antd";
 import { DeleteOutlined, ShoppingOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
-import { setCartCount } from "../../redux/cart/cartSlice"; 
+import { setCartCount } from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient";
 
 const { Title, Text } = Typography;
@@ -16,7 +25,7 @@ const CartPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
-  
+
   // 1. STATE MỚI: Lưu danh sách ID các sản phẩm được tích chọn (Checkbox)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -24,8 +33,10 @@ const CartPage: React.FC = () => {
     if (!user || !user.userId) return;
     setLoading(true);
     try {
-      const response = await axiosClient.get(`/client/cart?customerId=${user.userId}`);
-      const data = response.data;    
+      const response = await axiosClient.get(
+        `/client/cart?customerId=${user.userId}`,
+      );
+      const data = response.data;
       console.log(data);
       if (Array.isArray(data)) {
         setCartItems(data);
@@ -34,7 +45,7 @@ const CartPage: React.FC = () => {
         // setSelectedRowKeys(data.map(item => item.id));
       } else {
         setCartItems([]);
-        dispatch(setCartCount(0));  
+        dispatch(setCartCount(0));
       }
     } catch (error) {
       console.error("Lỗi khi tải giỏ hàng:", error);
@@ -49,45 +60,56 @@ const CartPage: React.FC = () => {
     fetchCartItems();
   }, [user]);
 
-  const handleUpdateQuantity = async (cartDetailId: string, newQuantity: number | null) => {
+  const handleUpdateQuantity = async (
+    cartDetailId: string,
+    newQuantity: number | null,
+  ) => {
     if (!newQuantity || newQuantity < 1) return;
     try {
-      await axiosClient.put(`/client/cart/update/${cartDetailId}?quantity=${newQuantity}`);
-      const updatedCart = cartItems.map(item => 
-        item.id === cartDetailId ? { ...item, quantity: newQuantity } : item
+      await axiosClient.put(
+        `/client/cart/update/${cartDetailId}?quantity=${newQuantity}`,
+      );
+      const updatedCart = cartItems.map((item) =>
+        item.id === cartDetailId ? { ...item, quantity: newQuantity } : item,
       );
       setCartItems(updatedCart);
     } catch (error) {
-      message.error("Lỗi cập nhật số lượng!");
+      console.error("Lỗi khi cập nhật số lượng:", error);
     }
   };
 
   const handleDeleteItem = async (cartDetailId: string) => {
     try {
       await axiosClient.delete(`/client/cart/remove/${cartDetailId}`);
-      const newCart = cartItems.filter(item => item.id !== cartDetailId);
+      const newCart = cartItems.filter((item) => item.id !== cartDetailId);
       setCartItems(newCart);
-      dispatch(setCartCount(newCart.length)); 
-      
+      dispatch(setCartCount(newCart.length));
+
       // Xóa luôn ID đó khỏi danh sách đang chọn (nếu có)
-      setSelectedRowKeys(prev => prev.filter(key => key !== cartDetailId));
+      setSelectedRowKeys((prev) => prev.filter((key) => key !== cartDetailId));
       message.success("Đã xóa sản phẩm khỏi giỏ hàng");
     } catch (error) {
-      message.error("Lỗi khi xóa sản phẩm!");
+      console.error("Lỗi khi xóa sản phẩm:", error);
     }
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
   };
 
   // 2. LOGIC TÍNH TIỀN MỚI: Chỉ tính tổng tiền của những sản phẩm ĐƯỢC CHỌN (có trong selectedRowKeys)
-  const selectedCartItems = cartItems.filter(item => selectedRowKeys.includes(item.id));
+  const selectedCartItems = cartItems.filter((item) =>
+    selectedRowKeys.includes(item.id),
+  );
   const totalPrice = selectedCartItems.reduce((sum, item) => {
-    const currentPrice = (item.discountedPrice && item.discountedPrice < item.price) 
-                          ? item.discountedPrice 
-                          : (item.price || 0);
-    return sum + (currentPrice * (item.quantity || 0));
+    const currentPrice =
+      item.discountedPrice && item.discountedPrice < item.price
+        ? item.discountedPrice
+        : item.price || 0;
+    return sum + currentPrice * (item.quantity || 0);
   }, 0);
 
   // 3. XỬ LÝ THANH TOÁN: Bắt lỗi nếu chưa chọn gì
@@ -97,43 +119,59 @@ const CartPage: React.FC = () => {
       return;
     }
     // Chuyển sang trang thanh toán, truyền theo danh sách ID sản phẩm đã chọn
-    navigate('/client/checkout', { state: { selectedCartItemIds: selectedRowKeys } });
+    navigate("/client/checkout", {
+      state: { selectedCartItemIds: selectedRowKeys },
+    });
   };
 
   // 4. CẤU HÌNH CỘT: Thêm width (%) để bảng tự co giãn, không bị tràn ngang
   const columns = [
     {
-      title: 'Sản phẩm',
-      key: 'product',
-      width: '40%', // Chiếm 40% chiều rộng
+      title: "Sản phẩm",
+      key: "product",
+      width: "40%", // Chiếm 40% chiều rộng
       render: (record: any) => (
         <div className="cart-product-col">
-          <img 
-            src={record.imageUrl || "https://via.placeholder.com/80"} 
-            alt={record.productName} 
+          <img
+            src={record.imageUrl || "https://via.placeholder.com/80"}
+            alt={record.productName}
             className="cart-product-img"
           />
           <div className="cart-product-info">
-            <div className="cart-product-name">{record.productName || "Tên sản phẩm"}</div>
-            <div className="cart-product-variant">{record.version || "Version"}</div>
+            <div className="cart-product-name">
+              {record.productName || "Tên sản phẩm"}
+            </div>
+            <div className="cart-product-variant">
+              {record.version || "Version"}
+            </div>
           </div>
         </div>
       ),
     },
     {
-      title: 'Đơn giá',
-      dataIndex: 'price',
-      key: 'price',
-      width: '20%',
+      title: "Đơn giá",
+      dataIndex: "price",
+      key: "price",
+      width: "20%",
       render: (price: number, record: any) => {
-        const hasDiscount = record.discountedPrice && record.discountedPrice < price;
+        const hasDiscount =
+          record.discountedPrice && record.discountedPrice < price;
         if (hasDiscount) {
           return (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="cart-price" style={{ color: '#ff4d4f', fontWeight: '600' }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span
+                className="cart-price"
+                style={{ color: "#ff4d4f", fontWeight: "600" }}
+              >
                 {formatPrice(record.discountedPrice)}
               </span>
-              <span style={{ textDecoration: 'line-through', color: '#8c8c8c', fontSize: '13px' }}>
+              <span
+                style={{
+                  textDecoration: "line-through",
+                  color: "#8c8c8c",
+                  fontSize: "13px",
+                }}
+              >
                 {formatPrice(price || 0)}
               </span>
             </div>
@@ -143,26 +181,27 @@ const CartPage: React.FC = () => {
       },
     },
     {
-      title: 'Số lượng',
-      key: 'quantity',
-      width: '15%',
+      title: "Số lượng",
+      key: "quantity",
+      width: "15%",
       render: (record: any) => (
-        <InputNumber 
-          min={1} 
-          max={record.stock || 99} 
-          value={record.quantity} 
+        <InputNumber
+          min={1}
+          max={record.stock || 99}
+          value={record.quantity}
           onChange={(val) => handleUpdateQuantity(record.id, val)}
         />
       ),
     },
     {
-      title: 'Thành tiền',
-      key: 'total',
-      width: '15%',
+      title: "Thành tiền",
+      key: "total",
+      width: "15%",
       render: (record: any) => {
-        const currentPrice = (record.discountedPrice && record.discountedPrice < record.price) 
-                              ? record.discountedPrice 
-                              : (record.price || 0);
+        const currentPrice =
+          record.discountedPrice && record.discountedPrice < record.price
+            ? record.discountedPrice
+            : record.price || 0;
         return (
           <span className="cart-total-price">
             {formatPrice(currentPrice * (record.quantity || 1))}
@@ -171,10 +210,10 @@ const CartPage: React.FC = () => {
       },
     },
     {
-      title: 'Thao tác',
-      key: 'action',
-      width: '10%',
-      align: 'center' as const,
+      title: "Thao tác",
+      key: "action",
+      width: "10%",
+      align: "center" as const,
       render: (record: any) => (
         <Popconfirm
           title="Xóa sản phẩm này?"
@@ -203,8 +242,19 @@ const CartPage: React.FC = () => {
       <div className="cart-empty-container">
         <ShoppingOutlined className="empty-icon" />
         <Title level={3}>Bạn chưa đăng nhập!</Title>
-        <Text type="secondary">Vui lòng đăng nhập để xem giỏ hàng của bạn.</Text>
-        <Button type="primary" size="large" className="mt-4" onClick={() => navigate('/login')}>Đăng nhập ngay</Button>
+        <Text type="secondary">
+          Vui lòng đăng nhập để xem giỏ hàng của bạn.
+        </Text>
+        <Button
+          type="primary"
+          size="large"
+          className="mt-4"
+          onClick={() =>
+            navigate("/login", { state: { from: "/client/cart" } })
+          }
+        >
+          Đăng nhập ngay
+        </Button>
       </div>
     );
   }
@@ -212,61 +262,83 @@ const CartPage: React.FC = () => {
   return (
     <div className="cart-page-wrapper">
       <div className="cart-container">
-        <Title level={2} className="cart-page-title">Giỏ hàng của bạn</Title>
+        <Title level={2} className="cart-page-title">
+          Giỏ hàng của bạn
+        </Title>
 
         {loading ? (
-          <div className="text-center py-10"><Spin size="large" /></div>
+          <div className="text-center py-10">
+            <Spin size="large" />
+          </div>
         ) : cartItems.length === 0 ? (
           <div className="cart-empty-container">
-            <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty Cart" className="w-32 mx-auto mb-4 opacity-50" />
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png"
+              alt="Empty Cart"
+              className="w-32 mx-auto mb-4 opacity-50"
+            />
             <Title level={4}>Giỏ hàng trống</Title>
-            <Text type="secondary">Bạn chưa có sản phẩm nào trong giỏ hàng.</Text>
-            <Button type="primary" size="large" className="mt-4" onClick={() => navigate('/client/catalog')}>
+            <Text type="secondary">
+              Bạn chưa có sản phẩm nào trong giỏ hàng.
+            </Text>
+            <Button
+              type="primary"
+              size="large"
+              className="mt-4"
+              onClick={() => navigate("/client/catalog")}
+            >
               Tiếp tục mua sắm
             </Button>
           </div>
         ) : (
           <div className="cart-layout">
             <div className="cart-table-section">
-              <Table 
+              <Table
                 rowSelection={rowSelection} // Kích hoạt Checkbox
-                dataSource={cartItems} 
-                columns={columns} 
-                rowKey="id" 
+                dataSource={cartItems}
+                columns={columns}
+                rowKey="id"
                 pagination={false}
-            
               />
             </div>
             <div className="cart-summary-section">
               <div className="summary-card">
-                <Title level={4} className="summary-title">Tổng đơn hàng</Title>
-                <Text type="secondary">Đã chọn {selectedRowKeys.length} sản phẩm</Text>
+                <Title level={4} className="summary-title">
+                  Tổng đơn hàng
+                </Title>
+                <Text type="secondary">
+                  Đã chọn {selectedRowKeys.length} sản phẩm
+                </Text>
                 <Divider className="my-3" />
                 <div className="summary-row">
                   <Text>Tạm tính:</Text>
                   <Text strong>{formatPrice(totalPrice)}</Text>
-                </div>              
+                </div>
                 <Divider className="my-3" />
                 <div className="summary-row total-row">
-                  <Text strong className="text-lg">Tổng cộng:</Text>
-                  <Text strong className="text-2xl text-red-600">{formatPrice(totalPrice)}</Text>
+                  <Text strong className="text-lg">
+                    Tổng cộng:
+                  </Text>
+                  <Text strong className="text-2xl text-red-600">
+                    {formatPrice(totalPrice)}
+                  </Text>
                 </div>
-               
-                <Button 
-                  type="primary" 
-                  size="large" 
-                  block 
+
+                <Button
+                  type="primary"
+                  size="large"
+                  block
                   className="checkout-btn"
                   onClick={handleCheckout} // Sử dụng hàm handleCheckout có bắt lỗi
                 >
                   TIẾN HÀNH THANH TOÁN
                 </Button>
-                <Button 
-                  type="default" 
-                  size="large" 
-                  block 
+                <Button
+                  type="default"
+                  size="large"
+                  block
                   className="continue-btn mt-3"
-                  onClick={() => navigate('/client/catalog')}
+                  onClick={() => navigate("/client/catalog")}
                 >
                   Tiếp tục mua sắm
                 </Button>

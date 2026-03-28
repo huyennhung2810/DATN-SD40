@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Row,
   Col,
@@ -30,6 +30,7 @@ const { Title } = Typography;
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const { user } = useSelector((state: RootState) => state.auth);
@@ -63,7 +64,7 @@ const ProductDetail: React.FC = () => {
   const handleAddToCart = async () => {
     if (!user || !user.userId) {
       message.warning("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
@@ -94,6 +95,11 @@ const ProductDetail: React.FC = () => {
   };
 
   const handleCheckout = () => {
+    if (!user || !user.userId) {
+      message.warning("Vui lòng đăng nhập để mua hàng!");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
     if (!selectedVariantId) {
       message.error("Vui lòng chọn phiên bản bạn muốn mua!");
       return;

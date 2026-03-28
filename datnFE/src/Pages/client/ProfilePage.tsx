@@ -34,7 +34,7 @@ import {
   CheckCircleFilled,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { RootState } from "../../redux/store";
 import type { CustomerResponse } from "../../models/customer";
 import type { AddressRequest, AddressResponse } from "../../models/address";
@@ -49,6 +49,7 @@ const ProfilePage: React.FC = () => {
   const { user, isLoggedIn } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [profileForm] = Form.useForm();
   const [addrForm] = Form.useForm();
@@ -115,7 +116,8 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!isLoggedIn || !user) {
-      navigate("/login");
+      const searchStr = searchParams.toString();
+      navigate("/login", { state: { from: location.pathname + (searchStr ? `?${searchStr}` : "") }, replace: true });
       return;
     }
     if (user.userId) {

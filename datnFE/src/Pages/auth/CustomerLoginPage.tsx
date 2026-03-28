@@ -1,7 +1,7 @@
 import React from "react";
 import { Form, Input, Button, Typography, Divider, Space } from "antd";
 import { UserOutlined, LockOutlined, GithubFilled } from "@ant-design/icons";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { authActions } from "../../redux/auth/authSlice";
 import type { RootState } from "../../redux/store";
@@ -11,14 +11,17 @@ const { Title, Text } = Typography;
 
 const CustomerLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+
+  const from = (location.state as any)?.from || "/client";
 
   const onFinish = (values: { username: string; password: string }) => {
     dispatch(
       authActions.login({
         data: values,
-        navigate: () => navigate("/client"),
+        navigate: () => navigate(from, { replace: true }),
       }),
     );
   };
