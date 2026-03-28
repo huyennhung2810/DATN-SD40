@@ -1,16 +1,12 @@
 ﻿import {
-  BankOutlined,
   CarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  CreditCardOutlined,
   DeleteOutlined,
   EditOutlined,
   EnvironmentOutlined,
   GiftOutlined,
   InfoCircleOutlined,
-  LinkOutlined,
-  LoadingOutlined,
   PlusOutlined,
   PrinterOutlined,
   ScanOutlined,
@@ -43,6 +39,7 @@ import {
 } from "antd";
 import axios from "axios";
 import * as React from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useReactToPrint } from "react-to-print";
 import type { CheckoutPosRequest } from "../../../api/admin/posApi";
 import { posApi } from "../../../api/admin/posApi";
@@ -69,6 +66,15 @@ const PosPage: React.FC = () => {
 
   // Payment State
   const [customerCash, setCustomerCash] = useState<number | null>(null);
+  const [qrModal, setQrModal] = useState<{
+    open: boolean;
+    totalAmount: number;
+    orderCode: string;
+  }>({
+    open: false,
+    totalAmount: 0,
+    orderCode: "",
+  });
   const [orderType, setOrderType] = useState<"OFFLINE" | "GIAO_HANG">(
     "OFFLINE",
   );
@@ -110,13 +116,6 @@ const PosPage: React.FC = () => {
   const [posProvinces, setPosProvinces] = useState<any[]>([]);
   const [posCommunes, setPosCommunes] = useState<any[]>([]);
   const [posLoadingCommunes, setPosLoadingCommunes] = useState(false);
-  const [vnpayPendingModal, setVnpayPendingModal] = useState<{
-    open: boolean;
-    paymentUrl: string;
-    orderCode: string;
-    totalAmount: number;
-  }>({ open: false, paymentUrl: "", orderCode: "", totalAmount: 0 });
-  const vnpayPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [checkoutSuccessModal, setCheckoutSuccessModal] = useState<{
     open: boolean;
     orderCode: string;
@@ -807,6 +806,30 @@ const PosPage: React.FC = () => {
     message.success("Đã lưu thông tin người nhận");
   };
 
+  const handleQrOpen = () => {
+    if (!activeKey || cartDetails.length === 0) {
+      message.warning("Hóa đơn trống, không thể thanh toán.");
+      return;
+    }
+    const isMissingSerials = cartDetails.some(
+      (d) => (d.assignedSerialsCount || 0) < d.quantity,
+    );
+    if (isMissingSerials) {
+      message.error(
+        "Vui lòng gán ĐẦY ĐỦ số lượng Serial cho tất cả các sản phẩm trước khi thanh toán.",
+      );
+      return;
+    }
+    const totalToPay =
+      (activeOrder?.totalAfterDiscount || 0) +
+      (orderType === "GIAO_HANG" ? shippingFee : 0);
+    setQrModal({
+      open: true,
+      totalAmount: totalToPay,
+      orderCode: activeOrder?.code || "",
+    });
+  };
+
   const handleCheckout = async () => {
     if (!activeKey || cartDetails.length === 0) {
       message.warning("Hóa đơn trống, không thể thanh toán.");
@@ -852,74 +875,6 @@ const PosPage: React.FC = () => {
       message.error(
         "Vui lòng gán ĐẦY ĐỦ số lượng Serial cho tất cả các sản phẩm trước khi thanh toán.",
       );
-      return;
-    }
-
-    // CHUYEN_KHOAN → dùng VNPay
-    if (posPaymentMethod === "CHUYEN_KHOAN") {
-      try {
-        const vnPayBody: Partial<
-          import("../../../api/admin/posApi").CheckoutPosRequest
-        > = {
-          orderType,
-          ...(orderType === "GIAO_HANG" && {
-            recipientName: recipientInfo.name,
-            recipientPhone: recipientInfo.phone,
-            recipientEmail: recipientInfo.email,
-            recipientAddress: recipientInfo.address,
-            shippingFee: shippingFee,
-          }),
-        };
-        const res = await posApi.createVnPayUrl(activeKey, vnPayBody);
-        const data = res.data?.data;
-        if (data?.paymentUrl) {
-          setVnpayPendingModal({
-            open: true,
-            paymentUrl: data.paymentUrl,
-            orderCode: data.orderCode || activeOrder.code,
-            totalAmount: data.totalAmount || totalToPay,
-          });
-          window.open(data.paymentUrl, "_blank");
-          // Poll every 3 s to detect payment confirmation
-          vnpayPollingRef.current = setInterval(async () => {
-            try {
-              const pollRes = await posApi.getPendingOrders();
-              const stillPending = (pollRes.data?.data || []).some(
-                (o: any) => o.id === activeKey,
-              );
-              if (!stillPending) {
-                // Order is gone from pending list → payment confirmed
-                clearInterval(vnpayPollingRef.current!);
-                setVnpayPendingModal({
-                  open: false,
-                  paymentUrl: "",
-                  orderCode: "",
-                  totalAmount: 0,
-                });
-                setCheckoutSuccessModal({
-                  open: true,
-                  orderCode: data.orderCode || activeOrder.code,
-                  totalAmount: data.totalAmount || totalToPay,
-                  change: 0,
-                  cartItems: [...cartDetails],
-                  customerCash: 0,
-                  voucherSaving: calcVoucherSaving(
-                    appliedVoucher,
-                    activeOrder.totalAmount || 0,
-                  ),
-                  customerName: activeOrder?.customer?.name,
-                });
-                fetchPendingOrders();
-              }
-            } catch {
-              // ignore polling errors
-            }
-          }, 3000);
-        }
-      } catch (error: any) {
-        console.error(error);
-        message.error(error.response?.data?.message || "Lỗi tạo link VNPay");
-      }
       return;
     }
 
@@ -1599,8 +1554,8 @@ const PosPage: React.FC = () => {
                         style={{ width: "50%", textAlign: "center" }}
                       >
                         <Space>
-                          <BankOutlined />
-                          Chuyển khoản
+                          <ScanOutlined />
+                          Chuyển khoản / QR
                         </Space>
                       </Radio.Button>
                     </Radio.Group>
@@ -1667,46 +1622,40 @@ const PosPage: React.FC = () => {
                       style={{
                         marginBottom: 24,
                         padding: "14px 16px",
-                        background: "#f0f5ff",
+                        background: "#f6ffed",
                         borderRadius: 8,
-                        border: "1px solid #91caff",
+                        border: "1px solid #b7eb8f",
+                        textAlign: "center",
                       }}
                     >
                       <Space align="center" style={{ marginBottom: 8 }}>
-                        <CreditCardOutlined
-                          style={{ fontSize: 20, color: "#1677ff" }}
+                        <ScanOutlined
+                          style={{ fontSize: 20, color: "#52c41a" }}
                         />
-                        <Text strong style={{ color: "#1677ff" }}>
-                          Thanh toán qua VNPay
+                        <Text strong style={{ color: "#52c41a" }}>
+                          Chuyển khoản / QR
                         </Text>
                       </Space>
+                      <div
+                        style={{ margin: "10px auto", display: "inline-block" }}
+                      >
+                        <QRCodeSVG
+                          value={`CHUYEN_KHOAN|${activeOrder?.code || ""}|${(
+                            (activeOrder?.totalAfterDiscount || 0) +
+                            (orderType === "GIAO_HANG" ? shippingFee : 0)
+                          ).toString()}|DATN Camera`}
+                          size={160}
+                          level="M"
+                          includeMargin
+                        />
+                      </div>
                       <Text
                         type="secondary"
-                        style={{
-                          display: "block",
-                          fontSize: 12,
-                          marginBottom: 6,
-                        }}
+                        style={{ display: "block", fontSize: 12 }}
                       >
-                        Thẻ ATM, VISA, MasterCard, QR Code — Nhấn "Xác nhận
-                        Thanh toán" để tạo link VNPay và mở trang thanh toán.
+                        Khách quét mã QR, chuyển khoản xong nhấn “Xác nhận Thanh
+                        toán”.
                       </Text>
-                      <Space size={4} style={{ flexWrap: "wrap" }}>
-                        {[
-                          "Vietcombank",
-                          "Techcombank",
-                          "MBBank",
-                          "VIB",
-                          "ACB",
-                        ].map((b) => (
-                          <Tag key={b} style={{ fontSize: 10 }}>
-                            {b}
-                          </Tag>
-                        ))}
-                        <Tag style={{ fontSize: 10 }}>
-                          + nhiều ngân hàng khác
-                        </Tag>
-                      </Space>
                     </div>
                   )}
                 </>
@@ -1722,7 +1671,11 @@ const PosPage: React.FC = () => {
               size="large"
               style={{ background: "#52c41a" }}
               block
-              onClick={handleCheckout}
+              onClick={
+                posPaymentMethod === "CHUYEN_KHOAN"
+                  ? handleQrOpen
+                  : handleCheckout
+              }
               disabled={
                 !activeOrder ||
                 cartDetails.length === 0 ||
@@ -2201,63 +2154,74 @@ const PosPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Modal chờ thanh toán VNPay */}
+      {/* Modal QR chuyển khoản */}
       <Modal
         title={
           <Space>
-            <CreditCardOutlined style={{ color: "#1677ff" }} />
-            <span>Đang chờ thanh toán VNPay</span>
+            <ScanOutlined style={{ color: "#52c41a" }} />
+            <span>Thanh toán chuyển khoản / QR</span>
           </Space>
         }
-        open={vnpayPendingModal.open}
+        open={qrModal.open}
+        onCancel={() =>
+          setQrModal({ open: false, totalAmount: 0, orderCode: "" })
+        }
         footer={null}
-        closable={false}
         centered
-        width={420}
+        width={380}
       >
-        <div style={{ textAlign: "center", padding: "16px 0" }}>
-          <LoadingOutlined
-            style={{ fontSize: 48, color: "#1677ff", marginBottom: 16 }}
-          />
-          <Title level={4} style={{ marginBottom: 4 }}>
-            Mã hóa đơn: {vnpayPendingModal.orderCode}
-          </Title>
-          <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
+        <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+            Mã hóa đơn: <Text strong>{qrModal.orderCode}</Text>
+          </Text>
+          <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
             Số tiền cần thanh toán:
           </Text>
           <Title level={3} type="danger" style={{ marginBottom: 16 }}>
-            {vnpayPendingModal.totalAmount.toLocaleString("vi-VN")} đ
+            {qrModal.totalAmount.toLocaleString("vi-VN")} đ
           </Title>
-          <Text type="secondary" style={{ display: "block", marginBottom: 20 }}>
-            Trang thanh toán VNPay đã được mở trong tab mới. Đang tự động kiểm
-            tra trạng thái thanh toán...
+          <div
+            style={{
+              display: "inline-block",
+              padding: 8,
+              border: "1px solid #d9d9d9",
+              borderRadius: 8,
+              marginBottom: 16,
+            }}
+          >
+            <QRCodeSVG
+              value={`CHUYEN_KHOAN|${qrModal.orderCode}|${qrModal.totalAmount}|DATN Camera`}
+              size={200}
+              level="M"
+              includeMargin
+            />
+          </div>
+          <Text
+            type="secondary"
+            style={{ display: "block", marginBottom: 20, fontSize: 13 }}
+          >
+            Khách quét mã, chuyển khoản xong nhấn xác nhận bên dưới.
           </Text>
-          <Space orientation="vertical" style={{ width: "100%" }}>
+          <Space style={{ width: "100%" }} direction="vertical">
             <Button
               type="primary"
-              icon={<LinkOutlined />}
+              size="large"
               block
-              onClick={() =>
-                window.open(vnpayPendingModal.paymentUrl, "_blank")
-              }
+              style={{ background: "#52c41a" }}
+              onClick={async () => {
+                setQrModal({ open: false, totalAmount: 0, orderCode: "" });
+                await handleCheckout();
+              }}
             >
-              Mở lại trang VNPay
+              Đã nhận tiền — Xác nhận Thanh toán
             </Button>
             <Button
               block
-              onClick={() => {
-                if (vnpayPollingRef.current)
-                  clearInterval(vnpayPollingRef.current);
-                setVnpayPendingModal({
-                  open: false,
-                  paymentUrl: "",
-                  orderCode: "",
-                  totalAmount: 0,
-                });
-                fetchPendingOrders();
-              }}
+              onClick={() =>
+                setQrModal({ open: false, totalAmount: 0, orderCode: "" })
+              }
             >
-              Hủy thanh toán VNPay
+              Đóng
             </Button>
           </Space>
         </div>
