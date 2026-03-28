@@ -251,6 +251,27 @@ const CheckoutPage: React.FC = () => {
   const selectedAddr =
     savedAddresses.find((a) => a.id === selectedAddressId) ?? null;
 
+  const handleConfirmOrder = () => {
+    const isCOD = paymentMethod === "COD";
+    Modal.confirm({
+      title: isCOD ? "Xác nhận đặt hàng" : "Xác nhận thanh toán VNPay",
+      content: isCOD
+        ? `Bạn có chắc chắn muốn đặt hàng với tổng tiền ${formatPrice(totalAmount)} thanh toán khi nhận hàng (COD)?`
+        : `Bạn có chắc chắn muốn thanh toán ${formatPrice(totalAmount)} qua cổng VNPay?`,
+      okText: isCOD ? "Đặt hàng" : "Tiếp tục thanh toán",
+      okType: "primary",
+      okButtonProps: {
+        style: {
+          backgroundColor: isCOD ? "#D32F2F" : undefined,
+          borderColor: isCOD ? "#D32F2F" : undefined,
+        },
+      },
+      cancelText: "Huỷ",
+      centered: true,
+      onOk: handlePlaceOrder,
+    });
+  };
+
   const handlePlaceOrder = async () => {
     // 1. Validate và lấy Ghi chú
     const noteValues = await noteForm
@@ -975,7 +996,7 @@ const CheckoutPage: React.FC = () => {
                   size="large"
                   block
                   loading={submitting}
-                  onClick={handlePlaceOrder}
+                  onClick={handleConfirmOrder}
                   style={{
                     marginTop: 16,
                     height: 48,

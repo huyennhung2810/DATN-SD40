@@ -7,7 +7,6 @@ import ForgotPasswordPage from "../Pages/auth/ForgotPasswordPage";
 import OAuth2RedirectPage from "../Pages/auth/0Auth2RedirectPage";
 import ChangePasswordPage from "../Pages/admin/otp/DoiMatKhau";
 import VNPayReturnPage from "../Pages/client/VNPayReturnPage";
-import PosVnPayReturnPage from "../Pages/admin/pos/PosVnPayReturnPage";
 
 export const PublicRoutes = () => [
   <Route key="login" path="/login" element={<CustomerLoginPage />} />,
@@ -33,11 +32,6 @@ export const PublicRoutes = () => [
     key="vnpay-return"
     path="/payment/vnpay-return"
     element={<VNPayReturnPage />}
-  />,
-  <Route
-    key="pos-vnpay-return"
-    path="/admin/pos/vnpay-return"
-    element={<PosVnPayReturnPage />}
   />,
 ];
 

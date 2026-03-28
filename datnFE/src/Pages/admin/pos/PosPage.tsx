@@ -1671,11 +1671,23 @@ const PosPage: React.FC = () => {
               size="large"
               style={{ background: "#52c41a" }}
               block
-              onClick={
-                posPaymentMethod === "CHUYEN_KHOAN"
-                  ? handleQrOpen
-                  : handleCheckout
-              }
+              onClick={() => {
+                if (posPaymentMethod === "CHUYEN_KHOAN") {
+                  handleQrOpen();
+                  return;
+                }
+                const totalToPay =
+                  (activeOrder?.totalAfterDiscount || 0) +
+                  (orderType === "GIAO_HANG" ? shippingFee : 0);
+                Modal.confirm({
+                  title: "Xác nhận thanh toán",
+                  content: `Bạn có chắc chắn muốn thanh toán hóa đơn ${activeOrder?.code} với số tiền ${totalToPay.toLocaleString("vi-VN")} đ?`,
+                  okText: "Thanh toán",
+                  okType: "primary",
+                  cancelText: "Huỷ",
+                  onOk: handleCheckout,
+                });
+              }}
               disabled={
                 !activeOrder ||
                 cartDetails.length === 0 ||
@@ -2208,9 +2220,18 @@ const PosPage: React.FC = () => {
               size="large"
               block
               style={{ background: "#52c41a" }}
-              onClick={async () => {
-                setQrModal({ open: false, totalAmount: 0, orderCode: "" });
-                await handleCheckout();
+              onClick={() => {
+                Modal.confirm({
+                  title: "Xác nhận thanh toán",
+                  content: `Đã nhận chuyển khoản cho hóa đơn ${qrModal.orderCode} số tiền ${qrModal.totalAmount.toLocaleString("vi-VN")} đ?`,
+                  okText: "Xác nhận",
+                  okType: "primary",
+                  cancelText: "Huỷ",
+                  onOk: async () => {
+                    setQrModal({ open: false, totalAmount: 0, orderCode: "" });
+                    await handleCheckout();
+                  },
+                });
               }}
             >
               Đã nhận tiền — Xác nhận Thanh toán
