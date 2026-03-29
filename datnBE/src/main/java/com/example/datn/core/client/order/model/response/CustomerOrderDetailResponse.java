@@ -39,9 +39,14 @@ public class CustomerOrderDetailResponse {
     String shippingMethodName;
 
     // === PRICING ===
-    BigDecimal totalAmount; // Subtotal before discounts
-    BigDecimal campaignDiscount; // Total discount from campaigns
-    BigDecimal voucherDiscount; // Discount from voucher
+    /** Tổng giá niêm yết (trước KM sản phẩm) = totalAmount + campaignDiscount */
+    BigDecimal originalSubtotal;
+    /** Tạm tính sau KM sản phẩm, trước voucher (khớp Order.totalAmount) */
+    BigDecimal totalAmount;
+    /** Tổng tiền giảm từ đợt khuyến mãi (tổng OrderDetail.discountAmount) */
+    BigDecimal campaignDiscount;
+    /** Giảm từ voucher = totalAmount - totalAfterDiscount */
+    BigDecimal voucherDiscount;
     String voucherCode;
     String voucherName;
     BigDecimal shippingFee;

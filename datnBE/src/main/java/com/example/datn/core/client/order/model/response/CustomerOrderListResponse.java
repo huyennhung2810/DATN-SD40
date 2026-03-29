@@ -23,11 +23,11 @@ public class CustomerOrderListResponse {
     String paymentStatusLabel;    // Vietnamese display label
     String paymentMethod;          // COD / VNPAY / TIEN_MAT / CHUYEN_KHOAN
     String paymentMethodLabel;     // Vietnamese display label
-    BigDecimal totalAmount;        // Subtotal before discounts
-    BigDecimal totalAfterDiscount; // Final amount paid
-    BigDecimal shippingFee;        // Shipping fee (usually 0 in current impl)
-    BigDecimal campaignDiscount;   // Derived: totalAmount - voucher-adjusted subtotal
-    BigDecimal voucherDiscount;    // Derived: voucher discount amount
+    BigDecimal totalAmount;        // Sau KM sản phẩm, trước voucher (Order.totalAmount)
+    BigDecimal totalAfterDiscount; // Số tiền sau voucher (Order.totalAfterDiscount)
+    BigDecimal shippingFee;
+    BigDecimal campaignDiscount;   // Tổng OrderDetail.discountAmount
+    BigDecimal voucherDiscount;    // totalAmount - totalAfterDiscount
     String voucherCode;           // Voucher code if applied
     Integer itemCount;            // Total quantity of items
     List<OrderItemPreview> itemPreviews; // First 2-3 items for thumbnail preview

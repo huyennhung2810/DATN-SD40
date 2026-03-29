@@ -27,8 +27,12 @@ public class CustomerOrderItemResponse {
 
     // === PURCHASE INFO (historical, from OrderDetail) ===
     Integer quantity;
-    BigDecimal unitPrice;         // Historical purchase price (from OrderDetail.unitPrice)
-    BigDecimal discountAmount;     // Item-level discount
+    /** Đơn giá niêm yết / trước KM dòng (suy ra từ unitPrice + discountAmount/qty) */
+    BigDecimal listUnitPrice;
+    /** Đơn giá sau KM (OrderDetail.unitPrice) */
+    BigDecimal unitPrice;
+    /** Giảm KM trên dòng (OrderDetail.discountAmount) */
+    BigDecimal discountAmount;
     BigDecimal totalPrice;         // Historical total (unitPrice * quantity - discountAmount)
 
     // === SERIALS (if applicable) ===

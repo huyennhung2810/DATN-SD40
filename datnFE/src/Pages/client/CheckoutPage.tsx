@@ -45,10 +45,17 @@ const { Title, Text } = Typography;
 
 interface CartItem {
   id: string;
+  /** ID ProductDetail — BE trả từ giỏ hàng; ưu tiên khi gửi checkout */
+  productDetailId?: string;
   productName: string;
-  variantName: string;
+  variantName?: string;
+  /** API giỏ hàng dùng `version` */
+  version?: string;
   imageUrl: string;
+  /** Giá gốc / niêm yết (salePrice từ BE) */
   price: number;
+  /** Giá sau đợt khuyến mãi (priceAfter); có thể từ JSON là string */
+  discountedPrice?: number | string | null;
   quantity: number;
 }
 
@@ -210,28 +217,69 @@ const CheckoutPage: React.FC = () => {
       currency: "VND",
     }).format(price);
 
-  // Tính tiền
-  const subTotal = cartItems.reduce(
-    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+  const toNum = (v: unknown): number => {
+    if (v == null) return 0;
+    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const unitOriginal = (item: CartItem) => toNum(item.price);
+
+  const unitAfterPromotion = (item: CartItem) => {
+    const orig = unitOriginal(item);
+    const disc =
+      item.discountedPrice != null && item.discountedPrice !== ""
+        ? toNum(item.discountedPrice)
+        : orig;
+    return disc > 0 && disc < orig ? disc : orig;
+  };
+
+  const lineOriginalTotal = (item: CartItem) =>
+    unitOriginal(item) * toNum(item.quantity);
+  const lineSaleTotal = (item: CartItem) =>
+    unitAfterPromotion(item) * toNum(item.quantity);
+
+  // Tổng giá niêm yết (trước đợt khuyến mãi sản phẩm)
+  const originalSubtotal = cartItems.reduce(
+    (sum, item) => sum + lineOriginalTotal(item),
+    0,
+  );
+  // Tiền giảm từ khuyến mãi / đợt sale (chưa tính voucher)
+  const promotionDiscountTotal = cartItems.reduce(
+    (sum, item) => sum + (lineOriginalTotal(item) - lineSaleTotal(item)),
+    0,
+  );
+  // Tạm tính sau KM — cơ sở để áp voucher
+  const subTotalAfterPromotion = cartItems.reduce(
+    (sum, item) => sum + lineSaleTotal(item),
     0,
   );
 
-  let discountAmount = 0;
+  let voucherDiscountAmount = 0;
   if (appliedVoucher) {
     if (appliedVoucher.discountUnit === "PERCENT") {
-      discountAmount = (subTotal * appliedVoucher.discountValue) / 100;
+      voucherDiscountAmount =
+        (subTotalAfterPromotion * appliedVoucher.discountValue) / 100;
       if (appliedVoucher.maxDiscountAmount) {
-        discountAmount = Math.min(
-          discountAmount,
+        voucherDiscountAmount = Math.min(
+          voucherDiscountAmount,
           appliedVoucher.maxDiscountAmount,
         );
       }
     } else {
-      discountAmount = appliedVoucher.discountValue;
+      voucherDiscountAmount = appliedVoucher.discountValue;
     }
+    voucherDiscountAmount = Math.min(
+      voucherDiscountAmount,
+      subTotalAfterPromotion,
+    );
   }
 
-  const totalAmount = Math.max(0, subTotal - discountAmount);
+  const totalAmount = Math.max(
+    0,
+    subTotalAfterPromotion - voucherDiscountAmount,
+  );
 
   const handleApplyVoucher = (v: Voucher) => {
     setAppliedVoucher({
@@ -329,7 +377,7 @@ const CheckoutPage: React.FC = () => {
       isBuyNow: isBuyNow,
       // Danh sách sản phẩm kèm ID chi tiết và số lượng
       items: cartItems.map((item) => ({
-        productDetailId: item.id, // ID của variant
+        productDetailId: item.productDetailId ?? item.id,
         quantity: item.quantity,
       })),
     };
@@ -776,61 +824,87 @@ const CheckoutPage: React.FC = () => {
                     marginBottom: 16,
                   }}
                 >
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        marginBottom: 16,
-                        alignItems: "center",
-                      }}
-                    >
-                      <img
-                        src={item.imageUrl || "https://via.placeholder.com/60"}
-                        alt={item.productName}
+                  {cartItems.map((item) => {
+                    const orig = unitOriginal(item);
+                    const sale = unitAfterPromotion(item);
+                    const qty = toNum(item.quantity);
+                    const hasPromo = sale < orig;
+                    return (
+                      <div
+                        key={item.id}
                         style={{
-                          width: 60,
-                          height: 60,
-                          objectFit: "contain",
-                          border: "1px solid #f0f0f0",
-                          borderRadius: 8,
-                          padding: 4,
+                          display: "flex",
+                          gap: 12,
+                          marginBottom: 16,
+                          alignItems: "center",
                         }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div
+                      >
+                        <img
+                          src={item.imageUrl || "https://via.placeholder.com/60"}
+                          alt={item.productName}
                           style={{
-                            fontWeight: 600,
-                            fontSize: 13,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
+                            width: 60,
+                            height: 60,
+                            objectFit: "contain",
+                            border: "1px solid #f0f0f0",
+                            borderRadius: 8,
+                            padding: 4,
                           }}
-                        >
-                          {item.productName}
-                        </div>
-                        <div style={{ color: "#888", fontSize: 12 }}>
-                          {item.variantName}
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginTop: 4,
-                          }}
-                        >
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            x{item.quantity}
-                          </Text>
-                          <Text strong style={{ color: "#e53935" }}>
-                            {formatPrice(item.price * item.quantity)}
-                          </Text>
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 13,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.productName}
+                          </div>
+                          <div style={{ color: "#888", fontSize: 12 }}>
+                            {item.variantName ?? item.version ?? ""}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-end",
+                              marginTop: 4,
+                              gap: 8,
+                            }}
+                          >
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              x{qty}
+                            </Text>
+                            <div
+                              style={{
+                                textAlign: "right",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-end",
+                              }}
+                            >
+                              {hasPromo && (
+                                <Text
+                                  delete
+                                  type="secondary"
+                                  style={{ fontSize: 11 }}
+                                >
+                                  {formatPrice(orig * qty)}
+                                </Text>
+                              )}
+                              <Text strong style={{ color: "#e53935" }}>
+                                {formatPrice(sale * qty)}
+                              </Text>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Divider style={{ margin: "12px 0" }} />
@@ -905,7 +979,7 @@ const CheckoutPage: React.FC = () => {
                 <VoucherPickerModal
                   open={voucherModalOpen}
                   onClose={() => setVoucherModalOpen(false)}
-                  subTotal={subTotal}
+                  subTotal={subTotalAfterPromotion}
                   onApply={handleApplyVoucher}
                   appliedCode={appliedVoucher?.code}
                 />
@@ -919,8 +993,32 @@ const CheckoutPage: React.FC = () => {
                     marginBottom: 8,
                   }}
                 >
-                  <Text>Tạm tính:</Text>
-                  <Text>{formatPrice(subTotal)}</Text>
+                  <Text>Giá gốc (niêm yết):</Text>
+                  <Text>{formatPrice(originalSubtotal)}</Text>
+                </div>
+                {promotionDiscountTotal > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text>Khuyến mãi:</Text>
+                    <Text type="danger">
+                      -{formatPrice(promotionDiscountTotal)}
+                    </Text>
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text>Tạm tính (sau khuyến mãi):</Text>
+                  <Text strong>{formatPrice(subTotalAfterPromotion)}</Text>
                 </div>
                 {appliedVoucher && (
                   <div
@@ -930,8 +1028,10 @@ const CheckoutPage: React.FC = () => {
                       marginBottom: 8,
                     }}
                   >
-                    <Text>Giảm giá ({appliedVoucher.code}):</Text>
-                    <Text type="danger">-{formatPrice(discountAmount)}</Text>
+                    <Text>Giảm voucher ({appliedVoucher.code}):</Text>
+                    <Text type="danger">
+                      -{formatPrice(voucherDiscountAmount)}
+                    </Text>
                   </div>
                 )}
                 <div

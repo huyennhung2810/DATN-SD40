@@ -90,7 +90,7 @@ const Footer: React.FC = () => {
                     alt="Hikari Camera"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        "https://via.placeholder.com/150x50?text=HIKARI";
+                        "https://placehold.co/150x50/1a1a2e/ffffff?text=HIKARI";
                     }}
                   />
                 </div>

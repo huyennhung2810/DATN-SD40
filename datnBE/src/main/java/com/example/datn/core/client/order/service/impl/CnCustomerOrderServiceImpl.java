@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -70,6 +71,22 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
     private static final Set<OrderStatus> BUY_AGAIN_ALLOWED_STATUSES = Set.of(
             OrderStatus.HOAN_THANH);
 
+    private BigDecimal sumLinePromotionDiscount(List<OrderDetail> details) {
+        if (details == null || details.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return details.stream()
+                .map(d -> d.getDiscountAmount() != null ? d.getDiscountAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal resolveVoucherDiscount(Order order) {
+        if (order.getTotalAmount() == null || order.getTotalAfterDiscount() == null) {
+            return BigDecimal.ZERO;
+        }
+        return order.getTotalAmount().subtract(order.getTotalAfterDiscount()).max(BigDecimal.ZERO);
+    }
+
     // ===== ORDER LIST =====
 
     @Override
@@ -103,15 +120,8 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .mapToInt(d -> d.getQuantity() != null ? d.getQuantity() : 0)
                 .sum();
 
-        BigDecimal campaignDiscount = BigDecimal.ZERO;
-        BigDecimal voucherDiscount = BigDecimal.ZERO;
-
-        if (order.getTotalAmount() != null && order.getTotalAfterDiscount() != null) {
-            BigDecimal rawDiscount = order.getTotalAmount().subtract(order.getTotalAfterDiscount());
-            if (rawDiscount.compareTo(BigDecimal.ZERO) > 0) {
-                voucherDiscount = rawDiscount;
-            }
-        }
+        BigDecimal campaignDiscount = sumLinePromotionDiscount(details);
+        BigDecimal voucherDiscount = resolveVoucherDiscount(order);
 
         return CustomerOrderListResponse.builder()
                 .id(order.getId())
@@ -159,15 +169,10 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
         List<OrderHistory> histories = orderHistoryRepository.findByHoaDonOrderByThoiGianAsc(order);
         List<CustomerOrderHistoryResponse> timeline = toTimeline(histories, order.getOrderStatus());
 
-        BigDecimal campaignDiscount = BigDecimal.ZERO;
-        BigDecimal voucherDiscount = BigDecimal.ZERO;
-
-        if (order.getTotalAmount() != null && order.getTotalAfterDiscount() != null) {
-            BigDecimal rawDiscount = order.getTotalAmount().subtract(order.getTotalAfterDiscount());
-            if (rawDiscount.compareTo(BigDecimal.ZERO) > 0) {
-                voucherDiscount = rawDiscount;
-            }
-        }
+        BigDecimal campaignDiscount = sumLinePromotionDiscount(details);
+        BigDecimal voucherDiscount = resolveVoucherDiscount(order);
+        BigDecimal totalAfterCampaign = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+        BigDecimal originalSubtotal = totalAfterCampaign.add(campaignDiscount);
 
         OrderStatus currentStatus = order.getOrderStatus();
         boolean canCancel = currentStatus != null && CANCELABLE_STATUSES.contains(currentStatus);
@@ -190,6 +195,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .recipientEmail(order.getRecipientEmail())
                 .recipientAddress(order.getRecipientAddress())
                 .shippingMethodName(order.getShippingMethod() != null ? order.getShippingMethod().getName() : null)
+                .originalSubtotal(originalSubtotal)
                 .totalAmount(order.getTotalAmount())
                 .campaignDiscount(campaignDiscount)
                 .voucherDiscount(voucherDiscount)
@@ -228,6 +234,14 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
             imageUrl = product.getImages().get(0).getUrl();
         }
 
+        BigDecimal unit = detail.getUnitPrice() != null ? detail.getUnitPrice() : BigDecimal.ZERO;
+        BigDecimal linePromo = detail.getDiscountAmount() != null ? detail.getDiscountAmount() : BigDecimal.ZERO;
+        int q = detail.getQuantity() != null ? detail.getQuantity() : 0;
+        BigDecimal listUnitPrice = unit;
+        if (q > 0 && linePromo.compareTo(BigDecimal.ZERO) > 0) {
+            listUnitPrice = unit.add(linePromo.divide(BigDecimal.valueOf(q), 0, RoundingMode.HALF_UP));
+        }
+
         return CustomerOrderItemResponse.builder()
                 .id(detail.getId())
                 .productDetailId(pd != null ? pd.getId() : null)
@@ -238,6 +252,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .colorName(color != null ? color.getName() : null)
                 .storageLabel(storage != null ? storage.getName() : null)
                 .quantity(detail.getQuantity())
+                .listUnitPrice(listUnitPrice)
                 .unitPrice(detail.getUnitPrice())
                 .discountAmount(detail.getDiscountAmount())
                 .totalPrice(detail.getTotalPrice())

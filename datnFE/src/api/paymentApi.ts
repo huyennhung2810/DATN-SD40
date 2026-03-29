@@ -9,6 +9,8 @@ export interface CheckoutRequest {
   paymentMethod: "COD" | "VNPAY";
   voucherCode?: string | null;
   note?: string;
+  /** Phí vận chuyển tính từ GHN (VNĐ). Mặc định 0 = miễn phí. */
+  phiVanChuyen?: number;
 }
 
 export interface CheckoutResponse {

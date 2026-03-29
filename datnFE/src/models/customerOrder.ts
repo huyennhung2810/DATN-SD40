@@ -46,8 +46,13 @@ export interface CustomerOrderDetailResponse {
   recipientEmail: string | null;
   recipientAddress: string | null;
   shippingMethodName: string | null;
+  /** Tổng giá niêm yết trước KM sản phẩm */
+  originalSubtotal: number | null;
+  /** Tạm tính sau KM, trước voucher */
   totalAmount: number | null;
+  /** Tổng giảm từ đợt khuyến mãi sản phẩm */
   campaignDiscount: number | null;
+  /** Giảm từ voucher */
   voucherDiscount: number | null;
   voucherCode: string | null;
   voucherName: string | null;
@@ -72,6 +77,8 @@ export interface CustomerOrderItemResponse {
   colorName: string | null;
   storageLabel: string | null;
   quantity: number;
+  /** Đơn giá niêm yết / trước KM dòng */
+  listUnitPrice: number | null;
   unitPrice: number | null;
   discountAmount: number | null;
   totalPrice: number | null;

@@ -108,17 +108,22 @@ const ProductDetail: React.FC = () => {
     const activeVariant = product.variants?.find(
       (v: any) => v.id === selectedVariantId,
     );
-    const finalPrice = activeVariant
-      ? (activeVariant.displayPrice ?? activeVariant.salePrice)
-      : product.price;
+    const unitOriginal = activeVariant
+      ? Number(activeVariant.originalPrice ?? activeVariant.salePrice ?? 0)
+      : Number(product.originalPrice ?? product.price ?? 0);
+    const unitAfterCampaign = activeVariant
+      ? Number(activeVariant.displayPrice ?? activeVariant.salePrice ?? 0)
+      : Number(product.displayPrice ?? product.price ?? 0);
 
-    // Object này phải giống hệt cấu trúc CartItem ở trang Checkout
+    // Cấu trúc khớp Checkout: price = giá niêm yết/gốc, discountedPrice = giá sau đợt KM
     const buyNowItem = {
       id: selectedVariantId,
+      productDetailId: selectedVariantId,
       productName: product.name,
-      variantName: activeVariant?.name, // Kiểm tra key này ở trang Checkout là variantName hay version
+      variantName: activeVariant?.name,
       imageUrl: mainImage,
-      price: finalPrice,
+      price: unitOriginal,
+      discountedPrice: unitAfterCampaign,
       quantity: quantity,
     };
 

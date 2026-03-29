@@ -108,6 +108,7 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             CartItemResponse dto = new CartItemResponse();
 
             dto.setId(cd.getId());
+            dto.setProductDetailId(cd.getProductDetail().getId());
             dto.setProductId(cd.getProductDetail().getProduct().getId());
             dto.setProductName(cd.getProductDetail().getProduct().getName());
             dto.setVersion(cd.getProductDetail().getVersion());

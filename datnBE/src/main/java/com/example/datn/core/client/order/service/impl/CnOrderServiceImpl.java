@@ -44,6 +44,20 @@ public class CnOrderServiceImpl implements CnOrderService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ProductDetailRepository productDetailRepository;
+    private final DiscountDetailRepository discountDetailRepository;
+
+    /** Đơn giá sau đợt khuyến mãi (đồng bộ với giỏ hàng / CartItemResponse). */
+    private BigDecimal resolveCampaignUnitPrice(ProductDetail pd) {
+        BigDecimal salePrice = pd.getSalePrice();
+        if (salePrice == null) {
+            return BigDecimal.ZERO;
+        }
+        DiscountDetail active = discountDetailRepository.findFirstByProductDetail_IdAndStatus(pd.getId(), 1);
+        if (active != null && active.getPriceAfter() != null) {
+            return active.getPriceAfter();
+        }
+        return salePrice;
+    }
 
     @Override
     @Transactional
@@ -66,8 +80,9 @@ public class CnOrderServiceImpl implements CnOrderService {
                 OrderDetail od = new OrderDetail();
                 od.setProductDetail(pd);
                 od.setQuantity(itemReq.getQuantity());
-                od.setUnitPrice(pd.getSalePrice());
-                BigDecimal itemTotal = pd.getSalePrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                BigDecimal unit = resolveCampaignUnitPrice(pd);
+                od.setUnitPrice(unit);
+                BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
                 od.setTotalPrice(itemTotal);
 
                 tempOrderDetails.add(od);
@@ -84,10 +99,12 @@ public class CnOrderServiceImpl implements CnOrderService {
 
             for (CartDetail cd : cartItems) {
                 OrderDetail od = new OrderDetail();
-                od.setProductDetail(cd.getProductDetail());
+                ProductDetail pd = cd.getProductDetail();
+                od.setProductDetail(pd);
                 od.setQuantity(cd.getQuantity());
-                od.setUnitPrice(cd.getProductDetail().getSalePrice());
-                BigDecimal itemTotal = od.getUnitPrice().multiply(BigDecimal.valueOf(cd.getQuantity()));
+                BigDecimal unit = resolveCampaignUnitPrice(pd);
+                od.setUnitPrice(unit);
+                BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(cd.getQuantity()));
                 od.setTotalPrice(itemTotal);
 
                 tempOrderDetails.add(od);
@@ -174,7 +191,12 @@ public class CnOrderServiceImpl implements CnOrderService {
         // 6. LƯU CHI TIẾT ĐƠN HÀNG (OrderDetail)
         for (OrderDetail od : tempOrderDetails) {
             od.setOrder(savedOrder);
-            od.setDiscountAmount(BigDecimal.ZERO);
+            ProductDetail pd = od.getProductDetail();
+            BigDecimal sale = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+            BigDecimal promoLine = sale.subtract(od.getUnitPrice())
+                    .multiply(BigDecimal.valueOf(od.getQuantity()))
+                    .max(BigDecimal.ZERO);
+            od.setDiscountAmount(promoLine);
             orderDetailRepository.save(od);
         }
 

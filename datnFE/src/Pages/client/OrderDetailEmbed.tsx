@@ -9,6 +9,7 @@ import {
   message,
   Steps,
   Tag,
+  Typography,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -36,6 +37,15 @@ interface Props {
   orderId: string;
   onBack: () => void;
 }
+
+const { Text } = Typography;
+
+const toNum = (v: unknown): number => {
+  if (v == null) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 const formatPrice = (price: number | null | undefined): string => {
   if (price == null) return "—";
@@ -202,6 +212,20 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
     bg: "#f3f4f6",
     text: "#6b7280",
   };
+
+  const promotionFromItems = (order.items ?? []).reduce(
+    (s, i) => s + toNum(i.discountAmount),
+    0,
+  );
+  const campaignTotal = Math.max(
+    toNum(order.campaignDiscount),
+    promotionFromItems,
+  );
+  const originalSubtotalDisplay =
+    order.originalSubtotal != null
+      ? toNum(order.originalSubtotal)
+      : toNum(order.totalAmount) + campaignTotal;
+  const voucherTotal = toNum(order.voucherDiscount);
 
   return (
     <div>
@@ -674,11 +698,39 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                   )}
                 </div>
               </div>
-              <span
-                style={{ fontSize: 13, color: "#374151", textAlign: "right" }}
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#374151",
+                  textAlign: "right",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-end",
+                  gap: 2,
+                }}
               >
-                {formatPrice(item.unitPrice)}
-              </span>
+                {(() => {
+                  const saleU = toNum(item.unitPrice);
+                  const listU =
+                    item.listUnitPrice != null
+                      ? toNum(item.listUnitPrice)
+                      : saleU;
+                  const linePromo = toNum(item.discountAmount);
+                  if (linePromo > 0 && listU > saleU) {
+                    return (
+                      <>
+                        <Text delete type="secondary" style={{ fontSize: 12 }}>
+                          {formatPrice(listU)}
+                        </Text>
+                        <Text strong style={{ color: "#DC2626", fontSize: 13 }}>
+                          {formatPrice(saleU)}
+                        </Text>
+                      </>
+                    );
+                  }
+                  return <span>{formatPrice(item.unitPrice)}</span>;
+                })()}
+              </div>
               <span
                 style={{
                   fontSize: 13,
@@ -689,16 +741,37 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
               >
                 {item.quantity}
               </span>
-              <span
+              <div
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
                   color: "#111827",
                   textAlign: "right",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-end",
+                  gap: 2,
                 }}
               >
-                {formatPrice(item.totalPrice)}
-              </span>
+                {(() => {
+                  const lineSale = toNum(item.totalPrice);
+                  const linePromo = toNum(item.discountAmount);
+                  const lineOrig = lineSale + linePromo;
+                  if (linePromo > 0 && lineOrig > lineSale) {
+                    return (
+                      <>
+                        <Text delete type="secondary" style={{ fontSize: 12 }}>
+                          {formatPrice(lineOrig)}
+                        </Text>
+                        <span style={{ color: "#DC2626" }}>
+                          {formatPrice(lineSale)}
+                        </span>
+                      </>
+                    );
+                  }
+                  return <span>{formatPrice(item.totalPrice)}</span>;
+                })()}
+              </div>
             </div>
           ))}
         </div>
@@ -714,25 +787,73 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
         >
           <div
             style={{
-              width: 280,
+              width: 300,
               display: "flex",
               flexDirection: "column",
               gap: 8,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 13,
-                color: "#6b7280",
-              }}
-            >
-              <span>Tạm tính</span>
-              <span style={{ color: "#374151" }}>
-                {formatPrice(order.totalAmount)}
-              </span>
-            </div>
+            {campaignTotal > 0 ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    gap: 12,
+                  }}
+                >
+                  <span>Giá gốc (niêm yết)</span>
+                  <span style={{ color: "#374151", textAlign: "right" }}>
+                    {formatPrice(originalSubtotalDisplay)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    gap: 12,
+                  }}
+                >
+                  <span>Khuyến mãi</span>
+                  <span style={{ color: "#DC2626", fontWeight: 600 }}>
+                    -{formatPrice(campaignTotal)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    gap: 12,
+                  }}
+                >
+                  <span>Tạm tính (sau khuyến mãi)</span>
+                  <span style={{ color: "#374151", fontWeight: 600 }}>
+                    {formatPrice(order.totalAmount)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 13,
+                  color: "#6b7280",
+                  gap: 12,
+                }}
+              >
+                <span>Tạm tính</span>
+                <span style={{ color: "#374151", fontWeight: 600 }}>
+                  {formatPrice(order.totalAmount)}
+                </span>
+              </div>
+            )}
             {!isPOS && (
               <div
                 style={{
@@ -748,25 +869,22 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                 </span>
               </div>
             )}
-            {(order.voucherDiscount ?? 0) + (order.campaignDiscount ?? 0) >
-              0 && (
+            {voucherTotal > 0 && (
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   fontSize: 13,
                   color: "#6b7280",
+                  gap: 12,
                 }}
               >
                 <span>
-                  Giảm giá{order.voucherCode ? ` (${order.voucherCode})` : ""}
+                  Giảm voucher
+                  {order.voucherCode ? ` (${order.voucherCode})` : ""}
                 </span>
                 <span style={{ color: "#DC2626", fontWeight: 600 }}>
-                  -
-                  {formatPrice(
-                    (order.voucherDiscount ?? 0) +
-                      (order.campaignDiscount ?? 0),
-                  )}
+                  -{formatPrice(voucherTotal)}
                 </span>
               </div>
             )}
@@ -795,7 +913,7 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
               }}
             >
               <span style={{ fontWeight: 700, color: "#111827", fontSize: 14 }}>
-                Tổng
+                Tổng cộng
               </span>
               <span style={{ fontWeight: 800, color: "#D32F2F", fontSize: 18 }}>
                 {formatPrice(order.totalAfterDiscount)}
