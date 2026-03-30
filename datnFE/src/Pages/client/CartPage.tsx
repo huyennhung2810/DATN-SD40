@@ -133,50 +133,69 @@ const CartPage: React.FC = () => {
   };
 
   const columns = [
-    {
-      title: "Sản phẩm",
-      key: "product",
-      width: "40%",
-      render: (record: any) => (
+  {
+    title: "Sản phẩm",
+    key: "product",
+    width: "40%",
+    render: (record: any) => {
+      // LOGIC LẤY ẢNH:
+      // 1. Ưu tiên ảnh của chính phiên bản (SPCT) nếu có
+      // 2. Nếu không có, lấy ảnh chung của sản phẩm (imageUrl)
+      // 3. Cuối cùng là ảnh placeholder
+      const displayImage = 
+        record.productDetail?.imageUrl || 
+        record.imageUrl || 
+        "https://via.placeholder.com/80";
+
+      return (
         <div className="cart-product-col">
           <img
-            src={record.imageUrl || "https://via.placeholder.com/80"}
+            src={displayImage} 
             alt={record.productName}
             className="cart-product-img"
+            // Thêm xử lý nếu ảnh lỗi
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "https://via.placeholder.com/80";
+            }}
           />
           <div className="cart-product-info">
             <div className="cart-product-name">
               {record.productName || "Tên sản phẩm"}
             </div>
+            {/* Hiển thị chi tiết phiên bản (màu sắc, kích cỡ...) từ SPCT */}
             <div className="cart-product-variant">
-              {record.version || "Version"}
+              {record.productDetail?.colorName} {record.productDetail?.sizeName} 
+              {record.version ? ` - ${record.version}` : ""}
             </div>
           </div>
         </div>
-      ),
+      );
     },
+  },
     {
       title: "Đơn giá",
       dataIndex: "price",
       key: "price",
       width: "20%",
       render: (price: number, record: any) => {
-        const hasDiscount =
-          record.discountedPrice && record.discountedPrice < price;
+        // KIỂM TRA: Nếu có giá giảm và giá giảm nhỏ hơn giá gốc
+        const hasDiscount = record.discountedPrice && record.discountedPrice < price;
+        
         if (hasDiscount) {
           return (
             <div style={{ display: "flex", flexDirection: "column" }}>
+              {/* GIÁ ĐÃ GIẢM - HIỂN THỊ MÀU ĐỎ ĐẬM */}
               <span
-                className="cart-price"
-                style={{ color: "#ff4d4f", fontWeight: "600" }}
+                style={{ color: "#D32F2F", fontWeight: "700", fontSize: "15px" }}
               >
                 {formatPrice(record.discountedPrice)}
               </span>
+              {/* GIÁ GỐC - GẠCH NGANG */}
               <span
                 style={{
                   textDecoration: "line-through",
                   color: "#8c8c8c",
-                  fontSize: "13px",
+                  fontSize: "12px",
                 }}
               >
                 {formatPrice(price || 0)}
@@ -184,7 +203,8 @@ const CartPage: React.FC = () => {
             </div>
           );
         }
-        return <span className="cart-price">{formatPrice(price || 0)}</span>;
+        // NẾU KHÔNG GIẢM GIÁ - HIỂN THỊ BÌNH THƯỜNG
+        return <span style={{ fontWeight: "500" }}>{formatPrice(price || 0)}</span>;
       },
     },
     {
@@ -205,13 +225,14 @@ const CartPage: React.FC = () => {
       key: "total",
       width: "15%",
       render: (record: any) => {
-        const currentPrice =
-          record.discountedPrice && record.discountedPrice < record.price
+        // Lấy giá thực tế để tính tổng (ưu tiên giá giảm)
+        const finalPrice = record.discountedPrice && record.discountedPrice < record.price
             ? record.discountedPrice
             : record.price || 0;
+            
         return (
-          <span className="cart-total-price">
-            {formatPrice(currentPrice * (record.quantity || 1))}
+          <span style={{ fontWeight: "700", color: "#D32F2F", fontSize: "16px" }}>
+            {formatPrice(finalPrice * (record.quantity || 1))}
           </span>
         );
       },
@@ -224,7 +245,6 @@ const CartPage: React.FC = () => {
       render: (record: any) => (
         <Popconfirm
           title="Xóa sản phẩm này?"
-          description="Bạn có chắc chắn muốn xóa khỏi giỏ hàng?"
           onConfirm={() => handleDeleteItem(record.id)}
           okText="Xóa"
           cancelText="Hủy"
