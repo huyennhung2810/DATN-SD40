@@ -226,7 +226,9 @@ const OrderDetailPage: React.FC = () => {
     Array<{ id: string; code: string }>
   >([]);
   const [loadingSerials, setLoadingSerials] = useState(false);
-  const [selectedNewSerial, setSelectedNewSerial] = useState("");
+  const [selectedNewSerial, setSelectedNewSerial] = useState<string | string[]>(
+    "",
+  );
   const [changingSerial, setChangingSerial] = useState(false);
 
   // Derived state
@@ -360,66 +362,132 @@ const OrderDetailPage: React.FC = () => {
     setSerialInfoOpen(true);
   };
 
+  // Hiển thị danh sách serial hiện tại, cho phép chọn từng serial để đổi
   const openSerialChange = async (row: FlatRow) => {
-    setSerialChangeRow(row);
-    setSelectedNewSerial("");
-    setSerialChangeOpen(true);
-    setLoadingSerials(true);
-    try {
-      const res = await posApi.getAvailableSerials(row.productDetailId);
-      // axiosClient returns AxiosResponse; backend wraps list in ResponseObject.data
-      const responseBody = (res as any)?.data;
-      console.log("[openSerialChange] productDetailId:", row.productDetailId);
-      console.log("[openSerialChange] raw response:", responseBody);
-      const list: any[] = Array.isArray(responseBody?.data)
-        ? responseBody.data
-        : Array.isArray(responseBody)
-          ? responseBody
-          : [];
-      console.log("[openSerialChange] parsed list:", list);
-      setAvailableSerials(
-        list.map((s: any) => ({
-          id: String(s.id ?? s.serialId ?? ""),
-          code: String(s.serialNumber ?? s.code ?? s.serialCode ?? ""),
-        })),
-      );
-    } catch (err) {
-      console.error("[openSerialChange] error:", err);
-      message.error("Không thể tải danh sách serial");
-    } finally {
-      setLoadingSerials(false);
+    // Lấy danh sách serial hiện tại của sản phẩm này
+    const item = items.find(
+      (i) =>
+        i.productDetailId === row.productDetailId &&
+        i.maHoaDonChiTiet === row.detailId,
+    );
+    let currentSerials: { id: string; code: string }[] = [];
+    if (item) {
+      try {
+        currentSerials = parseSerials(item.danhSachImei);
+      } catch {
+        message.error("Không thể đọc danh sách serial hiện tại");
+      }
+    }
+    // Nếu chỉ có 1 serial hiện tại thì cho phép đổi luôn, nếu nhiều thì hiển thị danh sách để chọn
+    if (currentSerials.length <= 1) {
+      setSerialChangeRow({
+        ...row,
+        serialId: currentSerials[0]?.id || "",
+        serialCode: currentSerials[0]?.code || "",
+      });
+      setSelectedNewSerial("");
+      setSerialChangeOpen(true);
+      setLoadingSerials(true);
+      try {
+        const res = await posApi.getAvailableSerials(row.productDetailId);
+        const responseBody = (res as any)?.data;
+        const list: any[] = Array.isArray(responseBody?.data)
+          ? responseBody.data
+          : Array.isArray(responseBody)
+            ? responseBody
+            : [];
+        setAvailableSerials(
+          list.map((s: any) => ({
+            id: String(s.id ?? s.serialId ?? ""),
+            code: String(s.serialNumber ?? s.code ?? s.serialCode ?? ""),
+          })),
+        );
+      } catch (err) {
+        console.error("[openSerialChange] error:", err);
+        message.error("Không thể tải danh sách serial");
+      } finally {
+        setLoadingSerials(false);
+      }
+    } else {
+      // Hiển thị modal chọn serial hiện tại để đổi
+      Modal.info({
+        title: "Chọn serial muốn đổi",
+        content: (
+          <div>
+            {currentSerials.map((s) => (
+              <Button
+                key={s.id}
+                style={{ margin: 4 }}
+                onClick={async () => {
+                  Modal.destroyAll();
+                  setSerialChangeRow({
+                    ...row,
+                    serialId: s.id,
+                    serialCode: s.code,
+                  });
+                  setSelectedNewSerial("");
+                  setSerialChangeOpen(true);
+                  setLoadingSerials(true);
+                  try {
+                    const res = await posApi.getAvailableSerials(
+                      row.productDetailId,
+                    );
+                    const responseBody = (res as any)?.data;
+                    const list: any[] = Array.isArray(responseBody?.data)
+                      ? responseBody.data
+                      : Array.isArray(responseBody)
+                        ? responseBody
+                        : [];
+                    setAvailableSerials(
+                      list.map((s: any) => ({
+                        id: String(s.id ?? s.serialId ?? ""),
+                        code: String(
+                          s.serialNumber ?? s.code ?? s.serialCode ?? "",
+                        ),
+                      })),
+                    );
+                  } catch (err) {
+                    console.error("[openSerialChange] error:", err);
+                    message.error("Không thể tải danh sách serial");
+                  } finally {
+                    setLoadingSerials(false);
+                  }
+                }}
+              >
+                {s.code}
+              </Button>
+            ))}
+          </div>
+        ),
+        okText: "Đóng",
+        width: 400,
+      });
     }
   };
 
   const handleSaveSerialChange = async () => {
-    if (!serialChangeRow || !selectedNewSerial) {
-      message.warning("Vui lòng chọn serial mới");
+    if (!serialChangeRow) return;
+    const required = serialChangeRow.soLuong || 1;
+    const selected = Array.isArray(selectedNewSerial)
+      ? selectedNewSerial
+      : selectedNewSerial
+        ? [selectedNewSerial]
+        : [];
+    if (selected.length !== required) {
+      message.warning(`Vui lòng chọn đủ ${required} serial`);
       return;
     }
     setChangingSerial(true);
     try {
-      console.log("[assignSerials] request:", {
-        hoaDonChiTietId: serialChangeRow.detailId,
-        oldImeiId: serialChangeRow.serialId || "",
-        newImeiId: selectedNewSerial,
-      });
-      const res = await orderApi.assignSerials({
-        hoaDonChiTietId: serialChangeRow.detailId,
-        oldImeiId: serialChangeRow.serialId || "",
-        newImeiId: selectedNewSerial,
-      });
-      console.log("[assignSerials] response:", res);
-      // res is now ResponseObject body (unwrapped in orderApi)
-      const ok = res?.success ?? (res as any)?.isSuccess ?? true;
-      if (!ok) {
-        message.error((res as any)?.message || "Đổi serial thất bại");
-        return;
+      // Gửi từng serial nếu số lượng > 1
+      for (const newImeiId of selected) {
+        await orderApi.assignSerials({
+          hoaDonChiTietId: serialChangeRow.detailId,
+          oldImeiId: "", // Gán mới
+          newImeiId,
+        });
       }
-      message.success(
-        serialChangeRow.serialId
-          ? "Đổi serial thành công"
-          : "Gán serial thành công",
-      );
+      message.success("Gán serial thành công");
       setSerialChangeOpen(false);
       await fetchOrder();
     } catch (err: any) {
@@ -767,14 +835,38 @@ const OrderDetailPage: React.FC = () => {
   const availableSerialColumns: ColumnsType<{ id: string; code: string }> = [
     {
       title: "",
-      key: "radio",
+      key: "checkbox",
       width: 50,
-      render: (_: unknown, r: { id: string; code: string }) => (
-        <Radio
-          checked={selectedNewSerial === r.id}
-          onChange={() => setSelectedNewSerial(r.id)}
-        />
-      ),
+      render: (_: unknown, r: { id: string; code: string }) => {
+        const required = serialChangeRow?.soLuong || 1;
+        const selected = Array.isArray(selectedNewSerial)
+          ? selectedNewSerial
+          : selectedNewSerial
+            ? [selectedNewSerial]
+            : [];
+        return required === 1 ? (
+          <Radio
+            checked={selected.includes(r.id)}
+            onChange={() => setSelectedNewSerial(r.id)}
+          />
+        ) : (
+          <input
+            type="checkbox"
+            checked={selected.includes(r.id)}
+            onChange={() => {
+              if (selected.includes(r.id)) {
+                setSelectedNewSerial(selected.filter((id) => id !== r.id));
+              } else {
+                if (selected.length < required) {
+                  setSelectedNewSerial([...selected, r.id]);
+                } else {
+                  message.warning(`Chỉ được chọn tối đa ${required} serial`);
+                }
+              }
+            }}
+          />
+        );
+      },
     },
     { title: "Serial", dataIndex: "code" },
   ];
@@ -1698,14 +1790,26 @@ const OrderDetailPage: React.FC = () => {
                 columns={availableSerialColumns}
                 pagination={false}
                 size="small"
-                onRow={(r) => ({
-                  onClick: () => setSelectedNewSerial(r.id),
-                  style: {
-                    cursor: "pointer",
-                    background:
-                      selectedNewSerial === r.id ? "#e6f4ff" : undefined,
-                  },
-                })}
+                rowSelection={
+                  (serialChangeRow?.soLuong || 1) > 1
+                    ? {
+                        type: "checkbox",
+                        selectedRowKeys: Array.isArray(selectedNewSerial)
+                          ? selectedNewSerial
+                          : selectedNewSerial
+                            ? [selectedNewSerial]
+                            : [],
+                        onChange: (selectedRowKeys) =>
+                          setSelectedNewSerial(selectedRowKeys as string[]),
+                        getCheckboxProps: () => ({
+                          disabled:
+                            Array.isArray(selectedNewSerial) &&
+                            selectedNewSerial.length >=
+                              (serialChangeRow?.soLuong || 1),
+                        }),
+                      }
+                    : undefined
+                }
               />
             )}
           </div>

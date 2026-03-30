@@ -640,7 +640,14 @@ public class ADOrderServiceImpl implements ADOrderService {
                     && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN
                     && hoaDon.getOrderStatus() != OrderStatus.CHO_GIAO) {
                 throw new RuntimeException(
-                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận', 'Đã xác nhận' hoặc 'Chờ giao hàng'");
+                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận'");
+            }
+
+            // Kiểm tra số lượng serial đã gán cho OrderDetail
+            int soLuongSanPham = chiTiet.getQuantity() != null ? chiTiet.getQuantity() : 1;
+            int soSerialDaGan = chiTiet.getSerials() != null ? chiTiet.getSerials().size() : 0;
+            if (!hasOldSerial && soSerialDaGan >= soLuongSanPham) {
+                throw new RuntimeException("Đã đủ số lượng serial cho sản phẩm này. Không thể gán thêm!");
             }
 
             // Xử lý IMEI cũ (nếu có)
