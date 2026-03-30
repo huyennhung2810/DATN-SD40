@@ -30,6 +30,8 @@ public interface ADOrderDetailResponse {
 
     BigDecimal getGiaBan();
 
+    BigDecimal getGiaBanGoc();
+
     // Thông tin giá trị
     BigDecimal getThanhTienSP();
 

@@ -132,6 +132,9 @@ export interface OrderDetailResponse {
     lichSuTrangThai: string;
     danhSachImei: string;  
     soLuongImei: number;
+
+    // Giá bán gốc (sale_price từ backend)
+    giaBanGoc?: number;
 }
 
 export interface OrderDetailPageResponse {

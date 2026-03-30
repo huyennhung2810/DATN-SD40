@@ -478,7 +478,32 @@ const OrderDetailPage: React.FC = () => {
       key: "giaBan",
       align: "right",
       width: 120,
-      render: (_: unknown, r: FlatRow) => fmt(r.giaBan),
+      render: (_: unknown, r: FlatRow) => {
+        const item = items.find((i) => i.productDetailId === r.productDetailId);
+        const giaBanGoc =
+          item && typeof item.giaBanGoc === "number"
+            ? item.giaBanGoc
+            : undefined;
+        const showDiscount = giaBanGoc && giaBanGoc > r.giaBan;
+        return (
+          <div>
+            {showDiscount && (
+              <Text
+                delete
+                style={{ color: "#888", fontSize: 13, marginRight: 4 }}
+              >
+                {fmt(giaBanGoc)}
+              </Text>
+            )}
+            <Text
+              strong
+              style={{ color: showDiscount ? "#cf1322" : undefined }}
+            >
+              {fmt(r.giaBan)}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: "SL",
@@ -600,7 +625,29 @@ const OrderDetailPage: React.FC = () => {
       key: "giaBan",
       align: "right",
       width: 130,
-      render: (_: unknown, r: OrderDetailResponse) => fmt(r.giaBan),
+      render: (_: unknown, r: OrderDetailResponse) => {
+        const giaBanGoc =
+          typeof r.giaBanGoc === "number" ? r.giaBanGoc : undefined;
+        const showDiscount = giaBanGoc && giaBanGoc > r.giaBan;
+        return (
+          <div>
+            {showDiscount && (
+              <Text
+                delete
+                style={{ color: "#888", fontSize: 13, marginRight: 4 }}
+              >
+                {fmt(giaBanGoc)}
+              </Text>
+            )}
+            <Text
+              strong
+              style={{ color: showDiscount ? "#cf1322" : undefined }}
+            >
+              {fmt(r.giaBan)}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: "Thành tiền",
@@ -1105,10 +1152,48 @@ const OrderDetailPage: React.FC = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 marginBottom: 8,
+                alignItems: "center",
               }}
             >
               <Text type="secondary">Tổng tiền hàng:</Text>
-              <Text>{fmt(totalProductAmount)}</Text>
+              <span>
+                {(() => {
+                  const totalOrigin = items.reduce(
+                    (s, r) =>
+                      s +
+                      (typeof r.giaBanGoc === "number"
+                        ? r.giaBanGoc * (r.soLuong ?? 1)
+                        : r.giaBan * (r.soLuong ?? 1)),
+                    0,
+                  );
+                  const hasDiscount = items.some(
+                    (r) =>
+                      typeof r.giaBanGoc === "number" && r.giaBanGoc > r.giaBan,
+                  );
+                  return (
+                    <>
+                      {hasDiscount && (
+                        <Text
+                          delete
+                          style={{
+                            color: "#888",
+                            fontSize: 13,
+                            marginRight: 6,
+                          }}
+                        >
+                          {fmt(totalOrigin)}
+                        </Text>
+                      )}
+                      <Text
+                        strong
+                        style={{ color: hasDiscount ? "#cf1322" : undefined }}
+                      >
+                        {fmt(totalProductAmount)}
+                      </Text>
+                    </>
+                  );
+                })()}
+              </span>
             </div>
             {(order?.giaTriVoucher ?? 0) > 0 && (
               <div
