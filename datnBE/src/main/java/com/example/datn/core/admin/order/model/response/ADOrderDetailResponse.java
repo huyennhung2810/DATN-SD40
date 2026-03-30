@@ -46,6 +46,9 @@ public interface ADOrderDetailResponse {
 
     String getDiaChi();
 
+    // Link ảnh khách hàng (từ entity Customer)
+    String getAvatarKhachHang();
+
     // Thông tin khách hàng (từ customer entity)
     String getTenKhachHang2();
 

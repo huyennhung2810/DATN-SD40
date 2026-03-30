@@ -103,6 +103,7 @@ export interface OrderDetailResponse {
     sdtKH: string;
     email: string;
     diaChi: string;
+    avatarKhachHang?: string; // link ảnh khách hàng
 
     // Sản phẩm
     productDetailId: string;

@@ -59,6 +59,7 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                 COALESCE(hd.recipient_name, '') AS tenKhachHang,
                 COALESCE(hd.recipient_phone, '') AS sdtKH,
                 kh.email AS email,
+                kh.image AS avatarKhachHang,
                 COALESCE(hd.recipient_address, '') AS diaChi,
 
                 -- ===== LỊCH SỬ TRẠNG THÁI (FIX THEO ENTITY ORDERHISTORY) =====

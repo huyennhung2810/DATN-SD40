@@ -250,7 +250,8 @@ const OrderDetailPage: React.FC = () => {
       if (res.success && res.data?.content?.length) {
         const rows = res.data.content;
         setItems(rows);
-        setOrder(rows[0]);
+        // Đảm bảo đồng bộ trường avatarKhachHang nếu backend trả về
+        setOrder({ ...rows[0] });
         setHistoryList(parseHistory(rows[0].lichSuTrangThai));
       }
     } catch {
@@ -1003,11 +1004,13 @@ const OrderDetailPage: React.FC = () => {
             <Space align="start" style={{ marginBottom: 16, width: "100%" }}>
               <Avatar
                 size={52}
-                icon={<UserOutlined />}
+                src={order?.avatarKhachHang || undefined}
+                icon={!order?.avatarKhachHang && <UserOutlined />}
                 style={{
-                  background: "#e6f4ff",
-                  color: "#1677ff",
+                  background: order?.avatarKhachHang ? undefined : "#e6f4ff",
+                  color: order?.avatarKhachHang ? undefined : "#1677ff",
                   flexShrink: 0,
+                  objectFit: "cover",
                 }}
               />
               <div>
@@ -1145,7 +1148,11 @@ const OrderDetailPage: React.FC = () => {
                 TỔNG CỘNG:
               </Text>
               <Text strong style={{ fontSize: 18, color: "#cf1322" }}>
-                {fmt(order?.tongTienSauGiam)}
+                {fmt(
+                  totalProductAmount -
+                    (order?.giaTriVoucher ?? 0) +
+                    (order?.phiVanChuyen ?? 0),
+                )}
               </Text>
             </div>
             {order?.maVoucher && (
@@ -1357,7 +1364,11 @@ const OrderDetailPage: React.FC = () => {
                 Tổng cộng:
               </Text>
               <Text strong style={{ fontSize: 18, color: "#cf1322" }}>
-                {fmt(order?.tongTienSauGiam)}
+                {fmt(
+                  totalProductAmount -
+                    (order?.giaTriVoucher ?? 0) +
+                    (order?.phiVanChuyen ?? 0),
+                )}
               </Text>
             </div>
           </div>
