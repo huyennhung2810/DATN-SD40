@@ -108,6 +108,10 @@ export interface OrderDetailResponse {
 
     // Sản phẩm
     productDetailId: string;
+    maSanPham?: string;
+    maChiTietSanPham?: string;
+    productCode?: string;
+    detailCode?: string;
     tenSanPham: string;
     anhSanPham: string;
     thuongHieu: string;

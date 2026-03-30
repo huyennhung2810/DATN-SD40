@@ -118,6 +118,10 @@ interface FlatRow {
   rowKey: string;
   detailId: string;
   productDetailId: string;
+  maSanPham?: string;
+  maChiTietSanPham?: string;
+  productCode?: string;
+  detailCode?: string;
   tenSanPham: string;
   thuongHieu: string;
   mauSac: string;
@@ -139,6 +143,10 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
         rowKey: item.maHoaDonChiTiet,
         detailId: item.maHoaDonChiTiet,
         productDetailId: item.productDetailId,
+        maSanPham: item.maSanPham,
+        maChiTietSanPham: item.maChiTietSanPham,
+        productCode: item.productCode,
+        detailCode: item.detailCode,
         tenSanPham: item.tenSanPham,
         thuongHieu: item.thuongHieu,
         mauSac: item.mauSac,
@@ -156,6 +164,10 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
           rowKey: `${item.maHoaDonChiTiet}-${s.id}`,
           detailId: item.maHoaDonChiTiet,
           productDetailId: item.productDetailId,
+          maSanPham: item.maSanPham,
+          maChiTietSanPham: item.maChiTietSanPham,
+          productCode: item.productCode,
+          detailCode: item.detailCode,
           tenSanPham: item.tenSanPham,
           thuongHieu: item.thuongHieu,
           mauSac: item.mauSac,
@@ -431,6 +443,24 @@ const OrderDetailPage: React.FC = () => {
       render: (_: unknown, __: unknown, i: number) => i + 1,
     },
     {
+      title: "Mã SP",
+      dataIndex: "productDetailId",
+      key: "productDetailId",
+      width: 120,
+      align: "center",
+      render: (_: unknown, r: FlatRow) =>
+        r.maSanPham || r.productCode || r.productDetailId || "—",
+    },
+    {
+      title: "Mã CT SP",
+      dataIndex: "detailId",
+      key: "detailId",
+      width: 120,
+      align: "center",
+      render: (_: unknown, r: FlatRow) =>
+        r.maChiTietSanPham || r.detailCode || r.detailId || "—",
+    },
+    {
       title: "Sản phẩm",
       key: "sp",
       width: 300,
@@ -570,6 +600,24 @@ const OrderDetailPage: React.FC = () => {
       render: (_: unknown, __: unknown, i: number) => i + 1,
     },
     {
+      title: "Mã SP",
+      dataIndex: "productDetailId",
+      key: "productDetailId",
+      width: 120,
+      align: "center",
+      render: (_: unknown, r: OrderDetailResponse) =>
+        r.maSanPham || r.productCode || r.productDetailId || "—",
+    },
+    {
+      title: "Mã CT SP",
+      dataIndex: "maHoaDonChiTiet",
+      key: "maHoaDonChiTiet",
+      width: 120,
+      align: "center",
+      render: (_: unknown, r: OrderDetailResponse) =>
+        r.maChiTietSanPham || r.detailCode || r.maHoaDonChiTiet || "—",
+    },
+    {
       title: "Sản phẩm",
       key: "sp",
       render: (_: unknown, r: OrderDetailResponse) => (
@@ -600,6 +648,13 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </Space>
       ),
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "soLuong",
+      key: "soLuong",
+      width: 80,
+      align: "center",
     },
     {
       title: "Mã Serial",

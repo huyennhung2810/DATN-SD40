@@ -51,7 +51,11 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                 COALESCE(hd.shipping_fee, 0) AS phiVanChuyen,
                 hd.payment_method AS phuongThucThanhToan,
 
+
                 spct.sale_price AS giaBanGoc,
+
+                sp.code AS maSanPham,
+                spct.code AS maChiTietSanPham,
 
                 (
                     SELECT COALESCE(SUM(hdsub.quantity * hdsub.unit_price), 0)
