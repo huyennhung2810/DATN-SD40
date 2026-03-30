@@ -2,7 +2,7 @@ package com.example.datn.infrastructure.constant;
 
 public enum SerialStatus {
     AVAILABLE,
-    RESERVED,
+    IN_ORDER,
     SOLD,
     DEFECTIVE,
     WARRANTY;

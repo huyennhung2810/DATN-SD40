@@ -229,12 +229,12 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST,
                         String.format(MSG_SERIAL_NOT_BELONG, serial.getSerialNumber()));
             }
-            // Allow AVAILABLE or RESERVED-by-this-same-detail
+            // Allow AVAILABLE or IN_ORDER-by-this-same-detail
             boolean isAvailable = serial.getSerialStatus() == SerialStatus.AVAILABLE;
-            boolean isReservedBySelf = serial.getSerialStatus() == SerialStatus.RESERVED
+            boolean isInOrderBySelf = serial.getSerialStatus() == SerialStatus.IN_ORDER
                     && serial.getOrderDetail() != null
                     && serial.getOrderDetail().getId().equals(detailId);
-            if (!isAvailable && !isReservedBySelf) {
+            if (!isAvailable && !isInOrderBySelf) {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST,
                         String.format(MSG_SERIAL_NOT_READY, serial.getSerialNumber()));
             }
@@ -252,7 +252,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         for (Serial serial : targetSerials) {
             serial.setOrderDetail(detail);
-            serial.setSerialStatus(SerialStatus.RESERVED);
+            serial.setSerialStatus(SerialStatus.IN_ORDER);
         }
         serialRepository.saveAll(targetSerials);
 
@@ -390,14 +390,14 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy chi tiết hóa đơn");
         }
 
-        // Free any reserved serials
-        List<Serial> reservedSerials = getSerialsByOrderDetailId(detailId);
-        for (Serial serial : reservedSerials) {
+        // Free any IN_ORDER serials
+        List<Serial> inOrderSerials = getSerialsByOrderDetailId(detailId);
+        for (Serial serial : inOrderSerials) {
             serial.setOrderDetail(null);
             serial.setSerialStatus(SerialStatus.AVAILABLE);
         }
-        if (!reservedSerials.isEmpty()) {
-            serialRepository.saveAll(reservedSerials);
+        if (!inOrderSerials.isEmpty()) {
+            serialRepository.saveAll(inOrderSerials);
         }
 
         // Update Order total
@@ -601,13 +601,13 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         List<OrderDetail> details = posOrderDetailRepository.findByOrderId(orderId);
         for (OrderDetail detail : details) {
-            List<Serial> reservedSerials = getSerialsByOrderDetailId(detail.getId());
-            for (Serial serial : reservedSerials) {
+            List<Serial> inOrderSerials = getSerialsByOrderDetailId(detail.getId());
+            for (Serial serial : inOrderSerials) {
                 serial.setOrderDetail(null);
                 serial.setSerialStatus(SerialStatus.AVAILABLE);
             }
-            if (!reservedSerials.isEmpty()) {
-                serialRepository.saveAll(reservedSerials);
+            if (!inOrderSerials.isEmpty()) {
+                serialRepository.saveAll(inOrderSerials);
             }
             posOrderDetailRepository.delete(detail);
         }

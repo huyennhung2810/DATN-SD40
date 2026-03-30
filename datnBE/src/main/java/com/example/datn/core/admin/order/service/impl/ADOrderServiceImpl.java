@@ -320,7 +320,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         for (OrderDetail chiTiet : danhSachChiTiet) {
             if (chiTiet.getSerials() != null && !chiTiet.getSerials().isEmpty()) {
                 for (Serial imei : chiTiet.getSerials()) {
-                    imei.setSerialStatus(SerialStatus.RESERVED);
+                    imei.setSerialStatus(SerialStatus.IN_ORDER);
                     imei.setLockedAt(System.currentTimeMillis());
                 }
                 serialRepository.saveAll(chiTiet.getSerials());
@@ -683,8 +683,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                 log.info("Đã giải phóng Serial cũ: {}", imeiCu.getCode());
             }
 
-            // Gán IMEI mới → RESERVED (đang chờ xác nhận)
-            imeiMoi.setSerialStatus(SerialStatus.RESERVED);
+            // Gán IMEI mới → IN_ORDER (đang trong đơn hàng)
+            imeiMoi.setSerialStatus(SerialStatus.IN_ORDER);
             imeiMoi.setOrderDetail(chiTiet);
             imeiMoi.setLockedAt(System.currentTimeMillis());
             serialRepository.save(imeiMoi);

@@ -72,7 +72,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       setLoadingAvailable(true);
       const res = await posApi.getAvailableSerials(productDetailId);
       const available: AvailableSerial[] = res.data?.data || [];
-      // Merge in the already-assigned serials (which are RESERVED, not in available list)
+      // Merge in the already-assigned serials (which are IN_ORDER, not in available list)
       // so they can appear in the top table with "Đã chọn" indicator
       const merged = [
         ...initialSerials.filter(
