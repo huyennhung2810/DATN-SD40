@@ -23,9 +23,13 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { orderActions } from "../../../redux/order/OrderSlice";
+import { orderApi } from "../../../api/admin/orderApi";
+import { message, Modal } from "antd";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -210,6 +214,81 @@ const OrderPage: React.FC = () => {
     [currentPage, pageSize, navigate],
   );
 
+  // Xuất toàn bộ danh sách hóa đơn (không phân trang)
+
+  const handleExportExcel = async () => {
+    try {
+      const params = {
+        q: keyword.trim() || undefined,
+        status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType || undefined,
+        startDate: dateRange
+          ? dayjs(dateRange[0]).startOf("day").valueOf()
+          : undefined,
+        endDate: dateRange
+          ? dayjs(dateRange[1]).endOf("day").valueOf()
+          : undefined,
+        page: 0,
+        size: 10000, // lấy tối đa 10.000 bản ghi
+      };
+      const res = await orderApi.searchOrders(params);
+      // Log dữ liệu trả về để debug
+      console.log("[Xuất Excel] Params:", params);
+      console.log("[Xuất Excel] API response:", res);
+      console.log("[Xuất Excel] res.data:", res.data);
+      console.log("[Xuất Excel] res.data.page:", res.data?.data?.page);
+      const allData = res.data?.data?.page?.content || [];
+      message.info(`Số bản ghi lấy được: ${allData.length}`);
+      if (!allData.length) {
+        message.warning("Không có dữ liệu để xuất!");
+        return;
+      }
+      const exportData = allData.map((row: any, idx: number) => ({
+        STT: idx + 1,
+        "Mã HĐ": row.maHoaDon,
+        "Khách hàng": row.tenKhachHang,
+        "SĐT KH": row.sdtKhachHang,
+        "Nhân viên": row.tenNhanVien,
+        "Mã NV": row.maNhanVien,
+        Loại:
+          row.loaiHoaDon === "OFFLINE"
+            ? "Tại quầy"
+            : row.loaiHoaDon === "ONLINE"
+              ? "Online"
+              : row.loaiHoaDon,
+        "Ngày tạo": row.createdDate
+          ? dayjs(row.createdDate).format("HH:mm DD/MM/YYYY")
+          : "",
+        "Tổng tiền": row.tongTien?.toLocaleString("vi-VN") + " đ",
+        "Trạng thái": row.status,
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DanhSachHoaDon");
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([excelBuffer], { type: "application/octet-stream" }),
+        `DanhSachHoaDon_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`,
+      );
+      message.success("Xuất Excel thành công!");
+    } catch (err: any) {
+      message.error("Lỗi khi xuất Excel. Vui lòng thử lại!");
+      // Log chi tiết lỗi để debug
+      console.error("Lỗi khi xuất Excel:", err);
+    }
+  };
+
+  const confirmExportExcel = () => {
+    Modal.confirm({
+      title: "Xác nhận xuất Excel",
+      content:
+        "Bạn có chắc chắn muốn xuất toàn bộ danh sách hóa đơn ra file Excel?",
+      okText: "Xuất Excel",
+      cancelText: "Hủy",
+      onOk: handleExportExcel,
+    });
+  };
+
   return (
     <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
       <div
@@ -336,6 +415,7 @@ const OrderPage: React.FC = () => {
             <Button
               icon={<FileExcelOutlined />}
               style={{ color: "#217346", borderColor: "#217346" }}
+              onClick={confirmExportExcel}
             >
               Xuất Excel
             </Button>

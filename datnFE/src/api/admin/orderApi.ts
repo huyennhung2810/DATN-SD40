@@ -7,8 +7,8 @@ import axiosClient from "../axiosClient";
 const PREFIX = "/admin/orders"; 
 
 export const orderApi = {
-    //Layas ds hd
-    searchOrders: (params: ADOrderSearchRequest): Promise<ResponseObject<OrderPageResponse>> => {
+    //Lấy danh sách hóa đơn
+    searchOrders: (params: ADOrderSearchRequest): Promise<{ data: ResponseObject<OrderPageResponse> }> => {
         return axiosClient.get(`${PREFIX}`, { params });
     },
 
