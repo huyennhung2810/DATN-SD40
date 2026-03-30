@@ -3,6 +3,7 @@ export interface ADOrderSearchRequest {
     startDate?: number;   // Timestamp từ ngày
     endDate?: number;     // Timestamp đến ngày
     status?: string;      // Trạng thái hóa đơn (CHO_XAC_NHAN, DANG_GIAO...)
+    orderType?: string;   // Loại hóa đơn (OFFLINE, ONLINE, GIAO_HANG)
     page?: number;        // Trang hiện tại (mặc định 0)
     size?: number;        // Số bản ghi / trang
     sortBy?: string;

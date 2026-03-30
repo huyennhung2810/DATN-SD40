@@ -267,6 +267,8 @@ const OrderPage: React.FC = () => {
               setKeyword("");
               setDateRange(null);
               setActiveTab("ALL");
+              setOrderType(undefined);
+              setCurrentPage(1);
             }}
           />
         </Row>
@@ -306,7 +308,6 @@ const OrderPage: React.FC = () => {
                 { value: undefined, label: "Tất cả" },
                 { value: "OFFLINE", label: "Tại quầy" },
                 { value: "ONLINE", label: "Online" },
-                { value: "GIAO_HANG", label: "Giao hàng" },
               ]}
             />
           </Col>
@@ -329,7 +330,7 @@ const OrderPage: React.FC = () => {
       <Card variant="borderless" style={{ borderRadius: 8 }}>
         <Row justify="space-between" style={{ marginBottom: 16 }}>
           <Text strong style={{ fontSize: "16px" }}>
-            Danh sách Hóa Đơn
+            Danh sách Đơn hàng
           </Text>
           <Space>
             <Button

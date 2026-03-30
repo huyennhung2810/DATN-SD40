@@ -19,4 +19,5 @@ public class ADOrderSearchRequest extends PageableRequest {
     private Long startDate;
     private Long endDate;
     private OrderStatus status;
+    private String orderType;
 }
