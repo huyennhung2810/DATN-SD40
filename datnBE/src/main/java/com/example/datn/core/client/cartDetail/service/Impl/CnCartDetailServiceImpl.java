@@ -41,6 +41,19 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
         ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId())
                 .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
 
+        // ==========================================
+        // LẤY GIÁ GỐC VÀ GIÁ SAU GIẢM TẠI ĐÂY
+        // ==========================================
+        BigDecimal originalPrice = productDetail.getSalePrice() != null ? productDetail.getSalePrice() : BigDecimal.ZERO;
+        BigDecimal discountedPrice = originalPrice; // Mặc định cho bằng giá gốc trước
+
+        // Gọi repository để kiểm tra xem sản phẩm này có đang được giảm giá không
+        DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetail.getId());
+
+        if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+            discountedPrice = activeDiscount.getPriceAfter(); // Cập nhật lại thành giá sau giảm
+        }
+
         // KIỂM TRA KHO 1: Kho đã cạn sạch
         if (productDetail.getQuantity() <= 0) {
             throw new RuntimeException("Sản phẩm này đã hết hàng!");
@@ -90,10 +103,13 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             newDetail.setQuantity(request.getQuantity());
             newDetail.setCreatedDate(System.currentTimeMillis());
 
+            // Gợi ý: Nếu trong Entity CartDetail của bạn có thiết kế cột lưu giá (ví dụ setPrice),
+            // bạn có thể gán giá trị ở đây: newDetail.setPrice(discountedPrice);
+
             return cnCartDetailRepository.save(newDetail);
         }
     }
-    @Override
+    /*@Override
     @Transactional
     public List<CartItemResponse> getCartDetails (String customerId){
         // 1. Tìm giỏ hàng của khách này
@@ -134,7 +150,51 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
         }
 
         return responseList;
+    }*/
+
+    @Override
+    @Transactional
+    public List<CartItemResponse> getCartDetails(String customerId) {
+        Cart cart = CartService.getOrCreateCart(customerId);
+        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
+        List<CartItemResponse> responseList = new ArrayList<>();
+
+        for (CartDetail cd : cartDetails) {
+            CartItemResponse dto = new CartItemResponse();
+            ProductDetail pd = cd.getProductDetail();
+
+            dto.setId(cd.getId());
+            dto.setProductDetailId(pd.getId());
+            dto.setProductName(pd.getProduct().getName());
+            dto.setImageUrl(pd.getImageUrl());
+
+            // Giá gốc (Price)
+            BigDecimal originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+            dto.setPrice(originalPrice);
+
+            dto.setQuantity(cd.getQuantity());
+            dto.setVersion(pd.getVersion());
+
+            // 1. Gọi hàm SQL thuần vừa tạo ở Bước 1
+            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
+
+            // 2. Gán giá gốc (Lưu ý: Bạn kiểm tra xem pd.getSalePrice() trong hệ thống của bạn là giá gốc hay giá giảm nhé)
+            originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+            dto.setPrice(originalPrice);
+
+            // 3. Xử lý giá sau giảm
+            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+                // TÌM THẤY TRONG DB -> ÉP GIÁ TRỊ PRICE_AFTER VÀO GIỎ HÀNG
+                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+            } else {
+                dto.setDiscountedPrice(originalPrice);
+            }
+
+            responseList.add(dto);
+        }
+        return responseList;
     }
+
     @Override
     @Transactional
     public void updateQuantity(String cartDetailId, Integer quantity) {

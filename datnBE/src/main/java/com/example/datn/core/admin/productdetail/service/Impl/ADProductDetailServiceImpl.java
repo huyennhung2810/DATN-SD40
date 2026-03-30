@@ -185,10 +185,9 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         spct.setColor(adColorRepository.findById(request.getColorId()).orElseThrow());
         spct.setStorageCapacity(adStorageCapacityRepository.findById(request.getStorageCapacityId()).orElseThrow());
 
-        // Thêm ảnh cho biến thể - ảnh cũ (url trực tiếp)
-        spct.setImageUrl(request.getImageUrl());
+        List<ProductImage> productImage = productImageRepository.findByProduct_Id(request.getProductId());
 
-        // Lưu selectedImageId - ảnh được chọn từ sản phẩm mẹ
+        spct.setImageUrl(productImage.get(0).getUrl());
         spct.setSelectedImageId(request.getSelectedImageId());
 
         // LƯU SPCT LẦN 1: Để Database sinh ra ID cho cái SPCT này
