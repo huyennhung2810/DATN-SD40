@@ -2,14 +2,19 @@ import axiosClient from "./axiosClient";
 import type { ProductPageParams, ProductRequest, ProductResponse } from "../models/product";
 import type { ProductVariantResponse, ProductWithVariantsResponse } from "../models/productVariant";
 import type { ProductDetailRequest } from "../models/productdetail";
-import type { PageResponse, ResponseObject } from "../models/base";
+import type { PageResponse, PageableObject, ResponseObject } from "../models/base";
 
 const BASE_URL = "/admin/product";
 
 const productApi = {
     search: async (params: ProductPageParams): Promise<PageResponse<ProductResponse>> => {
-        const res = await axiosClient.get<ResponseObject<PageResponse<ProductResponse>>>(BASE_URL, { params });
-        return res.data.data;
+        const res = await axiosClient.get<ResponseObject<PageableObject<ProductResponse>>>(BASE_URL, { params });
+        return {
+            data: res.data.data?.data ?? [],
+            totalElements: res.data.data?.totalElements ?? 0,
+            totalPages: res.data.data?.totalPages ?? 0,
+            currentPage: res.data.data?.currentPage ?? 0,
+        };
     },
 
     getById: async (id: string): Promise<ProductResponse> => {

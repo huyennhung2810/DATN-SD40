@@ -30,6 +30,8 @@ export const initialSerial: SerialFormValues = {
 export interface SerialPageParams {
   keyword?: string;
   status?: string;
+  productCategoryId?: string;
+  productId?: string;
   page: number;
   size: number;
   sortBy?: string;

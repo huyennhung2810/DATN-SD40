@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 
 public interface ADSerialService {
 
-    ResponseObject<?> getAllSerials(String keyword, EntityStatus status);
+    ResponseObject<?> getAllSerials(String keyword, EntityStatus status, String productCategoryId, String productId);
 
     ResponseObject<?> findById(String id);
 

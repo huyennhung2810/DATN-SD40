@@ -29,10 +29,16 @@ public interface ADSerialRepository extends SerialRepository {
     @Query("SELECT s FROM Serial s WHERE " +
             "(:kw IS NULL OR :kw = '' OR s.serialNumber LIKE %:kw% OR s.code LIKE %:kw%) " +
             "AND (:sts IS NULL OR s.status = :sts) " +
+            "AND (:pdId IS NULL OR s.productDetail.id = :pdId) " +
+            "AND (:prodId IS NULL OR s.productDetail.product.id = :prodId) " +
+            "AND (:catId IS NULL OR s.productDetail.product.productCategory.id = :catId) " +
             "ORDER BY s.createdDate DESC")
     List<Serial> searchSerials(
             @Param("kw") String keyword,
-            @Param("sts") EntityStatus status
+            @Param("sts") EntityStatus status,
+            @Param("pdId") String productDetailId,
+            @Param("prodId") String productId,
+            @Param("catId") String productCategoryId
     );
 
     // Kiểm tra serial đã tồn tại trong biến thể khác (dùng cho update)

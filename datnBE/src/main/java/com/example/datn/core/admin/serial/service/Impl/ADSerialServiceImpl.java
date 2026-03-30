@@ -30,8 +30,8 @@ public class ADSerialServiceImpl implements ADSerialService {
     private final ProductDetailRepository productDetailRepository;
 
     @Override
-    public ResponseObject<?> getAllSerials(String keyword, EntityStatus status) {
-        List<Serial> list = adSerialRepository.searchSerials(keyword, status);
+    public ResponseObject<?> getAllSerials(String keyword, EntityStatus status, String productCategoryId, String productId) {
+        List<Serial> list = adSerialRepository.searchSerials(keyword, status, null, productId, productCategoryId);
 
         List<ADSerialResponse> dtoList = list.stream().map(entity -> ADSerialResponse.builder()
                 .id(entity.getId())

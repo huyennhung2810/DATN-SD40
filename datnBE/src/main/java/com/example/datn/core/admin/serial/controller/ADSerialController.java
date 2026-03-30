@@ -23,9 +23,11 @@ public class ADSerialController {
     @GetMapping
     public ResponseObject<?> getAllSerials(
             @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "status", required = false) EntityStatus status
+            @RequestParam(name = "status", required = false) EntityStatus status,
+            @RequestParam(name = "productCategoryId", required = false) String productCategoryId,
+            @RequestParam(name = "productId", required = false) String productId
     ) {
-        return adSerialService.getAllSerials(keyword, status);
+        return adSerialService.getAllSerials(keyword, status, productCategoryId, productId);
     }
 
     @GetMapping("/product-detail/{productDetailId}")

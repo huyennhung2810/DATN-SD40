@@ -27,6 +27,16 @@ export interface PageResponse<T> {
   data: T[];
   totalPages: number;
   totalElements: number;
-  size: number;
-  number: number;
+  currentPage: number;
+  /** Spring Page field — present when BE returns raw Page instead of PageableObject */
+  size?: number;
+  /** Spring Page field — present when BE returns raw Page instead of PageableObject */
+  number?: number;
+}
+
+export interface PageableObject<T> {
+  data: T[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
 }
