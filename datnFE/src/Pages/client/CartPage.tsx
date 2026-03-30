@@ -25,8 +25,6 @@ const CartPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
-
-  // 1. STATE MỚI: Lưu danh sách ID các sản phẩm được tích chọn (Checkbox)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const fetchCartItems = async () => {
@@ -37,12 +35,9 @@ const CartPage: React.FC = () => {
         `/client/cart?customerId=${user.userId}`,
       );
       const data = response.data;
-      console.log(data);
       if (Array.isArray(data)) {
         setCartItems(data);
         dispatch(setCartCount(data.length));
-        // Mặc định chọn tất cả sản phẩm khi mới vào giỏ hàng (nếu muốn)
-        // setSelectedRowKeys(data.map(item => item.id));
       } else {
         setCartItems([]);
         dispatch(setCartCount(0));
@@ -85,7 +80,6 @@ const CartPage: React.FC = () => {
       setCartItems(newCart);
       dispatch(setCartCount(newCart.length));
 
-      // Xóa luôn ID đó khỏi danh sách đang chọn (nếu có)
       setSelectedRowKeys((prev) => prev.filter((key) => key !== cartDetailId));
       message.success("Đã xóa sản phẩm khỏi giỏ hàng");
     } catch (error) {
@@ -100,36 +94,49 @@ const CartPage: React.FC = () => {
     }).format(price);
   };
 
-  // 2. LOGIC TÍNH TIỀN MỚI: Chỉ tính tổng tiền của những sản phẩm ĐƯỢC CHỌN (có trong selectedRowKeys)
+  // ==========================================
+  // LOGIC TÍNH TOÁN TIỀN ĐƯỢC CẬP NHẬT TẠI ĐÂY
+  // ==========================================
   const selectedCartItems = cartItems.filter((item) =>
     selectedRowKeys.includes(item.id),
   );
-  const totalPrice = selectedCartItems.reduce((sum, item) => {
-    const currentPrice =
-      item.discountedPrice && item.discountedPrice < item.price
-        ? item.discountedPrice
-        : item.price || 0;
-    return sum + currentPrice * (item.quantity || 0);
-  }, 0);
 
-  // 3. XỬ LÝ THANH TOÁN: Bắt lỗi nếu chưa chọn gì
+  const { totalOriginalPrice, totalDiscount, totalFinalPrice } = selectedCartItems.reduce(
+    (acc, item) => {
+      const qty = item.quantity || 1;
+      const originalPrice = item.price || 0;
+      
+      // Xác định giá trị thực tế sau khi giảm (nếu có)
+      const finalPrice =
+        item.discountedPrice && item.discountedPrice < originalPrice
+          ? item.discountedPrice
+          : originalPrice;
+
+      // Cộng dồn các giá trị
+      acc.totalOriginalPrice += originalPrice * qty;
+      acc.totalFinalPrice += finalPrice * qty;
+      acc.totalDiscount += (originalPrice - finalPrice) * qty;
+
+      return acc;
+    },
+    { totalOriginalPrice: 0, totalDiscount: 0, totalFinalPrice: 0 }
+  );
+
   const handleCheckout = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!");
       return;
     }
-    // Chuyển sang trang thanh toán, truyền theo danh sách ID sản phẩm đã chọn
     navigate("/client/checkout", {
       state: { selectedCartItemIds: selectedRowKeys },
     });
   };
 
-  // 4. CẤU HÌNH CỘT: Thêm width (%) để bảng tự co giãn, không bị tràn ngang
   const columns = [
     {
       title: "Sản phẩm",
       key: "product",
-      width: "40%", // Chiếm 40% chiều rộng
+      width: "40%",
       render: (record: any) => (
         <div className="cart-product-col">
           <img
@@ -229,7 +236,6 @@ const CartPage: React.FC = () => {
     },
   ];
 
-  // 5. CẤU HÌNH CHECKBOX CHO BẢNG
   const rowSelection = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
@@ -294,13 +300,17 @@ const CartPage: React.FC = () => {
           <div className="cart-layout">
             <div className="cart-table-section">
               <Table
-                rowSelection={rowSelection} // Kích hoạt Checkbox
+                rowSelection={rowSelection}
                 dataSource={cartItems}
                 columns={columns}
                 rowKey="id"
                 pagination={false}
               />
             </div>
+            
+            {/* ========================================== */}
+            {/* GIAO DIỆN SUMMARY ĐƯỢC CẬP NHẬT TẠI ĐÂY */}
+            {/* ========================================== */}
             <div className="cart-summary-section">
               <div className="summary-card">
                 <Title level={4} className="summary-title">
@@ -310,17 +320,32 @@ const CartPage: React.FC = () => {
                   Đã chọn {selectedRowKeys.length} sản phẩm
                 </Text>
                 <Divider className="my-3" />
+                
+                {/* 1. Tổng tiền gốc */}
                 <div className="summary-row">
-                  <Text>Tạm tính:</Text>
-                  <Text strong>{formatPrice(totalPrice)}</Text>
+                  <Text>Tổng tiền hàng:</Text>
+                  <Text strong style={{ color: '#595959' }}>{formatPrice(totalOriginalPrice)}</Text>
                 </div>
+                
+                {/* 2. Tiền được giảm (Chỉ hiển thị nếu lớn hơn 0) */}
+                {totalDiscount > 0 && (
+                  <div className="summary-row">
+                    <Text>Khuyến mãi giảm:</Text>
+                    <Text strong style={{ color: '#ff4d4f' }}>
+                      - {formatPrice(totalDiscount)}
+                    </Text>
+                  </div>
+                )}
+                
                 <Divider className="my-3" />
+                
+                {/* 3. Tổng thanh toán cuối cùng */}
                 <div className="summary-row total-row">
                   <Text strong className="text-lg">
-                    Tổng cộng:
+                    Tổng thanh toán:
                   </Text>
                   <Text strong className="text-2xl text-red-600">
-                    {formatPrice(totalPrice)}
+                    {formatPrice(totalFinalPrice)}
                   </Text>
                 </div>
 
@@ -329,7 +354,7 @@ const CartPage: React.FC = () => {
                   size="large"
                   block
                   className="checkout-btn"
-                  onClick={handleCheckout} // Sử dụng hàm handleCheckout có bắt lỗi
+                  onClick={handleCheckout}
                 >
                   TIẾN HÀNH THANH TOÁN
                 </Button>
@@ -357,11 +382,9 @@ const CartPage: React.FC = () => {
         .empty-icon { font-size: 64px; color: #ccc; margin-bottom: 20px; }
 
         .cart-layout { display: flex; gap: 30px; align-items: flex-start; }
-        /* Tối ưu lại phần bảng để không bị tràn */
         .cart-table-section { flex: 1; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; min-width: 0; }
         .cart-summary-section { width: 350px; flex-shrink: 0; position: sticky; top: 100px; }
         
-        /* Table Styles */
         .cart-product-col { display: flex; align-items: center; gap: 15px; }
         .cart-product-img { width: 80px; height: 80px; object-fit: contain; border: 1px solid #f0f0f0; border-radius: 8px; padding: 4px; }
         .cart-product-name { font-weight: 600; font-size: 14px; color: #1a1a1a; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -369,7 +392,6 @@ const CartPage: React.FC = () => {
         .cart-price { font-weight: 500; }
         .cart-total-price { font-weight: 700; color: #D32F2F; }
 
-        /* Summary Card */
         .summary-card { background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .summary-title { margin-bottom: 0 !important; }
         .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }

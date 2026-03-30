@@ -18,9 +18,10 @@ public class ProductDetailForDiscountServiceImpl implements ProductDetailForDisc
     private ADProductDetailForDiscountRepository adProductDetailForDiscountRepository;
 
     @Override
-    public Page<ADDiscountProductDetailResponse> getAll(String keyword, Pageable pageable) {
-        // 1. Lấy ra Page<ProductDetail> (Entity) từ Repository
-        Page<ProductDetail> entityPage = adProductDetailForDiscountRepository.searchByKeyword(keyword, pageable);
+    public Page<ADDiscountProductDetailResponse> getAll(String keyword, String currentDiscountId, Pageable pageable) { // THÊM PARAM Ở ĐÂY
+
+        // 1. Lấy ra Page<ProductDetail> (Entity) từ Repository (Truyền thêm currentDiscountId vào)
+        Page<ProductDetail> entityPage = adProductDetailForDiscountRepository.searchByKeyword(keyword, currentDiscountId, pageable);
 
         // 2. Map Entity sang DTO ngay trên đối tượng Page
         Page<ADDiscountProductDetailResponse> dtoPage = entityPage.map(entity ->
@@ -32,7 +33,6 @@ public class ProductDetailForDiscountServiceImpl implements ProductDetailForDisc
                         .quantity(entity.getQuantity())
                         .salePrice(entity.getSalePrice())
                         .status(entity.getStatus())
-                        // Lấy các thông tin liên quan
                         .colorName(entity.getColor() != null ? entity.getColor().getName() : null)
                         .productName(entity.getProduct() != null ? entity.getProduct().getName() : null)
                         .storageCapacityName(entity.getStorageCapacity() != null ? entity.getStorageCapacity().getName() : null)
@@ -40,7 +40,6 @@ public class ProductDetailForDiscountServiceImpl implements ProductDetailForDisc
                         .build()
         );
 
-        // 3. Trả về Page chứa DTO
         return dtoPage;
     }
 }
