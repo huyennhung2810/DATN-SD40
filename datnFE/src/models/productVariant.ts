@@ -1,12 +1,14 @@
 import type { CommonStatus } from "./base";
 import { ProductVersion } from "./productVersion";
 
+export type SerialBusinessStatus = 'AVAILABLE' | 'IN_ORDER' | 'SOLD' | 'DEFECTIVE' | 'WARRANTY';
+
 export interface SerialResponse {
   id: string;
   serialNumber: string;
   code: string;
   status: string;
-  serialStatus?: string;
+  serialStatus?: SerialBusinessStatus;
   productName?: string;
   productDetailId?: string;
   createdDate?: string;

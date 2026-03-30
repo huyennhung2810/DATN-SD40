@@ -102,7 +102,7 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                                 'statusText',
                                     CASE i.serial_status
                                         WHEN 'AVAILABLE' THEN 'Khả dụng'
-                                        WHEN 'RESERVED' THEN 'Đã đặt'
+                                        WHEN 'IN_ORDER' THEN 'Đang trong đơn'
                                         WHEN 'SOLD' THEN 'Đã bán'
                                         WHEN 'DEFECTIVE' THEN 'Lỗi'
                                         WHEN 'WARRANTY' THEN 'Đang bảo hành'

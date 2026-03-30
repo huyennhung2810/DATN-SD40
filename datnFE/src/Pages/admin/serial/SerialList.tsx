@@ -39,6 +39,10 @@ import type { RootState } from "../../../redux/store";
 
 const { Title, Text } = Typography;
 
+function isSerialInOrder(r: SerialResponse): boolean {
+  return String(r.serialStatus ?? "").toUpperCase() === "IN_ORDER";
+}
+
 function isSerialSold(r: SerialResponse): boolean {
   return String(r.serialStatus ?? "").toUpperCase() === "SOLD";
 }
@@ -204,9 +208,10 @@ const SerialPage: React.FC = () => {
       align: "center",
       render: (ss) => {
         const sold = isSerialSold({ serialStatus: ss } as SerialResponse);
+        const inOrder = isSerialInOrder({ serialStatus: ss } as SerialResponse);
         return (
-          <Tag color={sold ? "gold" : "success"}>
-            {sold ? "ĐÃ BÁN" : "TRONG KHO"}
+          <Tag color={sold ? "gold" : inOrder ? "processing" : "success"}>
+            {sold ? "ĐÃ BÁN" : inOrder ? "ĐANG TRONG ĐƠN" : "TRONG KHO"}
           </Tag>
         );
       },
@@ -455,16 +460,18 @@ const SerialPage: React.FC = () => {
                   <Descriptions.Item label="Trạng thái">
                     <Tag
                       color={
-                        isSerialSold(
-                          detailSerial as SerialResponse
-                        )
+                        isSerialSold(detailSerial as SerialResponse)
                           ? "gold"
-                          : "success"
+                          : isSerialInOrder(detailSerial as SerialResponse)
+                            ? "processing"
+                            : "success"
                       }
                     >
                       {isSerialSold(detailSerial as SerialResponse)
                         ? "ĐÃ BÁN"
-                        : "TRONG KHO"}
+                        : isSerialInOrder(detailSerial as SerialResponse)
+                          ? "ĐANG TRONG ĐƠN"
+                          : "TRONG KHO"}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày nhập">

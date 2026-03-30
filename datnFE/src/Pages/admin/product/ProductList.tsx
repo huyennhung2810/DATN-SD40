@@ -89,9 +89,14 @@ import { videoFormatActions } from "../../../redux/techSpec/videoFormatSlice";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-/** Serial đã bán (BE: SerialStatus.SOLD) → tag vàng; còn lại → xanh (chưa bán). */
+/** Serial đã bán (BE: SerialStatus.SOLD) → tag vàng. */
 function isVariantSerialSold(serial: { serialStatus?: string }): boolean {
   return String(serial.serialStatus ?? "").toUpperCase() === "SOLD";
+}
+
+/** Serial đang trong đơn (BE: SerialStatus.IN_ORDER) → tag xanh nước biển. */
+function isVariantSerialInOrder(serial: { serialStatus?: string }): boolean {
+  return String(serial.serialStatus ?? "").toUpperCase() === "IN_ORDER";
 }
 
 const ProductPage: React.FC = () => {
@@ -2944,7 +2949,8 @@ const ProductPage: React.FC = () => {
                 </Text>
                 <div style={{ marginTop: 4 }}>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    Màu xanh: chưa bán · Màu vàng: đã bán
+                    Màu xanh lá: chưa bán · Màu xanh dương: đang trong đơn · Màu
+                    vàng: đã bán
                   </Text>
                 </div>
                 <div
@@ -2962,10 +2968,16 @@ const ProductPage: React.FC = () => {
                     <Space wrap>
                       {variantSerials.map((s: any, idx: number) => {
                         const sold = isVariantSerialSold(s);
+                        const inOrder = isVariantSerialInOrder(s);
+                        const tagColor = sold
+                          ? "gold"
+                          : inOrder
+                            ? "geekblue"
+                            : "success";
                         return (
                           <Tag
                             key={s.id ?? `${s.serialNumber}-${idx}`}
-                            color={sold ? "gold" : "success"}
+                            color={tagColor}
                           >
                             {s.serialNumber}
                           </Tag>
