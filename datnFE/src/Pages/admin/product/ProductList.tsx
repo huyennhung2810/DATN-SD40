@@ -89,6 +89,11 @@ import { videoFormatActions } from "../../../redux/techSpec/videoFormatSlice";
 const { Title, Text } = Typography;
 const { Search } = Input;
 
+/** Serial đã bán (BE: SerialStatus.SOLD) → tag vàng; còn lại → xanh (chưa bán). */
+function isVariantSerialSold(serial: { serialStatus?: string }): boolean {
+  return String(serial.serialStatus ?? "").toUpperCase() === "SOLD";
+}
+
 const ProductPage: React.FC = () => {
   const dispatch = useDispatch();
   const { list, loading, totalElements } = useSelector(
@@ -2932,11 +2937,16 @@ const ProductPage: React.FC = () => {
               size="small"
               style={{ marginBottom: 16, background: "#fafafa" }}
             >
-              {/* Danh sách serial cũ - readonly */}
+              {/* Danh sách serial cũ - readonly, màu theo trạng thái bán */}
               <div style={{ marginBottom: 16 }}>
                 <Text strong>
-                  Danh sách Serial hiện tại ({variantSerials.length} máy)
+                  Quản lý serial hiện tại ({variantSerials.length} máy)
                 </Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Màu xanh: chưa bán · Màu vàng: đã bán
+                  </Text>
+                </div>
                 <div
                   style={{
                     maxHeight: 150,
@@ -2950,11 +2960,17 @@ const ProductPage: React.FC = () => {
                 >
                   {variantSerials.length > 0 ? (
                     <Space wrap>
-                      {variantSerials.map((s: any, idx: number) => (
-                        <Tag key={idx} color="blue">
-                          {s.serialNumber}
-                        </Tag>
-                      ))}
+                      {variantSerials.map((s: any, idx: number) => {
+                        const sold = isVariantSerialSold(s);
+                        return (
+                          <Tag
+                            key={s.id ?? `${s.serialNumber}-${idx}`}
+                            color={sold ? "gold" : "success"}
+                          >
+                            {s.serialNumber}
+                          </Tag>
+                        );
+                      })}
                     </Space>
                   ) : (
                     <Text type="secondary">Chưa có serial nào</Text>

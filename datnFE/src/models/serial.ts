@@ -9,6 +9,8 @@ export interface SerialResponse {
   productDetailId: string;
   createdDate: string;
   status: CommonStatus;
+  /** Trạng thái kinh doanh: AVAILABLE = chưa bán, SOLD = đã bán (dùng cho màu tag). */
+  serialStatus?: string;
 }
 
 export interface SerialFormValues {

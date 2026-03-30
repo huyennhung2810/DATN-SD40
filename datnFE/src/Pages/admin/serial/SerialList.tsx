@@ -20,6 +20,11 @@ import type { RootState } from "../../../redux/store";
 
 const { Title, Text } = Typography;
 
+/** serialStatus === 'SOLD' → đã bán (vàng); ngược lại → chưa bán (xanh). */
+function isSerialSold(r: SerialResponse): boolean {
+  return String(r.serialStatus ?? "").toUpperCase() === "SOLD";
+}
+
 const SerialPage: React.FC = () => {
   const dispatch = useDispatch();
 
@@ -95,13 +100,16 @@ const SerialPage: React.FC = () => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
+      dataIndex: "serialStatus",
       align: "center",
-      render: (s) => (
-        <Tag color={s === "ACTIVE" ? "green" : "red"}>
-          {s === "ACTIVE" ? "TRONG KHO" : "ĐÃ BÁN"}
-        </Tag>
-      ),
+      render: (ss) => {
+        const sold = isSerialSold({ serialStatus: ss } as SerialResponse);
+        return (
+          <Tag color={sold ? "gold" : "success"}>
+            {sold ? "ĐÃ BÁN" : "TRONG KHO"}
+          </Tag>
+        );
+      },
     },
   ];
 
@@ -200,7 +208,7 @@ const SerialPage: React.FC = () => {
                   style={{ minWidth: "100px", textAlign: "center" }}
                 >
                   <Tag
-                    color="green"
+                    color="success"
                     style={{
                       border: "none",
                       background: "transparent",
@@ -215,7 +223,7 @@ const SerialPage: React.FC = () => {
                   style={{ minWidth: "100px", textAlign: "center" }}
                 >
                   <Tag
-                    color="red"
+                    color="gold"
                     style={{
                       border: "none",
                       background: "transparent",
