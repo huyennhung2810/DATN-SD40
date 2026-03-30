@@ -109,9 +109,13 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
   }, [loadOrder]);
 
   const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      message.warning("Vui lòng nhập lý do hủy đơn hàng.");
+      return;
+    }
     setActionLoading(true);
     try {
-      await cancelOrder(orderId, cancelReason || undefined);
+      await cancelOrder(orderId, cancelReason);
       message.success("Đơn hàng đã được hủy thành công");
       setCancelModalOpen(false);
       setCancelReason("");
@@ -944,13 +948,8 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
           </Button>
 
           <div style={{ display: "flex", gap: 10 }}>
-            {/* Nút hủy chỉ mất khi đang giao hàng, hoàn thành, đã hủy, hoặc giao hàng không thành công */}
-            {![
-              "DANG_GIAO",
-              "HOAN_THANH",
-              "DA_HUY",
-              "GIAO_HANG_KHONG_THANH_CONG",
-            ].includes(order.orderStatus) && (
+            {/* Chỉ cho phép hủy khi trạng thái là CHO_XAC_NHAN */}
+            {order.orderStatus === "CHO_XAC_NHAN" && (
               <Button
                 danger
                 icon={<CloseCircleOutlined />}
@@ -1027,12 +1026,17 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
           </p>
           <Input.TextArea
             rows={3}
-            placeholder="Lý do hủy đơn (không bắt buộc)"
+            placeholder="Lý do hủy đơn (bắt buộc)"
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             maxLength={300}
             showCount
           />
+          {!cancelReason.trim() && (
+            <div style={{ color: "#DC2626", fontSize: 13, marginTop: 4 }}>
+              * Vui lòng nhập lý do hủy đơn hàng
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -1055,6 +1059,7 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
               loading={actionLoading}
               onClick={handleCancel}
               style={{ minWidth: 100 }}
+              disabled={!cancelReason.trim() || actionLoading}
             >
               Xác nhận hủy
             </Button>

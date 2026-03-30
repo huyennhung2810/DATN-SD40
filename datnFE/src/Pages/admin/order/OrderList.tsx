@@ -52,7 +52,7 @@ const OrderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("ALL");
   const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState<any>(null);
-  const [_orderType, setOrderType] = useState<string | undefined>(undefined);
+  const [orderType, setOrderType] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -63,6 +63,7 @@ const OrderPage: React.FC = () => {
         size: pageSize,
         q: keyword.trim() || undefined,
         status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType || undefined,
         startDate: dateRange
           ? dayjs(dateRange[0]).startOf("day").valueOf()
           : undefined,
@@ -71,7 +72,15 @@ const OrderPage: React.FC = () => {
           : undefined,
       }),
     );
-  }, [dispatch, currentPage, pageSize, keyword, activeTab, dateRange]);
+  }, [
+    dispatch,
+    currentPage,
+    pageSize,
+    keyword,
+    activeTab,
+    dateRange,
+    orderType,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -225,10 +234,10 @@ const OrderPage: React.FC = () => {
 
           <div>
             <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-              Quản lý Hóa Đơn
+              Quản lý Đơn hàng
             </Title>
             <Text type="secondary" style={{ fontSize: "13px" }}>
-              Quản lý và theo dõi danh sách hóa đơn của cửa hàng
+              Quản lý và theo dõi danh sách đơn hàng của cửa hàng
             </Text>
           </div>
         </Space>
@@ -288,7 +297,17 @@ const OrderPage: React.FC = () => {
               placeholder="Tất cả"
               style={{ width: "100%", marginTop: 8 }}
               allowClear
-              onChange={setOrderType}
+              value={orderType}
+              onChange={(val) => {
+                setOrderType(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: undefined, label: "Tất cả" },
+                { value: "OFFLINE", label: "Tại quầy" },
+                { value: "ONLINE", label: "Online" },
+                { value: "GIAO_HANG", label: "Giao hàng" },
+              ]}
             />
           </Col>
           <Col span={4}>

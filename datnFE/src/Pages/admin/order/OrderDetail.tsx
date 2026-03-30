@@ -1486,6 +1486,10 @@ const OrderDetailPage: React.FC = () => {
         confirmLoading={isUpdating}
         okText="Xác nhận"
         cancelText="Hủy"
+        okButtonProps={{
+          disabled:
+            (nextStatus === "DA_HUY" && !statusNote.trim()) || isUpdating,
+        }}
       >
         <div
           style={{
@@ -1515,7 +1519,9 @@ const OrderDetailPage: React.FC = () => {
           placeholder={
             nextStatus === "GIAO_HANG_KHONG_THANH_CONG"
               ? "Bắt buộc nhập lý do..."
-              : "Ghi chú (tùy chọn)..."
+              : nextStatus === "DA_HUY"
+                ? "Bắt buộc nhập lý do hủy đơn..."
+                : "Ghi chú (tùy chọn)..."
           }
           value={statusNote}
           onChange={(e) => setStatusNote(e.target.value)}
@@ -1523,6 +1529,11 @@ const OrderDetailPage: React.FC = () => {
         {nextStatus === "GIAO_HANG_KHONG_THANH_CONG" && (
           <div style={{ color: "#fa541c", marginTop: 8 }}>
             * Bắt buộc nhập lý do giao hàng không thành công
+          </div>
+        )}
+        {nextStatus === "DA_HUY" && !statusNote.trim() && (
+          <div style={{ color: "#fa541c", marginTop: 8 }}>
+            * Vui lòng nhập lý do hủy đơn hàng
           </div>
         )}
       </Modal>
