@@ -467,36 +467,40 @@ const OrderDetailPage: React.FC = () => {
 
   const handleSaveSerialChange = async () => {
     if (!serialChangeRow) return;
-    const required = serialChangeRow.soLuong || 1;
+
+    const isSwapping = !!serialChangeRow.serialId;
+
+    const required = isSwapping ? 1 : serialChangeRow.soLuong || 1;
+
     const selected = Array.isArray(selectedNewSerial)
       ? selectedNewSerial
       : selectedNewSerial
         ? [selectedNewSerial]
         : [];
+
     if (selected.length !== required) {
       message.warning(`Vui lòng chọn đủ ${required} serial`);
       return;
     }
+
     setChangingSerial(true);
     try {
-      // Gửi từng serial nếu số lượng > 1
       for (const newImeiId of selected) {
         await orderApi.assignSerials({
-          hoaDonChiTietId: serialChangeRow.detailId,
-          oldImeiId: "", // Gán mới
+          hoaDonChiTietId: serialChangeRow.detailId, // Trả về ID cũ nếu là thao tác Đổi, ngược lại rỗng
+          oldImeiId: isSwapping ? serialChangeRow.serialId : "",
           newImeiId,
         });
       }
-      message.success("Gán serial thành công");
+      message.success(
+        isSwapping ? "Đổi serial thành công" : "Gán serial thành công",
+      );
       setSerialChangeOpen(false);
       await fetchOrder();
     } catch (err: any) {
       console.error("[assignSerials] error:", err);
       const errMsg =
-        err?.message ||
-        err?.data?.message ||
-        err?.error ||
-        "Đổi serial thất bại";
+        err?.message || err?.data?.message || err?.error || "Thao tác thất bại";
       message.error(errMsg);
     } finally {
       setChangingSerial(false);
@@ -838,12 +842,14 @@ const OrderDetailPage: React.FC = () => {
       key: "checkbox",
       width: 50,
       render: (_: unknown, r: { id: string; code: string }) => {
-        const required = serialChangeRow?.soLuong || 1;
+        const isSwapping = !!serialChangeRow?.serialId;
+        const required = isSwapping ? 1 : serialChangeRow?.soLuong || 1;
         const selected = Array.isArray(selectedNewSerial)
           ? selectedNewSerial
           : selectedNewSerial
             ? [selectedNewSerial]
             : [];
+
         return required === 1 ? (
           <Radio
             checked={selected.includes(r.id)}
@@ -1790,8 +1796,12 @@ const OrderDetailPage: React.FC = () => {
                 columns={availableSerialColumns}
                 pagination={false}
                 size="small"
-                rowSelection={
-                  (serialChangeRow?.soLuong || 1) > 1
+                rowSelection={(() => {
+                  const isSwapping = !!serialChangeRow?.serialId;
+                  const required = isSwapping
+                    ? 1
+                    : serialChangeRow?.soLuong || 1;
+                  return required > 1
                     ? {
                         type: "checkbox",
                         selectedRowKeys: Array.isArray(selectedNewSerial)
@@ -1804,12 +1814,11 @@ const OrderDetailPage: React.FC = () => {
                         getCheckboxProps: () => ({
                           disabled:
                             Array.isArray(selectedNewSerial) &&
-                            selectedNewSerial.length >=
-                              (serialChangeRow?.soLuong || 1),
+                            selectedNewSerial.length >= required,
                         }),
                       }
-                    : undefined
-                }
+                    : undefined;
+                })()}
               />
             )}
           </div>
