@@ -109,6 +109,8 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
                     // Lấy Trạng thái (ép kiểu Enum sang String nếu cần)
                     sRes.setStatus(s.getStatus() != null ? s.getStatus() : null);
 
+                    sRes.setSerialStatus(s.getSerialStatus());
+
                     // Lấy Ngày thêm và format
                     sRes.setCreatedDate(s.getCreatedDate() != null ? Helper.formatDate(s.getCreatedDate()) : null);
 
@@ -187,7 +189,14 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
 
         List<ProductImage> productImage = productImageRepository.findByProduct_Id(request.getProductId());
 
-        spct.setImageUrl(productImage.get(0).getUrl());
+        if (productImage != null && !productImage.isEmpty()) {
+            // Nếu có ảnh, lấy ảnh đầu tiên làm mặc định
+            spct.setImageUrl(productImage.get(0).getUrl());
+        } else {
+            // Nếu không có ảnh nào, để null hoặc một đường dẫn ảnh mặc định
+            spct.setImageUrl(null);
+            // Hoặc: spct.setImageUrl("default-image.jpg");
+        }
         spct.setSelectedImageId(request.getSelectedImageId());
 
         // LƯU SPCT LẦN 1: Để Database sinh ra ID cho cái SPCT này
@@ -210,6 +219,7 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
 
                 // Default status to ACTIVE if not provided
                 serial.setStatus(sReq.getStatus() != null ? sReq.getStatus() : EntityStatus.ACTIVE);
+
                 serial.setProductDetail(spct);
                 serial.setProductDetail(savedSpct);
                 return serial;

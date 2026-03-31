@@ -44,6 +44,8 @@ const ProductDetailPage: React.FC = () => {
   const [selectedSerials, setSelectedSerials] = useState<any[]>([]);
   const [viewingProductName, setViewingProductName] = useState("");
   const [loadingSerials, setLoadingSerials] = useState(false);
+  const isSerialInOrder = (status: string) => String(status ?? "").toUpperCase() === "IN_ORDER";
+  const isSerialSold = (status: string) => String(status ?? "").toUpperCase() === "SOLD" || String(status ?? "").toUpperCase() === "INACTIVE";
 
   // 1. Lấy dữ liệu Màu sắc và Dung lượng từ Redux (kèm fallback mảng rỗng để tránh lỗi map)
   const { list: colors = [] } = useSelector(
@@ -54,42 +56,41 @@ const ProductDetailPage: React.FC = () => {
   );
 
   const handleViewSerials = (record: ProductDetailResponse) => {
-    if (!record || !record.id) return;
+  if (!record || !record.id) return;
 
-    setSerialModalOpen(true);
-    setViewingProductName(
-      `${record.productName || "Sản phẩm"} - ${record.version || ""}`
-    );
-    setLoadingSerials(true);
+  setSerialModalOpen(true);
+  setViewingProductName(`${record.productName || "Sản phẩm"} - ${record.version || ""}`);
+  setLoadingSerials(true);
 
-    dispatch(
-      productDetailActions.getById({
-        id: record.id,
-        onSuccess: (response: any) => {
-          const productDetail = response.data ? response.data : response;
+  dispatch(
+    productDetailActions.getById({
+      id: record.id,
+      onSuccess: (response: any) => {
+        const productDetail = response.data ? response.data : response;
 
-          if (productDetail && productDetail.serials) {
-            // Lọc và giữ lại nguyên object thay vì chỉ lấy string
-            const serialsList = productDetail.serials
-              .filter(
-                (s: any) =>
-                  s.serialNumber && String(s.serialNumber).trim() !== ""
-              )
-              .map((s: any) => ({
-                serialNumber: String(s.serialNumber),
-                status: s.status || s.serialStatus, // Tùy BE trả về trường nào
-                createdDate: s.createdDate,
-              }));
+        if (productDetail && productDetail.serials) {
+          const serialsList = productDetail.serials
+            .filter((s: any) => s.serialNumber && String(s.serialNumber).trim() !== "")
+            .map((s: any) => ({
+              serialNumber: String(s.serialNumber),
+              
+              // --- THAY ĐỔI Ở ĐÂY ---
+              // Ưu tiên lấy serialStatus (IN_ORDER, SOLD, AVAILABLE) từ BE
+              status: s.serialStatus || s.status, 
+              // -----------------------
+              
+              createdDate: s.createdDate,
+            }));
 
-            setSelectedSerials(serialsList);
-          } else {
-            setSelectedSerials([]);
-          }
-          setLoadingSerials(false);
-        },
-      })
-    );
-  };
+          setSelectedSerials(serialsList);
+        } else {
+          setSelectedSerials([]);
+        }
+        setLoadingSerials(false);
+      },
+    })
+  );
+};
 
   // 2. Lấy danh sách SPCT (list) và Sản phẩm cha (productList) từ productDetailSlice
   const {
@@ -679,12 +680,12 @@ const ProductDetailPage: React.FC = () => {
                   }
                 />
                 <div>
-                  {item.status === "ACTIVE" ? (
-                    <Tag color="green">TRONG KHO</Tag>
-                  ) : item.status === "INACTIVE" ? (
+                  {isSerialInOrder(item.status) ? (
+                    <Tag color="orange">ĐANG TRONG ĐƠN</Tag>
+                  ) : isSerialSold(item.status) ? (
                     <Tag color="red">ĐÃ BÁN</Tag>
                   ) : (
-                    <Tag color="default">{item.status || "KHÔNG RÕ"}</Tag>
+                    <Tag color="green">TRONG KHO</Tag>
                   )}
                 </div>
               </List.Item>

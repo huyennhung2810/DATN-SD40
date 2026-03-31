@@ -33,4 +33,6 @@ public interface SerialRepository extends JpaRepository<Serial, String> {
 
     // Lấy danh sách serial theo productDetailId và trạng thái
     List<Serial> findByProductDetailIdAndSerialStatus(String productDetailId, SerialStatus serialStatus);
+
+    List<Serial> findByOrderDetailId(String id);
 }
