@@ -130,10 +130,16 @@ const BASE = "/client/orders";
 export const getOrderList = async (
   status?: string,
   page = 0,
-  size = 8
+  size = 8,
+  keyword?: string // Thêm tham số keyword vào đây
 ): Promise<OrderPageResponse> => {
   const params: Record<string, string | number> = { page, size };
+  
   if (status && status !== "all") params.status = status;
+  
+  // Kiểm tra nếu có keyword thì đẩy vào params
+  if (keyword) params.q = keyword;
+
   const res = await axiosClient.get<ResponseObject<Page<CustomerOrderListResponse>>>(BASE, { params });
   return res.data;
 };
