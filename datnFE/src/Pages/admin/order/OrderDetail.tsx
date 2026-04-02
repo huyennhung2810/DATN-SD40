@@ -13,7 +13,6 @@ import {
   Input,
   message,
   Modal,
-  Radio,
   Row,
   Space,
   Spin,
@@ -837,43 +836,6 @@ const OrderDetailPage: React.FC = () => {
   ];
 
   const availableSerialColumns: ColumnsType<{ id: string; code: string }> = [
-    {
-      title: "",
-      key: "checkbox",
-      width: 50,
-      render: (_: unknown, r: { id: string; code: string }) => {
-        const isSwapping = !!serialChangeRow?.serialId;
-        const required = isSwapping ? 1 : serialChangeRow?.soLuong || 1;
-        const selected = Array.isArray(selectedNewSerial)
-          ? selectedNewSerial
-          : selectedNewSerial
-            ? [selectedNewSerial]
-            : [];
-
-        return required === 1 ? (
-          <Radio
-            checked={selected.includes(r.id)}
-            onChange={() => setSelectedNewSerial(r.id)}
-          />
-        ) : (
-          <input
-            type="checkbox"
-            checked={selected.includes(r.id)}
-            onChange={() => {
-              if (selected.includes(r.id)) {
-                setSelectedNewSerial(selected.filter((id) => id !== r.id));
-              } else {
-                if (selected.length < required) {
-                  setSelectedNewSerial([...selected, r.id]);
-                } else {
-                  message.warning(`Chỉ được chọn tối đa ${required} serial`);
-                }
-              }
-            }}
-          />
-        );
-      },
-    },
     { title: "Serial", dataIndex: "code" },
   ];
 
@@ -1801,23 +1763,40 @@ const OrderDetailPage: React.FC = () => {
                   const required = isSwapping
                     ? 1
                     : serialChangeRow?.soLuong || 1;
-                  return required > 1
-                    ? {
-                        type: "checkbox",
-                        selectedRowKeys: Array.isArray(selectedNewSerial)
-                          ? selectedNewSerial
-                          : selectedNewSerial
-                            ? [selectedNewSerial]
-                            : [],
-                        onChange: (selectedRowKeys) =>
-                          setSelectedNewSerial(selectedRowKeys as string[]),
-                        getCheckboxProps: () => ({
-                          disabled:
-                            Array.isArray(selectedNewSerial) &&
-                            selectedNewSerial.length >= required,
-                        }),
+
+                  // Đảm bảo selectedKeys luôn là mảng để Antd đọc được
+                  const selectedKeys = Array.isArray(selectedNewSerial)
+                    ? selectedNewSerial
+                    : selectedNewSerial
+                      ? [selectedNewSerial]
+                      : [];
+
+                  return {
+                    type: required > 1 ? "checkbox" : "radio", // Tự động đổi Radio/Checkbox
+                    selectedRowKeys: selectedKeys,
+                    onChange: (selectedRowKeys) => {
+                      if (required === 1) {
+                        // Trực tiếp lưu string nếu chỉ cần 1
+                        setSelectedNewSerial(selectedRowKeys[0] as string);
+                      } else {
+                        // Chặn chọn lố số lượng
+                        if (selectedRowKeys.length > required) {
+                          message.warning(
+                            `Chỉ được chọn tối đa ${required} serial`,
+                          );
+                          return;
+                        }
+                        setSelectedNewSerial(selectedRowKeys as string[]);
                       }
-                    : undefined;
+                    },
+                    getCheckboxProps: (record) => ({
+                      // Disable các ô chưa chọn nếu đã chọn đủ số lượng
+                      disabled:
+                        required > 1 &&
+                        selectedKeys.length >= required &&
+                        !selectedKeys.includes(record.id),
+                    }),
+                  };
                 })()}
               />
             )}
