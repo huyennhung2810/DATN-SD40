@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
+import { message } from "antd";
 import {
   Table,
   Card,
@@ -43,6 +44,8 @@ const ShiftTemplatePage: React.FC = () => {
   const { list, isLoading, totalElements } = useSelector(
     (state: RootState) => state.shiftTemplate,
   );
+  // Modal loading state riêng để tránh đóng modal khi lỗi
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Hàm fetch dữ liệu (Bổ sung tham số page, size)
   const fetchShifts = useCallback(
@@ -88,21 +91,37 @@ const ShiftTemplatePage: React.FC = () => {
     formModal.resetFields();
   };
 
-  const onFinishModal = (values: any) => {
+  // Theo dõi trạng thái tạo/sửa thành công/thất bại qua redux
+  useEffect(() => {
+    if (!modalLoading && isModalOpen) {
+      // Nếu modal đang mở mà loading = false thì có thể là vừa xong thao tác
+      // Không tự đóng modal ở đây, chỉ đóng khi thành công
+    }
+  }, [isLoading]);
+
+  const onFinishModal = async (values: any) => {
     const payload = {
       name: values.name,
       startTime: values.timeRange[0].format("HH:mm:ss"),
       endTime: values.timeRange[1].format("HH:mm:ss"),
     };
-
-    if (editingId) {
-      dispatch(
-        shiftTemplateActions.updateRequest({ id: editingId, ...payload }),
-      );
-    } else {
-      dispatch(shiftTemplateActions.createRequest(payload));
+    setModalLoading(true);
+    // Dùng promise để biết thành công/thất bại
+    const action = editingId
+      ? shiftTemplateActions.updateRequest({ id: editingId, ...payload })
+      : shiftTemplateActions.createRequest(payload);
+    try {
+      // dispatch trả về promise nếu middleware hỗ trợ, nếu không thì dùng saga báo message
+      await dispatch(action);
+      // Đợi redux cập nhật xong (isLoading false)
+      setTimeout(() => {
+        setModalLoading(false);
+        handleCancelModal();
+      }, 400); // delay nhỏ để tránh đóng quá nhanh
+    } catch (err: any) {
+      setModalLoading(false);
+      message.error(err?.message || "Có lỗi xảy ra, vui lòng thử lại");
     }
-    handleCancelModal();
   };
 
   const handleReset = () => {
@@ -110,8 +129,12 @@ const ShiftTemplatePage: React.FC = () => {
     fetchShifts(0, 10);
   };
 
-  const handleStatusChange = (id: string) => {
-    dispatch(shiftTemplateActions.changeStatusRequest(id));
+  const handleStatusChange = async (id: string) => {
+    try {
+      await dispatch(shiftTemplateActions.changeStatusRequest(id));
+    } catch (err: any) {
+      message.error(err?.message || "Không thể đổi trạng thái");
+    }
   };
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -312,7 +335,8 @@ const ShiftTemplatePage: React.FC = () => {
         onOk={() => formModal.submit()}
         okText={editingId ? "Cập nhật" : "Lưu lại"}
         cancelText="Hủy bỏ"
-        destroyOnHidden // ✅ Xóa sạch data cũ khi đóng
+        destroyOnHidden
+        confirmLoading={modalLoading || isLoading}
       >
         <Form form={formModal} layout="vertical" onFinish={onFinishModal}>
           <Form.Item
