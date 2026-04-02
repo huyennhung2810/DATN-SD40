@@ -54,6 +54,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     @Override
     @Transactional
     public ResponseObject<?> capNhatTrangThaiHoaDon(ADChangeStatusRequest request) {
+
         try {
             log.info("Bắt đầu cập nhật trạng thái hóa đơn: {}", request.getMaHoaDon());
 
@@ -65,6 +66,24 @@ public class ADOrderServiceImpl implements ADOrderService {
             OrderStatus trangThaiMoi = request.getStatusTrangThaiHoaDon();
 
             log.info("Trạng thái cũ: {}, Trạng thái mới: {}", trangThaiCu, trangThaiMoi);
+
+            // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là COD thì chuyển
+            if (trangThaiMoi == OrderStatus.HOAN_THANH
+                    && (hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.ONLINE
+                            || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
+                    && "COD".equalsIgnoreCase(hoaDon.getPaymentMethod())) {
+                hoaDon.setPaymentMethod("TIEN_MAT");
+                log.info("[ONLINE] Đã tự động chuyển payment_method COD -> TIEN_MAT cho hóa đơn {}", hoaDon.getCode());
+            }
+
+            // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là VNPAY thì chuyển thành CHUYEN_KHOAN để tính doanh thu ca
+            if (trangThaiMoi == OrderStatus.HOAN_THANH
+                    && (hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.ONLINE
+                        || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
+                    && "VNPAY".equalsIgnoreCase(hoaDon.getPaymentMethod())) {
+                hoaDon.setPaymentMethod("CHUYEN_KHOAN");
+                log.info("[ONLINE] Đã tự động chuyển payment_method VNPAY -> CHUYEN_KHOAN cho hóa đơn {}", hoaDon.getCode());
+            }
 
             // Kiểm tra luồng trạng thái hợp lệ
             kiemTraChuyenTrangThai(trangThaiCu, trangThaiMoi);
@@ -119,7 +138,6 @@ public class ADOrderServiceImpl implements ADOrderService {
                     request.getNote(),
                     nhanVien);
 
-
             List<OrderDetail> orderDetail = new ArrayList<>();
             // XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
             switch (trangThaiMoi) {
@@ -133,7 +151,8 @@ public class ADOrderServiceImpl implements ADOrderService {
 
                         // Kiểm tra tồn kho trước khi trừ
                         if (product.getQuantity() < soLuongMua) {
-                            throw new RuntimeException("Sản phẩm " + product.getProduct().getName() + " không đủ hàng trong kho!");
+                            throw new RuntimeException(
+                                    "Sản phẩm " + product.getProduct().getName() + " không đủ hàng trong kho!");
                         }
 
                         // Trừ số lượng tồn kho
