@@ -48,11 +48,14 @@ import { productDetailApi } from "../../../api/productDetailApi";
 import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
 import ReceiptTemplate from "../../../Pages/admin/pos/ReceiptTemplate";
+import { useAppSelector } from "../../../app/hook";
 const { useEffect, useState, useRef } = React;
 
 const { Title, Text } = Typography;
 
 const PosPage: React.FC = () => {
+  // Lấy thông tin nhân viên đăng nhập
+  const authUser = useAppSelector((state) => state.auth.user);
   // Orders / Cart State
   const [orders, setOrders] = useState<any[]>([]);
   const [activeKey, setActiveKey] = useState<string>("");
@@ -1855,6 +1858,7 @@ const PosPage: React.FC = () => {
         change={checkoutSuccessModal.change}
         voucherSaving={checkoutSuccessModal.voucherSaving}
         customerName={checkoutSuccessModal.customerName}
+        staffName={authUser?.fullName || authUser?.username || ""}
       />
 
       {/* Modal Thông tin người nhận */}
