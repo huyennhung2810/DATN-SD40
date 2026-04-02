@@ -20,6 +20,9 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { shiftHandoverApi } from "../../../api/shiftHandoverApi";
+import { shiftActions } from "../../../redux/shiftHandover/shiftHandoverSlice";
 import { useSelector } from "react-redux";
 import { workScheduleApi } from "../../../api/workScheduleApi";
 import { getGreeting } from "../../../constants/time";
@@ -34,6 +37,32 @@ const ShiftHandoverPage: React.FC = () => {
   const { currentShift, isLoading: isShiftLoading } = useSelector(
     (state: RootState) => state.shiftHandover,
   );
+  const dispatch = useDispatch();
+
+  // Xác định ID ca làm việc (Lấy scheduleId mới thêm, fallback về workScheduleId)
+  const targetId = currentShift?.scheduleId || currentShift?.workScheduleId;
+  
+  useEffect(() => {
+    const fetchShiftStats = async () => {
+      if (targetId) {
+        try {
+          const res = await shiftHandoverApi.getShiftStats(targetId);
+          const statsData = (res as any).data || res;
+          console.log("=== THỐNG KÊ CA TỪ BACKEND ===", statsData);
+          dispatch(
+            shiftActions.checkInSuccess({ ...currentShift, ...statsData }),
+          );
+        } catch (err) {
+          // Không cần báo lỗi, chỉ log
+          console.error("Không thể cập nhật lại thông tin ca làm việc:", err);
+        }
+      }
+    };
+    if (currentShift) {
+      fetchShiftStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetId]);
   const { user } = useSelector((state: RootState) => state.auth);
 
   // --- LOCAL STATE ---
@@ -45,7 +74,7 @@ const ShiftHandoverPage: React.FC = () => {
   } | null>(null);
   const [fetchingSchedule, setFetchingSchedule] = useState<boolean>(false);
 
-  // --- LOGIC: LẤY LỊCH TRỰC HÔM NAY ---
+  //  LẤY LỊCH TRỰC HÔM NAY ---
   const fetchTodaySchedule = useCallback(async () => {
     // Nếu đã trong ca thì không cần tìm lịch trực nữa
     if (!user?.userId || !!currentShift) return;
@@ -194,7 +223,7 @@ const ShiftHandoverPage: React.FC = () => {
                   </div>
 
                   <Row gutter={[16, 16]} style={{ marginBottom: 25 }}>
-                    <Col span={12}>
+                    <Col span={6}>
                       <Card
                         size="small"
                         style={{ borderRadius: 12, background: "#fafafa" }}
@@ -206,13 +235,13 @@ const ShiftHandoverPage: React.FC = () => {
                             </Text>
                           }
                           value={dayjs(currentShift.checkInTime).format(
-                            "HH:mm",
+                            "HH:mm:ss DD/MM/YYYY",
                           )}
                           valueStyle={{ fontSize: "20px", fontWeight: 700 }}
                         />
                       </Card>
                     </Col>
-                    <Col span={12}>
+                    <Col span={6}>
                       <Card
                         size="small"
                         style={{ borderRadius: 12, background: "#fafafa" }}
@@ -229,6 +258,48 @@ const ShiftHandoverPage: React.FC = () => {
                             fontSize: "20px",
                             fontWeight: 700,
                             color: "#52c41a",
+                          }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={6}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
+                            <Text type="secondary">
+                              <DollarCircleOutlined /> Doanh thu tiền mặt
+                            </Text>
+                          }
+                          value={currentShift.totalCashSales || 0}
+                          suffix="₫"
+                          valueStyle={{
+                            fontSize: "20px",
+                            fontWeight: 700,
+                            color: "#faad14",
+                          }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={6}>
+                      <Card
+                        size="small"
+                        style={{ borderRadius: 12, background: "#fafafa" }}
+                      >
+                        <Statistic
+                          title={
+                            <Text type="secondary">
+                              <DollarCircleOutlined /> Doanh thu chuyển khoản
+                            </Text>
+                          }
+                          value={currentShift.totalBankSales || 0}
+                          suffix="₫"
+                          valueStyle={{
+                            fontSize: "20px",
+                            fontWeight: 700,
+                            color: "#1890ff",
                           }}
                         />
                       </Card>
@@ -283,7 +354,6 @@ const ShiftHandoverPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* --- CÁC MODAL CHỨC NĂNG --- */}
       <CheckInModal
         isOpen={isCheckInOpen}
         onClose={() => setIsCheckInOpen(false)}
@@ -293,7 +363,7 @@ const ShiftHandoverPage: React.FC = () => {
       <CheckOutModal
         isOpen={isCheckOutOpen}
         onClose={() => setIsCheckOutOpen(false)}
-        scheduleId={currentShift?.workScheduleId || todaySchedule?.id || ""}
+        scheduleId={targetId || todaySchedule?.id || ""}
       />
     </div>
   );

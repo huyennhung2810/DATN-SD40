@@ -87,9 +87,8 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
         // Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
-        BigDecimal systemCashSales = shiftHandoverRepository.sumCashRevenue(
-                empId, OrderStatus.HOAN_THANH, handover.getCheckInTime(), endTime);
-
+        BigDecimal systemCashSales = shiftHandoverRepository.sumRevenue(
+            OrderStatus.HOAN_THANH, "TIEN_MAT", handover.getCheckInTime(), endTime);
         // Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
         BigDecimal actual = Optional.ofNullable(request.getActualCash()).orElse(BigDecimal.ZERO);
@@ -143,9 +142,24 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
     }
 
     private ADShiftHandoverStatsResponse mapToStats(ShiftHandover h) {
+        Long checkInTime = h.getCheckInTime();
+        Long now = System.currentTimeMillis();
+
+        BigDecimal cashSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "TIEN_MAT", checkInTime, now); 
+
+        BigDecimal bankSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", checkInTime, now); 
+        BigDecimal finalCashSales = cashSales != null ? cashSales : BigDecimal.ZERO;
+        BigDecimal finalBankSales = bankSales != null ? bankSales : BigDecimal.ZERO;
+        BigDecimal finalInitialCash = h.getInitialCash() != null ? h.getInitialCash() : BigDecimal.ZERO;
+
         return ADShiftHandoverStatsResponse.builder()
                 .handoverId(h.getId())
-                .initialCash(h.getInitialCash())
+                .scheduleId(h.getWorkSchedule().getId())
+                .initialCash(finalInitialCash)
+                .totalCashSales(finalCashSales)
+                .totalBankSales(finalBankSales)
                 .build();
     }
 
@@ -161,8 +175,6 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         // Pageable giúp hệ thống không bị chậm khi có hàng nghìn bản ghi
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
 
-        // Nếu staffId là rỗng hoặc chỉ chứa khoảng trắng thì set thành null để lấy tất
-        // cả
         String staffId = (request.getStaffId() != null && request.getStaffId().trim().isEmpty()) ? null
                 : request.getStaffId();
 

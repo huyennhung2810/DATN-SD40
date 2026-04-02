@@ -19,28 +19,50 @@ import type { RootState } from "../../../redux/store";
 
 const { Text, Title } = Typography;
 
-const CheckOutModal = ({ isOpen, onClose, scheduleId }: any) => {
+const CheckOutModal = ({ isOpen, onClose, scheduleId: _scheduleId }: any) => {
+  // Lấy scheduleId từ Redux (ưu tiên ca đang mở)
+  const { currentShift } = useSelector(
+    (state: RootState) => state.shiftHandover,
+  );
+  const scheduleId =
+    currentShift?.workScheduleId || currentShift?.id || _scheduleId || "";
   const [form] = Form.useForm();
   const dispatch = useDispatch();
 
   // Lấy dữ liệu từ store và form
   const { isLoading } = useSelector((state: RootState) => state.shiftHandover);
-  const [initialCash, setInitialCash] = useState(0); // Tiền đầu ca
-  const [systemSales, setSystemSales] = useState(0); // Doanh thu trong ca
+  const [initialCash, setInitialCash] = useState(
+    currentShift?.initialCash || 0,
+  );
+  const [systemSales, setSystemSales] = useState(
+    currentShift?.totalCashSales || 0,
+  );
+  const [bankSales, setBankSales] = useState(currentShift?.totalBankSales || 0);
 
   const actualCash = Form.useWatch("actualCash", form) || 0;
   const withdraw = Form.useWatch("withdrawAmount", form) || 0;
 
-  // Logic lấy dữ liệu đối soát
+  //useEffect GỌI API:
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
       if (!isOpen || !scheduleId) return;
+      console.log("[CheckOutModal] scheduleId truyền vào:", scheduleId);
       try {
         const res = await shiftHandoverApi.getShiftStats(scheduleId);
+        console.log("[CheckOutModal] Kết quả getShiftStats:", res);
         if (isMounted) {
-          setInitialCash((res as any).initialCash || 0);
-          setSystemSales((res as any).totalCashSales || 0);
+          const statsData = (res as any).data || res;
+
+          setInitialCash(
+            statsData.initialCash ?? currentShift?.initialCash ?? 0,
+          );
+          setSystemSales(
+            statsData.totalCashSales ?? currentShift?.totalCashSales ?? 0,
+          );
+          setBankSales(
+            statsData.totalBankSales ?? currentShift?.totalBankSales ?? 0,
+          );
         }
       } catch (err) {
         console.error("Lỗi khi lấy dữ liệu đối soát:", err);
@@ -51,7 +73,7 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId }: any) => {
     return () => {
       isMounted = false;
     };
-  }, [isOpen, scheduleId]);
+  }, [isOpen, scheduleId, currentShift]);
 
   // Công thức: Tiền kỳ vọng có trong két = (Đầu ca + Doanh thu) - Số tiền đã rút
   const expectedCash = initialCash + systemSales - withdraw;
@@ -63,13 +85,16 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId }: any) => {
       message.error("Tiền mặt bị lệch! Vui lòng nhập lý do vào phần ghi chú.");
       return;
     }
+    // Đảm bảo các trường đúng kiểu số
+    const payload = {
+      ...values,
+      scheduleId,
+      actualCash: Number(values.actualCash),
+      withdrawAmount: Number(values.withdrawAmount) || 0,
+    };
+    console.log("[CheckOutModal] Payload gửi lên checkOutRequest:", payload);
     //Gửi request kết ca lên server
-    dispatch(
-      shiftActions.checkOutRequest({
-        ...values,
-        scheduleId,
-      }),
-    );
+    dispatch(shiftActions.checkOutRequest(payload));
   };
 
   return (
@@ -109,11 +134,15 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId }: any) => {
               <Text>{initialCash.toLocaleString()} ₫</Text>
             </Row>
             <Row justify="space-between" style={{ marginTop: 8 }}>
-              <Text>Doanh thu tiền mặt (Hệ thống):</Text>
+              <Text>Doanh thu tiền mặt:</Text>
               <Text>+ {systemSales.toLocaleString()} ₫</Text>
             </Row>
             <Row justify="space-between" style={{ marginTop: 8 }}>
-              <Text>Tiền rút ra nộp sếp:</Text>
+              <Text>Doanh thu chuyển khoản:</Text>
+              <Text>+ {bankSales.toLocaleString()} ₫</Text>
+            </Row>
+            <Row justify="space-between" style={{ marginTop: 8 }}>
+              <Text>Tiền rút ra và nộp lại:</Text>
               <Text>- {withdraw.toLocaleString()} ₫</Text>
             </Row>
             <Divider style={{ margin: "12px 0" }} />

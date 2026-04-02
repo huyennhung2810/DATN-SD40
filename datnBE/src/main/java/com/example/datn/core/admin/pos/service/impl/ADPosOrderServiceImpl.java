@@ -15,6 +15,7 @@ import com.example.datn.infrastructure.payment.VNPayService;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
+import com.example.datn.repository.ShiftHandoverRepository;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
 import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
 import com.example.datn.infrastructure.constant.PaymentStatus;
@@ -99,6 +100,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final EmployeeRepository employeeRepository;
     private final OrderHistoryRepository orderHistoryRepository;
     private final VoucherDetailRepository voucherDetailRepository;
+    private final ShiftHandoverRepository shiftHandoverRepository;
 
     @Override
     @Transactional
@@ -118,6 +120,11 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         // Gán nhân viên thực hiện bán hàng tại thời điểm tạo hóa đơn
         Employee currentEmployee = getCurrentEmployee();
         order.setEmployee(currentEmployee);
+        // Gán ca làm việc hiện tại cho đơn hàng
+        if (currentEmployee.getAccount() != null) {
+            shiftHandoverRepository.findOpenShiftByAccountId(currentEmployee.getAccount().getId())
+                    .ifPresent(order::setShiftHandover);
+        }
         posOrderRepository.save(order);
         logger.info("[POS] Đã tạo hóa đơn trống thành công, orderId={}", order.getId());
         return ResponseObject.success(order, "Tạo hóa đơn tại quầy thành công");
@@ -502,6 +509,13 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             order.setCustomerPaid(request.getCustomerPaid());
         }
 
+        // Gán lại ca làm việc hiện tại cho đơn hàng (phòng trường hợp tạo đơn xong mới
+        // mở ca)
+        Employee currentEmployee = getCurrentEmployee();
+        if (currentEmployee.getAccount() != null) {
+            shiftHandoverRepository.findOpenShiftByAccountId(currentEmployee.getAccount().getId())
+                    .ifPresent(order::setShiftHandover);
+        }
         // Update Order status
         // GIAO_HANG: đã xác nhận + đã thanh toán nhưng chưa giao → DA_XAC_NHAN
         // OFFLINE: khách lấy hàng ngay tại quầy → HOAN_THANH

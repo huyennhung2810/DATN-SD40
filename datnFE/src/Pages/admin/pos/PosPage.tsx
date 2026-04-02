@@ -43,6 +43,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { useReactToPrint } from "react-to-print";
 import type { CheckoutPosRequest } from "../../../api/admin/posApi";
 import { posApi } from "../../../api/admin/posApi";
+import shiftHandoverApi from "../../../api/shiftHandoverApi";
+import { useDispatch, useSelector } from "react-redux";
+import { shiftActions } from "../../../redux/shiftHandover/shiftHandoverSlice";
+import type { RootState } from "../../../redux/store";
 import { customerApi } from "../../../api/customerApi";
 import { productDetailApi } from "../../../api/productDetailApi";
 import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
@@ -54,6 +58,10 @@ const { useEffect, useState, useRef } = React;
 const { Title, Text } = Typography;
 
 const PosPage: React.FC = () => {
+  const dispatch = useDispatch();
+  const currentShift = useSelector(
+    (state: RootState) => state.shiftHandover.currentShift,
+  );
   // Lấy thông tin nhân viên đăng nhập
   const authUser = useAppSelector((state) => state.auth.user);
   // Orders / Cart State
@@ -917,6 +925,24 @@ const PosPage: React.FC = () => {
           ),
           customerName: activeOrder?.customer?.name,
         });
+
+        // --- Cập nhật lại doanh thu ca làm việc ---
+        if (currentShift?.workScheduleId) {
+          try {
+            const stats = await shiftHandoverApi.getShiftStats(
+              currentShift.workScheduleId,
+            );
+            // Cập nhật toàn bộ thông tin ca làm việc mới nhất vào Redux/localStorage
+            dispatch(
+              shiftActions.checkInSuccess({
+                ...currentShift,
+                ...stats,
+              }),
+            );
+          } catch (err) {
+            console.error("Không thể cập nhật doanh thu ca làm việc:", err);
+          }
+        }
 
         fetchPendingOrders();
       }
