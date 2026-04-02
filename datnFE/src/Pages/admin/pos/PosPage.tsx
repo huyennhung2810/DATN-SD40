@@ -1348,18 +1348,26 @@ const PosPage: React.FC = () => {
                 <Space.Compact style={{ width: "100%" }}>
                   <Select
                     showSearch
-                    placeholder={
-                      activeOrder && activeOrder.customer
-                        ? `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber}`
-                        : "Chọn khách hàng (Có thể để trống)"
-                    }
+                    placeholder="Chọn khách hàng (Có thể để trống)"
                     style={{ flex: 1 }}
                     allowClear
+                    value={activeOrder?.customer?.id || undefined}
+                    options={
+                      customerOptions.length > 0
+                        ? customerOptions
+                        : activeOrder?.customer
+                          ? [
+                              {
+                                value: activeOrder.customer.id,
+                                label: `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber || "N/A"}`,
+                              },
+                            ]
+                          : []
+                    }
                     onSearch={handleSearchCustomer}
                     onChange={handleSelectCustomer}
                     onOpenChange={handleCustomerDropdownOpenChange}
                     filterOption={false}
-                    options={customerOptions}
                     loading={fetchingCustomer}
                     suffixIcon={<UserOutlined />}
                     notFoundContent={
@@ -2307,6 +2315,24 @@ const PosPage: React.FC = () => {
                   open: false,
                 });
                 setCustomerCash(null);
+                setAppliedVoucher(null);
+                setCustomerSearchKeyword("");
+                setCustomerOptions([]);
+                setRecipientInfo({
+                  name: "",
+                  phone: "",
+                  email: "",
+                  address: "",
+                  addressDetail: "",
+                  provinceCode: undefined,
+                  provinceCity: "",
+                  wardCode: undefined,
+                  wardCommune: "",
+                  note: "",
+                });
+                setShippingFee(0);
+                setCartDetails([]);
+                setActiveKey("");
               }}
             >
               Đóng & Bắt đầu đơn mới
