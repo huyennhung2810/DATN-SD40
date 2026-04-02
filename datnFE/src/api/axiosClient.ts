@@ -37,8 +37,10 @@ const writeRefreshedTokens = (accessToken: string, newRefreshToken?: string) => 
 
 axiosClient.interceptors.request.use(
     (config) => {
+        console.log("[DEBUG] Request URL:", config.baseURL + config.url);
+        console.log("[DEBUG] Request data:", config.data);
         const token = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-        const isAuthApi = AUTH_WHITELIST.some(url => 
+        const isAuthApi = AUTH_WHITELIST.some(url =>
             config.url === url || config.url?.endsWith(url)
         );
 

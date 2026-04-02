@@ -2,8 +2,10 @@ package com.example.datn.infrastructure.exception;
 
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.security.exception.OAuth2AuthenticationProcessingException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -16,26 +18,48 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler{
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public ResponseEntity<ResponseObject<?>> handleValidation(Exception ex) {
-        String message;
-
-        if (ex instanceof MethodArgumentNotValidException) {
-            message = ((MethodArgumentNotValidException) ex).getBindingResult()
-                    .getFieldErrors()
-                    .stream()
-                    .map(FieldError::getDefaultMessage)
-                    .collect(Collectors.joining(", "));
-        } else {
-            message = ((BindException) ex).getBindingResult()
-                    .getFieldErrors()
-                    .stream()
-                    .map(FieldError::getDefaultMessage)
-                    .collect(Collectors.joining(", "));
-        }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ResponseObject<?>> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
 
         return ResponseEntity.badRequest().body(
                 ResponseObject.error(HttpStatus.BAD_REQUEST, message)
+        );
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ResponseObject<?>> handleBindException(BindException ex) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+
+        return ResponseEntity.badRequest().body(
+                ResponseObject.error(HttpStatus.BAD_REQUEST, message)
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ResponseObject<?>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        String message = "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra định dạng JSON.";
+        return ResponseEntity.badRequest().body(
+                ResponseObject.error(HttpStatus.BAD_REQUEST, message)
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ResponseObject<?>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String message = "Dữ liệu bị trùng lặp (mã đã tồn tại trong hệ thống). Vui lòng sử dụng mã khác.";
+        if (ex.getMessage() != null && ex.getMessage().contains("code")) {
+            message = "Mã này đã tồn tại. Vui lòng sử dụng mã khác.";
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ResponseObject.error(HttpStatus.CONFLICT, message)
         );
     }
 

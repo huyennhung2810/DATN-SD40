@@ -449,6 +449,7 @@ const TechSpecListPage: React.FC = () => {
 
   const handleGroupSubmit = () => {
     groupForm.validateFields().then((values) => {
+      console.log("[DEBUG] Form values:", values);
       setGroupSubmitting(true);
       const data: TechSpecGroupRequest = {
         id: editingGroup?.id,
@@ -458,6 +459,7 @@ const TechSpecListPage: React.FC = () => {
         displayOrder: values.displayOrder ?? undefined,
         status: values.status,
       };
+      console.log("[DEBUG] Data to send:", JSON.stringify(data));
       const action = editingGroup
         ? techSpecGroupActions.updateGroup({
             id: editingGroup.id,
