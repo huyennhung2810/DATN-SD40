@@ -43,12 +43,19 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                 color.name AS mauSac,
                 COALESCE(sc.name, '') AS size,
 
+
                 hd.order_status AS trangThaiHoaDon,
                 hd.payment_status AS trangThaiThanhToan,
                 hd.created_date AS ngayTao,
                 hd.payment_date AS ngayThanhToan,
                 COALESCE(hd.shipping_fee, 0) AS phiVanChuyen,
                 hd.payment_method AS phuongThucThanhToan,
+
+
+                spct.sale_price AS giaBanGoc,
+
+                sp.code AS maSanPham,
+                spct.code AS maChiTietSanPham,
 
                 (
                     SELECT COALESCE(SUM(hdsub.quantity * hdsub.unit_price), 0)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Spin, Pagination, Empty, message } from "antd";
+import { Spin, Pagination, Empty, message, Input } from "antd"; // Thêm Input từ antd
 import dayjs from "dayjs";
 import { getOrderList } from "../../models/customerOrder";
 import type { CustomerOrderListResponse } from "../../models/customerOrder";
@@ -48,13 +48,18 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState("all");
 
-  const load = async (status: string, p: number) => {
+  // State mới cho tìm kiếm
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  const load = async (status: string, p: number, keyword: string) => {
     setLoading(true);
     try {
+      // BẠN CẦN CẬP NHẬT getOrderList để nhận thêm tham số keyword này nhé
       const res = await getOrderList(
         status === "all" ? undefined : status,
         p,
         PAGE_SIZE,
+        keyword, // Truyền keyword vào API
       );
       setOrders(res.data.content ?? []);
       setTotal(res.data.totalElements ?? 0);
@@ -66,12 +71,17 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
   };
 
   useEffect(() => {
-    load(activeStatus, page);
-  }, [activeStatus, page]);
+    load(activeStatus, page, searchKeyword);
+  }, [activeStatus, page, searchKeyword]);
 
   const handleTabChange = (key: string) => {
     setActiveStatus(key);
     setPage(0);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchKeyword(value.trim());
+    setPage(0); // Reset về trang 1 khi tìm kiếm
   };
 
   return (
@@ -91,38 +101,55 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
           borderBottom: "1px solid #f3f4f6",
           background: "linear-gradient(90deg,#fff 70%,#fff8f8 100%)",
           display: "flex",
+          justifyContent: "space-between", // Căn 2 bên
           alignItems: "center",
-          gap: 10,
+          flexWrap: "wrap", // Tránh lỗi giao diện trên màn hình nhỏ
+          gap: 16,
         }}
       >
-        <div
-          style={{
-            width: 4,
-            height: 22,
-            borderRadius: 4,
-            background: "#D32F2F",
-            flexShrink: 0,
-          }}
-        />
-        <h2
-          style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}
-        >
-          Đơn hàng của bạn
-        </h2>
-        {total > 0 && (
-          <span
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
             style={{
+              width: 4,
+              height: 22,
+              borderRadius: 4,
               background: "#D32F2F",
-              color: "#fff",
-              fontSize: 11,
+              flexShrink: 0,
+            }}
+          />
+          <h2
+            style={{
+              fontSize: 16,
               fontWeight: 700,
-              padding: "1px 8px",
-              borderRadius: 10,
+              color: "#111827",
+              margin: 0,
             }}
           >
-            {total}
-          </span>
-        )}
+            Đơn hàng của bạn
+          </h2>
+          {total > 0 && (
+            <span
+              style={{
+                background: "#D32F2F",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "1px 8px",
+                borderRadius: 10,
+              }}
+            >
+              {total}
+            </span>
+          )}
+        </div>
+
+        {/* Thanh tìm kiếm */}
+        <Input.Search
+          placeholder="Tìm theo mã sản phẩm hoặc đơn hàng..."
+          allowClear
+          onSearch={handleSearch}
+          style={{ width: 300 }}
+        />
       </div>
 
       {/* Status tabs */}
@@ -173,7 +200,13 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
         </div>
       ) : orders.length === 0 ? (
         <div style={{ padding: "48px 0" }}>
-          <Empty description="Không có đơn hàng nào" />
+          <Empty
+            description={
+              searchKeyword
+                ? "Không tìm thấy đơn hàng nào khớp với từ khóa"
+                : "Không có đơn hàng nào"
+            }
+          />
         </div>
       ) : (
         <>

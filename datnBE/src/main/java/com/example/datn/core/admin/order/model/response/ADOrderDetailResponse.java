@@ -15,20 +15,21 @@ public interface ADOrderDetailResponse {
 
     String getInvoiceId();
 
+
     // Thông tin sản phẩm
+    String getMaSanPham(); // code của Product
+    String getMaChiTietSanPham(); // code của ProductDetail
     String getTenSanPham();
-
     String getAnhSanPham();
-
     String getThuongHieu();
-
     String getMauSac();
-
     String getSize();
 
     Integer getSoLuong();
 
     BigDecimal getGiaBan();
+
+    BigDecimal getGiaBanGoc();
 
     // Thông tin giá trị
     BigDecimal getThanhTienSP();

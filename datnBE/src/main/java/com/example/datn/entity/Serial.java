@@ -21,7 +21,7 @@ public class Serial extends PrimaryEntity implements Serializable {
     private String serialNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "serial_status")
+    @Column(name = "serial_status", length = 20)
     private SerialStatus serialStatus = SerialStatus.AVAILABLE;
 
     @ManyToOne

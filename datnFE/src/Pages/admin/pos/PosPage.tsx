@@ -48,11 +48,14 @@ import { productDetailApi } from "../../../api/productDetailApi";
 import QuickAddCustomerModal from "../../../components/QuickAddCustomerModal";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal";
 import ReceiptTemplate from "../../../Pages/admin/pos/ReceiptTemplate";
+import { useAppSelector } from "../../../app/hook";
 const { useEffect, useState, useRef } = React;
 
 const { Title, Text } = Typography;
 
 const PosPage: React.FC = () => {
+  // Lấy thông tin nhân viên đăng nhập
+  const authUser = useAppSelector((state) => state.auth.user);
   // Orders / Cart State
   const [orders, setOrders] = useState<any[]>([]);
   const [activeKey, setActiveKey] = useState<string>("");
@@ -1348,18 +1351,26 @@ const PosPage: React.FC = () => {
                 <Space.Compact style={{ width: "100%" }}>
                   <Select
                     showSearch
-                    placeholder={
-                      activeOrder && activeOrder.customer
-                        ? `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber}`
-                        : "Chọn khách hàng (Có thể để trống)"
-                    }
+                    placeholder="Chọn khách hàng (Có thể để trống)"
                     style={{ flex: 1 }}
                     allowClear
+                    value={activeOrder?.customer?.id || undefined}
+                    options={
+                      customerOptions.length > 0
+                        ? customerOptions
+                        : activeOrder?.customer
+                          ? [
+                              {
+                                value: activeOrder.customer.id,
+                                label: `${activeOrder.customer.name} - ${activeOrder.customer.phoneNumber || "N/A"}`,
+                              },
+                            ]
+                          : []
+                    }
                     onSearch={handleSearchCustomer}
                     onChange={handleSelectCustomer}
                     onOpenChange={handleCustomerDropdownOpenChange}
                     filterOption={false}
-                    options={customerOptions}
                     loading={fetchingCustomer}
                     suffixIcon={<UserOutlined />}
                     notFoundContent={
@@ -1847,6 +1858,7 @@ const PosPage: React.FC = () => {
         change={checkoutSuccessModal.change}
         voucherSaving={checkoutSuccessModal.voucherSaving}
         customerName={checkoutSuccessModal.customerName}
+        staffName={authUser?.fullName || authUser?.username || ""}
       />
 
       {/* Modal Thông tin người nhận */}
@@ -2307,6 +2319,24 @@ const PosPage: React.FC = () => {
                   open: false,
                 });
                 setCustomerCash(null);
+                setAppliedVoucher(null);
+                setCustomerSearchKeyword("");
+                setCustomerOptions([]);
+                setRecipientInfo({
+                  name: "",
+                  phone: "",
+                  email: "",
+                  address: "",
+                  addressDetail: "",
+                  provinceCode: undefined,
+                  provinceCity: "",
+                  wardCode: undefined,
+                  wardCommune: "",
+                  note: "",
+                });
+                setShippingFee(0);
+                setCartDetails([]);
+                setActiveKey("");
               }}
             >
               Đóng & Bắt đầu đơn mới

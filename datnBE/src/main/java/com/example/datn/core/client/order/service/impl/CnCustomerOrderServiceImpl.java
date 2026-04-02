@@ -91,16 +91,27 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CustomerOrderListResponse> getOrderList(String customerId, String status, Pageable pageable) {
+    public Page<CustomerOrderListResponse> getOrderList(String customerId, String status, String q, Pageable pageable) {
         Page<Order> orders;
+        boolean hasStatus = status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("all");
+        boolean hasQ = q != null && !q.trim().isEmpty();
 
-        if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("all")) {
+        if (hasStatus && hasQ) {
+            try {
+                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+                orders = orderRepository.findByCustomerIdAndStatusAndCodeLike(customerId, orderStatus, "%" + q.trim() + "%", pageable);
+            } catch (IllegalArgumentException e) {
+                orders = orderRepository.findByCustomerIdAndCodeLike(customerId, "%" + q.trim() + "%", pageable);
+            }
+        } else if (hasStatus) {
             try {
                 OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
                 orders = orderRepository.findByCustomerIdAndStatus(customerId, orderStatus, pageable);
             } catch (IllegalArgumentException e) {
                 orders = orderRepository.findByCustomerId(customerId, pageable);
             }
+        } else if (hasQ) {
+            orders = orderRepository.findByCustomerIdAndCodeLike(customerId, "%" + q.trim() + "%", pageable);
         } else {
             orders = orderRepository.findByCustomerId(customerId, pageable);
         }

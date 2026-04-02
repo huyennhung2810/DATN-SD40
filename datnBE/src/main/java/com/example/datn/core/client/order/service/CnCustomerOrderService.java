@@ -9,7 +9,7 @@ import java.util.Map;
 
 public interface CnCustomerOrderService {
 
-    Page<CustomerOrderListResponse> getOrderList(String customerId, String status, Pageable pageable);
+    Page<CustomerOrderListResponse> getOrderList(String customerId, String status, String q, Pageable pageable);
 
     CustomerOrderDetailResponse getOrderDetail(String customerId, String orderId);
 

@@ -86,11 +86,11 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         Long endTime = System.currentTimeMillis();
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
-        //Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
+        // Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
         BigDecimal systemCashSales = shiftHandoverRepository.sumCashRevenue(
                 empId, OrderStatus.HOAN_THANH, handover.getCheckInTime(), endTime);
 
-        //Tính toán tiền theo hệ thống
+        // Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
         BigDecimal actual = Optional.ofNullable(request.getActualCash()).orElse(BigDecimal.ZERO);
 
@@ -119,7 +119,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             handover.setHandoverStatus(HandoverStatus.CLOSED);
         }
 
-        //Kết thúc lịch làm việc
+        // Kết thúc lịch làm việc
         WorkSchedule schedule = handover.getWorkSchedule();
         schedule.setShiftStatus(ShiftStatus.COMPLETED);
         workScheduleRepository.save(schedule);
@@ -156,23 +156,27 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy ca trực"));
     }
 
-
     @Override
     public ResponseObject<?> getShiftHistory(ADShiftHistoryRequest request) {
         // Pageable giúp hệ thống không bị chậm khi có hàng nghìn bản ghi
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
 
+        // Nếu staffId là rỗng hoặc chỉ chứa khoảng trắng thì set thành null để lấy tất
+        // cả
+        String staffId = (request.getStaffId() != null && request.getStaffId().trim().isEmpty()) ? null
+                : request.getStaffId();
+
         Page<ShiftHandover> pageData = shiftHandoverRepository.findHistory(
-                request.getStaffId(),
+                staffId,
                 request.getStatus(),
                 request.getFromDate(),
                 request.getToDate(),
-                pageable
-        );
+                pageable);
 
         // Chuyển đổi sang DTO
         Page<ADShiftHistoryResponse> result = pageData.map(s -> ADShiftHistoryResponse.builder()
                 .id(s.getId())
+                .code(s.getCode())
                 .employeeName(s.getWorkSchedule().getEmployee().getName())
                 .checkInTime(s.getCheckInTime())
                 .checkOutTime(s.getCheckOutTime())
@@ -195,14 +199,14 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu giao ca"));
 
         if (handover.getHandoverStatus() != HandoverStatus.PENDING) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chỉ có thể duyệt các ca đang ở trạng thái chờ (lệch tiền).");
+            return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                    "Chỉ có thể duyệt các ca đang ở trạng thái chờ (lệch tiền).");
         }
 
         // Cập nhật trạng thái
         handover.setHandoverStatus(HandoverStatus.CLOSED);
         String existingNote = handover.getNote() != null ? handover.getNote() : "";
         handover.setNote(existingNote + " | Admin Note: " + request.getAdminNote());
-
 
         shiftHandoverRepository.save(handover);
         return ResponseObject.success(null, "Duyệt ca thành công");

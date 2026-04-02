@@ -21,9 +21,16 @@ public interface CnOrderRepository extends JpaRepository<Order, String> {
     Page<Order> findByCustomerIdAndStatus(
             @Param("customerId") String customerId,
             @Param("status") OrderStatus status,
-            Pageable pageable
-    );
+            Pageable pageable);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderHistories WHERE o.id = :orderId")
     Optional<Order> findByIdWithHistories(@Param("orderId") String orderId);
+
+    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.code LIKE :code ORDER BY o.createdDate DESC")
+    Page<Order> findByCustomerIdAndCodeLike(@Param("customerId") String customerId, @Param("code") String code,
+            Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.orderStatus = :status AND o.code LIKE :code ORDER BY o.createdDate DESC")
+    Page<Order> findByCustomerIdAndStatusAndCodeLike(@Param("customerId") String customerId,
+            @Param("status") OrderStatus status, @Param("code") String code, Pageable pageable);
 }

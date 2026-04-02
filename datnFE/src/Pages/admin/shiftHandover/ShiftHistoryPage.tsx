@@ -12,6 +12,7 @@ import {
   message,
   Tooltip,
   Alert,
+  Descriptions,
 } from "antd";
 import {
   SearchOutlined,
@@ -19,6 +20,7 @@ import {
   HistoryOutlined,
   FileExcelOutlined,
   ReloadOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { shiftHandoverApi } from "../../../api/shiftHandoverApi";
@@ -44,11 +46,19 @@ const ShiftHistoryPage: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  // Modal xem chi tiết ca
+  const [detailModal, setDetailModal] = useState<{
+    open: boolean;
+    record: ShiftHistoryItem | null;
+  }>({ open: false, record: null });
 
   const loadHistory = async () => {
     setLoading(true);
+    // Debug: log filter và response
+    console.log("[DEBUG] Filter gửi lên API:", filter);
     try {
       const res = await shiftHandoverApi.getShiftHistory(filter);
+      console.log("[DEBUG] Response trả về từ API:", res.data.content);
       setData(res.data.content);
       setTotal(res.data.totalElements);
     } catch (error) {
@@ -114,13 +124,52 @@ const ShiftHistoryPage: React.FC = () => {
     );
   };
 
-  // Cột Table (Giữ nguyên logic render của bạn nhưng thêm Tooltip cho ghi chú)
   const columns = [
-    // ... các cột trước giữ nguyên
+    {
+      title: "Mã ca",
+      dataIndex: "code",
+      width: 120,
+      render: (text: string) => (
+        <Text code style={{ fontSize: 15 }}>
+          {text}
+        </Text>
+      ),
+    },
     {
       title: "Nhân viên",
       dataIndex: "employeeName",
       render: (text: string) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Giờ vào",
+      dataIndex: "checkInTime",
+      render: (val: number) =>
+        val ? dayjs(val).format("HH:mm:ss DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Giờ ra",
+      dataIndex: "checkOutTime",
+      render: (val: number) =>
+        val ? (
+          dayjs(val).format("HH:mm:ss DD/MM/YYYY")
+        ) : (
+          <Text type="warning">Chưa ra ca</Text>
+        ),
+    },
+    {
+      title: "Tiền đầu ca",
+      dataIndex: "initialCash",
+      render: (val: number) => val?.toLocaleString() + " ₫",
+    },
+    {
+      title: "Doanh thu (VND)",
+      dataIndex: "totalCashSales",
+      render: (val: number) => val?.toLocaleString() + " ₫",
+    },
+    {
+      title: "Tiền mặt cuối ca",
+      dataIndex: "actualCashAtEnd",
+      render: (val: number) => val?.toLocaleString() + " ₫",
     },
     {
       title: "Chênh lệch",
@@ -148,7 +197,7 @@ const ShiftHistoryPage: React.FC = () => {
     {
       title: "Ghi chú",
       dataIndex: "note",
-      ellipsis: true, // Senior Tip: Tránh việc ghi chú quá dài làm vỡ layout bảng
+      ellipsis: true,
       render: (text: string) => <Text type="secondary">{text || "-"}</Text>,
     },
     {
@@ -160,12 +209,10 @@ const ShiftHistoryPage: React.FC = () => {
           PENDING: { color: "orange", text: "Chờ duyệt" },
           OPEN: { color: "blue", text: "Đang mở" },
         };
-
         const currentConfig = config[status] || {
           color: "default",
           text: status,
         };
-
         return <Tag color={currentConfig.color}>{currentConfig.text}</Tag>;
       },
     },
@@ -173,26 +220,123 @@ const ShiftHistoryPage: React.FC = () => {
       title: "Thao tác",
       key: "action",
       align: "center" as const,
-      render: (_: any, record: any) => (
+      render: (_: any, record: ShiftHistoryItem) => (
         <Space>
-          {record.status === "PENDING" && (
+          <Tooltip title="Xem chi tiết">
             <Button
-              type="primary"
-              ghost
               size="small"
-              icon={<CheckCircleOutlined />}
-              onClick={() => {
-                setSelectedId(record.id);
-                setIsConfirmModalOpen(true);
-              }}
-            >
-              Duyệt
-            </Button>
+              icon={<EyeOutlined />}
+              onClick={() => setDetailModal({ open: true, record })}
+            />
+          </Tooltip>
+          {record.status === "PENDING" && (
+            <Tooltip title="Duyệt ca lệch tiền">
+              <Button
+                type="primary"
+                ghost
+                size="small"
+                icon={<CheckCircleOutlined />}
+                onClick={() => {
+                  setSelectedId(record.id);
+                  setIsConfirmModalOpen(true);
+                }}
+              />
+            </Tooltip>
           )}
         </Space>
       ),
     },
   ];
+  // Modal chi tiết ca làm việc chuyên nghiệp hơn
+  const renderDetailModal = () => {
+    const record = detailModal.record;
+    return (
+      <Modal
+        open={detailModal.open}
+        title={
+          <Space>
+            <HistoryOutlined />
+            Chi tiết ca làm việc
+          </Space>
+        }
+        onCancel={() => setDetailModal({ open: false, record: null })}
+        footer={null}
+        width={540}
+      >
+        {record ? (
+          <Descriptions
+            bordered
+            size="middle"
+            column={1}
+            labelStyle={{ width: 180, fontWeight: 600 }}
+            contentStyle={{ fontWeight: 500 }}
+          >
+            <Descriptions.Item label="Mã ca">
+              <Text code>{record.code || record.id}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Nhân viên">
+              {record.employeeName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Giờ vào">
+              {record.checkInTime
+                ? dayjs(record.checkInTime).format("HH:mm:ss DD/MM/YYYY")
+                : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Giờ ra">
+              {record.checkOutTime ? (
+                dayjs(record.checkOutTime).format("HH:mm:ss DD/MM/YYYY")
+              ) : (
+                <Text type="warning">Chưa ra ca</Text>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tiền đầu ca">
+              {record.initialCash?.toLocaleString()} ₫
+            </Descriptions.Item>
+            <Descriptions.Item label="Doanh thu (VND)">
+              {record.totalCashSales?.toLocaleString()} ₫
+            </Descriptions.Item>
+            <Descriptions.Item label="Tiền mặt cuối ca">
+              {record.actualCashAtEnd?.toLocaleString()} ₫
+            </Descriptions.Item>
+            <Descriptions.Item label="Chênh lệch">
+              <Text
+                type={
+                  record.differenceAmount < 0
+                    ? "danger"
+                    : record.differenceAmount > 0
+                      ? "warning"
+                      : "success"
+                }
+              >
+                {record.differenceAmount > 0 ? "+" : ""}
+                {record.differenceAmount?.toLocaleString()} ₫
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Ghi chú">
+              {record.note || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag
+                color={
+                  record.status === "CLOSED"
+                    ? "green"
+                    : record.status === "PENDING"
+                      ? "orange"
+                      : "blue"
+                }
+              >
+                {record.status === "CLOSED"
+                  ? "Hoàn tất"
+                  : record.status === "PENDING"
+                    ? "Chờ duyệt"
+                    : "Đang mở"}
+              </Tag>
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Modal>
+    );
+  };
 
   return (
     <div style={{ padding: "24px" }}>
@@ -268,6 +412,7 @@ const ShiftHistoryPage: React.FC = () => {
         />
       </Card>
 
+      {renderDetailModal()}
       <Modal
         title="Xác nhận duyệt ca trực"
         open={isConfirmModalOpen}

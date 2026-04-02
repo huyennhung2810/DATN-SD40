@@ -24,14 +24,17 @@ export interface ShiftHandoverStatsResponse {
 }
 
 export interface ShiftHistoryItem {
-    employeeName: string;
-    checkInTime: number;
-    checkOutTime?: number;
-    totalCashSales: number;
-    actualCashAtEnd: number;
-    differenceAmount: number;
-    status: string;
-    note?: string;
+  id: string;
+  code: string;
+  employeeName: string;
+  checkInTime: number;
+  checkOutTime?: number;
+  initialCash: number;
+  totalCashSales: number;
+  actualCashAtEnd: number;
+  differenceAmount: number;
+  status: string;
+  note?: string;
 }
 
 // Thông tin chi tiết của 1 Phiếu giao ca 

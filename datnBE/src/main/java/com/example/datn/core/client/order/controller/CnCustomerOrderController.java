@@ -33,12 +33,13 @@ public class CnCustomerOrderController {
     public ResponseEntity<ResponseObject<Page<CustomerOrderListResponse>>> getOrderList(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "8") int size) {
+            @RequestParam(defaultValue = "8") int size,
+            @RequestParam(required = false) String q) {
 
         String customerId = getCurrentCustomerId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDate"));
 
-        Page<CustomerOrderListResponse> orders = customerOrderService.getOrderList(customerId, status, pageable);
+        Page<CustomerOrderListResponse> orders = customerOrderService.getOrderList(customerId, status, q, pageable);
 
         return ResponseEntity.ok(ResponseObject.success(orders, "Lấy danh sách đơn hàng thành công"));
     }

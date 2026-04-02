@@ -9,6 +9,7 @@ import com.example.datn.core.admin.order.repository.ADOrderRepositoryCustom;
 import com.example.datn.core.admin.order.service.ADOrderService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.*;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.email.EmailService;
@@ -47,6 +48,8 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final ADOrderRepositoryCustom adOrderRepositoryCustom;
     private final EmailService emailService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final OrderDetailRepository orderDetailRepository;
+    private final ProductDetailRepository productDetailRepository;
 
     @Override
     @Transactional
@@ -116,16 +119,30 @@ public class ADOrderServiceImpl implements ADOrderService {
                     request.getNote(),
                     nhanVien);
 
+
+            List<OrderDetail> orderDetail = new ArrayList<>();
             // XỬ LÝ NGHIỆP VỤ THEO TRẠNG THÁI
             switch (trangThaiMoi) {
-
                 case CHO_XAC_NHAN:
                 case DA_XAC_NHAN:
                     khoaIMEIKhiChoXacNhan(hoaDonDaCapNhat);
+                    orderDetail = orderDetailRepository.findByOrderId(hoaDon.getId());
+                    for (OrderDetail item : orderDetail) {
+                        ProductDetail product = item.getProductDetail();
+                        int soLuongMua = item.getQuantity();
+
+                        // Kiểm tra tồn kho trước khi trừ
+                        if (product.getQuantity() < soLuongMua) {
+                            throw new RuntimeException("Sản phẩm " + product.getProduct().getName() + " không đủ hàng trong kho!");
+                        }
+
+                        // Trừ số lượng tồn kho
+                        product.setQuantity(product.getQuantity() - soLuongMua);
+                        productDetailRepository.save(product);
+                    }
                     break;
 
                 case CHO_GIAO:
-                    danhDauIMEIDaBan(hoaDonDaCapNhat);
                     luuLichSuThanhToan(hoaDonDaCapNhat, nhanVien);
                     danhDauVoucherDaSuDung(hoaDonDaCapNhat);
                     break;
@@ -138,7 +155,15 @@ public class ADOrderServiceImpl implements ADOrderService {
                     if (request.getNote() == null || request.getNote().trim().isEmpty()) {
                         throw new RuntimeException("Vui lòng nhập lý do giao hàng không thành công!");
                     }
-                    // Có thể bổ sung logic hoàn trả hàng, hoàn voucher, v.v. nếu cần
+                    capNhatTrangThaiSerialBiHuy(hoaDon);
+
+                    orderDetail = orderDetailRepository.findByOrderId(hoaDon.getId());
+                    for (OrderDetail item : orderDetail) {
+                        ProductDetail product = item.getProductDetail();
+                        int soLuongMua = item.getQuantity();
+                        product.setQuantity(product.getQuantity() + soLuongMua);
+                        productDetailRepository.save(product);
+                    }
                     break;
 
                 case HOAN_THANH:
@@ -146,7 +171,15 @@ public class ADOrderServiceImpl implements ADOrderService {
                     break;
 
                 case DA_HUY:
-                    traIMEIVeKho(hoaDonDaCapNhat);
+                    capNhatTrangThaiSerialBiHuy(hoaDon);
+                    orderDetail = orderDetailRepository.findByOrderId(hoaDon.getId());
+                    for (OrderDetail item : orderDetail) {
+                        ProductDetail product = item.getProductDetail();
+                        int soLuongMua = item.getQuantity();
+                        product.setQuantity(product.getQuantity() + soLuongMua);
+                        productDetailRepository.save(product);
+                    }
+
                     hoanTraVoucher(hoaDonDaCapNhat);
                     hoanTienNeuCan(hoaDonDaCapNhat, nhanVien);
                     break;
@@ -640,7 +673,14 @@ public class ADOrderServiceImpl implements ADOrderService {
                     && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN
                     && hoaDon.getOrderStatus() != OrderStatus.CHO_GIAO) {
                 throw new RuntimeException(
-                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận', 'Đã xác nhận' hoặc 'Chờ giao hàng'");
+                        "Chỉ có thể gán/đổi Serial khi đơn hàng ở trạng thái 'Chờ xác nhận'");
+            }
+
+            // Kiểm tra số lượng serial đã gán cho OrderDetail
+            int soLuongSanPham = chiTiet.getQuantity() != null ? chiTiet.getQuantity() : 1;
+            int soSerialDaGan = chiTiet.getSerials() != null ? chiTiet.getSerials().size() : 0;
+            if (!hasOldSerial && soSerialDaGan >= soLuongSanPham) {
+                throw new RuntimeException("Đã đủ số lượng serial cho sản phẩm này. Không thể gán thêm!");
             }
 
             // Xử lý IMEI cũ (nếu có)
@@ -755,5 +795,29 @@ public class ADOrderServiceImpl implements ADOrderService {
             log.error("Lỗi cập nhật thông tin khách hàng: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    private void capNhatTrangThaiSerialBiHuy(Order hoaDon) {
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(hoaDon.getId());
+
+        for (OrderDetail item : details) {
+            // Lấy danh sách serial gắn với chi tiết hóa đơn này
+            List<Serial> serials = serialRepository.findByOrderDetailId(item.getId());
+
+            for (Serial s : serials) {
+                // 1. Quan trọng: Đưa về trạng thái CÓ SẴN trong kho
+                s.setSerialStatus(SerialStatus.AVAILABLE);
+
+                // 2. Xóa các thông tin giữ chỗ
+                s.setOrderDetail(null);
+                s.setOrderHolding(null);
+                s.setLockedAt(null);
+
+                // 3. Set status hiển thị (nếu cần)
+                s.setStatus(EntityStatus.ACTIVE);
+            }
+            serialRepository.saveAll(serials);
+        }
+        log.info("Đã giải phóng Serial cho hóa đơn {} về trạng thái AVAILABLE", hoaDon.getCode());
     }
 }
