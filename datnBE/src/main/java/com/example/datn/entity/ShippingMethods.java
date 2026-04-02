@@ -1,6 +1,6 @@
 package com.example.datn.entity;
+
 import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

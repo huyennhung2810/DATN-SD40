@@ -1,7 +1,6 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;

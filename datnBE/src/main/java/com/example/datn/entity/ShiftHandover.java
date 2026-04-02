@@ -1,6 +1,5 @@
 package com.example.datn.entity;
 
-
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.HandoverStatus;
 import jakarta.persistence.*;
@@ -8,7 +7,6 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.List;
 
 @Getter
 @Setter
@@ -17,7 +15,7 @@ import java.util.List;
 @Entity
 @ToString
 @Table(name = "shift_handover")
-//Phiếu giao ca
+// Phiếu giao ca
 public class ShiftHandover extends PrimaryEntity implements Serializable {
 
     @OneToOne
@@ -31,13 +29,17 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     private Long checkInTime;
     private Long checkOutTime;
 
-    //Tiền mặt có sẵn trong két lúc nhận ca
+    // Tiền mặt có sẵn trong két lúc nhận ca
     @Column(precision = 15, scale = 2)
     private BigDecimal initialCash;
 
-    // Tổng tiền thu được trong ca (Hệ thống tính từ Order)
+    // Tổng tiền mặt thu được trong ca (Hệ thống tính từ Order)
     @Column(precision = 15, scale = 2)
     private BigDecimal totalCashSales;
+
+    // Tổng tiền chuyển khoản thu được trong ca (Hệ thống tính từ Order)
+    @Column(precision = 15, scale = 2)
+    private BigDecimal totalBankSales;
 
     // Tiền nhân viên rút ra chi tiêu (trả ship, tiền điện...)
     @Column(precision = 15, scale = 2)
@@ -68,4 +70,3 @@ public class ShiftHandover extends PrimaryEntity implements Serializable {
     private Account account;
 
 }
-

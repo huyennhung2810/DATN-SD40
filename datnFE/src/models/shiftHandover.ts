@@ -34,10 +34,12 @@ export interface ShiftHistoryItem {
   checkOutTime?: number;
   initialCash: number;
   totalCashSales: number;
+  totalBankSales?: number;
+  cashWithdraw?: number;
   actualCashAtEnd: number;
   differenceAmount: number;
-  status: string;
   note?: string;
+  status: string;
 }
 
 // Thông tin chi tiết của 1 Phiếu giao ca 

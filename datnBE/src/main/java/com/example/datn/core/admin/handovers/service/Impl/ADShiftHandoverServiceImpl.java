@@ -86,9 +86,11 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         Long endTime = System.currentTimeMillis();
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
-        // Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
+        // Lấy tổng doanh thu tiền mặt và chuyển khoản thực tế từ bảng Order
         BigDecimal systemCashSales = shiftHandoverRepository.sumRevenue(
-            OrderStatus.HOAN_THANH, "TIEN_MAT", handover.getCheckInTime(), endTime);
+                OrderStatus.HOAN_THANH, "TIEN_MAT", handover.getCheckInTime(), endTime);
+        BigDecimal systemBankSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", handover.getCheckInTime(), endTime);
         // Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
         BigDecimal actual = Optional.ofNullable(request.getActualCash()).orElse(BigDecimal.ZERO);
@@ -100,6 +102,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         // Cập nhật dữ liệu
         handover.setCheckOutTime(endTime);
         handover.setTotalCashSales(systemCashSales);
+        handover.setTotalBankSales(systemBankSales);
         handover.setCashWithdraw(withdraw);
         handover.setActualCashAtEnd(actual);
         handover.setDifferenceAmount(difference);
@@ -146,10 +149,10 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         Long now = System.currentTimeMillis();
 
         BigDecimal cashSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "TIEN_MAT", checkInTime, now); 
+                OrderStatus.HOAN_THANH, "TIEN_MAT", checkInTime, now);
 
         BigDecimal bankSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", checkInTime, now); 
+                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", checkInTime, now);
         BigDecimal finalCashSales = cashSales != null ? cashSales : BigDecimal.ZERO;
         BigDecimal finalBankSales = bankSales != null ? bankSales : BigDecimal.ZERO;
         BigDecimal finalInitialCash = h.getInitialCash() != null ? h.getInitialCash() : BigDecimal.ZERO;
@@ -194,6 +197,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 .checkOutTime(s.getCheckOutTime())
                 .initialCash(s.getInitialCash())
                 .totalCashSales(s.getTotalCashSales())
+                .totalBankSales(s.getTotalBankSales())
                 .cashWithdraw(s.getCashWithdraw())
                 .actualCashAtEnd(s.getActualCashAtEnd())
                 .differenceAmount(s.getDifferenceAmount())

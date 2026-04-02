@@ -15,6 +15,7 @@ public class ADShiftHistoryResponse {
     private Long checkOutTime;
     private BigDecimal initialCash;
     private BigDecimal totalCashSales;
+    private BigDecimal totalBankSales;
     private BigDecimal cashWithdraw;
     private BigDecimal actualCashAtEnd;
     private BigDecimal differenceAmount;
