@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @Builder
 public class ADShiftHistoryResponse {
     private String id;
+    private String code;
     private String employeeName;
     private Long checkInTime;
     private Long checkOutTime;
