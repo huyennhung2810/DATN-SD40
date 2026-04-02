@@ -757,20 +757,28 @@ const OrderDetailPage: React.FC = () => {
         const showDiscount = giaBanGoc && giaBanGoc > r.giaBan;
         return (
           <div>
+            <Text
+              strong
+              style={{
+                color: showDiscount ? "#cf1322" : undefined,
+                display: "block",
+              }}
+            >
+              {fmt(r.giaBan)}
+            </Text>
             {showDiscount && (
               <Text
                 delete
-                style={{ color: "#888", fontSize: 13, marginRight: 4 }}
+                style={{
+                  color: "#888",
+                  fontSize: 13,
+                  display: "block",
+                  marginTop: 2,
+                }}
               >
                 {fmt(giaBanGoc)}
               </Text>
             )}
-            <Text
-              strong
-              style={{ color: showDiscount ? "#cf1322" : undefined }}
-            >
-              {fmt(r.giaBan)}
-            </Text>
           </div>
         );
       },
