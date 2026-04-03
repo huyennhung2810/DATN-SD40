@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -49,12 +50,82 @@ public class CnProductResponse {
     private List<String> images;
 
     private List<CnVariantResponse> variants;
-    // 1. Khai báo danh sách thông số kỹ thuật trả về cho Frontend
+
+    /**
+     * Thông số kỹ thuật đầy đủ (cố định + động).
+     * Sử dụng field này thay cho specifications (list phẳng).
+     */
+    private TechSpecDetail techSpec;
+
+    /**
+     * @deprecated Dùng techSpec.fixedSpecs và techSpec.dynamicSpecs thay cho list phẳng này.
+     */
+    @Deprecated
     private List<TechSpecDto> specifications;
 
-    // 2. Tạo một DTO nhỏ bên trong (hoặc tạo file TechSpecDto.java riêng lẻ tùy bạn) để chứa cặp Tên - Giá trị
+    // =============================================
+    // Nested DTOs for structured tech spec response
+    // =============================================
+
     @Getter
     @Setter
+    public static class TechSpecDetail {
+        private FixedSpecs fixedSpecs;
+        private List<DynamicSpecGroup> dynamicSpecs;
+    }
+
+    @Getter
+    @Setter
+    public static class FixedSpecs {
+        private String sensorType;
+        private String lensMount;
+        private String resolution;
+        private String iso;
+        private String processor;
+        private String imageFormat;
+        private String videoFormat;
+    }
+
+    @Getter
+    @Setter
+    public static class DynamicSpecGroup {
+        private String groupId;
+        private String groupName;
+        private Integer groupOrder;
+        private List<SpecItem> items;
+
+        public DynamicSpecGroup(String groupId, String groupName, Integer groupOrder) {
+            this.groupId = groupId;
+            this.groupName = groupName;
+            this.groupOrder = groupOrder;
+            this.items = new ArrayList<>();
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class SpecItem {
+        private String definitionId;
+        private String definitionName;
+        private String value;
+        private String unit;
+        private Integer displayOrder;
+
+        public SpecItem(String definitionId, String definitionName, String value, String unit, Integer displayOrder) {
+            this.definitionId = definitionId;
+            this.definitionName = definitionName;
+            this.value = value;
+            this.unit = unit;
+            this.displayOrder = displayOrder;
+        }
+    }
+
+    /**
+     * @deprecated Dùng TechSpecDetail thay cho DTO phẳng này.
+     */
+    @Getter
+    @Setter
+    @Deprecated
     public static class TechSpecDto {
         private String name;
         private String value;

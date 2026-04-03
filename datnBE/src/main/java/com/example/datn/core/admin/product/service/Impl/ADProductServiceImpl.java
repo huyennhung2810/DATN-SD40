@@ -353,6 +353,9 @@ public class ADProductServiceImpl implements ADProductService {
             response.setTechSpec(techSpecResponse);
         }
 
+        // Lấy thông số kỹ thuật động (key-value)
+        response.setTechSpecDynamic(productTechSpecService.getProductSpecFormValues(product.getId()));
+
         // Lấy danh sách URL ảnh sản phẩm cha
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             List<String> imageUrls = product.getImages().stream()

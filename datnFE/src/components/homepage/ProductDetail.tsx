@@ -11,7 +11,6 @@ import {
   Breadcrumb,
   message,
   Spin,
-  Descriptions,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -19,13 +18,101 @@ import {
   SafetyCertificateOutlined,
   TruckOutlined,
   SettingOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { increaseCartCount } from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient";
+import type {
+  CnProductResponse,
+  DynamicSpecGroup,
+  ProductVariantResponse,
+  RelatedProductResponse,
+} from "../../models/productVariant";
 
 const { Title } = Typography;
+
+// ============================================================
+// Map label tiếng Việt cho fixed specs
+// ============================================================
+const FIXED_SPEC_KEYS = [
+  "sensorType",
+  "lensMount",
+  "resolution",
+  "iso",
+  "processor",
+  "imageFormat",
+  "videoFormat",
+] as const;
+
+const FIXED_SPEC_LABELS: Record<(typeof FIXED_SPEC_KEYS)[number], string> = {
+  sensorType: "Loại cảm biến",
+  lensMount: "Ngàm ống kính",
+  resolution: "Độ phân giải",
+  iso: "ISO",
+  processor: "Bộ xử lý ảnh",
+  imageFormat: "Định dạng ảnh",
+  videoFormat: "Định dạng video",
+};
+
+function formatPrice(
+  price: number | string | bigint | undefined | null,
+): string {
+  if (price == null || price === "") return "Liên hệ";
+  const n = typeof price === "number" ? price : Number(price);
+  if (Number.isNaN(n)) return "Liên hệ";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(n);
+}
+
+/** API client trả `stock`; một số API khác trả `quantity`. */
+function variantStock(v: ProductVariantResponse): number {
+  const s = v.stock ?? v.quantity;
+  if (typeof s === "number" && !Number.isNaN(s)) return s;
+  return 0;
+}
+
+/** API client trả `name` (CnVariantResponse); admin có thể trả `version`. */
+function variantDisplayName(v: ProductVariantResponse): string {
+  return (v.name ?? v.version ?? "").trim() || "Phiên bản";
+}
+
+function hasFixedSpecValue(fixed?: Record<string, unknown> | null): boolean {
+  if (!fixed) return false;
+  return FIXED_SPEC_KEYS.some((key) => {
+    const val = fixed[key];
+    return val != null && val !== "";
+  });
+}
+
+function isFixedSpecEmpty(fixed?: Record<string, unknown> | null): boolean {
+  return !hasFixedSpecValue(fixed);
+}
+
+function hasAnyDynamicSpec(groups?: DynamicSpecGroup[]): boolean {
+  if (!groups || groups.length === 0) return false;
+  return groups.some((g) => g.items && g.items.length > 0);
+}
+
+function hasAnySpec(techSpec?: CnProductResponse["techSpec"]): boolean {
+  if (!techSpec) return false;
+  return !isFixedSpecEmpty(techSpec.fixedSpecs as Record<string, unknown> | null) || hasAnyDynamicSpec(techSpec.dynamicSpecs);
+}
+
+function legacySpecifications(product: CnProductResponse) {
+  const list = product.specifications;
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (s) =>
+      s?.name &&
+      String(s.name).trim() !== "" &&
+      s.value != null &&
+      String(s.value).trim() !== "",
+  );
+}
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,20 +123,22 @@ const ProductDetail: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
 
   const [loading, setLoading] = useState(false);
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<CnProductResponse | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [mainImage, setMainImage] = useState<string>("");
+  const [relatedProducts, setRelatedProducts] = useState<RelatedProductResponse[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
       setLoading(true);
       try {
         const response = await axiosClient.get(`/client/product/${id}`);
-        const realProduct = response.data;
-        setProduct(realProduct);
-        if (realProduct.images && realProduct.images.length > 0) {
-          setMainImage(realProduct.images[0]);
+        const data: CnProductResponse = response.data;
+        setProduct(data);
+        if (data.images && data.images.length > 0) {
+          setMainImage(data.images[0]);
         }
       } catch (error) {
         console.error("Lỗi khi tải chi tiết sản phẩm:", error);
@@ -60,6 +149,28 @@ const ProductDetail: React.FC = () => {
     };
     if (id) fetchProductDetail();
   }, [id, user?.userId]);
+
+  // Fetch related products after product data is available
+  useEffect(() => {
+    const fetchRelatedProducts = async () => {
+      if (!id) return;
+      setRelatedLoading(true);
+      try {
+        const response = await axiosClient.get(`/client/product/${id}/related`, {
+          params: { size: 8 },
+        });
+        setRelatedProducts(response.data || []);
+      } catch (error) {
+        console.error("Lỗi khi tải sản phẩm liên quan:", error);
+        setRelatedProducts([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+    if (id && !loading) {
+      fetchRelatedProducts();
+    }
+  }, [id, loading]);
 
   const handleAddToCart = async () => {
     if (!user || !user.userId) {
@@ -105,22 +216,23 @@ const ProductDetail: React.FC = () => {
       return;
     }
 
-    const activeVariant = product.variants?.find(
-      (v: any) => v.id === selectedVariantId,
+    const activeVariant = product?.variants?.find(
+      (v) => v.id === selectedVariantId,
     );
     const unitOriginal = activeVariant
       ? Number(activeVariant.originalPrice ?? activeVariant.salePrice ?? 0)
-      : Number(product.originalPrice ?? product.price ?? 0);
+      : Number(product?.originalPrice ?? product?.displayPrice ?? 0);
     const unitAfterCampaign = activeVariant
       ? Number(activeVariant.displayPrice ?? activeVariant.salePrice ?? 0)
-      : Number(product.displayPrice ?? product.price ?? 0);
+      : Number(product?.displayPrice ?? 0);
 
-    // Cấu trúc khớp Checkout: price = giá niêm yết/gốc, discountedPrice = giá sau đợt KM
     const buyNowItem = {
       id: selectedVariantId,
       productDetailId: selectedVariantId,
-      productName: product.name,
-      variantName: activeVariant?.name,
+      productName: product?.name,
+      variantName: activeVariant
+        ? variantDisplayName(activeVariant)
+        : undefined,
       imageUrl: mainImage,
       price: unitOriginal,
       discountedPrice: unitAfterCampaign,
@@ -135,13 +247,6 @@ const ProductDetail: React.FC = () => {
     });
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
-
   if (loading || !product) {
     return (
       <div className="hikari-loading">
@@ -151,18 +256,33 @@ const ProductDetail: React.FC = () => {
   }
 
   const activeVariant = product.variants?.find(
-    (v: any) => v.id === selectedVariantId,
+    (v) => v.id === selectedVariantId,
   );
   const displayPrice = activeVariant
-    ? (activeVariant.displayPrice ?? activeVariant.salePrice)
-    : (product.displayPrice ?? product.price);
+    ? activeVariant.displayPrice ?? activeVariant.salePrice
+    : product.displayPrice;
   const displayOriginalPrice = activeVariant
-    ? (activeVariant.originalPrice ?? activeVariant.salePrice)
+    ? activeVariant.originalPrice ?? activeVariant.salePrice
     : product.originalPrice;
-  const maxStock = activeVariant ? activeVariant.stock : 1;
+  const maxStock = activeVariant ? variantStock(activeVariant) : 1;
 
-  // LẤY TRỰC TIẾP TỪ BACKEND (Nếu BE chưa trả về hoặc sản phẩm ko có thông số thì dùng mảng rỗng)
-  const specifications = product.specifications || [];
+  // ============================================================
+  // SECTION: THÔNG SỐ KỸ THUẬT
+  // ============================================================
+  const techSpec = product.techSpec;
+  const fixedSpecs = techSpec?.fixedSpecs;
+  const dynamicGroups = techSpec?.dynamicSpecs;
+  const legacySpecRows = legacySpecifications(product);
+  const hasStructuredSpec = hasAnySpec(techSpec);
+  const showTechSpec = hasStructuredSpec || legacySpecRows.length > 0;
+
+  // Lấy các fixed spec có dữ liệu
+  const fixedEntries = fixedSpecs
+    ? FIXED_SPEC_KEYS.map((key) => ({
+        label: FIXED_SPEC_LABELS[key],
+        value: (fixedSpecs as Record<string, unknown>)[key] as string | null,
+      })).filter((item) => item.value != null && item.value !== "")
+    : [];
 
   return (
     <div className="hikari-product-detail">
@@ -194,7 +314,7 @@ const ProductDetail: React.FC = () => {
                   />
                 </div>
                 <div className="thumbnail-list">
-                  {product.images?.map((img: string, index: number) => (
+                  {product.images?.map((img, index) => (
                     <div
                       key={index}
                       className={`thumb-item ${mainImage === img ? "active" : ""}`}
@@ -218,8 +338,7 @@ const ProductDetail: React.FC = () => {
                 </Title>
 
                 <div className="price-box">
-                  {displayOriginalPrice &&
-                  displayOriginalPrice !== displayPrice ? (
+                  {displayOriginalPrice && displayOriginalPrice !== displayPrice ? (
                     <>
                       <span className="current-price">
                         {formatPrice(displayPrice)}
@@ -248,8 +367,9 @@ const ProductDetail: React.FC = () => {
                 <div className="variant-section">
                   <div className="section-label">Chọn phiên bản:</div>
                   <div className="variant-grid">
-                    {product.variants?.map((variant: any) => {
-                      const isOutOfStock = variant.stock <= 0;
+                    {product.variants?.map((variant) => {
+                      const stock = variantStock(variant);
+                      const isOutOfStock = stock <= 0;
                       const isSelected = selectedVariantId === variant.id;
                       return (
                         <div
@@ -259,11 +379,13 @@ const ProductDetail: React.FC = () => {
                             !isOutOfStock && setSelectedVariantId(variant.id)
                           }
                         >
-                          <div className="variant-name">{variant.name}</div>
+                          <div className="variant-name">
+                            {variantDisplayName(variant)}
+                          </div>
                           <div className="variant-stock">
                             {isOutOfStock
                               ? "Hết hàng"
-                              : `Còn ${variant.stock} sp`}
+                              : `Còn ${stock} sp`}
                           </div>
                           {variant.hasActiveSaleCampaign ? (
                             <div className="variant-price">
@@ -355,63 +477,175 @@ const ProductDetail: React.FC = () => {
               </div>
             </Col>
           </Row>
-
-          {/* ========================================= */}
-          {/* KHU VỰC THÔNG SỐ KỸ THUẬT NẰM Ở ĐÂY */}
-          {/* ========================================= */}
-          {specifications.length > 0 && (
-            <>
-              <Divider style={{ marginTop: "40px" }} />
-              <div className="specifications-section">
-                <Title
-                  level={4}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <SettingOutlined /> Thông số kỹ thuật
-                </Title>
-
-                <Descriptions
-                  bordered
-                  column={1}
-                  size="middle"
-                  styles={{
-                    label: {
-                      width: "30%",
-                      minWidth: "150px",
-                      fontWeight: "600",
-                      backgroundColor: "#fafafa",
-                      color: "#555",
-                    },
-                    content: { backgroundColor: "#fff" },
-                  }}
-                >
-                  {specifications.map((spec: any, index: number) => (
-                    <Descriptions.Item key={index} label={spec.name}>
-                      {spec.value}
-                    </Descriptions.Item>
-                  ))}
-                </Descriptions>
-              </div>
-            </>
-          )}
         </div>
+
+        {/* ============================================================ */}
+        {/* THÔNG SỐ KỸ THUẬT — nằm bên dưới card chính */}
+        {/* ============================================================ */}
+        {showTechSpec ? (
+          <div className="hikari-card tech-spec-card">
+            <Title
+              level={4}
+              className="tech-spec-title"
+            >
+              <SettingOutlined /> Thông số kỹ thuật
+            </Title>
+
+            <div className="tech-spec-content">
+              {hasStructuredSpec && (
+                <>
+                  {fixedEntries.length > 0 && (
+                    <div className="spec-group">
+                      <div className="spec-group-header">Thông số cơ bản</div>
+                      <div className="spec-table">
+                        {fixedEntries.map(({ label, value }) => (
+                          <div key={label} className="spec-row">
+                            <span className="spec-label">{label}</span>
+                            <span className="spec-value">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {dynamicGroups?.map((group) => {
+                    if (!group.items || group.items.length === 0) return null;
+                    return (
+                      <div key={group.groupId} className="spec-group">
+                        <div className="spec-group-header">{group.groupName}</div>
+                        <div className="spec-table">
+                          {group.items.map((item) => {
+                            const raw = item.value;
+                            if (
+                              raw == null ||
+                              String(raw).trim() === ""
+                            ) {
+                              return null;
+                            }
+                            const u = item.unit?.trim();
+                            const vStr = String(raw);
+                            const displayVal =
+                              u && !vStr.includes(u) ? `${vStr} ${u}` : vStr;
+                            return (
+                              <div key={item.definitionId} className="spec-row">
+                                <span className="spec-label">
+                                  {item.definitionName}
+                                </span>
+                                <span className="spec-value">{displayVal}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {!hasStructuredSpec && legacySpecRows.length > 0 && (
+                <div className="spec-group">
+                  <div className="spec-group-header">Thông số kỹ thuật</div>
+                  <div className="spec-table">
+                    {legacySpecRows.map((spec, idx) => (
+                      <div key={`${spec.name}-${idx}`} className="spec-row">
+                        <span className="spec-label">{spec.name}</span>
+                        <span className="spec-value">{spec.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="hikari-card tech-spec-card">
+            <div className="tech-spec-empty">
+              Sản phẩm đang được cập nhật thông số kỹ thuật
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* SẢN PHẨM LIÊN QUAN */}
+        {/* ============================================================ */}
+        {(relatedLoading || relatedProducts.length > 0) && (
+          <div className="hikari-card related-products-card">
+            <Title level={4} className="related-products-title">
+              <AppstoreOutlined /> Sản phẩm liên quan
+            </Title>
+
+            {relatedLoading ? (
+              <div className="related-loading">
+                <Row gutter={[16, 16]}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <Col xs={12} sm={12} md={6} key={i}>
+                      <div className="related-skeleton">
+                        <div className="skeleton-img" />
+                        <div className="skeleton-text" />
+                        <div className="skeleton-text short" />
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            ) : (
+              <Row gutter={[16, 16]}>
+                {relatedProducts.map((item) => (
+                  <Col xs={12} sm={12} md={6} key={item.productId}>
+                    <div
+                      className="related-card"
+                      onClick={() => navigate(`/client/product/${item.productId}`)}
+                    >
+                      {item.hasActiveSaleCampaign && item.discountPercent && (
+                        <span className="related-badge-sale">
+                          -{Math.round(Number(item.discountPercent))}%
+                        </span>
+                      )}
+                      <div className="related-card-img">
+                        <img
+                          src={item.thumbnail || "https://via.placeholder.com/200"}
+                          alt={item.productName}
+                        />
+                      </div>
+                      <div className="related-card-body">
+                        <div className="related-card-brand">{item.brand}</div>
+                        <div className="related-card-name" title={item.productName}>
+                          {item.productName}
+                        </div>
+                        <div className="related-card-price">
+                          {item.hasActiveSaleCampaign && item.originalPrice && (
+                            <span className="price-original">
+                              {formatPrice(Number(item.originalPrice))}
+                            </span>
+                          )}
+                          <span className="price-current">
+                            {formatPrice(Number(item.displayPrice))}
+                          </span>
+                        </div>
+                        {item.matchReasons && item.matchReasons.length > 0 && (
+                          <div className="related-card-reason">
+                            {item.matchReasons[0]}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`
-        /* CSS CHUẨN KHÔNG CẦN TAILWIND */
+        /* ===== BASE ===== */
         .hikari-loading { display: flex; justify-content: center; align-items: center; height: 60vh; }
         .hikari-product-detail { background-color: #f5f5f5; min-height: 100vh; padding-bottom: 50px; }
         .hikari-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .hikari-breadcrumb { margin-bottom: 20px; font-size: 14px; }
-        
-        .hikari-card { background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        
-        /* Cột Trái - Ảnh */
+        .hikari-card { background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
+
+        /* ===== ẢNH SẢN PHẨM ===== */
         .main-image-box { border: 1px solid #f0f0f0; border-radius: 12px; padding: 20px; text-align: center; height: 400px; display: flex; align-items: center; justify-content: center; background: #fff; }
         .main-image-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .thumbnail-list { display: flex; gap: 12px; margin-top: 16px; overflow-x: auto; padding-bottom: 5px; }
@@ -420,15 +654,14 @@ const ProductDetail: React.FC = () => {
         .thumb-item:hover { border-color: #ffccc7; }
         .thumb-item.active { border-color: #D32F2F; }
 
-        /* Cột Phải - Thông tin */
+        /* ===== THÔNG TIN SẢN PHẨM ===== */
         .brand-tag { font-weight: 600; padding: 4px 10px; font-size: 13px; margin-bottom: 12px; }
         .product-title { margin-top: 0 !important; font-size: 28px !important; color: #1a1a1a; }
         .price-box { background: #f9f9f9; padding: 20px; border-radius: 12px; margin: 20px 0; }
         .current-price { color: #D32F2F; font-size: 32px; font-weight: 700; }
-        
         .section-label { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #333; }
-        
-        /* Phiên bản (Variants) */
+
+        /* ===== PHIÊN BẢN ===== */
         .variant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
         .variant-btn { border: 2px solid #e8e8e8; border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
         .variant-btn:hover:not(.disabled) { border-color: #ffccc7; }
@@ -438,33 +671,300 @@ const ProductDetail: React.FC = () => {
         .variant-stock { font-size: 12px; color: #888; }
         .variant-btn.selected .variant-name { color: #D32F2F; }
 
-        /* Số lượng */
+        /* ===== SỐ LƯỢNG ===== */
         .quantity-section { margin-bottom: 30px; display: flex; align-items: center; gap: 15px; }
         .qty-input { width: 100px; border-radius: 6px; }
         .stock-hint { color: #888; font-size: 14px; }
 
-        /* Nút Mua */
+        /* ===== NÚT MUA ===== */
         .action-buttons { display: flex; gap: 16px; margin-bottom: 30px; }
         .btn-add-cart { flex: 1; height: 54px; font-size: 16px; font-weight: 700; color: #D32F2F; border: 2px solid #D32F2F; border-radius: 10px; background: #fff; }
         .btn-add-cart:hover:not(:disabled) { background: #fff1f0 !important; color: #D32F2F !important; border-color: #D32F2F !important; }
         .btn-buy-now { flex: 1; height: 54px; font-size: 16px; font-weight: 700; background: #D32F2F; border: none; border-radius: 10px; }
         .btn-buy-now:hover:not(:disabled) { background: #b71c1c !important; }
 
-        /* Cam kết */
+        /* ===== CAM KẾT ===== */
         .commitments { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; border-top: 1px solid #f0f0f0; padding-top: 20px; }
         .commit-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
         .icon { font-size: 20px; }
         .icon.green { color: #52c41a; }
         .icon.blue { color: #1890ff; }
 
-        /* Thông số kỹ thuật */
-        .specifications-section { background: #fff; border-radius: 12px; padding: 10px 0; }
+        /* ============================================================ */
+        /* ===== THÔNG SỐ KỸ THUẬT — GROUPED LAYOUT ===== */
+        /* ============================================================ */
+        .tech-spec-card { padding: 24px 30px; }
 
+        .tech-spec-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 24px !important;
+          font-size: 18px !important;
+          color: #1a1a1a;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tech-spec-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+
+        /* Nhóm thông số */
+        .spec-group {
+          margin-bottom: 8px;
+        }
+
+        .spec-group-header {
+          font-size: 14px;
+          font-weight: 700;
+          color: #D32F2F;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 10px 0 8px;
+          border-bottom: 1px solid #fce4e4;
+          margin-bottom: 0;
+        }
+
+        /* Bảng spec bên trong mỗi nhóm */
+        .spec-table {
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Dòng spec */
+        .spec-row {
+          display: flex;
+          align-items: flex-start;
+          padding: 10px 0;
+          border-bottom: 1px solid #fafafa;
+          gap: 20px;
+        }
+
+        .spec-row:last-child {
+          border-bottom: none;
+        }
+
+        .spec-label {
+          width: 220px;
+          min-width: 180px;
+          color: #555;
+          font-size: 14px;
+          line-height: 1.5;
+          flex-shrink: 0;
+        }
+
+        .spec-value {
+          flex: 1;
+          color: #1a1a1a;
+          font-size: 14px;
+          font-weight: 500;
+          line-height: 1.5;
+          word-break: break-word;
+        }
+
+        /* ===== TRẠNG THÁI TRỐNG ===== */
+        .tech-spec-empty {
+          text-align: center;
+          padding: 32px 20px;
+          color: #999;
+          font-size: 15px;
+          font-style: italic;
+        }
+
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
           .action-buttons { flex-direction: column; }
           .commitments { grid-template-columns: 1fr; }
           .main-image-box { height: 300px; }
           .current-price { font-size: 26px; }
+          .product-title { font-size: 22px !important; }
+
+          /* Tech spec mobile */
+          .spec-row { flex-direction: column; gap: 4px; padding: 10px 0; }
+          .spec-label { width: 100%; font-size: 13px; color: #777; }
+          .spec-value { width: 100%; font-size: 14px; }
+          .spec-group-header { font-size: 13px; }
+        }
+
+        @media (max-width: 480px) {
+          .hikari-card { padding: 16px; }
+          .tech-spec-card { padding: 16px; }
+          .variant-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+        }
+
+        /* ============================================================ */
+        /* ===== SẢN PHẨM LIÊN QUAN ===== */
+        /* ============================================================ */
+        .related-products-card { padding: 24px 30px; }
+
+        .related-products-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 20px !important;
+          font-size: 18px !important;
+          color: #1a1a1a;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* Related product card */
+        .related-card {
+          border: 1px solid #f0f0f0;
+          border-radius: 10px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          background: #fff;
+          position: relative;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .related-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+          border-color: #ffccc7;
+        }
+
+        .related-badge-sale {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: #D32F2F;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 4px;
+          z-index: 1;
+        }
+
+        .related-card-img {
+          width: 100%;
+          aspect-ratio: 1;
+          overflow: hidden;
+          background: #fafafa;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px;
+        }
+
+        .related-card-img img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.3s ease;
+        }
+
+        .related-card:hover .related-card-img img {
+          transform: scale(1.05);
+        }
+
+        .related-card-body {
+          padding: 12px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .related-card-brand {
+          font-size: 12px;
+          color: #888;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .related-card-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1a1a1a;
+          line-height: 1.4;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          min-height: 36px;
+        }
+
+        .related-card-price {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 4px;
+          flex-wrap: wrap;
+        }
+
+        .related-card-price .price-current {
+          font-size: 15px;
+          font-weight: 700;
+          color: #D32F2F;
+        }
+
+        .related-card-price .price-original {
+          font-size: 12px;
+          color: #999;
+          text-decoration: line-through;
+        }
+
+        .related-card-reason {
+          margin-top: 6px;
+          font-size: 11px;
+          color: #666;
+          background: #f5f5f5;
+          border-radius: 4px;
+          padding: 3px 8px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-style: italic;
+        }
+
+        /* Loading skeleton */
+        .related-skeleton {
+          border-radius: 10px;
+          overflow: hidden;
+          border: 1px solid #f0f0f0;
+          background: #fff;
+        }
+
+        .skeleton-img {
+          width: 100%;
+          aspect-ratio: 1;
+          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+
+        .skeleton-text {
+          height: 14px;
+          margin: 12px 12px 4px;
+          border-radius: 4px;
+          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+
+        .skeleton-text.short { width: 60%; margin-bottom: 12px; }
+
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
+        /* Mobile adjustments for related products */
+        @media (max-width: 768px) {
+          .related-products-card { padding: 16px; }
+          .related-card-name { font-size: 12px; }
+          .related-card-price .price-current { font-size: 14px; }
+          .related-card-reason { font-size: 10px; }
         }
       `}</style>
     </div>

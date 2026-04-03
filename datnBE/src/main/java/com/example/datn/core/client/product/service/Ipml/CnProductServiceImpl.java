@@ -12,16 +12,22 @@ import com.example.datn.entity.Product;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.ProductImage;
 import com.example.datn.entity.TechSpec;
+import com.example.datn.entity.TechSpecDefinition;
+import com.example.datn.entity.TechSpecValue;
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.repository.ProductImageRepository;
 import com.example.datn.repository.ProductRepository;
+import com.example.datn.repository.TechSpecValueRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CnProductServiceImpl implements CnProductService {
@@ -31,11 +37,13 @@ public class CnProductServiceImpl implements CnProductService {
     private final ProductImageRepository productImageRepository;
     private final ADDiscountDetailRepository discountDetailRepository;
     private final ProductPricingService pricingService;
+    private final TechSpecValueRepository techSpecValueRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public CnProductResponse getProductDetailById(String productId) {
-        // 1. Tìm thông tin Sản phẩm cha
-        Product product = productRepository.findById(productId)
+        // 1. Tìm thông tin Sản phẩm cha (+ tech_spec JOIN FETCH để map thông số cố định)
+        Product product = productRepository.findByIdWithTechSpec(productId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
 
         // 2. Lấy danh sách ảnh của sản phẩm
@@ -59,6 +67,7 @@ public class CnProductServiceImpl implements CnProductService {
             response.setDiscountPercent(null);
             response.setImages(imageUrls);
             response.setVariants(Collections.emptyList());
+            response.setTechSpec(buildTechSpecDetail(product));
             return response;
         }
 
@@ -78,63 +87,16 @@ public class CnProductServiceImpl implements CnProductService {
         List<CnVariantResponse> variants = details.stream()
                 .map(detail -> mapToVariantResponse(detail, activeDiscounts))
                 .collect(Collectors.toList());
-// ==========================================
-        // 6.5 LẤY CÁC THÔNG SỐ KỸ THUẬT TỪ BẢNG TECH_SPEC
-        // ==========================================
-        List<CnProductResponse.TechSpecDto> specDtos = new ArrayList<>();
 
-        // Kiểm tra xem sản phẩm có thông số kỹ thuật (tech_spec) không
-        if (product.getTechSpec() != null) {
-            TechSpec ts = product.getTechSpec();
-
-            // Ghi chú: Nếu các trường này trong file TechSpec.java của bạn là kiểu String, thì code dưới đây chạy ngay lập tức.
-            // NẾU chúng là dạng Object (@ManyToOne), bạn chỉ cần thêm .getName() vào cuối. VD: ts.getSensorType().getName()
-
-            if (ts.getSensorType() != null && !ts.getSensorType().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Loại cảm biến", ts.getSensorType()));
-            }
-
-            if (ts.getResolution() != null && !ts.getResolution().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Độ phân giải", ts.getResolution()));
-            }
-
-            if (ts.getProcessor() != null && !ts.getProcessor().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Bộ xử lý", ts.getProcessor()));
-            }
-
-            if (ts.getImageFormat() != null && !ts.getImageFormat().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Định dạng ảnh", ts.getImageFormat()));
-            }
-
-            if (ts.getVideoFormat() != null && !ts.getVideoFormat().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Định dạng video", ts.getVideoFormat()));
-            }
-
-            if (ts.getIso() != null && !ts.getIso().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("ISO", ts.getIso()));
-            }
-
-            if (ts.getLensMount() != null && !ts.getLensMount().isEmpty()) {
-                specDtos.add(new CnProductResponse.TechSpecDto("Mount ống kính", ts.getLensMount()));
-            }
+        // 7. Build TechSpecDetail (fixed + dynamic specs) — wrapped in try-catch to never crash endpoint
+        CnProductResponse.TechSpecDetail techSpecDetail;
+        try {
+            techSpecDetail = buildTechSpecDetail(product);
+        } catch (Exception e) {
+            techSpecDetail = new CnProductResponse.TechSpecDetail();
         }
 
-    /* // [TÙY CHỌN NÂNG CAO]
-    // Nếu sau này bạn muốn lấy thêm các "Thông số động" từ bảng tech_spec_value thì mở comment đoạn này:
-
-    List<TechSpecValue> dynamicValues = techSpecValueRepository.findByProduct_Id(product.getId());
-    if (dynamicValues != null && !dynamicValues.isEmpty()) {
-        for (TechSpecValue val : dynamicValues) {
-            String specName = val.getTechSpecDefinition().getName();
-            String specValue = val.getDisplayValue(); // Cột display_value trong DB của bạn
-            specDtos.add(new CnProductResponse.TechSpecDto(specName, specValue));
-        }
-    }
-    */
-
-
-
-        // 7. Build Response
+        // 8. Build Response
         CnProductResponse response = new CnProductResponse();
         response.setId(product.getId());
         response.setName(product.getName());
@@ -147,11 +109,165 @@ public class CnProductServiceImpl implements CnProductService {
         response.setDiscountPercent(productPricing.getDiscountPercent());
         response.setImages(imageUrls);
         response.setVariants(variants);
-        response.setSpecifications(specDtos);
+        response.setTechSpec(techSpecDetail);
         return response;
     }
 
+    /**
+     * Xây dựng TechSpecDetail chứa cả fixed specs và dynamic specs.
+     * Sử dụng 1 query duy nhất với JOIN FETCH để lấy TechSpecValue cùng
+     * TechSpecDefinition và TechSpecGroup, tránh N+1.
+     */
+    private CnProductResponse.TechSpecDetail buildTechSpecDetail(Product product) {
+        CnProductResponse.TechSpecDetail detail = new CnProductResponse.TechSpecDetail();
+
+        // --- Fixed Specs ---
+        CnProductResponse.FixedSpecs fixedSpecs = buildFixedSpecs(product.getTechSpec());
+        detail.setFixedSpecs(fixedSpecs);
+
+        // --- Dynamic Specs ---
+        List<CnProductResponse.DynamicSpecGroup> dynamicGroups = buildDynamicSpecGroups(product.getId());
+        detail.setDynamicSpecs(dynamicGroups);
+
+        return detail;
+    }
+
+    /**
+     * Map 7 trường cố định từ TechSpec entity.
+     */
+    private CnProductResponse.FixedSpecs buildFixedSpecs(TechSpec ts) {
+        CnProductResponse.FixedSpecs fixed = new CnProductResponse.FixedSpecs();
+        if (ts == null) {
+            return fixed;
+        }
+        fixed.setSensorType(trimToNull(ts.getSensorType()));
+        fixed.setLensMount(trimToNull(ts.getLensMount()));
+        fixed.setResolution(trimToNull(ts.getResolution()));
+        fixed.setIso(trimToNull(ts.getIso()));
+        fixed.setProcessor(trimToNull(ts.getProcessor()));
+        fixed.setImageFormat(trimToNull(ts.getImageFormat()));
+        fixed.setVideoFormat(trimToNull(ts.getVideoFormat()));
+        return fixed;
+    }
+
+    /**
+     * Lấy TechSpecValue cho sản phẩm (1 query), sau đó nhóm theo TechSpecGroup
+     * và map sang DynamicSpecGroup.
+     * Sắp xếp: group theo displayOrder, item trong group theo displayOrder.
+     */
+    private List<CnProductResponse.DynamicSpecGroup> buildDynamicSpecGroups(String productId) {
+        try {
+            List<TechSpecValue> values = techSpecValueRepository.findByProductIdWithDefinition(productId);
+            if (values == null || values.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            Map<String, CnProductResponse.DynamicSpecGroup> groupMap = new LinkedHashMap<>();
+
+            for (TechSpecValue val : values) {
+                TechSpecDefinition def = val.getTechSpecDefinition();
+                if (def == null) {
+                    continue;
+                }
+                String groupId = def.getTechSpecGroup() != null ? def.getTechSpecGroup().getId() : "UNGROUPED";
+                String groupName = def.getTechSpecGroup() != null ? def.getTechSpecGroup().getName() : "Khác";
+                Integer groupOrder = def.getTechSpecGroup() != null ? def.getTechSpecGroup().getDisplayOrder() : null;
+                final Integer effectiveGroupOrder = groupOrder != null ? groupOrder : Integer.MAX_VALUE;
+
+                groupMap.computeIfAbsent(groupId, k -> new CnProductResponse.DynamicSpecGroup(groupId, groupName, effectiveGroupOrder));
+
+                String displayValue = resolveDisplayValue(val, def);
+
+                CnProductResponse.DynamicSpecGroup group = groupMap.get(groupId);
+                if (group == null) continue;
+                group.getItems().add(new CnProductResponse.SpecItem(
+                        def.getId(),
+                        trimToNull(def.getName()),
+                        displayValue,
+                        trimToNull(def.getUnit()),
+                        def.getDisplayOrder() != null ? def.getDisplayOrder() : null
+                ));
+            }
+
+            return groupMap.values().stream()
+                    .sorted((a, b) -> {
+                        int aOrder = a.getGroupOrder() != null ? a.getGroupOrder() : Integer.MAX_VALUE;
+                        int bOrder = b.getGroupOrder() != null ? b.getGroupOrder() : Integer.MAX_VALUE;
+                        return Integer.compare(aOrder, bOrder);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("buildDynamicSpecGroups failed for productId={}: {}", productId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Chuyển đổi giá trị TechSpecValue sang chuỗi hiển thị theo dataType.
+     */
+    private String resolveDisplayValue(TechSpecValue val, TechSpecDefinition def) {
+        if (val == null || def == null) {
+            return null;
+        }
+
+        switch (def.getDataType()) {
+            case BOOLEAN:
+                return Boolean.TRUE.equals(val.getValueBoolean()) ? "Có" : "Không";
+
+            case NUMBER:
+                if (val.getValueNumber() != null) {
+                    return formatNumber(val.getValueNumber()) + (def.getUnit() != null ? " " + def.getUnit() : "");
+                }
+                String numFallback = trimToNull(val.getDisplayValue());
+                if (numFallback != null) {
+                    return numFallback;
+                }
+                return trimToNull(val.getValueText());
+
+            case RANGE:
+                if (val.getValueMin() != null || val.getValueMax() != null) {
+                    StringBuilder sb = new StringBuilder();
+                    if (val.getValueMin() != null) {
+                        sb.append(formatNumber(val.getValueMin()));
+                    }
+                    sb.append(" - ");
+                    if (val.getValueMax() != null) {
+                        sb.append(formatNumber(val.getValueMax()));
+                    }
+                    if (def.getUnit() != null) {
+                        sb.append(" ").append(def.getUnit());
+                    }
+                    return sb.toString();
+                }
+                return null;
+
+            case ENUM:
+            case TEXT:
+            default:
+                String display = trimToNull(val.getDisplayValue());
+                if (display != null) {
+                    return display;
+                }
+                return trimToNull(val.getValueText());
+        }
+    }
+
+    private String formatNumber(Double value) {
+        if (value == null) return "";
+        if (value == value.longValue()) {
+            return String.valueOf(value.longValue());
+        }
+        return String.format("%.1f", value).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    private String trimToNull(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        return s.isEmpty() ? null : s;
+    }
+
     @Override
+    @Transactional(readOnly = true)
     public List<CnVariantResponse> getVariantsByProductId(String productId) {
         List<ProductDetail> details = productDetailRepository.findByProduct_Id(productId);
         if (details == null || details.isEmpty()) {
