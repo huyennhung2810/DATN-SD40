@@ -5,7 +5,12 @@ import com.example.datn.core.admin.color.repository.ADColorRepository;
 import com.example.datn.core.admin.product.model.response.ADProductImageSimpleResponse;
 import com.example.datn.core.admin.product.repository.ADProductRepository;
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.request.BatchCreateProductDetailItemRequest;
+import com.example.datn.core.admin.productdetail.model.request.BatchCreateProductDetailRequest;
 import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.model.response.BatchCreateProductDetailResponse;
+import com.example.datn.core.admin.productdetail.model.response.BatchCreateProductDetailResponse.BatchCreatedItem;
+import com.example.datn.core.admin.productdetail.model.response.BatchCreateProductDetailResponse.BatchCreateError;
 import com.example.datn.core.admin.productdetail.repository.ADProductDetailRepository;
 import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
@@ -27,7 +32,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -340,5 +347,233 @@ public class ADProductDetailServiceImpl implements ADProductDetailService {
         ADProductDetailResponse response = mapToResponse(updatedPd);
 
         return ResponseObject.success(response, "Cập nhật sản phẩm chi tiết thành công");
+    }
+
+    @Override
+    public BatchCreateProductDetailResponse batchCreateProductDetails(String productId,
+            BatchCreateProductDetailRequest request) {
+
+        List<BatchCreatedItem> createdItems = new ArrayList<>();
+        List<BatchCreateError> errors = new ArrayList<>();
+        List<ProductDetail> toSave = new ArrayList<>();
+
+        // Load color & storage name lookups once
+        var colorRepo = adColorRepository;
+        var storageRepo = adStorageCapacityRepository;
+        var productOpt = adProductRepository.findById(productId);
+
+        if (productOpt.isEmpty()) {
+            return BatchCreateProductDetailResponse.builder()
+                    .success(false)
+                    .message("Không tìm thấy sản phẩm")
+                    .totalRequested(0)
+                    .totalCreated(0)
+                    .createdItems(createdItems)
+                    .errors(List.of(BatchCreateError.builder()
+                            .rowIndex(-1)
+                            .field("productId")
+                            .message("Không tìm thấy sản phẩm với ID: " + productId)
+                            .build()))
+                    .build();
+        }
+
+        var product = productOpt.get();
+
+        // ----- PHASE 1: PRE-VALIDATE ALL ROWS -----
+        Set<String> seenProductCodes = new HashSet<>();
+        Set<String> allSerialsInBatch = new HashSet<>();
+
+        for (int i = 0; i < request.getItems().size(); i++) {
+            BatchCreateProductDetailItemRequest item = request.getItems().get(i);
+            int rowIndex = i + 1;
+
+            // 1a. Trùng mã SPCT trong chính batch
+            if (seenProductCodes.contains(item.getProductCode())) {
+                errors.add(BatchCreateError.builder()
+                        .rowIndex(rowIndex)
+                        .field("productCode")
+                        .code(item.getProductCode())
+                        .message("Mã SPCT '" + item.getProductCode() + "' bị trùng trong danh sách tạo")
+                        .build());
+            } else {
+                seenProductCodes.add(item.getProductCode());
+            }
+
+            // 1b. Mã SPCT đã tồn tại trong DB
+            if (adProductDetailRepository.existsByCode(item.getProductCode())) {
+                errors.add(BatchCreateError.builder()
+                        .rowIndex(rowIndex)
+                        .field("productCode")
+                        .code(item.getProductCode())
+                        .message("Mã SPCT '" + item.getProductCode() + "' đã tồn tại trong hệ thống")
+                        .build());
+            }
+
+            // 1c. Tổ hợp biến thể đã tồn tại trong DB
+            if (adProductDetailRepository.existsByProductAndVariantAndColorAndStorage(
+                    productId, item.getVersionId(), item.getColorId(), item.getStorageCapacityId())) {
+                errors.add(BatchCreateError.builder()
+                        .rowIndex(rowIndex)
+                        .field("combination")
+                        .message("Tổ hợp biến thể đã tồn tại: " + item.getVersionId()
+                                + " / " + item.getColorId() + " / " + item.getStorageCapacityId())
+                        .build());
+            }
+
+            // 1d. Validate serial trùng trong batch (cùng dòng)
+            if (item.getSerials() != null && !item.getSerials().isEmpty()) {
+                Set<String> serialsInRow = new HashSet<>();
+                for (var serial : item.getSerials()) {
+                    String sn = serial.getSerialNumber().trim();
+                    if (serialsInRow.contains(sn)) {
+                        errors.add(BatchCreateError.builder()
+                                .rowIndex(rowIndex)
+                                .field("serials")
+                                .code(sn)
+                                .message("Serial '" + sn + "' bị trùng trong cùng dòng")
+                                .build());
+                    } else {
+                        serialsInRow.add(sn);
+                        allSerialsInBatch.add(sn);
+                    }
+                }
+            }
+        }
+
+        // 1e. Validate serial trùng giữa các dòng trong batch
+        Set<String> seenSerialsBatch = new HashSet<>();
+        for (int i = 0; i < request.getItems().size(); i++) {
+            BatchCreateProductDetailItemRequest item = request.getItems().get(i);
+            if (item.getSerials() == null) continue;
+            for (var serial : item.getSerials()) {
+                String sn = serial.getSerialNumber().trim();
+                if (seenSerialsBatch.contains(sn)) {
+                    errors.add(BatchCreateError.builder()
+                            .rowIndex(i + 1)
+                            .field("serials")
+                            .code(sn)
+                            .message("Serial '" + sn + "' bị trùng giữa các dòng trong batch")
+                            .build());
+                } else {
+                    seenSerialsBatch.add(sn);
+                }
+            }
+        }
+
+        // 1f. Validate serial đã tồn tại trong DB
+        if (!allSerialsInBatch.isEmpty()) {
+            List<String> allSerials = new ArrayList<>(allSerialsInBatch);
+            List<String> existingSerials = adSerialRepository.findExistingSerialNumbers(allSerials);
+            for (String sn : existingSerials) {
+                // Tìm row index chứa serial này
+                for (int i = 0; i < request.getItems().size(); i++) {
+                    BatchCreateProductDetailItemRequest item = request.getItems().get(i);
+                    if (item.getSerials() != null) {
+                        boolean found = item.getSerials().stream()
+                                .anyMatch(s -> s.getSerialNumber().trim().equals(sn));
+                        if (found) {
+                            errors.add(BatchCreateError.builder()
+                                    .rowIndex(i + 1)
+                                    .field("serials")
+                                    .code(sn)
+                                    .message("Serial '" + sn + "' đã tồn tại trong hệ thống")
+                                    .build());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ----- PHASE 2: REJECT ENTIRE BATCH IF ERRORS -----
+        if (!errors.isEmpty()) {
+            return BatchCreateProductDetailResponse.builder()
+                    .success(false)
+                    .message("Có " + errors.size() + " biến thể không hợp lệ — toàn batch bị từ chối")
+                    .totalRequested(request.getItems().size())
+                    .totalCreated(0)
+                    .createdItems(new ArrayList<>())
+                    .errors(errors)
+                    .build();
+        }
+
+        // ----- PHASE 3: BUILD ENTITIES -----
+        for (int i = 0; i < request.getItems().size(); i++) {
+            BatchCreateProductDetailItemRequest item = request.getItems().get(i);
+
+            String colorName = colorRepo.findById(item.getColorId())
+                    .map(c -> c.getName()).orElse("");
+            String storageName = storageRepo.findById(item.getStorageCapacityId())
+                    .map(s -> s.getName()).orElse("");
+
+            ProductDetail pd = new ProductDetail();
+            pd.setCode(item.getProductCode());
+            pd.setVariantVersion(item.getVersionId());
+            pd.setVersion(ProductVersion.formatFullName(item.getVersionId(), colorName, storageName));
+            pd.setSalePrice(item.getPrice());
+            pd.setNote(item.getNote());
+            pd.setStatus(EntityStatus.ACTIVE);
+            pd.setProduct(product);
+            pd.setColor(colorRepo.findById(item.getColorId()).orElse(null));
+            pd.setStorageCapacity(storageRepo.findById(item.getStorageCapacityId()).orElse(null));
+
+            // Quantity = số serial hợp lệ, 0 nếu không có serial
+            int serialCount = item.getSerials() != null ? item.getSerials().size() : 0;
+            pd.setQuantity(serialCount);
+
+            // Set image từ sản phẩm mẹ
+            List<ProductImage> productImages = productImageRepository.findByProduct_Id(productId);
+            if (item.getImageUrl() != null && !item.getImageUrl().isBlank()) {
+                pd.setImageUrl(item.getImageUrl());
+            } else if (productImages != null && !productImages.isEmpty()) {
+                pd.setImageUrl(productImages.get(0).getUrl());
+            }
+
+            toSave.add(pd);
+        }
+
+        // ----- PHASE 4: SAVE ALL -----
+        List<ProductDetail> saved = adProductDetailRepository.saveAll(toSave);
+
+        // ----- PHASE 5: SAVE SERIALS FOR EACH SAVED DETAIL -----
+        for (int i = 0; i < saved.size(); i++) {
+            ProductDetail pd = saved.get(i);
+            BatchCreateProductDetailItemRequest item = request.getItems().get(i);
+
+            if (item.getSerials() != null && !item.getSerials().isEmpty()) {
+                List<Serial> serialEntities = item.getSerials().stream().map(sReq -> {
+                    Serial serial = new Serial();
+                    serial.setSerialNumber(sReq.getSerialNumber());
+                    serial.setCode(sReq.getCode() != null && !sReq.getCode().isEmpty()
+                            ? sReq.getCode()
+                            : "SERIAL" + System.currentTimeMillis() + (int) (Math.random() * 1000));
+                    serial.setCreatedDate(System.currentTimeMillis());
+                    serial.setStatus(sReq.getStatus() != null ? sReq.getStatus() : EntityStatus.ACTIVE);
+                    serial.setProductDetail(pd);
+                    return serial;
+                }).collect(Collectors.toList());
+
+                adSerialRepository.saveAll(serialEntities);
+            }
+
+            createdItems.add(BatchCreatedItem.builder()
+                    .rowIndex(i + 1)
+                    .id(pd.getId())
+                    .code(pd.getCode())
+                    .version(pd.getVersion())
+                    .colorName(pd.getColor() != null ? pd.getColor().getName() : "")
+                    .storageCapacityName(pd.getStorageCapacity() != null ? pd.getStorageCapacity().getName() : "")
+                    .serialCount(pd.getQuantity())
+                    .build());
+        }
+
+        return BatchCreateProductDetailResponse.builder()
+                .success(true)
+                .message("Đã tạo " + createdItems.size() + " biến thể thành công!")
+                .totalRequested(request.getItems().size())
+                .totalCreated(createdItems.size())
+                .createdItems(createdItems)
+                .errors(new ArrayList<>())
+                .build();
     }
 }

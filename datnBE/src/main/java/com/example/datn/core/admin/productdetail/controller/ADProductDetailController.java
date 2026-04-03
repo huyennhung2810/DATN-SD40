@@ -1,7 +1,9 @@
 package com.example.datn.core.admin.productdetail.controller;
 
 import com.example.datn.core.admin.productdetail.model.request.ADProductDetailRequest;
+import com.example.datn.core.admin.productdetail.model.request.BatchCreateProductDetailRequest;
 import com.example.datn.core.admin.productdetail.model.response.ADProductDetailResponse;
+import com.example.datn.core.admin.productdetail.model.response.BatchCreateProductDetailResponse;
 import com.example.datn.core.admin.productdetail.service.ADProductDetailService;
 
 import com.example.datn.core.common.base.ResponseObject;
@@ -75,6 +77,32 @@ public class ADProductDetailController {
             res.setMessage("Lỗi khi cập nhật sản phẩm chi tiết: " + e.getMessage());
             res.setSuccess(false);
             log.error("Error updating product detail", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+        }
+    }
+
+    @PostMapping("/batch/{productId}")
+    public ResponseEntity<ResponseObject<BatchCreateProductDetailResponse>> batchCreate(
+            @PathVariable String productId,
+            @Valid @RequestBody BatchCreateProductDetailRequest request) {
+        ResponseObject<BatchCreateProductDetailResponse> res = new ResponseObject<>();
+        try {
+            BatchCreateProductDetailResponse response = adProductDetailService.batchCreateProductDetails(productId, request);
+            if (response.isSuccess()) {
+                res.setStatus(HttpStatus.OK);
+                res.setSuccess(true);
+            } else {
+                res.setStatus(HttpStatus.BAD_REQUEST);
+                res.setSuccess(false);
+            }
+            res.setData(response);
+            res.setMessage(response.getMessage());
+            return ResponseEntity.status(res.getStatus()).body(res);
+        } catch (Exception e) {
+            res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+            res.setMessage("Lỗi khi tạo hàng loạt biến thể: " + e.getMessage());
+            res.setSuccess(false);
+            log.error("Error batch creating product details", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
         }
     }

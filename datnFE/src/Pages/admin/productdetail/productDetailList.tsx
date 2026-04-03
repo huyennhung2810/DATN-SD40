@@ -1,8 +1,9 @@
-﻿import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
   Drawer,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -19,6 +20,7 @@ import {
   Upload,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { MenuProps } from "antd/es/menu";
 import { debounce } from "lodash";
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -33,6 +35,7 @@ import { colorActions } from "../../../redux/color/colorSlice";
 import { productDetailActions } from "../../../redux/productdetail/productDetailSlice";
 import { storageCapacityActions } from "../../../redux/storage/storageSlice";
 import type { RootState } from "../../../redux/store";
+import BatchCreateVariantModal from "../../../components/admin/variant/BatchCreateVariantModal";
 
 const { Text } = Typography;
 
@@ -46,6 +49,23 @@ const ProductDetailPage: React.FC = () => {
   const [loadingSerials, setLoadingSerials] = useState(false);
   const isSerialInOrder = (status: string) => String(status ?? "").toUpperCase() === "IN_ORDER";
   const isSerialSold = (status: string) => String(status ?? "").toUpperCase() === "SOLD" || String(status ?? "").toUpperCase() === "INACTIVE";
+
+  // --- BATCH CREATE STATE ---
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+
+  // --- ADD MENU ---
+  const addMenuItems: MenuProps["items"] = [
+    {
+      key: "single",
+      label: "Thêm 1 biến thể",
+      onClick: () => openDrawer(),
+    },
+    {
+      key: "batch",
+      label: "Thêm hàng loạt biến thể",
+      onClick: () => openBatchModal(),
+    },
+  ];
 
   // 1. Lấy dữ liệu Màu sắc và Dung lượng từ Redux (kèm fallback mảng rỗng để tránh lỗi map)
   const { list: colors = [] } = useSelector(
@@ -138,6 +158,11 @@ const ProductDetailPage: React.FC = () => {
 
   const generateCode = () => {
     return `SPCT${Date.now()}`;
+  };
+
+  // Mở modal batch create (sản phẩm được chọn bên trong modal)
+  const openBatchModal = () => {
+    setBatchModalOpen(true);
   };
 
   // Mở Drawer và fill dữ liệu
@@ -397,18 +422,23 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </Space>
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => openDrawer()}
-          style={{
-            borderRadius: "8px",
-            height: "36px",
-            padding: "0 16px",
-          }}
+        <Dropdown
+          menu={{ items: addMenuItems }}
+          trigger={["click"]}
+          placement="bottomRight"
         >
-          Thêm SPCT mới
-        </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={{
+              borderRadius: "8px",
+              height: "36px",
+              padding: "0 16px",
+            }}
+          >
+            Thêm SPCT mới
+          </Button>
+        </Dropdown>
       </div>
 
       <Card style={{ marginBottom: 16 }}>
@@ -693,6 +723,26 @@ const ProductDetailPage: React.FC = () => {
           />
         )}
       </Modal>
+
+      {/* ====== BATCH CREATE VARIANT MODAL ====== */}
+      <BatchCreateVariantModal
+        open={batchModalOpen}
+        productId=""
+        productCode=""
+        productName=""
+        colors={colors.map((c: any) => ({ id: String(c.id), name: c.name }))}
+        storages={capacities.map((s: any) => ({ id: String(s.id), name: s.name }))}
+        productList={productList.map((p: any) => ({
+          id: String(p.id),
+          code: p.code,
+          name: p.name,
+        }))}
+        onSuccess={() => {
+          setBatchModalOpen(false);
+          fetchData();
+        }}
+        onCancel={() => setBatchModalOpen(false)}
+      />
     </div>
   );
 };

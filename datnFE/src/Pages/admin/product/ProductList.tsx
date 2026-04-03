@@ -1,4 +1,4 @@
-﻿import {
+import {
   CameraOutlined,
   CheckCircleOutlined,
   CloseOutlined,
@@ -19,6 +19,7 @@ import {
   Descriptions,
   Divider,
   Drawer,
+  Dropdown,
   Empty,
   Form,
   Image,
@@ -39,6 +40,7 @@ import {
   Typography,
   Upload,
 } from "antd";
+import type { MenuProps } from "antd/es/menu";
 import type { RcFile, UploadProps } from "antd/es/upload/interface";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useState } from "react";
@@ -46,6 +48,7 @@ import { useDispatch, useSelector } from "react-redux";
 import * as XLSX from "xlsx";
 import productApi from "../../../api/productApi";
 import techSpecApi from "../../../api/techSpecApi";
+import BatchCreateVariantModal from "../../../components/admin/variant/BatchCreateVariantModal";
 import DynamicTechSpecForm from "../../../components/admin/DynamicTechSpecForm";
 import QuickAddCategoryModal from "../../../components/QuickAddCategoryModal";
 import QuickAddColorModal from "../../../components/QuickAddColorModal";
@@ -130,6 +133,7 @@ const ProductPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [batchVariantModalOpen, setBatchVariantModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(
     null,
   );
@@ -1251,6 +1255,69 @@ const ProductPage: React.FC = () => {
       });
     }
   };
+
+  /** Đồng bộ danh sách biến thể trong drawer sau khi thêm/sửa/xóa/batch. */
+  const refreshProductVariants = async (productId: string) => {
+    const response = await productApi.getProductWithVariants(productId);
+    setSelectedProductWithVariants(response);
+    if (response.variants) {
+      const details = response.variants.map(
+        (v: ProductVariantResponse) =>
+          ({
+            id: v.id,
+            code: v.code,
+            version: v.version,
+            variantVersion: v.variantVersion,
+            colorId: v.colorId,
+            colorName: v.colorName,
+            storageCapacityId: v.storageCapacityId,
+            storageCapacityName: v.storageCapacityName,
+            salePrice: v.salePrice,
+            quantity: v.quantity,
+            status: v.status,
+            imageUrl: v.imageUrl,
+            selectedImageId: v.selectedImageId,
+            selectedImageUrl: v.selectedImageUrl,
+            serials: v.serials,
+          }) as ProductDetailResponse,
+      );
+      setProductDetails(details);
+    } else {
+      setProductDetails([]);
+    }
+  };
+
+  const adminProductCode = (p: ProductResponse | null): string => {
+    if (!p) return "";
+    const c = (p as ProductResponse & { code?: string }).code;
+    if (c && String(c).trim()) return String(c).trim();
+    const fromName = p.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_|_$/g, "")
+      .toUpperCase();
+    return fromName.slice(0, 32) || p.id.slice(0, 8).toUpperCase();
+  };
+
+  const variantAddMenuItems: MenuProps["items"] = [
+    {
+      key: "single",
+      label: "Thêm một biến thể",
+      onClick: () => openAddVariantModal(),
+    },
+    {
+      key: "batch",
+      label: "Thêm hàng loạt biến thể",
+      onClick: () => {
+        if (!selectedProduct) {
+          message.warning("Mở chi tiết sản phẩm trước khi thêm biến thể.");
+          return;
+        }
+        setBatchVariantModalOpen(true);
+      },
+    },
+  ];
 
   const getCategoryName = (id: string) => {
     const cat = categories.find((c) => c.id === id);
@@ -2401,13 +2468,15 @@ const ProductPage: React.FC = () => {
                           <Typography.Text strong>
                             Danh sách biến thể sản phẩm
                           </Typography.Text>
-                          <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={openAddVariantModal}
+                          <Dropdown
+                            menu={{ items: variantAddMenuItems }}
+                            trigger={["click"]}
+                            placement="bottomRight"
                           >
-                            Thêm biến thể
-                          </Button>
+                            <Button type="primary" icon={<PlusOutlined />}>
+                              Thêm biến thể
+                            </Button>
+                          </Dropdown>
                         </div>
 
                         {selectedProductWithVariants && (
@@ -3259,6 +3328,38 @@ const ProductPage: React.FC = () => {
           variantForm.setFieldsValue({ storageCapacityId: storageId });
           notification.success({ message: `Đã chọn: ${label}` });
         }}
+      />
+
+      <BatchCreateVariantModal
+        open={batchVariantModalOpen}
+        productId={selectedProduct?.id ?? ""}
+        productCode={adminProductCode(selectedProduct)}
+        productName={selectedProduct?.name ?? ""}
+        colors={(colorState.list || []).map(
+          (c: { id: string; name: string }) => ({
+            id: String(c.id),
+            name: c.name,
+          }),
+        )}
+        storages={(storageCapacityState.list || []).map(
+          (s: { id: string; name: string }) => ({
+            id: String(s.id),
+            name: s.name,
+          }),
+        )}
+        productList={(list || []).map((p) => ({
+          id: String(p.id),
+          code: adminProductCode(p),
+          name: p.name,
+        }))}
+        onSuccess={() => {
+          setBatchVariantModalOpen(false);
+          if (selectedProduct?.id) {
+            void refreshProductVariants(selectedProduct.id);
+          }
+          fetchProducts();
+        }}
+        onCancel={() => setBatchVariantModalOpen(false)}
       />
     </div>
   );

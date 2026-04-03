@@ -63,4 +63,22 @@ public interface ADProductDetailRepository extends ProductDetailRepository {
     // Lấy tất cả product details theo danh sách productIds (dùng cho client product search)
     @Query("SELECT pd FROM ProductDetail pd WHERE pd.product.id IN :productIds")
     List<ProductDetail> findByProductIds(@Param("productIds") List<String> productIds);
+
+    // ====== BATCH CREATE VALIDATION ======
+
+    // Kiểm tra biến thể trùng theo productId + version + colorId + storageCapacityId
+    @Query("SELECT CASE WHEN COUNT(pd) > 0 THEN true ELSE false END FROM ProductDetail pd WHERE " +
+            "pd.product.id = :productId " +
+            "AND pd.variantVersion = :variantVersion " +
+            "AND pd.color.id = :colorId " +
+            "AND pd.storageCapacity.id = :storageCapacityId")
+    boolean existsByProductAndVariantAndColorAndStorage(
+            @Param("productId") String productId,
+            @Param("variantVersion") String variantVersion,
+            @Param("colorId") String colorId,
+            @Param("storageCapacityId") String storageCapacityId
+    );
+
+    // Kiểm tra mã SPCT đã tồn tại trong DB
+    boolean existsByCode(String code);
 }

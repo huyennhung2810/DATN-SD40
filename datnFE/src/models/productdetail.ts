@@ -144,3 +144,70 @@ export interface ProductDetailRequest {
   // Danh sách serial mới được thêm khi cập nhật biến thể (chỉ append, không ghi đè)
   newSerials?: string[];
 }
+
+// ===== BATCH CREATE TYPES =====
+
+export interface BatchCreateItem {
+  productCode: string;
+  versionId: string;
+  colorId: string;
+  storageCapacityId: string;
+  price: number;
+  imageUrl?: string;
+  note?: string;
+  serials?: {
+    serialNumber: string;
+    code?: string;
+    status?: string;
+  }[];
+}
+
+export interface BatchCreateRequest {
+  items: BatchCreateItem[];
+}
+
+export interface BatchCreatedItem {
+  rowIndex: number;
+  id: string;
+  code: string;
+  version: string;
+  colorName: string;
+  storageCapacityName: string;
+  serialCount: number;
+}
+
+export interface BatchCreateError {
+  rowIndex: number;
+  field: string;
+  code?: string;
+  message: string;
+}
+
+export interface BatchCreateResponse {
+  success: boolean;
+  message: string;
+  totalRequested: number;
+  totalCreated: number;
+  createdItems: BatchCreatedItem[];
+  errors: BatchCreateError[];
+}
+
+// ===== PREVIEW ROW TYPE =====
+
+export interface BatchVariantRow {
+  id?: string; // temp id for react key
+  rowIndex: number;
+  versionId: string;
+  versionName: string;
+  colorId: string;
+  colorName: string;
+  storageId: string;
+  storageName: string;
+  productCode: string;
+  price: number;
+  imageUrl?: string;
+  note?: string;
+  serials: string[];
+  error?: string;
+  errorField?: string;
+}
