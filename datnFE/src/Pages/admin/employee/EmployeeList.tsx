@@ -333,15 +333,13 @@ const EmployeePage: React.FC = () => {
         }
         className="shadow-md mb-4"
         extra={
-          <Tooltip title="Làm mới bộ lọc">
-            <Button
-              shape="circle"
-              icon={<ReloadOutlined />}
-              onClick={handleReset}
-              type="primary"
-              ghost
-            />
-          </Tooltip>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleReset}
+            aria-label="Đặt lại bộ lọc tìm kiếm"
+          >
+            Đặt lại bộ lọc
+          </Button>
         }
       >
         <Form
