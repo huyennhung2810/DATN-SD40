@@ -120,14 +120,17 @@ public class ChatController {
     // kết thúc sp
     @PostMapping("/end-support")
     public ResponseEntity<Void> endSupport(@RequestParam String sessionId) {
+        boolean wasStaff = sessionService.isStaffSession(sessionId);
         sessionService.endStaffSupport(sessionId);
 
-        messagingTemplate.convertAndSend("/topic/messages/" + sessionId,
-                ChatResponse.builder()
-                        .content("Nhân viên đã rời phòng hỗ trợ. AI Hikari sẽ tiếp tục đồng hành cùng bạn!")
-                        .sender("SYSTEM")
-                        .timestamp(LocalDateTime.now())
-                        .build());
+        if (wasStaff) {
+            messagingTemplate.convertAndSend("/topic/messages/" + sessionId,
+                    ChatResponse.builder()
+                            .content("Nhân viên đã rời phòng hỗ trợ. AI Hikari sẽ tiếp tục đồng hành cùng bạn!")
+                            .sender("SYSTEM")
+                            .timestamp(LocalDateTime.now())
+                            .build());
+        }
 
         return ResponseEntity.ok().build();
     }

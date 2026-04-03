@@ -336,7 +336,7 @@ const EmployeeChatPage: React.FC = () => {
             </Title>
           </div>
 
-          {sessions.length === 0 ? (
+          {sessions.filter((s) => !s.isAiActive).length === 0 ? (
             <Empty
               description="Chưa có khách hàng"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -344,7 +344,7 @@ const EmployeeChatPage: React.FC = () => {
             />
           ) : (
             <List
-              dataSource={sessions}
+              dataSource={sessions.filter((s) => !s.isAiActive)}
               style={{ overflowY: "auto", height: "calc(100% - 57px)" }}
               renderItem={(item) => {
                 const isSelected = selectedSession === item.sessionId;
@@ -473,15 +473,17 @@ const EmployeeChatPage: React.FC = () => {
                   </div>
                 </Space>
 
-                <Button
-                  type="primary"
-                  danger
-                  ghost
-                  size="small"
-                  onClick={handleEndSupport}
-                >
-                  Kết thúc hỗ trợ
-                </Button>
+                {activeSession && !activeSession.isAiActive && (
+                  <Button
+                    type="primary"
+                    danger
+                    ghost
+                    size="small"
+                    onClick={handleEndSupport}
+                  >
+                    Kết thúc hỗ trợ
+                  </Button>
+                )}
               </div>
 
               {/* MESSAGES */}

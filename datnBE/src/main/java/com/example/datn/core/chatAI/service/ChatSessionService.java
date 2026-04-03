@@ -24,19 +24,25 @@ public class ChatSessionService {
 
     private final CustomerRepository customerRepository;
 
+    // Kiểm tra session này đã từng có nhân viên hỗ trợ chưa
+    public boolean isStaffSession(String sessionId) {
+        return sessionRepository.findById(sessionId)
+                .map(s -> !s.isAiActive())
+                .orElse(false);
+    }
+
     @Transactional
 
-        public void saveMessage(String sessionId, String content, String sender, String userId, String customerName) {
+    public void saveMessage(String sessionId, String content, String sender, String userId, String customerName) {
         ChatSession session = sessionRepository.findById(sessionId)
-            .orElseGet(() -> sessionRepository.save(
-                ChatSession.builder()
-                    .sessionId(sessionId)
-                    .userId(userId)
-                    .customerName(customerName)
-                    .isAiActive(true)
-                    .createdAt(LocalDateTime.now())
-                    .build()
-            ));
+                .orElseGet(() -> sessionRepository.save(
+                        ChatSession.builder()
+                                .sessionId(sessionId)
+                                .userId(userId)
+                                .customerName(customerName)
+                                .isAiActive(true)
+                                .createdAt(LocalDateTime.now())
+                                .build()));
         // Nếu session đã tồn tại nhưng chưa có userId thì cập nhật
         if (session.getUserId() == null && userId != null) {
             session.setUserId(userId);
@@ -62,15 +68,16 @@ public class ChatSessionService {
         sessionRepository.save(session);
     }
 
-
-    // Lấy lịch sử tin nhắn cho user (nếu có userId, ưu tiên lấy sessionId đúng user)
+    // Lấy lịch sử tin nhắn cho user (nếu có userId, ưu tiên lấy sessionId đúng
+    // user)
     public List<ChatMessage> getChatHistory(String sessionId, String userId) {
         if (userId != null && !userId.isEmpty()) {
             // Tìm session đúng userId
             List<ChatSession> sessions = sessionRepository.findByUserIdOrderByUpdatedAtDesc(userId);
             if (!sessions.isEmpty()) {
                 // Ưu tiên sessionId truyền vào nếu đúng user, nếu không lấy session mới nhất
-                ChatSession session = sessions.stream().filter(s -> s.getSessionId().equals(sessionId)).findFirst().orElse(sessions.get(0));
+                ChatSession session = sessions.stream().filter(s -> s.getSessionId().equals(sessionId)).findFirst()
+                        .orElse(sessions.get(0));
                 return messageRepository.findBySession_SessionIdOrderByCreatedAtAsc(session.getSessionId());
             }
         }
@@ -87,8 +94,7 @@ public class ChatSessionService {
                         s.isAiActive(),
                         s.getCustomerName(),
                         s.getUserId(),
-                        s.getCustomerImage()
-                ))
+                        s.getCustomerImage()))
                 .collect(Collectors.toList());
     }
 

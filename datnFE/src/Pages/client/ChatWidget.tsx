@@ -17,6 +17,7 @@ import {
   setMessages,
 } from "../../redux/chat/chatSlice";
 import { useWebSocket } from "../../app/useWebSocket";
+import { clearMessages } from "../../redux/chat/chatSlice";
 import axiosClient from "../../api/axiosClient";
 
 const { Text } = Typography;
@@ -93,15 +94,31 @@ const ChatWidget: React.FC = () => {
   const dispatch = useDispatch();
 
   // 3. Lấy dữ liệu từ Redux Store
+
   const { messages, loading, sessionId } = useSelector(
     (state: RootState) => state.chat,
   );
   const userId = useSelector((state: RootState) => state.auth.user?.userId);
-  const customerName = useSelector((state: RootState) => state.auth.user?.fullName);
-  const customerImage = useSelector((state: RootState) => state.auth.user?.pictureUrl ?? state.auth.user?.image);
+  const customerName = useSelector(
+    (state: RootState) => state.auth.user?.fullName,
+  );
+  const customerImage = useSelector(
+    (state: RootState) => state.auth.user?.pictureUrl ?? state.auth.user?.image,
+  );
 
   // Kích hoạt kết nối WebSocket
-  useWebSocket(sessionId);
+  const wsRef = useWebSocket(sessionId);
+
+  // Khi userId hoặc sessionId thay đổi (đăng nhập/đăng xuất), reset chat state và disconnect websocket
+  useEffect(() => {
+    dispatch(clearMessages());
+    // Nếu có thể, disconnect websocket cũ
+    if (wsRef && wsRef.current) {
+      wsRef.current.disconnect?.(() => {
+        console.log("Đã ngắt kết nối WebSocket khi đổi user/session.");
+      });
+    }
+  }, [userId, sessionId]);
 
   // 4. Logic: Tự động tải lịch sử chat
   useEffect(() => {
@@ -130,7 +147,14 @@ const ChatWidget: React.FC = () => {
   const handleSend = async () => {
     if (!inputValue.trim() || loading) return;
     try {
-      dispatch(sendMessageRequest({ content: inputValue, sessionId, userId, customerName: customerName ?? undefined }));
+      dispatch(
+        sendMessageRequest({
+          content: inputValue,
+          sessionId,
+          userId,
+          customerName: customerName ?? undefined,
+        }),
+      );
       setInputValue("");
     } catch (error) {
       console.error("Lỗi gửi tin nhắn:", error);
@@ -138,7 +162,14 @@ const ChatWidget: React.FC = () => {
   };
 
   const handleRequestStaff = () => {
-    dispatch(requestStaff({ sessionId, userId, customerName: customerName ?? undefined, customerImage: customerImage ?? undefined }));
+    dispatch(
+      requestStaff({
+        sessionId,
+        userId,
+        customerName: customerName ?? undefined,
+        customerImage: customerImage ?? undefined,
+      }),
+    );
   };
 
   return (
