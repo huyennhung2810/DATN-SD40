@@ -560,107 +560,21 @@ const OrderDetailPage: React.FC = () => {
         </Space>
       ),
     },
+    // XÓA các cột Serial, Đơn giá, SL, Thành tiền
     {
-      title: "Serial",
-      key: "serial",
-      width: 180,
-      align: "center",
-      render: (_: unknown, r: FlatRow) =>
-        r.serialCode !== "Chưa gán" ? (
-          <Tag color="blue" style={{ fontFamily: "monospace" }}>
-            {r.serialCode}
-          </Tag>
-        ) : (
-          <Tag color="default">Chưa gán</Tag>
-        ),
-    },
-    {
-      title: "Đơn giá",
-      key: "giaBan",
-      align: "right",
+      title: "Thao tác",
+      key: "action",
+      align: "center" as const,
       width: 120,
-      render: (_: unknown, r: FlatRow) => {
-        const item = items.find((i) => i.productDetailId === r.productDetailId);
-        const giaBanGoc =
-          item && typeof item.giaBanGoc === "number"
-            ? item.giaBanGoc
-            : undefined;
-        const showDiscount = giaBanGoc && giaBanGoc > r.giaBan;
-        return (
-          <div>
-            {showDiscount && (
-              <Text
-                delete
-                style={{ color: "#888", fontSize: 13, marginRight: 4 }}
-              >
-                {fmt(giaBanGoc)}
-              </Text>
-            )}
-            <Text
-              strong
-              style={{ color: showDiscount ? "#cf1322" : undefined }}
-            >
-              {fmt(r.giaBan)}
-            </Text>
-          </div>
-        );
-      },
-    },
-    {
-      title: "SL",
-      key: "soLuong",
-      align: "center",
-      width: 60,
-      render: (_: unknown, r: FlatRow) => r.soLuong,
-    },
-    {
-      title: "Thành tiền",
-      key: "tongTien",
-      align: "right",
-      width: 130,
       render: (_: unknown, r: FlatRow) => (
-        <Text strong style={{ color: "#cf1322" }}>
-          {fmt(r.tongTien)}
-        </Text>
+        <Button
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => openSerialInfo(r)}
+          title="Xem serial"
+        />
       ),
     },
-    ...(canChangeSerial
-      ? [
-          {
-            title: "Thao tác",
-            key: "action",
-            align: "center" as const,
-            width: 120,
-            render: (_: unknown, r: FlatRow) => (
-              <Space>
-                <Button
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => openSerialInfo(r)}
-                  title="Xem serial"
-                />
-                {!r.serialId && (
-                  <Button
-                    size="small"
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => openSerialChange(r)}
-                    title="Gán serial"
-                  />
-                )}
-                {r.serialId && (
-                  <Button
-                    size="small"
-                    icon={<SwapOutlined />}
-                    onClick={() => openSerialChange(r)}
-                    title="Đổi serial"
-                  />
-                )}
-              </Space>
-            ),
-          },
-        ]
-      : []),
   ];
 
   const listColumns: ColumnsType<OrderDetailResponse> = [
@@ -1701,7 +1615,7 @@ const OrderDetailPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Thông tin Serial / IMEI"
+        title="Thông tin Serial"
         open={serialInfoOpen}
         onCancel={() => setSerialInfoOpen(false)}
         footer={null}
@@ -1716,7 +1630,7 @@ const OrderDetailPage: React.FC = () => {
             <Descriptions.Item label="Sản phẩm">
               {serialInfoRow.tenSanPham}
             </Descriptions.Item>
-            <Descriptions.Item label="Serial / IMEI">
+            <Descriptions.Item label="Serial">
               <Tag
                 color="blue"
                 style={{ fontFamily: "monospace", fontSize: 13 }}
