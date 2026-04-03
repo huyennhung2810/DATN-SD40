@@ -52,7 +52,7 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                 hd.payment_method AS phuongThucThanhToan,
 
 
-                spct.sale_price AS giaBanGoc,
+                COALESCE(hdct.original_price, spct.sale_price) AS giaBanGoc,
 
                 sp.code AS maSanPham,
                 spct.code AS maChiTietSanPham,

@@ -168,10 +168,12 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             }
         }
 
-        BigDecimal unitPrice = productDetail.getSalePrice();
-        if (unitPrice == null) {
-            unitPrice = BigDecimal.ZERO;
+        BigDecimal originalPrice = productDetail.getSalePrice();
+        if (originalPrice == null) {
+            originalPrice = BigDecimal.ZERO;
         }
+
+        BigDecimal unitPrice = originalPrice;
 
         // --- CHECK ACTIVE PRODUCT DISCOUNT ---
         Optional<DiscountDetail> discountDetail = adDiscountDetailRepository
@@ -186,6 +188,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             targetDetail.setOrder(order);
             targetDetail.setProductDetail(productDetail);
             targetDetail.setQuantity(quantity);
+            targetDetail.setOriginalPrice(originalPrice);
             targetDetail.setUnitPrice(unitPrice);
             targetDetail.setTotalPrice(unitPrice.multiply(new BigDecimal(quantity)));
         } else {
@@ -319,6 +322,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             map.put("id", d.getId());
             map.put("quantity", d.getQuantity());
             map.put("unitPrice", d.getUnitPrice());
+            map.put("originalPrice", d.getOriginalPrice() != null ? d.getOriginalPrice() : null);
             map.put("totalPrice", d.getTotalPrice());
 
             List<Serial> detailSerials = getSerialsByOrderDetailId(d.getId());
@@ -344,8 +348,10 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                     imageUrl = d.getProductDetail().getProduct().getImages().get(0).getUrl();
                 }
                 pdMap.put("image", imageUrl);
-                // Add original price to help FE show "Price Before vs Price After"
-                BigDecimal originalPrice = d.getProductDetail().getSalePrice();
+                // Add original price (snapshot) from order detail entity
+                BigDecimal originalPrice = d.getOriginalPrice() != null
+                        ? d.getOriginalPrice()
+                        : (d.getProductDetail() != null ? d.getProductDetail().getSalePrice() : null);
                 pdMap.put("originalPrice", originalPrice);
 
                 Map<String, Object> productMap = new HashMap<>();

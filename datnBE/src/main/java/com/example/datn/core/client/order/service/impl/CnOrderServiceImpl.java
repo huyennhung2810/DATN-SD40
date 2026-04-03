@@ -77,10 +77,13 @@ public class CnOrderServiceImpl implements CnOrderService {
                 ProductDetail pd = productDetailRepository.findById(itemReq.getProductDetailId())
                         .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại hoặc đã bị xóa!"));
 
+                BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+                BigDecimal unit = resolveCampaignUnitPrice(pd);
+
                 OrderDetail od = new OrderDetail();
                 od.setProductDetail(pd);
                 od.setQuantity(itemReq.getQuantity());
-                BigDecimal unit = resolveCampaignUnitPrice(pd);
+                od.setOriginalPrice(salePrice);
                 od.setUnitPrice(unit);
                 BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
                 od.setTotalPrice(itemTotal);
@@ -98,11 +101,14 @@ public class CnOrderServiceImpl implements CnOrderService {
             }
 
             for (CartDetail cd : cartItems) {
-                OrderDetail od = new OrderDetail();
                 ProductDetail pd = cd.getProductDetail();
+                BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+                BigDecimal unit = resolveCampaignUnitPrice(pd);
+
+                OrderDetail od = new OrderDetail();
                 od.setProductDetail(pd);
                 od.setQuantity(cd.getQuantity());
-                BigDecimal unit = resolveCampaignUnitPrice(pd);
+                od.setOriginalPrice(salePrice);
                 od.setUnitPrice(unit);
                 BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(cd.getQuantity()));
                 od.setTotalPrice(itemTotal);

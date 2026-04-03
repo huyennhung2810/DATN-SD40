@@ -23,6 +23,14 @@ public class OrderDetail extends PrimaryEntity implements Serializable {
     @Column(name = "unit_price")
     private BigDecimal unitPrice;
 
+    /**
+     * Giá gốc niêm yết tại thời điểm mua (snapshot).
+     * Dùng để hiển thị "giá gạch đi" trên hóa đơn.
+     * Lấy từ ProductDetail.salePrice tại thời điểm tạo OrderDetail.
+     */
+    @Column(name = "original_price", precision = 20, scale = 2)
+    private BigDecimal originalPrice;
+
     @Column(name = "discount_amount")
     private BigDecimal discountAmount;
 
