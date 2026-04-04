@@ -169,8 +169,24 @@ const VoucherForm: React.FC = () => {
     dispatch(action({ data: payload, navigate: () => navigate("/voucher") }));
   };
 
-  const disabledDate = (current: Dayjs) =>
-    current && current < dayjs().startOf("day");
+// LOGIC CHỌN NGÀY: Khóa quá khứ, nhưng "đặc cách" mở khóa cho đúng ngày bắt đầu cũ
+  const disabledDate = (current: Dayjs) => {
+    // 1. Lấy mốc hôm nay
+    const today = dayjs().startOf("day");
+
+    // 2. Nếu đang Cập nhật và đợt giảm giá có ngày bắt đầu cũ ở trong quá khứ
+    if (id && currentVoucher?.startDate) {
+      const originalStartDate = dayjs(currentVoucher.startDate).startOf("day");
+      
+      // Nếu ô đang vẽ trên lịch CHÍNH LÀ ngày bắt đầu cũ -> Cho phép (return false)
+      if (current.isSame(originalStartDate, 'day')) {
+        return false; 
+      }
+    }
+
+    // 3. Các ngày khác: Cứ trước hôm nay là khóa đen thui
+    return current && current.isBefore(today);
+  };
   return (
     <div
       style={{

@@ -109,7 +109,7 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             return cnCartDetailRepository.save(newDetail);
         }
     }
-    /*@Override
+    @Override
     @Transactional
     public List<CartItemResponse> getCartDetails (String customerId){
         // 1. Tìm giỏ hàng của khách này
@@ -139,7 +139,7 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             dto.setStock(cd.getProductDetail().getQuantity());
             String productDetailId = cd.getProductDetail().getId();
 
-            DiscountDetail activeDiscount = discountDetailRepository.findFirstByProductDetail_IdAndStatus(productDetailId, 1);
+            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetailId );
             if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
                 dto.setDiscountedPrice(activeDiscount.getPriceAfter());
             } else {
@@ -149,51 +149,51 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             responseList.add(dto);
         }
 
-        return responseList;
-    }*/
-
-    @Override
-    @Transactional
-    public List<CartItemResponse> getCartDetails(String customerId) {
-        Cart cart = CartService.getOrCreateCart(customerId);
-        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
-        List<CartItemResponse> responseList = new ArrayList<>();
-
-        for (CartDetail cd : cartDetails) {
-            CartItemResponse dto = new CartItemResponse();
-            ProductDetail pd = cd.getProductDetail();
-
-            dto.setId(cd.getId());
-            dto.setProductDetailId(pd.getId());
-            dto.setProductName(pd.getProduct().getName());
-            dto.setImageUrl(pd.getImageUrl());
-
-            // Giá gốc (Price)
-            BigDecimal originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
-            dto.setPrice(originalPrice);
-
-            dto.setQuantity(cd.getQuantity());
-            dto.setVersion(pd.getVersion());
-
-            // 1. Gọi hàm SQL thuần vừa tạo ở Bước 1
-            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
-
-            // 2. Gán giá gốc (Lưu ý: Bạn kiểm tra xem pd.getSalePrice() trong hệ thống của bạn là giá gốc hay giá giảm nhé)
-            originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
-            dto.setPrice(originalPrice);
-
-            // 3. Xử lý giá sau giảm
-            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
-                // TÌM THẤY TRONG DB -> ÉP GIÁ TRỊ PRICE_AFTER VÀO GIỎ HÀNG
-                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
-            } else {
-                dto.setDiscountedPrice(originalPrice);
-            }
-
-            responseList.add(dto);
-        }
         return responseList;
     }
+
+//    @Override
+//    @Transactional
+//    public List<CartItemResponse> getCartDetails(String customerId) {
+//        Cart cart = CartService.getOrCreateCart(customerId);
+//        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
+//        List<CartItemResponse> responseList = new ArrayList<>();
+//
+//        for (CartDetail cd : cartDetails) {
+//            CartItemResponse dto = new CartItemResponse();
+//            ProductDetail pd = cd.getProductDetail();
+//
+//            dto.setId(cd.getId());
+//            dto.setProductDetailId(pd.getId());
+//            dto.setProductName(pd.getProduct().getName());
+//            dto.setImageUrl(pd.getImageUrl());
+//
+//            // Giá gốc (Price)
+//            BigDecimal originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+//            dto.setPrice(originalPrice);
+//
+//            dto.setQuantity(cd.getQuantity());
+//            dto.setVersion(pd.getVersion());
+//
+//            // 1. Gọi hàm SQL thuần vừa tạo ở Bước 1
+//            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
+//
+//            // 2. Gán giá gốc (Lưu ý: Bạn kiểm tra xem pd.getSalePrice() trong hệ thống của bạn là giá gốc hay giá giảm nhé)
+//            originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+//            dto.setPrice(originalPrice);
+//
+//            // 3. Xử lý giá sau giảm
+//            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+//                // TÌM THẤY TRONG DB -> ÉP GIÁ TRỊ PRICE_AFTER VÀO GIỎ HÀNG
+//                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+//            } else {
+//                dto.setDiscountedPrice(originalPrice);
+//            }
+//
+//            responseList.add(dto);
+//        }
+//        return responseList;
+//    }
 
     @Override
     @Transactional

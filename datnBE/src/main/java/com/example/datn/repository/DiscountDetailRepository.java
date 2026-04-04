@@ -9,9 +9,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DiscountDetailRepository  extends JpaRepository<DiscountDetail, String> {
 
-    // Thêm duy nhất dòng này:
-    DiscountDetail findFirstByProductDetail_IdAndStatus(String productDetailId, Integer status);
-
-    @Query(value = "SELECT * FROM discount_detail WHERE id_product_detail = :productDetailId AND status = 1 LIMIT 1", nativeQuery = true)
+    // Dùng JPQL để JOIN thẳng sang bảng discount cha và check status = 2
+    @Query("SELECT dd FROM DiscountDetail dd " +
+            "JOIN dd.discount d " +
+            "WHERE dd.productDetail.id = :productDetailId " +
+            "AND d.status = 2")
     DiscountDetail getActiveDiscountByProductDetailId(@Param("productDetailId") String productDetailId);
 }

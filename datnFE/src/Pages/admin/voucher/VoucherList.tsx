@@ -210,10 +210,17 @@ const VoucherList: React.FC = () => {
 
   return (
     <div>
-      <div
+    <div
         className="solid-card"
-        style={{ padding: "var(--spacing-lg)", marginBottom: "12px" }}
+        style={{
+          padding: "var(--spacing-lg)",
+          marginBottom: "12px",
+          display: "flex",                 // 1. Kích hoạt Flexbox
+          justifyContent: "space-between", // 2. Đẩy 2 phần tử ra 2 góc trái/phải
+          alignItems: "center"             // 3. Căn giữa theo chiều dọc cho cân đối
+        }}
       >
+        {/* KHỐI BÊN TRÁI */}
         <Space align="center" size={16}>
           <div
             style={{
@@ -235,8 +242,22 @@ const VoucherList: React.FC = () => {
             <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
               Quản lý chương trình khuyến mãi và mã giảm giá
             </Typography.Text>
-          </div>
+          </div>         
         </Space>
+
+        {/* NÚT BÊN PHẢI */}
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate("/voucher/create")}
+          style={{
+            borderRadius: "20px",
+            height: "38px",
+            fontSize: "14px",
+          }}
+        >
+          Tạo Voucher mới
+        </Button>
       </div>
       <Card
         variant="borderless"
@@ -245,27 +266,7 @@ const VoucherList: React.FC = () => {
           boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 24,
-          }}
-        >
-          <Space orientation="vertical" size={0}>
-            <Text type="secondary">Phát hành và theo dõi mã giảm giá</Text>
-          </Space>
-          <Button
-            type="primary"
-            size="large"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/voucher/create")}
-            style={{ borderRadius: "8px" }}
-          >
-            Tạo Voucher mới
-          </Button>
-        </div>
+        
 
         <Card
           style={{ marginBottom: 16, backgroundColor: "#fafafa" }}
