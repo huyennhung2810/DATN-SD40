@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.example.datn.core.admin.pos.repository.ADPosOrderDetailRepository;
 import com.example.datn.core.admin.pos.repository.ADPosOrderRepository;
+import com.example.datn.core.admin.discount.repository.ADDiscountRepository;
 import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
 import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
@@ -15,7 +16,6 @@ import com.example.datn.infrastructure.payment.VNPayService;
 import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.repository.*;
-import com.example.datn.repository.ShiftHandoverRepository;
 import com.example.datn.core.admin.vouchers.repository.ADVouchersRepository;
 import com.example.datn.core.admin.vouchers.model.response.VoucherResponse;
 import com.example.datn.infrastructure.constant.PaymentStatus;
@@ -93,7 +93,6 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final ADPosOrderDetailRepository posOrderDetailRepository;
     private final SerialRepository serialRepository;
     private final CustomerRepository customerRepository;
-    private final WarrantyRepository warrantyRepository;
     private final ProductDetailRepository productDetailRepository;
     private final ADDiscountDetailRepository adDiscountDetailRepository;
     private final ADVouchersRepository adVouchersRepository;
@@ -101,6 +100,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     private final OrderHistoryRepository orderHistoryRepository;
     private final VoucherDetailRepository voucherDetailRepository;
     private final ShiftHandoverRepository shiftHandoverRepository;
+    private final ADDiscountRepository adDiscountRepository;
 
     @Override
     @Transactional
@@ -561,6 +561,29 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             productDetail.setQuantity(newQuantity);
             productDetailRepository.save(productDetail);
 
+            Optional<DiscountDetail> activeDiscountDetail = adDiscountDetailRepository
+                    .findActiveByProductDetailId(productDetail.getId(), System.currentTimeMillis());
+
+            if (activeDiscountDetail.isPresent()) {
+                DiscountDetail dd = activeDiscountDetail.get();
+                Discount parentDiscount = dd.getDiscount(); // Lấy thực thể cha (Discount)
+
+                // Kiểm tra xem chương trình giảm giá có quản lý số lượng không
+                if (parentDiscount != null && parentDiscount.getQuantity() != null) {
+                    if (parentDiscount.getQuantity() > 0) {
+                        int remainDiscountQty = parentDiscount.getQuantity() - detail.getQuantity();
+                        if (remainDiscountQty < 0)
+                            remainDiscountQty = 0;
+
+                        parentDiscount.setQuantity(remainDiscountQty);
+
+                        adDiscountRepository.save(parentDiscount);
+
+                        logger.info("[POS] Đã trừ số lượng CT giảm giá: {}, Còn lại: {}",
+                                parentDiscount.getCode(), remainDiscountQty);
+                    }
+                }
+            }
             List<Serial> assignedSerials = getSerialsByOrderDetailId(detail.getId());
             for (Serial serial : assignedSerials) {
                 // Update Serial status
@@ -832,6 +855,30 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                     newQuantity = 0;
                 productDetail.setQuantity(newQuantity);
                 productDetailRepository.save(productDetail);
+
+                Optional<DiscountDetail> activeDiscountDetail = adDiscountDetailRepository
+                        .findActiveByProductDetailId(productDetail.getId(), System.currentTimeMillis());
+
+                if (activeDiscountDetail.isPresent()) {
+                    DiscountDetail dd = activeDiscountDetail.get();
+                    Discount parentDiscount = dd.getDiscount(); // Lấy thực thể cha (Discount)
+
+                    // Kiểm tra xem chương trình giảm giá có quản lý số lượng không
+                    if (parentDiscount != null && parentDiscount.getQuantity() != null) {
+                        if (parentDiscount.getQuantity() > 0) {
+                            int remainDiscountQty = parentDiscount.getQuantity() - detail.getQuantity();
+                            if (remainDiscountQty < 0)
+                                remainDiscountQty = 0;
+
+                            parentDiscount.setQuantity(remainDiscountQty);
+
+                            adDiscountRepository.save(parentDiscount);
+
+                            logger.info("[POS] Đã trừ số lượng CT giảm giá: {}, Còn lại: {}",
+                                    parentDiscount.getCode(), remainDiscountQty);
+                        }
+                    }
+                }
 
                 List<Serial> assignedSerials = getSerialsByOrderDetailId(detail.getId());
                 for (Serial serial : assignedSerials) {

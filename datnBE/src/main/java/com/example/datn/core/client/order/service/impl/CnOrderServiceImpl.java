@@ -52,7 +52,8 @@ public class CnOrderServiceImpl implements CnOrderService {
         if (salePrice == null) {
             return BigDecimal.ZERO;
         }
-        DiscountDetail active = discountDetailRepository.findFirstByProductDetail_IdAndStatus(pd.getId(), 1);
+        DiscountDetail active = discountDetailRepository.findFirstByProductDetail_IdAndStatus(pd.getId(), 1)
+                .orElse(null);
         if (active != null && active.getPriceAfter() != null) {
             return active.getPriceAfter();
         }

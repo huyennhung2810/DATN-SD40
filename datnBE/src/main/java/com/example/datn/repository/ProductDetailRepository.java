@@ -1,5 +1,6 @@
 package com.example.datn.repository;
 
+import com.example.datn.entity.DiscountDetail;
 import com.example.datn.entity.ProductDetail;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,11 +8,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductDetailRepository extends JpaRepository<ProductDetail, String> {
 
     boolean existsByCode(String code);
+
     List<ProductDetail> findByProduct_Id(String productId);
 
     /**
@@ -21,4 +24,5 @@ public interface ProductDetailRepository extends JpaRepository<ProductDetail, St
      */
     @Query("SELECT pd FROM ProductDetail pd WHERE pd.product.id IN :productIds AND pd.status = 0 AND pd.quantity > 0")
     List<ProductDetail> findValidByProductIds(@Param("productIds") List<String> productIds);
+
 }
