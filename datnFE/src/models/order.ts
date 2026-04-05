@@ -50,6 +50,7 @@ export interface OrderResponse {
     maNhanVien: string;
     tenNhanVien: string;
     tongTien: number;
+    tongTienSauGiam: number;
     loaiHoaDon: string;
     createdDate: number;
     status: string;

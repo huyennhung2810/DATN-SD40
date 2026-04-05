@@ -33,6 +33,7 @@ public class ADOrderRepositoryCustomImpl implements ADOrderRepositoryCustom {
                                 nv.code,
                                 nv.name,
                                 hd.totalAmount,
+                                hd.totalAfterDiscount,
                                 hd.orderType,
                                 hd.createdDate,
                                 hd.orderStatus

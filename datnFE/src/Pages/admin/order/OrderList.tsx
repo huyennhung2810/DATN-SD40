@@ -30,6 +30,8 @@ import { useNavigate } from "react-router-dom";
 import { orderActions } from "../../../redux/order/OrderSlice";
 import { orderApi } from "../../../api/admin/orderApi";
 import { message, Modal } from "antd";
+import type { OrderResponse } from "../../../models/order";
+import type { ColumnsType } from "antd/es/table";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -90,13 +92,13 @@ const OrderPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  const columns = useMemo(
+  const columns: ColumnsType<OrderResponse> = useMemo(
     () => [
       {
         title: "STT",
         key: "index",
         width: 70,
-        align: "center" as const,
+        align: "center",
         render: (_: any, __: any, index: number) =>
           (currentPage - 1) * pageSize + index + 1,
       },
@@ -113,8 +115,8 @@ const OrderPage: React.FC = () => {
       {
         title: "Khách hàng",
         key: "customer",
-        render: (_: any, record: any) => (
-          <Space orientation="vertical" size={0}>
+        render: (_: any, record: OrderResponse) => (
+          <Space direction="vertical" size={0}>
             <Text strong>{record.tenKhachHang || "Khách vãng lai"}</Text>
             {record.sdtKhachHang && (
               <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -127,8 +129,8 @@ const OrderPage: React.FC = () => {
       {
         title: "Nhân viên",
         key: "staff",
-        render: (_: any, record: any) => (
-          <Space orientation="vertical" size={0}>
+        render: (_: any, record: OrderResponse) => (
+          <Space direction="vertical" size={0}>
             <Text>{record.tenNhanVien || "N/A"}</Text>
             <Text
               type="secondary"
@@ -160,14 +162,19 @@ const OrderPage: React.FC = () => {
       },
       {
         title: "Tổng tiền",
-        dataIndex: "tongTien",
-        key: "tongTien",
-        align: "right" as const,
-        render: (v: number) => (
-          <Text type="danger" strong>
-            {v?.toLocaleString("vi-VN")} đ
-          </Text>
-        ),
+        dataIndex: "tongTienSauGiam",
+        key: "tongTienSauGiam",
+        align: "right",
+        render: (value: number, record: any) => {
+          const finalAmount =
+            value ?? record.totalAfterDiscount ?? record.tongTien;
+
+          return (
+            <Typography.Text strong style={{ color: "#cf1322" }}>
+              {finalAmount?.toLocaleString("vi-VN")} đ
+            </Typography.Text>
+          );
+        },
       },
       {
         title: "Trạng thái",
@@ -259,7 +266,8 @@ const OrderPage: React.FC = () => {
         "Ngày tạo": row.createdDate
           ? dayjs(row.createdDate).format("HH:mm DD/MM/YYYY")
           : "",
-        "Tổng tiền": row.tongTien?.toLocaleString("vi-VN") + " đ",
+        "Tổng tiền":
+          (row.tongTienSauGiam ?? row.tongTien)?.toLocaleString("vi-VN") + " đ",
         "Trạng thái": row.status,
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);

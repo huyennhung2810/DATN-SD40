@@ -279,7 +279,14 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             map.put("id", o.getId());
             map.put("code", o.getCode());
             map.put("totalAmount", o.getTotalAmount());
-            map.put("totalAfterDiscount", o.getTotalAfterDiscount());
+
+            // TÍNH TOÁN LẠI TỔNG TIỀN CUỐI CÙNG ĐỂ HIỂN THỊ
+            BigDecimal subTotal = o.getTotalAfterDiscount() != null ? o.getTotalAfterDiscount() : o.getTotalAmount();
+            BigDecimal shipping = o.getShippingFee() != null ? o.getShippingFee() : BigDecimal.ZERO;
+            BigDecimal finalTotal = subTotal.add(shipping);
+
+            map.put("tongTienSauGiam", finalTotal);
+
             map.put("orderStatus", o.getOrderStatus());
 
             if (o.getVoucher() != null) {

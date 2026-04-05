@@ -17,6 +17,7 @@ public class ADOrderResponse {
     private String maNhanVien;
     private String tenNhanVien;
     private BigDecimal tongTien;
+    private BigDecimal tongTienSauGiam;
     private TypeInvoice loaiHoaDon;
     private Long createdDate;
     private OrderStatus status;
