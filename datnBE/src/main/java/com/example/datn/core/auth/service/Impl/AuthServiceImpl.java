@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    //login kh
+    // login kh
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
@@ -67,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
         return buildResponse(request.getUsername(), authentication, roles);
     }
 
-    //login admin-nv
+    // login admin-nv
     @Override
     @Transactional
     public AuthResponse loginAdmin(LoginRequest request) {
@@ -83,8 +83,6 @@ public class AuthServiceImpl implements AuthService {
 
         return buildResponse(request.getUsername(), authentication, roles);
     }
-
-
 
     @Override
     public AuthResponse refreshToken(RefreshTokenRequest request) {
@@ -147,7 +145,6 @@ public class AuthServiceImpl implements AuthService {
         throw new ServiceException("Không tìm thấy người dùng");
     }
 
-
     @Override
     @Transactional
     public void logout(String userId) {
@@ -157,7 +154,6 @@ public class AuthServiceImpl implements AuthService {
             refreshTokenRepository.save(t);
         });
     }
-
 
     @Override
     @Transactional
@@ -169,6 +165,10 @@ public class AuthServiceImpl implements AuthService {
         Optional<Customer> existingCustomer = customerRepository.findByEmail(request.getEmail());
         if (existingCustomer.isPresent()) {
             throw new ServiceException("Email đã được sử dụng");
+        }
+
+        if (customerRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new ServiceException("Số điện thoại đã được sử dụng bởi tài khoản khác");
         }
 
         Account account = Account.builder()
@@ -188,7 +188,6 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Registered new customer: {}", request.getUsername());
     }
-
 
     @Override
     @Transactional
@@ -216,7 +215,6 @@ public class AuthServiceImpl implements AuthService {
         account.setPassword(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
     }
-
 
     @Override
     @Transactional
@@ -251,7 +249,6 @@ public class AuthServiceImpl implements AuthService {
         emailService.sendOtpEmail(request.getEmail(), fullName, otp);
         log.info("OTP sent to email: {}", request.getEmail());
     }
-
 
     @Override
     @Transactional
@@ -288,12 +285,10 @@ public class AuthServiceImpl implements AuthService {
         log.info("Password reset for email: {}", request.getEmail());
     }
 
-
     private Authentication authenticate(String username, String password) {
         try {
             return authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
+                    new UsernamePasswordAuthenticationToken(username, password));
         } catch (BadCredentialsException e) {
             throw new ServiceException("Tên đăng nhập hoặc mật khẩu không đúng");
         } catch (AuthenticationException e) {
@@ -372,8 +367,6 @@ public class AuthServiceImpl implements AuthService {
     private Map<String, Object> buildClaims(Customer customer, List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", customer.getId());
-
-
 
         claims.put("userCode", customer.getCode());
         claims.put("username", customer.getAccount().getUsername());
