@@ -377,14 +377,13 @@ const OrderPage: React.FC = () => {
             <Select
               placeholder="Tất cả"
               style={{ width: "100%", marginTop: 8 }}
-              allowClear
-              value={orderType}
+              value={orderType || "ALL"}
               onChange={(val) => {
-                setOrderType(val);
+                setOrderType(val === "ALL" ? undefined : val);
                 setCurrentPage(1);
               }}
               options={[
-                { value: undefined, label: "Tất cả" },
+                { value: "ALL", label: "Tất cả" },
                 { value: "OFFLINE", label: "Tại quầy" },
                 { value: "ONLINE", label: "Online" },
               ]}
