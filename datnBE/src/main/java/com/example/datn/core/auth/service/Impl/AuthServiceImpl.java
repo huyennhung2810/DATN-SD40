@@ -287,28 +287,9 @@ public class AuthServiceImpl implements AuthService {
 
     private Authentication authenticate(String username, String password) {
         try {
-            // --- ĐOẠN CODE BẮT QUẢ TANG ---
-            Account acc = accountRepository.findByUsername(username);
-            if (acc != null) {
-                log.info("==== DEBUG AUTHENTICATION ====");
-                log.info("1. Username: [{}]", username);
-                log.info("2. Mật khẩu thô (Frontend): [{}] - Độ dài: {}", password, password.length());
-                log.info("3. Mật khẩu trong DB: [{}]", acc.getPassword());
-
-                // Thử so khớp trực tiếp bằng encoder hiện tại của Service
-                boolean matchManual = passwordEncoder.matches(password.trim(), acc.getPassword());
-                log.info("4. Kết quả so khớp thủ công: {}", matchManual);
-
-                // Kiểm tra loại PasswordEncoder đang dùng
-                log.info("5. Class PasswordEncoder hiện tại: {}", passwordEncoder.getClass().getName());
-                log.info("================================");
-            }
-            // ------------------------------
-
             return authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password.trim()));
         } catch (BadCredentialsException e) {
-            log.error("Xác thực thất bại cho user: {}. Độ dài mật khẩu gửi lên: {}", username, password.length());
             throw new ServiceException("Tên đăng nhập hoặc mật khẩu không đúng");
         }
     }
