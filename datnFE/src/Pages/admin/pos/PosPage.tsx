@@ -1,4 +1,4 @@
-﻿import {
+import {
   CarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -508,6 +508,10 @@ const PosPage: React.FC = () => {
 
   // Compute activeOrder early (before useEffect to avoid TDZ)
   const activeOrder = orders.find((o) => o.id === activeKey);
+  /** Sau giảm giá/voucher, chưa cộng phí ship FE; API từng không trả totalAfterDiscount */
+  const payableOrderSubtotal = activeOrder
+    ? Number(activeOrder.totalAfterDiscount ?? activeOrder.totalAmount ?? 0)
+    : 0;
 
   // Fetch customer addresses khi activeOrder thay đổi customer
   useEffect(() => {
@@ -832,8 +836,7 @@ const PosPage: React.FC = () => {
       return;
     }
     const totalToPay =
-      (activeOrder?.totalAfterDiscount || 0) +
-      (orderType === "GIAO_HANG" ? shippingFee : 0);
+      payableOrderSubtotal + (orderType === "GIAO_HANG" ? shippingFee : 0);
     setQrModal({
       open: true,
       totalAmount: totalToPay,
@@ -848,8 +851,7 @@ const PosPage: React.FC = () => {
     }
 
     const totalToPay =
-      (activeOrder?.totalAfterDiscount || 0) +
-      (orderType === "GIAO_HANG" ? shippingFee : 0);
+      payableOrderSubtotal + (orderType === "GIAO_HANG" ? shippingFee : 0);
 
     // Validate tiền mặt chỉ khi TIEN_MAT
     if (posPaymentMethod === "TIEN_MAT") {
@@ -1537,7 +1539,7 @@ const PosPage: React.FC = () => {
                     </Title>
                     <Title level={4} type="danger" style={{ margin: 0 }}>
                       {(
-                        (activeOrder.totalAfterDiscount || 0) +
+                        payableOrderSubtotal +
                         (orderType === "GIAO_HANG" ? shippingFee : 0)
                       ).toLocaleString("vi-VN")}{" "}
                       đ
@@ -1627,7 +1629,7 @@ const PosPage: React.FC = () => {
                         <Text>Tiền thối lại:</Text>
                         {(() => {
                           const total =
-                            (activeOrder.totalAfterDiscount || 0) +
+                            payableOrderSubtotal +
                             (orderType === "GIAO_HANG" ? shippingFee : 0);
                           if (customerCash !== null && customerCash >= total) {
                             return (
@@ -1678,7 +1680,7 @@ const PosPage: React.FC = () => {
                       >
                         <QRCodeSVG
                           value={`CHUYEN_KHOAN|${activeOrder?.code || ""}|${(
-                            (activeOrder?.totalAfterDiscount || 0) +
+                            payableOrderSubtotal +
                             (orderType === "GIAO_HANG" ? shippingFee : 0)
                           ).toString()}|DATN Camera`}
                           size={160}
@@ -1714,7 +1716,7 @@ const PosPage: React.FC = () => {
                   return;
                 }
                 const totalToPay =
-                  (activeOrder?.totalAfterDiscount || 0) +
+                  payableOrderSubtotal +
                   (orderType === "GIAO_HANG" ? shippingFee : 0);
                 Modal.confirm({
                   title: "Xác nhận thanh toán",
@@ -1734,7 +1736,7 @@ const PosPage: React.FC = () => {
                 (posPaymentMethod === "TIEN_MAT" &&
                   (customerCash === null ||
                     customerCash <
-                      (activeOrder?.totalAfterDiscount || 0) +
+                      payableOrderSubtotal +
                         (orderType === "GIAO_HANG" ? shippingFee : 0)))
               }
             >

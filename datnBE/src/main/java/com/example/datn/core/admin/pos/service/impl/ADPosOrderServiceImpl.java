@@ -282,6 +282,8 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
             // TÍNH TOÁN LẠI TỔNG TIỀN CUỐI CÙNG ĐỂ HIỂN THỊ
             BigDecimal subTotal = o.getTotalAfterDiscount() != null ? o.getTotalAfterDiscount() : o.getTotalAmount();
+            // FE POS dùng totalAfterDiscount (trước ship) cho "Khách cần trả" + phí ship phía client
+            map.put("totalAfterDiscount", subTotal);
             BigDecimal shipping = o.getShippingFee() != null ? o.getShippingFee() : BigDecimal.ZERO;
             BigDecimal finalTotal = subTotal.add(shipping);
 
