@@ -46,14 +46,18 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final ProductDetailRepository productDetailRepository;
     private final DiscountDetailRepository discountDetailRepository;
 
-    /** Đơn giá sau đợt khuyến mãi (đồng bộ với giỏ hàng / CartItemResponse). */
+    /**
+     * Đơn giá sau đợt khuyến mãi — phải trùng logic {@link com.example.datn.core.client.cartDetail.service.Impl.CnCartDetailServiceImpl#getCartDetails}.
+     * Chỉ dùng giá KM khi bản ghi discount cha đang active (status = 2), không dùng
+     * {@code findFirstByProductDetail_IdAndStatus(..., 1)} vì có thể khớp dòng detail cũ
+     * trong khi đợt KM đã tắt → lệch giá so với checkout.
+     */
     private BigDecimal resolveCampaignUnitPrice(ProductDetail pd) {
         BigDecimal salePrice = pd.getSalePrice();
         if (salePrice == null) {
             return BigDecimal.ZERO;
         }
-        DiscountDetail active = discountDetailRepository.findFirstByProductDetail_IdAndStatus(pd.getId(), 1)
-                .orElse(null);
+        DiscountDetail active = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
         if (active != null && active.getPriceAfter() != null) {
             return active.getPriceAfter();
         }

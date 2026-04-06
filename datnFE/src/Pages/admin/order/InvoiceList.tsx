@@ -1,10 +1,10 @@
 import {
   EyeOutlined,
   FileExcelOutlined,
+  FileTextOutlined,
   FilterOutlined,
   ReloadOutlined,
   SearchOutlined,
-  ShoppingCartOutlined,
 } from "@ant-design/icons";
 import {
   Badge,
@@ -25,13 +25,15 @@ import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { orderActions } from "../../../redux/order/OrderSlice";
-import { orderApi } from "../../../api/admin/orderApi";
+import { invoiceApi } from "../../../api/admin/invoiceApi";
 import { message, Modal } from "antd";
-import type { OrderResponse } from "../../../models/order";
+import type { OrderPageResponse, OrderResponse } from "../../../models/order";
 import type { ColumnsType } from "antd/es/table";
+import {
+  invoiceTypeLabel,
+  invoiceTypeTagColor,
+} from "../../../utils/invoiceTypeLabel";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -55,39 +57,50 @@ const PaymentMethods = [
   { key: "VNPAY", label: "VNPAY" },
 ];
 
-const OrderPage: React.FC = () => {
+const InvoiceListPage: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { ordersData, isLoadingList } = useSelector(
-    (state: any) => state.order,
-  );
+  const [ordersData, setOrdersData] = useState<OrderPageResponse | null>(null);
+  const [isLoadingList, setIsLoadingList] = useState(false);
 
   const [activeTab, setActiveTab] = useState("ALL");
   const [keyword, setKeyword] = useState("");
   const [productName, setProductName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("ALL");
+  const [orderType, setOrderType] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const loadData = useCallback(() => {
-    dispatch(
-      orderActions.fetchOrdersRequest({
+  const loadData = useCallback(async () => {
+    setIsLoadingList(true);
+    try {
+      const res = await invoiceApi.searchInvoices({
         page: currentPage - 1,
         size: pageSize,
         q: keyword.trim() || undefined,
         productName: productName.trim() || undefined,
         paymentMethod: paymentMethod === "ALL" ? undefined : paymentMethod,
         status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType === "ALL" ? undefined : orderType,
         startDate: dateRange
           ? dayjs(dateRange[0]).startOf("day").valueOf()
           : undefined,
         endDate: dateRange
           ? dayjs(dateRange[1]).endOf("day").valueOf()
           : undefined,
-      }),
-    );
-  }, [dispatch, currentPage, pageSize, keyword, productName, paymentMethod, activeTab, dateRange]);
+      });
+      const body = res.data;
+      if (body.isSuccess || body.success) {
+        setOrdersData(body.data);
+      } else {
+        message.error(body.message || "Không tải được danh sách hóa đơn");
+      }
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || "Lỗi mạng");
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, [currentPage, pageSize, keyword, productName, paymentMethod, activeTab, dateRange, orderType]);
 
   useEffect(() => {
     loadData();
@@ -143,6 +156,16 @@ const OrderPage: React.FC = () => {
         ),
       },
       {
+        title: "Loại",
+        dataIndex: "loaiHoaDon",
+        key: "loaiHoaDon",
+        render: (type: string) => (
+          <Tag color={invoiceTypeTagColor(type)} style={{ borderRadius: "4px" }}>
+            {invoiceTypeLabel(type)}
+          </Tag>
+        ),
+      },
+      {
         title: "Ngày tạo",
         dataIndex: "createdDate",
         key: "createdDate",
@@ -156,7 +179,6 @@ const OrderPage: React.FC = () => {
         render: (value: number, record: any) => {
           const finalAmount =
             value ?? record.totalAfterDiscount ?? record.tongTien;
-
           return (
             <Typography.Text strong style={{ color: "#cf1322" }}>
               {finalAmount?.toLocaleString("vi-VN")} đ
@@ -170,7 +192,7 @@ const OrderPage: React.FC = () => {
         key: "status",
         align: "center" as const,
         render: (st: string) => {
-          const statusMap: any = {
+          const statusMap: Record<string, { color: string; label: string }> = {
             CHO_XAC_NHAN: { color: "blue", label: "Chờ xác nhận" },
             DA_XAC_NHAN: { color: "cyan", label: "Đã xác nhận" },
             CHO_GIAO: { color: "cyan", label: "Chờ giao hàng" },
@@ -201,7 +223,7 @@ const OrderPage: React.FC = () => {
             icon={
               <EyeOutlined style={{ color: "#1677ff", fontSize: "16px" }} />
             }
-            onClick={() => navigate(`/admin/orders/${record.maHoaDon}`)}
+            onClick={() => navigate(`/admin/invoices/${record.maHoaDon}`)}
           />
         ),
       },
@@ -216,6 +238,7 @@ const OrderPage: React.FC = () => {
         productName: productName.trim() || undefined,
         paymentMethod: paymentMethod === "ALL" ? undefined : paymentMethod,
         status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType === "ALL" ? undefined : orderType,
         startDate: dateRange
           ? dayjs(dateRange[0]).startOf("day").valueOf()
           : undefined,
@@ -225,21 +248,21 @@ const OrderPage: React.FC = () => {
         page: 0,
         size: 10000,
       };
-      const res = await orderApi.searchOrders(params);
+      const res = await invoiceApi.searchInvoices(params);
       const allData = res.data?.data?.page?.content || [];
       message.info(`Số bản ghi lấy được: ${allData.length}`);
       if (!allData.length) {
         message.warning("Không có dữ liệu để xuất!");
         return;
       }
-      const exportData = allData.map((row: any, idx: number) => ({
+      const exportData = allData.map((row: OrderResponse, idx: number) => ({
         STT: idx + 1,
         "Mã HĐ": row.maHoaDon,
         "Khách hàng": row.tenKhachHang,
         "SĐT KH": row.sdtKhachHang,
         "Nhân viên": row.tenNhanVien,
         "Mã NV": row.maNhanVien,
-        Loại: "Online",
+        Loại: invoiceTypeLabel(row.loaiHoaDon),
         "Ngày tạo": row.createdDate
           ? dayjs(row.createdDate).format("HH:mm DD/MM/YYYY")
           : "",
@@ -249,16 +272,15 @@ const OrderPage: React.FC = () => {
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "DanhSachHoaDon");
+      XLSX.utils.book_append_sheet(wb, ws, "HoaDon");
       const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([excelBuffer], { type: "application/octet-stream" }),
-        `DanhSachHoaDon_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`,
+        `QuanLyHoaDon_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`,
       );
       message.success("Xuất Excel thành công!");
-    } catch (err: any) {
+    } catch {
       message.error("Lỗi khi xuất Excel. Vui lòng thử lại!");
-      console.error("Lỗi khi xuất Excel:", err);
     }
   };
 
@@ -266,7 +288,7 @@ const OrderPage: React.FC = () => {
     Modal.confirm({
       title: "Xác nhận xuất Excel",
       content:
-        "Bạn có chắc chắn muốn xuất toàn bộ danh sách hóa đơn ra file Excel?",
+        "Xuất danh sách hóa đơn (theo bộ lọc hiện tại) ra file Excel?",
       okText: "Xuất Excel",
       cancelText: "Hủy",
       onOk: handleExportExcel,
@@ -287,20 +309,20 @@ const OrderPage: React.FC = () => {
               borderRadius: "var(--radius-md)",
             }}
           >
-            <ShoppingCartOutlined
+            <FileTextOutlined
               style={{
                 fontSize: "24px",
                 color: "var(--color-primary)",
               }}
             />
           </div>
-
           <div>
             <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-              Đơn hàng online
+              Quản lý hóa đơn
             </Title>
             <Text type="secondary" style={{ fontSize: "13px" }}>
-              Chỉ đơn đặt trên website — xác nhận, giao hàng, hủy theo flow online
+              Tra cứu chứng từ online và tại quầy — không xử lý flow duyệt đơn
+              online tại đây
             </Text>
           </div>
         </Space>
@@ -330,6 +352,7 @@ const OrderPage: React.FC = () => {
               setKeyword("");
               setProductName("");
               setPaymentMethod("ALL");
+              setOrderType("ALL");
               setDateRange(null);
               setActiveTab("ALL");
               setCurrentPage(1);
@@ -371,22 +394,24 @@ const OrderPage: React.FC = () => {
               format="DD/MM/YYYY"
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Text strong>Trạng thái</Text>
+          <Col xs={24} sm={12} md={6}>
+            <Text strong>Loại hóa đơn</Text>
             <Select
-              value={activeTab}
+              value={orderType}
               style={{ width: "100%", marginTop: 8 }}
               onChange={(val) => {
-                setActiveTab(val);
+                setOrderType(val);
                 setCurrentPage(1);
               }}
-              options={OrderStatuses.map((s) => ({
-                value: s.key,
-                label: s.label,
-              }))}
+              options={[
+                { value: "ALL", label: "Tất cả" },
+                { value: "OFFLINE", label: "Tại quầy" },
+                { value: "ONLINE", label: "Online" },
+                { value: "GIAO_HANG", label: "Giao hàng (quầy)" },
+              ]}
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
             <Text strong>Phương thức thanh toán</Text>
             <Select
               value={paymentMethod}
@@ -401,13 +426,28 @@ const OrderPage: React.FC = () => {
               }))}
             />
           </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Text strong>Trạng thái</Text>
+            <Select
+              value={activeTab}
+              style={{ width: "100%", marginTop: 8 }}
+              onChange={(val) => {
+                setActiveTab(val);
+                setCurrentPage(1);
+              }}
+              options={OrderStatuses.map((s) => ({
+                value: s.key,
+                label: s.label,
+              }))}
+            />
+          </Col>
         </Row>
       </Card>
 
       <Card variant="borderless" style={{ borderRadius: 8 }}>
         <Row justify="space-between" style={{ marginBottom: 16 }}>
           <Text strong style={{ fontSize: "16px" }}>
-            Danh sách đơn hàng online
+            Danh sách hóa đơn
           </Text>
           <Space>
             <Button
@@ -457,7 +497,7 @@ const OrderPage: React.FC = () => {
             pageSize: pageSize,
             total: ordersData?.page?.totalElements || 0,
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} đơn`,
+            showTotal: (total) => `Tổng ${total} hóa đơn`,
           }}
           onChange={(p) => {
             setCurrentPage(p.current!);
@@ -469,4 +509,4 @@ const OrderPage: React.FC = () => {
   );
 };
 
-export default OrderPage;
+export default InvoiceListPage;

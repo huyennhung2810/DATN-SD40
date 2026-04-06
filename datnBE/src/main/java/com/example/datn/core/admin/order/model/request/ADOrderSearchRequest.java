@@ -16,8 +16,10 @@ public class ADOrderSearchRequest extends PageableRequest {
 
     private String q;
     private String idSP;
+    private String productName;
     private Long startDate;
     private Long endDate;
     private OrderStatus status;
     private String orderType;
+    private String paymentMethod;
 }

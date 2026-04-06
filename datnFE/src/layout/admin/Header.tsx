@@ -7,6 +7,7 @@ import {
   ClockCircleOutlined,
   CustomerServiceOutlined,
   ExclamationCircleOutlined,
+  FileTextOutlined,
   IdcardOutlined,
   KeyOutlined,
   LineChartOutlined,
@@ -88,8 +89,23 @@ const pageInfoMap: Record<
     icon: <CustomerServiceOutlined />,
   },
   "/orders": {
-    title: "Đơn hàng",
-    desc: "Theo dõi trạng thái đơn hàng và lịch sử giao dịch",
+    title: "Đơn hàng online",
+    desc: "Xác nhận và vận hành đơn đặt trên website",
+    icon: <ShoppingCartOutlined />,
+  },
+  "/invoices": {
+    title: "Quản lý hóa đơn",
+    desc: "Tra cứu hóa đơn online và tại quầy",
+    icon: <FileTextOutlined />,
+  },
+  "/admin/invoices": {
+    title: "Chi tiết hóa đơn",
+    desc: "Xem chứng từ bán hàng",
+    icon: <FileTextOutlined />,
+  },
+  "/admin/orders": {
+    title: "Chi tiết đơn online",
+    desc: "Vận hành đơn hàng online",
     icon: <ShoppingCartOutlined />,
   },
   "/customer": {

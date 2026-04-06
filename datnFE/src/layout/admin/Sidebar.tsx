@@ -3,6 +3,7 @@ import {
   CalendarOutlined,
   CameraOutlined,
   CustomerServiceOutlined,
+  FileTextOutlined,
   GiftOutlined,
   KeyOutlined,
   LineChartOutlined,
@@ -29,6 +30,8 @@ const Sidebar: React.FC = () => {
   // Helper function to get selected key - matches parent path for nested routes
   const getSelectedKey = () => {
     const path = location.pathname;
+    if (path.startsWith("/admin/orders")) return "/orders";
+    if (path.startsWith("/admin/invoices")) return "/invoices";
     // Check exact match first
     if (items.some((item: any) => item.key === path)) {
       return path;
@@ -64,7 +67,12 @@ const Sidebar: React.FC = () => {
     {
       key: "/orders",
       icon: <ShoppingCartOutlined />,
-      label: "Quản lý đơn hàng",
+      label: "Đơn hàng online",
+    },
+    {
+      key: "/invoices",
+      icon: <FileTextOutlined />,
+      label: "Quản lý hóa đơn",
     },
     {
       key: "/serial",

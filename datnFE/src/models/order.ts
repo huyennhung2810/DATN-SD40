@@ -8,6 +8,8 @@ export interface ADOrderSearchRequest {
     size?: number;        // Số bản ghi / trang
     sortBy?: string;
     orderBy?: string;     // ASC hoặc DESC
+    productName?: string;  // Tên sản phẩm trong hóa đơn
+    paymentMethod?: string; // Phương thức thanh toán (TIEN_MAT, CHUYEN_KHOAN, COD, VNPAY)
 }
 
 export interface ADChangeStatusRequest {
@@ -54,6 +56,7 @@ export interface OrderResponse {
     loaiHoaDon: string;
     createdDate: number;
     status: string;
+    paymentMethod?: string;
 }
 
 // Kiểu phân trang (Pagination)

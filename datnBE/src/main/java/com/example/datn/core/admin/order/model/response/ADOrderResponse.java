@@ -21,4 +21,5 @@ public class ADOrderResponse {
     private TypeInvoice loaiHoaDon;
     private Long createdDate;
     private OrderStatus status;
+    private String paymentMethod;
 }

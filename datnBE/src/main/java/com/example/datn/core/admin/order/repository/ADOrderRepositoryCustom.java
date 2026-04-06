@@ -8,5 +8,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface ADOrderRepositoryCustom {
 
-    OrderPageResponse getAllHoaDonResponse(ADOrderSearchRequest request, Pageable pageable);
+    /**
+     * @param onlineOrdersOnly true: chỉ {@link com.example.datn.infrastructure.constant.TypeInvoice#ONLINE} (module Đơn hàng online)
+     */
+    OrderPageResponse getAllHoaDonResponse(ADOrderSearchRequest request, Pageable pageable, boolean onlineOrdersOnly);
 }
