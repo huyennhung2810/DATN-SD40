@@ -32,9 +32,6 @@ public class Account extends PrimaryEntity implements Serializable {
     @Column(name = "full_name")
     private String fullName;
 
-    @Column(name = "salt")
-    private String salt;
-
     @Column(name = "otp_code")
     private String otpCode;
 

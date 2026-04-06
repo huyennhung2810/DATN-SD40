@@ -76,13 +76,15 @@ public class ADOrderServiceImpl implements ADOrderService {
                 log.info("[ONLINE] Đã tự động chuyển payment_method COD -> TIEN_MAT cho hóa đơn {}", hoaDon.getCode());
             }
 
-            // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là VNPAY thì chuyển thành CHUYEN_KHOAN để tính doanh thu ca
+            // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là VNPAY thì
+            // chuyển thành CHUYEN_KHOAN để tính doanh thu ca
             if (trangThaiMoi == OrderStatus.HOAN_THANH
                     && (hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.ONLINE
-                        || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
+                            || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
                     && "VNPAY".equalsIgnoreCase(hoaDon.getPaymentMethod())) {
                 hoaDon.setPaymentMethod("CHUYEN_KHOAN");
-                log.info("[ONLINE] Đã tự động chuyển payment_method VNPAY -> CHUYEN_KHOAN cho hóa đơn {}", hoaDon.getCode());
+                log.info("[ONLINE] Đã tự động chuyển payment_method VNPAY -> CHUYEN_KHOAN cho hóa đơn {}",
+                        hoaDon.getCode());
             }
 
             // Kiểm tra luồng trạng thái hợp lệ
