@@ -8,6 +8,7 @@ import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.entity.ProductDetail;
 import com.example.datn.entity.Serial;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import com.example.datn.repository.ProductDetailRepository;
 import com.example.datn.repository.SerialRepository;
 import com.example.datn.utils.Helper;
@@ -30,8 +31,8 @@ public class ADSerialServiceImpl implements ADSerialService {
     private final ProductDetailRepository productDetailRepository;
 
     @Override
-    public ResponseObject<?> getAllSerials(String keyword, EntityStatus status, String productCategoryId, String productId) {
-        List<Serial> list = adSerialRepository.searchSerials(keyword, status, null, productId, productCategoryId);
+    public ResponseObject<?> getAllSerials(String keyword, EntityStatus status, SerialStatus serialStatus, String productCategoryId, String productId) {
+        List<Serial> list = adSerialRepository.searchSerials(keyword, status, serialStatus, productId, productCategoryId);
 
         List<ADSerialResponse> dtoList = list.stream().map(entity -> ADSerialResponse.builder()
                 .id(entity.getId())
