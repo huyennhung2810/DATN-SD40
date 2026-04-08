@@ -105,14 +105,29 @@ public class CnOrderServiceImpl implements CnOrderService {
                 throw new RuntimeException("Giỏ hàng của bạn đang trống!");
             }
 
-            for (CartDetail cd : cartItems) {
+            // MỚI: Lấy danh sách ID sản phẩm mà Frontend truyền lên (những item được tick chọn)
+            List<String> selectedProductIds = request.getItems().stream()
+                    .map(CheckoutRequest.ItemRequest::getProductDetailId)
+                    .toList();
+
+            // MỚI: Chỉ lọc ra những sản phẩm trong giỏ hàng có ID trùng với danh sách được chọn
+            List<CartDetail> selectedCartItems = cartItems.stream()
+                    .filter(cd -> selectedProductIds.contains(cd.getProductDetail().getId()))
+                    .toList();
+
+            if (selectedCartItems.isEmpty()) {
+                throw new RuntimeException("Không có sản phẩm nào được chọn để thanh toán!");
+            }
+
+            // Đổi vòng lặp sang chạy trên danh sách đã lọc (selectedCartItems)
+            for (CartDetail cd : selectedCartItems) {
                 ProductDetail pd = cd.getProductDetail();
                 BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
                 BigDecimal unit = resolveCampaignUnitPrice(pd);
 
                 OrderDetail od = new OrderDetail();
                 od.setProductDetail(pd);
-                od.setQuantity(cd.getQuantity());
+                od.setQuantity(cd.getQuantity()); // Có thể dùng request item quantity nếu FE cho phép đổi slg ở trang checkout
                 od.setOriginalPrice(salePrice);
                 od.setUnitPrice(unit);
                 BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(cd.getQuantity()));
@@ -228,10 +243,21 @@ public class CnOrderServiceImpl implements CnOrderService {
             }
         }
 
-        // 8. XÓA GIỎ HÀNG (chỉ với COD và không phải mua ngay)
+        // 8. XÓA GIỎ HÀNG (chỉ xóa những sản phẩm đã đặt mua)
         if (!"VNPAY".equalsIgnoreCase(request.getPaymentMethod()) && !Boolean.TRUE.equals(request.getIsBuyNow())) {
             Cart cart = cartService.getOrCreateCart(customerId);
-            cartDetailRepository.deleteByCart_Id(cart.getId());
+            List<CartDetail> allCartItems = cartDetailRepository.findByCart_Id(cart.getId());
+
+            // Lọc ra các item đã mua để xóa
+            List<String> orderedProductIds = request.getItems().stream()
+                    .map(CheckoutRequest.ItemRequest::getProductDetailId)
+                    .toList();
+
+            List<CartDetail> itemsToRemove = allCartItems.stream()
+                    .filter(cd -> orderedProductIds.contains(cd.getProductDetail().getId()))
+                    .toList();
+
+            cartDetailRepository.deleteAll(itemsToRemove);
         }
 
         // 9. Gửi thông báo WebSocket cho Admin
