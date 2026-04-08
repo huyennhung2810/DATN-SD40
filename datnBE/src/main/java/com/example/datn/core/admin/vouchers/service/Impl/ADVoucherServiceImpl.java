@@ -87,8 +87,6 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                 .map(v -> {
                     // Kiểm tra nếu là voucher cá nhân thì mới tính toán lại quantity
                     if ("INDIVIDUAL".equalsIgnoreCase(v.getVoucherType())) {
-                        // Lấy danh sách details từ voucher
-                        // Giả sử Voucher có method getDetails() trả về List<VoucherDetail>
                         if (v.getDetails() != null) {
                             long availableCount = v.getDetails().stream()
                                     .filter(detail -> detail.getUsageStatus() == 0)
@@ -98,9 +96,9 @@ public class ADVoucherServiceImpl implements ADVoucherService {
                             v.setQuantity((int) availableCount);
                         }
                     }
+
+
                     VoucherResponse response = new VoucherResponse(v);
-                    // Chỉ set details cho trang chi tiết (không dùng ở list)
-                    response.setDetails(v.getDetails());
                     return ResponseObject.success(response, "Lấy chi tiết voucher thành công");
                 })
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy Voucher với ID: " + voucherId));

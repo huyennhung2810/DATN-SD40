@@ -1,13 +1,13 @@
 package com.example.datn.core.admin.vouchers.model.response;
 
 import com.example.datn.entity.Voucher;
-import com.example.datn.entity.VoucherDetail;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -30,7 +30,9 @@ public class VoucherResponse {
     private Long lastModifiedDate;
     private String createdBy;
     private Long createdDate;
-    private List<VoucherDetail> details;
+
+    // ĐỔI SANG DÙNG CLASS RESPONSE CON, KHÔNG DÙNG ENTITY NỮA
+    private List<VoucherDetailResponse> details;
 
     public VoucherResponse(Voucher v) {
         this.id = v.getId();
@@ -51,5 +53,11 @@ public class VoucherResponse {
         this.createdBy = v.getCreatedBy();
         this.createdDate = v.getCreatedDate();
 
+        // MAP DANH SÁCH ENTITY SANG DANH SÁCH RESPONSE
+        if (v.getDetails() != null) {
+            this.details = v.getDetails().stream()
+                    .map(VoucherDetailResponse::new)
+                    .collect(Collectors.toList());
+        }
     }
 }

@@ -97,30 +97,33 @@ const VoucherForm: React.FC = () => {
       const errorMessage = err?.message || "Không thể cập nhật trạng thái";
       message.error(errorMessage);
     }
-  };  
-
-  // Logic tính toán số lượng Quantity hiển thị
+  }; 
+   // ==============================================================
+  // 1. LOGIC TÍNH TOÁN SỐ LƯỢNG (Đồng bộ chuẩn 100% với Modal gốc)
+  // ==============================================================
   useEffect(() => {
     if (voucherTypeWatch === "INDIVIDUAL") {
       if (isEdit && currentVoucher) {
         const details: any[] = (currentVoucher as any).details || [];
-        const existingUnusedCount = details.filter(
-          (d) =>
-            selectedCustomerIds.includes(d.customer?.id) && d.usageStatus === 0,
-        ).length;
 
-        const oldIds = details.map((d) => d.customer?.id);
-        const newAddedCount = selectedCustomerIds.filter(
-          (cid) => !oldIds.includes(cid),
-        ).length;
+        // BƯỚC 1: Đếm số lượng khách hàng CŨ nhưng CHƯA DÙNG (usageStatus === 0)
+        const unusedOldCount = details.filter((d) => d.usageStatus === 0).length;
 
-        form.setFieldsValue({ quantity: existingUnusedCount + newAddedCount });
+        // BƯỚC 2: Tìm ra có bao nhiêu khách hàng MỚI TINH vừa được Admin tick thêm
+        // - Lấy danh sách ID cũ
+        const oldIds = details.map((d) => d.customerId || d.customer?.id).filter(Boolean);
+        // - Xem trong mảng đang tick (selectedCustomerIds) có bao nhiêu ID không nằm trong danh sách cũ
+        const newlyAddedCount = selectedCustomerIds.filter((cid) => !oldIds.includes(cid)).length;
+
+        // BƯỚC 3: Tổng số lượng = Cũ chưa dùng + Mới thêm
+        form.setFieldsValue({ quantity: unusedOldCount + newlyAddedCount });
+
       } else {
+        // Màn hình tạo mới: Tick bao nhiêu người = bấy nhiêu số lượng
         form.setFieldsValue({ quantity: selectedCustomerIds.length });
       }
     }
   }, [selectedCustomerIds, voucherTypeWatch, isEdit, currentVoucher, form]);
-
   // Load dữ liệu khi vào trang
   useEffect(() => {
     if (isEdit && id) {
@@ -132,7 +135,9 @@ const VoucherForm: React.FC = () => {
     }
   }, [id, isEdit, dispatch]);
 
-  // Đổ dữ liệu vào form khi currentVoucher thay đổi
+  // ==============================================================
+  // 2. ĐỔ DỮ LIỆU VÀO FORM (Đã cập nhật theo API mới)
+  // ==============================================================
   useEffect(() => {
     if (isEdit && currentVoucher) {
       form.setFieldsValue({
@@ -145,7 +150,12 @@ const VoucherForm: React.FC = () => {
 
       if (currentVoucher.voucherType === "INDIVIDUAL") {
         const details = (currentVoucher as any).details || [];
-        const oldIds = details.map((d: any) => d.customer?.id).filter(Boolean);
+        
+        // ĐÃ SỬA: Lấy d.customerId cực kỳ gọn nhẹ
+        const oldIds = details
+          .map((d: any) => d.customerId)
+          .filter(Boolean);
+          
         setSelectedCustomerIds(oldIds);
       }
     }
