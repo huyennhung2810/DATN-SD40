@@ -1,4 +1,4 @@
-import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+﻿import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -76,41 +76,41 @@ const ProductDetailPage: React.FC = () => {
   );
 
   const handleViewSerials = (record: ProductDetailResponse) => {
-  if (!record || !record.id) return;
+    if (!record || !record.id) return;
 
-  setSerialModalOpen(true);
-  setViewingProductName(`${record.productName || "Sản phẩm"} - ${record.version || ""}`);
-  setLoadingSerials(true);
+    setSerialModalOpen(true);
+    setViewingProductName(`${record.productName || "Sản phẩm"} - ${record.version || ""}`);
+    setLoadingSerials(true);
 
-  dispatch(
-    productDetailActions.getById({
-      id: record.id,
-      onSuccess: (response: any) => {
-        const productDetail = response.data ? response.data : response;
+    dispatch(
+      productDetailActions.getById({
+        id: record.id,
+        onSuccess: (response: any) => {
+          const productDetail = response.data ? response.data : response;
 
-        if (productDetail && productDetail.serials) {
-          const serialsList = productDetail.serials
-            .filter((s: any) => s.serialNumber && String(s.serialNumber).trim() !== "")
-            .map((s: any) => ({
-              serialNumber: String(s.serialNumber),
-              
-              // --- THAY ĐỔI Ở ĐÂY ---
-              // Ưu tiên lấy serialStatus (IN_ORDER, SOLD, AVAILABLE) từ BE
-              status: s.serialStatus || s.status, 
-              // -----------------------
-              
-              createdDate: s.createdDate,
-            }));
+          if (productDetail && productDetail.serials) {
+            const serialsList = productDetail.serials
+              .filter((s: any) => s.serialNumber && String(s.serialNumber).trim() !== "")
+              .map((s: any) => ({
+                serialNumber: String(s.serialNumber),
+                
+                // --- THAY ĐỔI Ở ĐÂY ---
+                // Ưu tiên lấy serialStatus (IN_ORDER, SOLD, AVAILABLE) từ BE
+                status: s.serialStatus || s.status, 
+                // -----------------------
+                
+                createdDate: s.createdDate,
+              }));
 
-          setSelectedSerials(serialsList);
-        } else {
-          setSelectedSerials([]);
-        }
-        setLoadingSerials(false);
-      },
-    })
-  );
-};
+            setSelectedSerials(serialsList);
+          } else {
+            setSelectedSerials([]);
+          }
+          setLoadingSerials(false);
+        },
+      })
+    );
+  };
 
   // 2. Lấy danh sách SPCT (list) và Sản phẩm cha (productList) từ productDetailSlice
   const {
@@ -277,18 +277,13 @@ const ProductDetailPage: React.FC = () => {
         quantity: serials.length, // Số lượng tồn kho TỰ ĐỘNG BẰNG số lượng Serial
         serials: serials, // Gửi kèm mảng Serial
       };
-    }
-    // --- NẾU LÀ CẬP NHẬT (UPDATE) ---
-    else {
+    } else {
       payload.quantity = values.quantity;
-      // Xóa mảng serials để không gửi lên BE gây lỗi 400
       delete payload.serials;
     }
-
-    // Xóa rác (các trường chỉ dùng cho Frontend)
     delete payload.serialList;
     delete payload.serialCode;
-
+    
     // --- GỌI API ---
     if (editingId) {
       dispatch(
@@ -298,7 +293,21 @@ const ProductDetailPage: React.FC = () => {
           navigate: () => {
             setDrawerOpen(false);
             fetchData();
+            notification.success({ message: "Cập nhật thành công!" });
           },
+          onError: (error: any) => {
+            console.log("=== CHI TIẾT LỖI UPDATE ===", error);
+            const errorMessage = 
+              error?.response?.data?.message ||
+              error?.data?.message ||
+              error?.message ||
+              (typeof error === 'string' ? error : "Lỗi không xác định khi cập nhật!");
+            
+            notification.error({
+              message: "Cập nhật thất bại",
+              description: errorMessage,
+            });
+          }
         })
       );
     } else {
@@ -308,12 +317,27 @@ const ProductDetailPage: React.FC = () => {
           navigate: () => {
             setDrawerOpen(false);
             fetchData();
+            notification.success({ message: "Thêm mới thành công!" });
           },
+          onError: (error: any) => {
+            console.log("=== CHI TIẾT LỖI ADD ===", error);
+            // SỬA LẠI ĐOẠN NÀY ĐỂ HỨNG MỌI CẤU TRÚC LỖI
+            const errorMessage = 
+              error?.response?.data?.message || 
+              error?.data?.message || 
+              error?.message || 
+              (typeof error === 'string' ? error : "Lỗi không xác định khi thêm mới!");
+
+            notification.error({
+              message: "Thêm mới thất bại",
+              description: errorMessage,
+            });
+          }
         })
       );
     }
   };
-
+  
   // Cấu hình cột cho bảng
   const columns: ColumnsType<ProductDetailResponse> = [
     {

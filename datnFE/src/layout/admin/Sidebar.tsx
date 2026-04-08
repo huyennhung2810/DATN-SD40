@@ -75,15 +75,15 @@ const Sidebar: React.FC = () => {
       label: "Quản lý hóa đơn",
     },
     {
-      key: "/serial",
-      icon: <BarcodeOutlined />,
-      label: "Quản lý Serial",
-    },
-    {
       key: "/product",
       icon: <ShopOutlined />,
       label: "Quản lý sản phẩm",
-      children: [
+      children: [  
+        {
+          key: "/serial",
+          icon: <BarcodeOutlined />,
+          label: "Quản lý Serial",
+        },
         {
           key: "/admin/product-categories",
           icon: <TagOutlined />,

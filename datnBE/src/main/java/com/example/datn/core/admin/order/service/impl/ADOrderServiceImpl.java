@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -51,6 +52,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final SimpMessagingTemplate messagingTemplate;
     private final OrderDetailRepository orderDetailRepository;
     private final ProductDetailRepository productDetailRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
     @Transactional
@@ -196,6 +198,7 @@ public class ADOrderServiceImpl implements ADOrderService {
 
                 case HOAN_THANH:
                     danhDauIMEIDaBan(hoaDonDaCapNhat);
+                    congTienTichLuyKhachHang(hoaDonDaCapNhat);
                     break;
 
                 case DA_HUY:
@@ -894,5 +897,35 @@ public class ADOrderServiceImpl implements ADOrderService {
             serialRepository.saveAll(serials);
         }
         log.info("Đã giải phóng Serial cho hóa đơn {} về trạng thái AVAILABLE", hoaDon.getCode());
+    }
+
+    // Hàm cộng tiền vào tổng chi tiêu của khách hàng
+    private void congTienTichLuyKhachHang(Order hoaDon) {
+        Customer customer = hoaDon.getCustomer();
+
+        // Nếu là khách vãng lai (không đăng nhập) thì bỏ qua
+        if (customer == null) {
+            log.info("Đơn hàng {} là khách vãng lai, không cộng tích lũy chi tiêu.", hoaDon.getCode());
+            return;
+        }
+
+        // Lấy số tiền thực tế khách đã thanh toán (ưu tiên tổng sau giảm giá)
+        BigDecimal soTienCongThem = hoaDon.getTotalAfterDiscount() != null
+                ? hoaDon.getTotalAfterDiscount()
+                : hoaDon.getTotalAmount();
+
+        if (soTienCongThem == null || soTienCongThem.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal tongChiTieuHienTai = customer.getTotalSpent() != null
+                ? customer.getTotalSpent()
+                : BigDecimal.ZERO;
+
+
+        customer.setTotalSpent(tongChiTieuHienTai.add(soTienCongThem));
+        customerRepository.save(customer);
+
+        log.info("Đã cộng {} VNĐ vào tổng chi tiêu của khách hàng ID: {}", soTienCongThem, customer.getId());
     }
 }
