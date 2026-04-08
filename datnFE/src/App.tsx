@@ -1,3 +1,4 @@
+// Mình rút gọn các phần import nhé
 import React from "react";
 import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
 import MainLayout from "./layout/admin/MainLayout";
@@ -18,11 +19,18 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/*Các trang Login/Register công khai */}
+        {/* Các trang Login/Register công khai */}
         {PublicRoutes()}
 
         <Route element={<MainLayout />}>
-          <Route element={<PrivateRoute allowedRoles={["ADMIN", "STAFF"]} />}>
+          <Route
+            element={
+              <PrivateRoute
+                allowedRoles={["ADMIN", "STAFF"]}
+                loginPath="/admin/login"
+              />
+            }
+          >
             <Route path="/" element={<HomePage />} />
           </Route>
 
@@ -30,7 +38,7 @@ const App: React.FC = () => {
           {EmployeeRoutes()}
         </Route>
 
-        {/*Trang cho Khách hàng */}
+        {/* Trang cho Khách hàng */}
         {CustomerRoutes()}
 
         {/* Điều hướng linh hoạt */}

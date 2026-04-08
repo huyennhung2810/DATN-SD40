@@ -119,6 +119,15 @@ public class SecurityConfig {
                                                                 MappingConstants.API_ADMIN_PREFIX_PRODUCTS + "/**")
                                                 .permitAll()
 
+                                                // Cho phép STAFF xem (GET) dữ liệu để vẽ Lịch
+                                                .requestMatchers(HttpMethod.GET,
+                                                                MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**")
+                                                .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+                                                .requestMatchers(HttpMethod.GET,
+                                                                MappingConstants.API_ADMIN_PREFIX_SHIFT_TEMPLATE
+                                                                                + "/**")
+                                                .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+
                                                 // 3. CHỈ ADMIN (Quyền nhạy cảm: Tiền bạc, Nhân sự, Tài khoản)
                                                 .requestMatchers(MappingConstants.API_ADMIN_PREFIX_STATISTICS + "/**")
                                                 .hasAuthority(RoleConstant.ADMIN.name())

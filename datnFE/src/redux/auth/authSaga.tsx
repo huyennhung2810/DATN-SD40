@@ -8,7 +8,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 
 function* handleLoginFlow(
   apiFunc: any,
-  payload: { data: any; navigate: () => void },
+  payload: { data: any; navigate: (role?: string) => void },
 ) {
   try {
     const response: AuthResponse = yield call(apiFunc, payload.data);
@@ -39,7 +39,9 @@ function* handleLoginFlow(
       placement: "topRight",
     });
 
-    payload.navigate();
+    // Lấy role và truyền vào hàm navigate
+    const userRole = response.roles?.[0];
+    payload.navigate(userRole);
   } catch (error: any) {
     const message = error?.message || "Thông tin đăng nhập không chính xác";
     yield put(authActions.authFailed(message));

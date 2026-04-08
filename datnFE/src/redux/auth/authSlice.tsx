@@ -85,7 +85,10 @@ const authSlice = createSlice({
     },
     loginAdmin: (
       state,
-      _action: PayloadAction<{ data: LoginRequest; navigate: () => void }>,
+      _action: PayloadAction<{
+        data: LoginRequest;
+        navigate: (role: string) => void;
+      }>,
     ) => {
       state.loading = true;
       state.error = null;
