@@ -19,7 +19,7 @@ import type { ADShiftTemplateResponse } from "../../../models/shiftTemplate";
 // Kích hoạt plugin để tính toán tuần theo chuẩn quốc tế (Thứ 2 là đầu tuần)
 dayjs.extend(isoWeek);
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 // Map màu sắc cho trạng thái ca làm việc
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
@@ -255,66 +255,62 @@ const EmployeeWeeklySchedule: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "10px 0" }}>
+    <div>
       {/* Header */}
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{
-          marginBottom: 20,
-          background: "#fff",
-          padding: "16px 20px",
-          borderRadius: 8,
-          border: "1px solid #f0f0f0",
-        }}
-      >
-        <Col>
-          <Space align="center" size="middle">
+      <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
+        <Row justify="space-between" align="middle" wrap={false}>
+          <Space align="center" size={16}>
             <div
               style={{
-                background: "#20c997",
-                padding: "10px 12px",
-                borderRadius: 8,
-                color: "#fff",
-                fontSize: 20,
+                backgroundColor: "var(--color-primary-light)",
+                padding: "12px",
+                borderRadius: "var(--radius-md)",
               }}
             >
-              <CalendarOutlined />
+              <CalendarOutlined
+                style={{ fontSize: "24px", color: "var(--color-primary)" }}
+              />
             </div>
+
             <div>
-              <Title level={4} style={{ margin: 0 }}>
-                Lịch Trực Nhân Viên
-              </Title>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, textTransform: "uppercase" }}
+              <Typography.Title
+                level={4}
+                style={{ margin: 0, fontWeight: 600 }}
               >
-                Phân ca làm việc hàng tuần
-              </Text>
+                Quản lý lịch làm việc
+              </Typography.Title>
+              <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+                Quản lý lịch làm việc của nhân viên
+              </Typography.Text>
             </div>
           </Space>
-        </Col>
-        <Col>
+
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchWeeklyData}
             loading={loading}
+            style={{
+              borderRadius: "12px",
+              height: "42px",
+              paddingInline: "20px",
+            }}
           >
             Làm mới
           </Button>
-        </Col>
-      </Row>
+        </Row>
+      </div>
 
       {/* Toolbar điều hướng */}
       <Row
         justify="space-between"
         align="middle"
         style={{
-          marginBottom: 16,
+          marginBottom: 10,
           background: "#fff",
           padding: "12px 20px",
           borderRadius: 8,
           border: "1px solid #f0f0f0",
+          marginTop: 10,
         }}
       >
         <Col>

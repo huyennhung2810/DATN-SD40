@@ -25,7 +25,18 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Badge, Button, Dropdown, Input, Spin, Tag, Popover, Empty, Tooltip } from "antd";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Dropdown,
+  Input,
+  Spin,
+  Tag,
+  Popover,
+  Empty,
+  Tooltip,
+} from "antd";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,7 +44,11 @@ import { authActions } from "../../redux/auth/authSlice";
 import type { RootState } from "../../redux/store";
 import { getEmployeeById } from "../../api/employeeApi";
 import type { EmployeeResponse } from "../../models/employee";
-import { notificationActions, type AppNotification, type NotificationType } from "../../redux/notification/notificationSlice";
+import {
+  notificationActions,
+  type AppNotification,
+  type NotificationType,
+} from "../../redux/notification/notificationSlice";
 import { useNotifications } from "../../app/useNotifications";
 
 const { Search } = Input;
@@ -138,6 +153,11 @@ const pageInfoMap: Record<
     desc: "Quản lý lịch làm việc của nhân viên",
     icon: <ScheduleOutlined />,
   },
+  "/weekly-schedule": {
+    title: "Lịch làm việc",
+    desc: "Xem lịch làm việc của nhân viên",
+    icon: <ScheduleOutlined />,
+  },
   "/shift-handover": {
     title: "Giao ca",
     desc: "Quản lý các ca làm việc và chuyển ca giữa nhân viên",
@@ -174,7 +194,7 @@ const Header: React.FC = () => {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const notifications = useSelector(
-    (state: RootState) => state.notification.items
+    (state: RootState) => state.notification.items,
   );
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -202,25 +222,44 @@ const Header: React.FC = () => {
   // Notification helpers
   const getNotifIcon = (type: NotificationType) => {
     switch (type) {
-      case "NEW_ORDER":     return <ShoppingOutlined style={{ color: "#1890ff" }} />;
-      case "ORDER_STATUS":  return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
-      case "CHAT_REQUEST":  return <CustomerServiceOutlined style={{ color: "#fa8c16" }} />;
-      case "SHIFT_ALERT":   return <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />;
+      case "NEW_ORDER":
+        return <ShoppingOutlined style={{ color: "#1890ff" }} />;
+      case "ORDER_STATUS":
+        return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
+      case "CHAT_REQUEST":
+        return <CustomerServiceOutlined style={{ color: "#fa8c16" }} />;
+      case "SHIFT_ALERT":
+        return <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />;
     }
   };
 
   const notifContent = (
     <div style={{ width: 340 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 8px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "4px 0 8px",
+        }}
+      >
         <span style={{ fontWeight: 600, fontSize: 14 }}>Thông báo</span>
         {unreadCount > 0 && (
-          <Button size="small" type="link" onClick={() => dispatch(notificationActions.markAllRead())}>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => dispatch(notificationActions.markAllRead())}
+          >
             Đánh dấu tất cả đã đọc
           </Button>
         )}
       </div>
       {notifications.length === 0 ? (
-        <Empty description="Chưa có thông báo" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ margin: "16px 0" }} />
+        <Empty
+          description="Chưa có thông báo"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ margin: "16px 0" }}
+        />
       ) : (
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {notifications.slice(0, 20).map((item: AppNotification) => (
@@ -248,13 +287,26 @@ const Header: React.FC = () => {
                 setNotifOpen(false);
               }}
             >
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{getNotifIcon(item.type)}</span>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>
+                {getNotifIcon(item.type)}
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}>{item.title}</div>
-                <div style={{ fontSize: 12, color: "#595959", marginBottom: 2 }}>{item.message}</div>
+                <div
+                  style={{ fontSize: 13, fontWeight: item.read ? 400 : 600 }}
+                >
+                  {item.title}
+                </div>
+                <div
+                  style={{ fontSize: 12, color: "#595959", marginBottom: 2 }}
+                >
+                  {item.message}
+                </div>
                 <div style={{ fontSize: 11, color: "#aaa" }}>
                   <ClockCircleOutlined style={{ marginRight: 4 }} />
-                  {new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(item.timestamp).toLocaleTimeString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
               </div>
             </div>
@@ -262,8 +314,20 @@ const Header: React.FC = () => {
         </div>
       )}
       {notifications.length > 0 && (
-        <div style={{ textAlign: "center", borderTop: "1px solid #f0f0f0", paddingTop: 8, marginTop: 4 }}>
-          <Button size="small" type="link" danger onClick={() => dispatch(notificationActions.clear())}>
+        <div
+          style={{
+            textAlign: "center",
+            borderTop: "1px solid #f0f0f0",
+            paddingTop: 8,
+            marginTop: 4,
+          }}
+        >
+          <Button
+            size="small"
+            type="link"
+            danger
+            onClick={() => dispatch(notificationActions.clear())}
+          >
             Xóa tất cả
           </Button>
         </div>
@@ -295,7 +359,6 @@ const Header: React.FC = () => {
   }
   if (breadcrumb.length === 0)
     breadcrumb = [{ title: defaultPageInfo.title, icon: defaultPageInfo.icon }];
-
 
   const handleSearch = (value: string) => {
     console.log("Header search:", value);
