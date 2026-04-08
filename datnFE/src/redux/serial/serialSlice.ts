@@ -56,16 +56,28 @@ const serialSlice = createSlice({
         },
 
         
-        fetchSuccess: (state, action: PayloadAction<PageResponse<SerialResponse>>) => {
+        fetchSuccess: (state, action: PayloadAction<any>) => { // Đổi thành any để linh hoạt check dữ liệu
             state.loading = false;
-            const sortedData = [...action.payload.data].sort((a, b) => {
-            const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-            const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-            return dateB - dateA;
-        });
-            state.list = sortedData; 
-            state.totalElements = action.payload.totalElements;
-            state.totalPages = action.payload.totalPages;
+            
+            // 1. Lấy mảng dữ liệu (Check xem nó nằm trong action.payload.data hay chính là action.payload)
+            const rawData = action.payload.data || action.payload || [];
+            
+            // 2. Logic sắp xếp (Giữ nguyên của bạn)
+            const sortedData = [...rawData].sort((a, b) => {
+                const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+                const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            state.list = sortedData;
+
+            // 3. Cập nhật totalElements: 
+            // Nếu API có trả về totalElements thì dùng, không thì lấy độ dài mảng data
+            state.totalElements = action.payload.totalElements !== undefined 
+                ? action.payload.totalElements 
+                : sortedData.length;
+
+            state.totalPages = action.payload.totalPages || 1;
         },
 
         getSerialByIdSuccess: (state, action: PayloadAction<SerialResponse>) => {

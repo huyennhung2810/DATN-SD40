@@ -62,7 +62,7 @@ const SerialPage: React.FC = () => {
     page: 0,
     size: 10,
     keyword: "",
-    status: undefined,
+    serialStatus: undefined,
     productCategoryId: undefined,
     productId: undefined,
   });
@@ -113,7 +113,7 @@ const SerialPage: React.FC = () => {
   const handleStatusChange = (status: string | undefined) => {
     setFilter((prev) => ({
       ...prev,
-      status,
+      serialStatus: status,
       keyword: keyword.trim(),
       page: 0,
     }));
@@ -354,50 +354,72 @@ const SerialPage: React.FC = () => {
           <Row gutter={[16, 0]}>
             <Col xs={24}>
               <Form.Item label={<Text strong>Trạng thái sản phẩm</Text>}>
-                <Radio.Group
-                  size="large"
-                  buttonStyle="solid"
-                  value={filter.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                >
-                  <Radio.Button
-                    value={undefined}
-                    style={{ minWidth: "100px", textAlign: "center" }}
+                  <Radio.Group
+                    size="large"
+                    buttonStyle="solid"
+                    // LƯU Ý: Chỗ này là filter.serialStatus (không phải filter.status nữa nhé)
+                    value={filter.serialStatus} 
+                    onChange={(e) => handleStatusChange(e.target.value)}
                   >
-                    Tất cả
-                  </Radio.Button>
-                  <Radio.Button
-                    value="ACTIVE"
-                    style={{ minWidth: "100px", textAlign: "center" }}
-                  >
-                    <Tag
-                      color="success"
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        margin: 0,
-                      }}
+                    <Radio.Button
+                      value={undefined}
+                      style={{ minWidth: "100px", textAlign: "center" }}
                     >
-                      Trong kho
-                    </Tag>
-                  </Radio.Button>
-                  <Radio.Button
-                    value="INACTIVE"
-                    style={{ minWidth: "100px", textAlign: "center" }}
-                  >
-                    <Tag
-                      color="gold"
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        margin: 0,
-                      }}
+                      Tất cả
+                    </Radio.Button>
+
+                    {/* Trạng thái AVAILABLE: Trong kho */}
+                    <Radio.Button
+                      value="AVAILABLE"
+                      style={{ minWidth: "100px", textAlign: "center" }}
                     >
-                      Đã bán
-                    </Tag>
-                  </Radio.Button>
-                </Radio.Group>
-              </Form.Item>
+                      <Tag
+                        color="success"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Trong kho
+                      </Tag>
+                    </Radio.Button>
+
+                    {/* Trạng thái IN_ORDER: Đang trong đơn */}
+                    <Radio.Button
+                      value="IN_ORDER"
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      <Tag
+                        color="processing"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Đang trong đơn
+                      </Tag>
+                    </Radio.Button>
+
+                    {/* Trạng thái SOLD: Đã bán */}
+                    <Radio.Button
+                      value="SOLD"
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      <Tag
+                        color="gold"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Đã bán
+                      </Tag>
+                    </Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
             </Col>
           </Row>
         </Form>
@@ -498,8 +520,8 @@ const SerialPage: React.FC = () => {
               </Card>
 
               {/* Variant info section */}
-              <Divider orientation="left" plain>
-                Thông tin biến thể sản phẩm
+              <Divider orientation={"left" as any} plain>
+              Thông tin biến thể sản phẩm
               </Divider>
 
               {detailVariant ? (

@@ -33,6 +33,7 @@ export interface ProductDetailResponse {
   status: CommonStatus;
   colorName: string;
   productName: string;
+  productCode?: string;
   storageCapacityName: string;
   creationDate: string;
 
