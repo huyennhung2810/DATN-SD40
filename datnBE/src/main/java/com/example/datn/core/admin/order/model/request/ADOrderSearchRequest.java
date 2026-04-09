@@ -1,6 +1,5 @@
 package com.example.datn.core.admin.order.model.request;
 
-
 import com.example.datn.core.common.base.PageableRequest;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import lombok.AllArgsConstructor;
@@ -16,10 +15,8 @@ public class ADOrderSearchRequest extends PageableRequest {
 
     private String q;
     private String idSP;
-    private String productName;
     private Long startDate;
     private Long endDate;
     private OrderStatus status;
     private String orderType;
-    private String paymentMethod;
 }

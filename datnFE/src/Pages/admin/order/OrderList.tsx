@@ -1,4 +1,4 @@
-import {
+﻿import {
   EyeOutlined,
   FileExcelOutlined,
   FilterOutlined,
@@ -36,6 +36,7 @@ import type { ColumnsType } from "antd/es/table";
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
+// Định nghĩa trạng thái chuẩn như ảnh mẫu
 const OrderStatuses = [
   { key: "ALL", label: "Tất cả" },
   { key: "CHO_XAC_NHAN", label: "Chờ xác nhận" },
@@ -47,14 +48,6 @@ const OrderStatuses = [
   { key: "DA_HUY", label: "Đã hủy" },
 ];
 
-const PaymentMethods = [
-  { key: "ALL", label: "Tất cả" },
-  { key: "TIEN_MAT", label: "Tiền mặt" },
-  { key: "CHUYEN_KHOAN", label: "Chuyển khoản" },
-  { key: "COD", label: "COD" },
-  { key: "VNPAY", label: "VNPAY" },
-];
-
 const OrderPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -64,9 +57,8 @@ const OrderPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState("ALL");
   const [keyword, setKeyword] = useState("");
-  const [productName, setProductName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [orderType, setOrderType] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -76,9 +68,8 @@ const OrderPage: React.FC = () => {
         page: currentPage - 1,
         size: pageSize,
         q: keyword.trim() || undefined,
-        productName: productName.trim() || undefined,
-        paymentMethod: paymentMethod === "ALL" ? undefined : paymentMethod,
         status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType || undefined,
         startDate: dateRange
           ? dayjs(dateRange[0]).startOf("day").valueOf()
           : undefined,
@@ -87,7 +78,15 @@ const OrderPage: React.FC = () => {
           : undefined,
       }),
     );
-  }, [dispatch, currentPage, pageSize, keyword, productName, paymentMethod, activeTab, dateRange]);
+  }, [
+    dispatch,
+    currentPage,
+    pageSize,
+    keyword,
+    activeTab,
+    dateRange,
+    orderType,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -140,6 +139,19 @@ const OrderPage: React.FC = () => {
               {record.maNhanVien || ""}
             </Text>
           </Space>
+        ),
+      },
+      {
+        title: "Loại",
+        dataIndex: "loaiHoaDon",
+        key: "loaiHoaDon",
+        render: (type: string) => (
+          <Tag
+            color="orange"
+            style={{ border: "none", background: "#fff7e6", color: "#d46b08" }}
+          >
+            {type === "OFFLINE" ? "Tại quầy" : "Online"}
+          </Tag>
         ),
       },
       {
@@ -209,13 +221,14 @@ const OrderPage: React.FC = () => {
     [currentPage, pageSize, navigate],
   );
 
+  // Xuất toàn bộ danh sách hóa đơn (không phân trang)
+
   const handleExportExcel = async () => {
     try {
       const params = {
         q: keyword.trim() || undefined,
-        productName: productName.trim() || undefined,
-        paymentMethod: paymentMethod === "ALL" ? undefined : paymentMethod,
         status: activeTab === "ALL" ? undefined : activeTab,
+        orderType: orderType || undefined,
         startDate: dateRange
           ? dayjs(dateRange[0]).startOf("day").valueOf()
           : undefined,
@@ -223,9 +236,14 @@ const OrderPage: React.FC = () => {
           ? dayjs(dateRange[1]).endOf("day").valueOf()
           : undefined,
         page: 0,
-        size: 10000,
+        size: 10000, // lấy tối đa 10.000 bản ghi
       };
       const res = await orderApi.searchOrders(params);
+      // Log dữ liệu trả về để debug
+      console.log("[Xuất Excel] Params:", params);
+      console.log("[Xuất Excel] API response:", res);
+      console.log("[Xuất Excel] res.data:", res.data);
+      console.log("[Xuất Excel] res.data.page:", res.data?.data?.page);
       const allData = res.data?.data?.page?.content || [];
       message.info(`Số bản ghi lấy được: ${allData.length}`);
       if (!allData.length) {
@@ -239,7 +257,12 @@ const OrderPage: React.FC = () => {
         "SĐT KH": row.sdtKhachHang,
         "Nhân viên": row.tenNhanVien,
         "Mã NV": row.maNhanVien,
-        Loại: "Online",
+        Loại:
+          row.loaiHoaDon === "OFFLINE"
+            ? "Tại quầy"
+            : row.loaiHoaDon === "ONLINE"
+              ? "Online"
+              : row.loaiHoaDon,
         "Ngày tạo": row.createdDate
           ? dayjs(row.createdDate).format("HH:mm DD/MM/YYYY")
           : "",
@@ -258,6 +281,7 @@ const OrderPage: React.FC = () => {
       message.success("Xuất Excel thành công!");
     } catch (err: any) {
       message.error("Lỗi khi xuất Excel. Vui lòng thử lại!");
+      // Log chi tiết lỗi để debug
       console.error("Lỗi khi xuất Excel:", err);
     }
   };
@@ -297,10 +321,10 @@ const OrderPage: React.FC = () => {
 
           <div>
             <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-              Đơn hàng online
+              Quản lý Đơn hàng
             </Title>
             <Text type="secondary" style={{ fontSize: "13px" }}>
-              Chỉ đơn đặt trên website — xác nhận, giao hàng, hủy theo flow online
+              Quản lý và theo dõi danh sách đơn hàng của cửa hàng
             </Text>
           </div>
         </Space>
@@ -328,19 +352,16 @@ const OrderPage: React.FC = () => {
             }}
             onClick={() => {
               setKeyword("");
-              setProductName("");
-              setPaymentMethod("ALL");
               setDateRange(null);
               setActiveTab("ALL");
+              setOrderType(undefined);
               setCurrentPage(1);
             }}
-          >
-            Đặt lại
-          </Button>
+          />
         </Row>
 
-        <Row gutter={[16, 8]}>
-          <Col xs={24} sm={12} md={8}>
+        <Row gutter={24}>
+          <Col span={8}>
             <Text strong>Tìm kiếm chung</Text>
             <Input
               prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
@@ -348,21 +369,9 @@ const OrderPage: React.FC = () => {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               style={{ marginTop: 8 }}
-              allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Text strong>Tên sản phẩm</Text>
-            <Input
-              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-              placeholder="Tìm theo tên sản phẩm..."
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              style={{ marginTop: 8 }}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col span={8}>
             <Text strong>Khoảng thời gian</Text>
             <RangePicker
               style={{ width: "100%", marginTop: 8 }}
@@ -371,43 +380,43 @@ const OrderPage: React.FC = () => {
               format="DD/MM/YYYY"
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col span={4}>
+            <Text strong>Loại hóa đơn</Text>
+            <Select
+              placeholder="Tất cả"
+              style={{ width: "100%", marginTop: 8 }}
+              value={orderType || "ALL"}
+              onChange={(val) => {
+                setOrderType(val === "ALL" ? undefined : val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "ALL", label: "Tất cả" },
+                { value: "OFFLINE", label: "Tại quầy" },
+                { value: "ONLINE", label: "Online" },
+              ]}
+            />
+          </Col>
+          <Col span={4}>
             <Text strong>Trạng thái</Text>
             <Select
               value={activeTab}
               style={{ width: "100%", marginTop: 8 }}
-              onChange={(val) => {
-                setActiveTab(val);
-                setCurrentPage(1);
-              }}
+              onChange={setActiveTab}
               options={OrderStatuses.map((s) => ({
                 value: s.key,
                 label: s.label,
               }))}
             />
           </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Text strong>Phương thức thanh toán</Text>
-            <Select
-              value={paymentMethod}
-              style={{ width: "100%", marginTop: 8 }}
-              onChange={(val) => {
-                setPaymentMethod(val);
-                setCurrentPage(1);
-              }}
-              options={PaymentMethods.map((pm) => ({
-                value: pm.key,
-                label: pm.label,
-              }))}
-            />
-          </Col>
         </Row>
       </Card>
 
+      {/* 3. Table Card */}
       <Card variant="borderless" style={{ borderRadius: 8 }}>
         <Row justify="space-between" style={{ marginBottom: 16 }}>
           <Text strong style={{ fontSize: "16px" }}>
-            Danh sách đơn hàng online
+            Danh sách Đơn hàng
           </Text>
           <Space>
             <Button
@@ -457,7 +466,7 @@ const OrderPage: React.FC = () => {
             pageSize: pageSize,
             total: ordersData?.page?.totalElements || 0,
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} đơn`,
+            showTotal: (total) => `Tổng ${total} hóa đơn`,
           }}
           onChange={(p) => {
             setCurrentPage(p.current!);

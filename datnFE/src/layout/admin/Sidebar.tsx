@@ -3,7 +3,6 @@ import {
   CalendarOutlined,
   CameraOutlined,
   CustomerServiceOutlined,
-  FileTextOutlined,
   GiftOutlined,
   KeyOutlined,
   LineChartOutlined,
@@ -60,13 +59,7 @@ const Sidebar: React.FC = () => {
     {
       key: "/orders",
       icon: <ShoppingCartOutlined />,
-      label: "Đơn hàng online",
-      allowedRoles: ["ADMIN", "STAFF"],
-    },
-    {
-      key: "/invoices",
-      icon: <FileTextOutlined />,
-      label: "Quản lý hóa đơn",
+      label: "Quản lý đơn hàng",
       allowedRoles: ["ADMIN", "STAFF"],
     },
     {

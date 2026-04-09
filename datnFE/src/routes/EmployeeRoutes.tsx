@@ -9,7 +9,6 @@ import ShiftHandoverPage from "../Pages/admin/shiftHandover/ShiftHandoverPage";
 import BannerList from "../Pages/admin/banner/BannerList";
 import BannerForm from "../Pages/admin/banner/BannerForm";
 import OrderDetailPage from "../Pages/admin/order/OrderDetail";
-import InvoiceListPage from "../Pages/admin/order/InvoiceList";
 import AdminProfilePage from "../Pages/admin/profile/AdminProfilePage";
 import EmployeeWeeklySchedule from "../Pages/admin/workSchedule/EmployeeWeeklySchedule";
 
@@ -26,15 +25,7 @@ export const EmployeeRoutes = () => [
     {/* Nghiệp vụ chính */}
     <Route path="/pos" element={<PosPage />} />
     <Route path="/orders" element={<OrderPage />} />
-    <Route
-      path="/admin/orders/:id"
-      element={<OrderDetailPage variant="online" />}
-    />
-    <Route path="/invoices" element={<InvoiceListPage />} />
-    <Route
-      path="/admin/invoices/:id"
-      element={<OrderDetailPage variant="invoice" />}
-    />
+    <Route path="/admin/orders/:id" element={<OrderDetailPage />} />
     <Route path="/EChatAi" element={<EmployeeChatPage />} />
     <Route path="/shift-handover" element={<ShiftHandoverPage />} />
     <Route path="/weekly-schedule" element={<EmployeeWeeklySchedule />} />

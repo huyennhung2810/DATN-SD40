@@ -7,13 +7,7 @@ public interface ADOrderService {
 
     ResponseObject<?> getAllHoaDon(ADOrderSearchRequest request);
 
-    /** Danh sách hóa đơn toàn cục (online + tại quầy + giao hàng quầy), có lọc loại */
-    ResponseObject<?> getAllInvoices(ADOrderSearchRequest request);
-
     ResponseObject<?> getAllHoaDonCT(ADOrderDetailRequest request);
-
-    /** Chi tiết hóa đơn cho module Quản lý hóa đơn (mọi loại TypeInvoice) */
-    ResponseObject<?> getInvoiceDetail(ADOrderDetailRequest request);
 
     ResponseObject<?> capNhatTrangThaiHoaDon(ADChangeStatusRequest adChangeStatusRequest);
 

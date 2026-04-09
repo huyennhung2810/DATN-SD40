@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
@@ -46,11 +46,6 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { orderApi } from "../../../api/admin/orderApi";
-import { invoiceApi } from "../../../api/admin/invoiceApi";
-import {
-  invoiceTypeLabel,
-  invoiceTypeTagColor,
-} from "../../../utils/invoiceTypeLabel";
 import { posApi } from "../../../api/admin/posApi";
 import type {
   OrderDetailResponse,
@@ -189,12 +184,9 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
   return rows;
 };
 
-const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
-  variant = "online",
-}) => {
+const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const allowOnlineOps = variant === "online";
   const [form] = Form.useForm();
   const receiptRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -240,15 +232,15 @@ const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
 
   // Derived state
   const currentStatus = order?.trangThaiHoaDon ?? "CHO_XAC_NHAN";
+  const isOnline =
+    order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
-  const canChangeSerial =
-    allowOnlineOps &&
-    order?.loaiHoaDon === "ONLINE" &&
-    currentStatus === "CHO_XAC_NHAN";
+  // Chỉ cho phép gán/đổi serial khi trạng thái là CHO_XAC_NHAN
+  const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
+  // Chỉ cho phép hủy ở các trạng thái: CHO_XAC_NHAN, DA_XAC_NHAN, CHO_GIAO
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
-  const showCancelButton =
-    allowOnlineOps && canCancelStatuses.includes(currentStatus);
+  const showCancelButton = canCancelStatuses.includes(currentStatus);
   // Nếu đang giao hàng thì cho phép chọn 2 trạng thái tiếp theo
   let nextStatusKeys =
     currentStatus === "DANG_GIAO"
@@ -267,36 +259,16 @@ const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
     if (!id) return;
     setLoading(true);
     try {
-      const res =
-        variant === "invoice"
-          ? await invoiceApi.getInvoiceDetails(id)
-          : await orderApi.getOrderDetails(id);
-      const ok = res.isSuccess ?? (res as { success?: boolean }).success;
-      if (!ok) {
-        message.warning(
-          res.message ||
-            (variant === "online"
-              ? "Đây không phải đơn hàng online hoặc không tồn tại."
-              : "Không tải được hóa đơn."),
-        );
-        navigate(variant === "invoice" ? "/invoices" : "/orders");
-        return;
+      const res = await orderApi.getOrderDetails(id);
+      if (res.success && res.data?.content?.length) {
+        const rows = res.data.content;
+        setItems(rows);
+        // Đảm bảo đồng bộ trường avatarKhachHang nếu backend trả về
+        setOrder({ ...rows[0] });
+        setHistoryList(parseHistory(rows[0].lichSuTrangThai));
       }
-      if (!res.data?.content?.length) {
-        message.warning("Không tìm thấy hóa đơn");
-        navigate(variant === "invoice" ? "/invoices" : "/orders");
-        return;
-      }
-      const rows = res.data.content;
-      setItems(rows);
-      setOrder({ ...rows[0] });
-      setHistoryList(parseHistory(rows[0].lichSuTrangThai));
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } };
-      message.error(
-        err?.response?.data?.message || "Không thể tải chi tiết",
-      );
-      navigate(variant === "invoice" ? "/invoices" : "/orders");
+    } catch {
+      message.error("Không thể tải chi tiết đơn hàng");
     } finally {
       setLoading(false);
     }
@@ -956,8 +928,7 @@ const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
                 >
                   {step.label}
                 </Text>
-                {allowOnlineOps &&
-                  active &&
+                {active &&
                   nextStatusKeys.length > 0 &&
                   !isCompleted &&
                   currentStatus !== "GIAO_HANG_KHONG_THANH_CONG" && (
@@ -1021,23 +992,17 @@ const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
         <Row justify="space-between" align="middle" wrap>
           <Col>
             <Space size="middle" wrap>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() =>
-                  navigate(variant === "invoice" ? "/invoices" : "/orders")
-                }
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
                 Quay lại
               </Button>
               <Title level={4} style={{ margin: 0 }}>
-                {variant === "invoice" ? "Hóa đơn" : "Đơn hàng"} #
-                {order?.maHoaDon ?? "---"}
+                Đơn hàng #{order?.maHoaDon ?? "---"}
               </Title>
               <Tag color={STATUS_COLORS[currentStatus]}>
                 {STATUS_LABELS[currentStatus] ?? currentStatus}
               </Tag>
-              <Tag color={invoiceTypeTagColor(order?.loaiHoaDon)}>
-                {invoiceTypeLabel(order?.loaiHoaDon)}
+              <Tag color={isOnline ? "blue" : "purple"}>
+                {isOnline ? "Giao hàng" : "Tại quầy"}
               </Tag>
               <Text type="secondary">
                 {order?.ngayTao
@@ -1109,7 +1074,7 @@ const OrderDetailPage: React.FC<{ variant?: "online" | "invoice" }> = ({
               </Space>
             }
             extra={
-              allowOnlineOps && !isCompleted && !isCancelled ? (
+              isOnline && !isCompleted && !isCancelled ? (
                 <Button
                   size="small"
                   icon={<EditOutlined />}

@@ -12,7 +12,6 @@ import com.example.datn.entity.*;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import com.example.datn.infrastructure.constant.SerialStatus;
-import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.infrastructure.email.EmailService;
 import com.example.datn.repository.*;
 import com.example.datn.utils.Helper;
@@ -28,7 +27,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -52,7 +50,6 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final SimpMessagingTemplate messagingTemplate;
     private final OrderDetailRepository orderDetailRepository;
     private final ProductDetailRepository productDetailRepository;
-    private final CustomerRepository customerRepository;
 
     @Override
     @Transactional
@@ -65,12 +62,6 @@ public class ADOrderServiceImpl implements ADOrderService {
             Order hoaDon = adOrderRepository.findByMa(request.getMaHoaDon())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + request.getMaHoaDon()));
 
-            if (hoaDon.getOrderType() != TypeInvoice.ONLINE) {
-                throw new RuntimeException(
-                        "Chỉ đơn hàng online (đặt trên website) mới được cập nhật trạng thái tại đây. "
-                                + "Hóa đơn tại quầy vui lòng xem tại Quản lý hóa đơn.");
-            }
-
             OrderStatus trangThaiCu = hoaDon.getOrderStatus();
             OrderStatus trangThaiMoi = request.getStatusTrangThaiHoaDon();
 
@@ -78,8 +69,8 @@ public class ADOrderServiceImpl implements ADOrderService {
 
             // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là COD thì chuyển
             if (trangThaiMoi == OrderStatus.HOAN_THANH
-                    && (hoaDon.getOrderType() == TypeInvoice.ONLINE
-                            || hoaDon.getOrderType() == TypeInvoice.GIAO_HANG)
+                    && (hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.ONLINE
+                            || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
                     && "COD".equalsIgnoreCase(hoaDon.getPaymentMethod())) {
                 hoaDon.setPaymentMethod("TIEN_MAT");
                 log.info("[ONLINE] Đã tự động chuyển payment_method COD -> TIEN_MAT cho hóa đơn {}", hoaDon.getCode());
@@ -88,8 +79,8 @@ public class ADOrderServiceImpl implements ADOrderService {
             // Nếu hoàn thành đơn hàng ONLINE/GIAO_HANG và payment_method là VNPAY thì
             // chuyển thành CHUYEN_KHOAN để tính doanh thu ca
             if (trangThaiMoi == OrderStatus.HOAN_THANH
-                    && (hoaDon.getOrderType() == TypeInvoice.ONLINE
-                            || hoaDon.getOrderType() == TypeInvoice.GIAO_HANG)
+                    && (hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.ONLINE
+                            || hoaDon.getOrderType() == com.example.datn.infrastructure.constant.TypeInvoice.GIAO_HANG)
                     && "VNPAY".equalsIgnoreCase(hoaDon.getPaymentMethod())) {
                 hoaDon.setPaymentMethod("CHUYEN_KHOAN");
                 log.info("[ONLINE] Đã tự động chuyển payment_method VNPAY -> CHUYEN_KHOAN cho hóa đơn {}",
@@ -198,7 +189,6 @@ public class ADOrderServiceImpl implements ADOrderService {
 
                 case HOAN_THANH:
                     danhDauIMEIDaBan(hoaDonDaCapNhat);
-                    congTienTichLuyKhachHang(hoaDonDaCapNhat);
                     break;
 
                 case DA_HUY:
@@ -653,9 +643,9 @@ public class ADOrderServiceImpl implements ADOrderService {
     public ResponseObject<?> getAllHoaDon(ADOrderSearchRequest request) {
         try {
             Pageable pageable = Helper.createPageable(request, "createdDate");
-            OrderPageResponse result = adOrderRepositoryCustom.getAllHoaDonResponse(request, pageable, true);
+            OrderPageResponse result = adOrderRepositoryCustom.getAllHoaDonResponse(request, pageable);
 
-            return ResponseObject.success(result, "Lấy danh sách đơn hàng online thành công");
+            return ResponseObject.success(result, "Lấy danh sách hóa đơn thành công");
 
         } catch (Exception e) {
             log.error("Lỗi khi lấy danh sách hóa đơn: {}", e.getMessage(), e);
@@ -666,30 +656,8 @@ public class ADOrderServiceImpl implements ADOrderService {
     }
 
     @Override
-    public ResponseObject<?> getAllInvoices(ADOrderSearchRequest request) {
-        try {
-            Pageable pageable = Helper.createPageable(request, "createdDate");
-            OrderPageResponse result = adOrderRepositoryCustom.getAllHoaDonResponse(request, pageable, false);
-            return ResponseObject.success(result, "Lấy danh sách hóa đơn thành công");
-        } catch (Exception e) {
-            log.error("Lỗi khi lấy danh sách hóa đơn (toàn cục): {}", e.getMessage(), e);
-            return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Lỗi khi lấy danh sách hóa đơn: " + e.getMessage());
-        }
-    }
-
-    @Override
     public ResponseObject<?> getAllHoaDonCT(ADOrderDetailRequest request) {
         try {
-            Order hoaDon = adOrderRepository.findByMa(request.getMaHoaDon()).orElse(null);
-            if (hoaDon == null) {
-                return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
-            }
-            if (hoaDon.getOrderType() != TypeInvoice.ONLINE) {
-                return ResponseObject.error(HttpStatus.BAD_REQUEST,
-                        "Đây không phải đơn hàng online. Vui lòng xem tại Quản lý hóa đơn.");
-            }
-
             Pageable pageable = Helper.createPageable(request, "created_date");
 
             Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(),
@@ -701,23 +669,6 @@ public class ADOrderServiceImpl implements ADOrderService {
             log.error("Lỗi khi lấy chi tiết hóa đơn: {}", e.getMessage(), e);
             return ResponseObject.error(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Lỗi khi lấy chi tiết hóa đơn: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public ResponseObject<?> getInvoiceDetail(ADOrderDetailRequest request) {
-        try {
-            if (adOrderRepository.findByMa(request.getMaHoaDon()).isEmpty()) {
-                return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
-            }
-            Pageable pageable = Helper.createPageable(request, "created_date");
-            Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(),
-                    pageable);
-            return ResponseObject.success(page, "Lấy chi tiết hóa đơn thành công");
-        } catch (Exception e) {
-            log.error("Lỗi khi lấy chi tiết hóa đơn (toàn cục): {}", e.getMessage(), e);
-            return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Lỗi khi lấy chi tiết hóa đơn: " + e.getMessage());
         }
     }
@@ -739,10 +690,6 @@ public class ADOrderServiceImpl implements ADOrderService {
             // Kiểm tra hóa đơn còn ở trạng thái CHỜ XÁC NHẬN hoặc ĐÃ XÁC NHẬN hoặc CHỜ GIAO
             // mới cho đổi/gán
             Order hoaDon = chiTiet.getOrder();
-            if (hoaDon.getOrderType() != TypeInvoice.ONLINE) {
-                throw new RuntimeException(
-                        "Chỉ đơn hàng online mới được gán/đổi serial tại module Đơn hàng online.");
-            }
             if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN
                     && hoaDon.getOrderStatus() != OrderStatus.DA_XAC_NHAN
                     && hoaDon.getOrderStatus() != OrderStatus.CHO_GIAO) {
@@ -840,10 +787,6 @@ public class ADOrderServiceImpl implements ADOrderService {
                     .orElseThrow(() -> new RuntimeException(
                             "Không tìm thấy hóa đơn: " + request.getMaHoaDon()));
 
-            if (hoaDon.getOrderType() != TypeInvoice.ONLINE) {
-                throw new RuntimeException("Chỉ đơn hàng online mới được cập nhật thông tin giao hàng tại đây.");
-            }
-
             // Chỉ cho phép cập nhật khi đơn ở trạng thái CHỜ XÁC NHẬN
             if (hoaDon.getOrderStatus() != OrderStatus.CHO_XAC_NHAN) {
                 throw new RuntimeException(
@@ -897,35 +840,5 @@ public class ADOrderServiceImpl implements ADOrderService {
             serialRepository.saveAll(serials);
         }
         log.info("Đã giải phóng Serial cho hóa đơn {} về trạng thái AVAILABLE", hoaDon.getCode());
-    }
-
-    // Hàm cộng tiền vào tổng chi tiêu của khách hàng
-    private void congTienTichLuyKhachHang(Order hoaDon) {
-        Customer customer = hoaDon.getCustomer();
-
-        // Nếu là khách vãng lai (không đăng nhập) thì bỏ qua
-        if (customer == null) {
-            log.info("Đơn hàng {} là khách vãng lai, không cộng tích lũy chi tiêu.", hoaDon.getCode());
-            return;
-        }
-
-        // Lấy số tiền thực tế khách đã thanh toán (ưu tiên tổng sau giảm giá)
-        BigDecimal soTienCongThem = hoaDon.getTotalAfterDiscount() != null
-                ? hoaDon.getTotalAfterDiscount()
-                : hoaDon.getTotalAmount();
-
-        if (soTienCongThem == null || soTienCongThem.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
-        }
-
-        BigDecimal tongChiTieuHienTai = customer.getTotalSpent() != null
-                ? customer.getTotalSpent()
-                : BigDecimal.ZERO;
-
-
-        customer.setTotalSpent(tongChiTieuHienTai.add(soTienCongThem));
-        customerRepository.save(customer);
-
-        log.info("Đã cộng {} VNĐ vào tổng chi tiêu của khách hàng ID: {}", soTienCongThem, customer.getId());
     }
 }
