@@ -37,7 +37,7 @@ import {
 import type { RootState, AppDispatch } from "../../../redux/store";
 import type { Discount } from "../../../models/Discount";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const DiscountList: React.FC = () => {

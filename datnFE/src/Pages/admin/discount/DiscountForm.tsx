@@ -142,12 +142,6 @@ const DiscountForm: React.FC = () => {
   const onFinish = (values: any) => {
     if (isSubmittingRef.current || loading) return;
     isSubmittingRef.current = true;
-
-    // ======================================================
-    // LOGIC CẮT BỎ SẢN PHẨM BỊ KẸT (CHỈ CHẠY LÚC BẤM LƯU)
-    // ======================================================
-    // Chỉ giữ lại những ID nào thực sự ĐANG CÓ MẶT trên bảng (tức là mảng allProductDetails)
-    // Những ID bị kẹt (tàng hình do dính đợt giảm giá khác) sẽ bị loại bỏ hoàn toàn
     const validSelectedKeys = selectedRowKeys.filter((key) =>
       allProductDetails.some((product) => product.id === key)
     );
@@ -168,6 +162,7 @@ const DiscountForm: React.FC = () => {
       endDate: values.timeRange ? values.timeRange[1].valueOf() : null,
       createdBy: user?.username || "Nhung",
       updatedBy: user?.username || "Nhung",
+      status: values.status,
       // Gửi mảng ID đã được lọc sạch sẽ kẹt xuống Backend
       productDetailIds: validSelectedKeys, 
     };

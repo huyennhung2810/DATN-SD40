@@ -73,8 +73,8 @@ const CustomerSelectModal: React.FC<Props> = ({
 
   // --- LOGIC PHÂN HẠNG VÀ SẮP XẾP ---
   const getCustomerTier = (totalSpent: number = 0) => {
-    if (totalSpent >= 20000000) return { label: "Vàng", color: "gold", rank: 3 };
-    if (totalSpent >= 5000000) return { label: "Bạc", color: "silver", rank: 2 };
+    if (totalSpent >= 500000000) return { label: "Vàng", color: "gold", rank: 3 };
+    if (totalSpent >= 250000000) return { label: "Bạc", color: "silver", rank: 2 };
     return { label: "Đồng", color: "orange", rank: 1 };
   };
 
