@@ -246,7 +246,7 @@ const ShiftHistoryPage: React.FC = () => {
             }}
           >
             <Title level={4}>
-              <HistoryOutlined /> Lịch sử đối soát tiền mặt
+              <HistoryOutlined /> Lịch sử hoạt động
             </Title>
             <Space>
               <Button icon={<ReloadOutlined />} onClick={loadHistory}>

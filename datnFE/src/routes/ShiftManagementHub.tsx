@@ -18,7 +18,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "1",
       label: (
         <span>
-          <CalendarOutlined /> Phân lịch làm việc
+          <CalendarOutlined /> Quản lý lịch làm việc
         </span>
       ),
       children: <WorkSchedulePage />,
@@ -27,7 +27,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "2",
       label: (
         <span>
-          <ClockCircleOutlined /> Ca mẫu
+          <ClockCircleOutlined /> Quản lý ca làm việc
         </span>
       ),
       children: <ShiftTemplatePage />,
@@ -36,7 +36,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "3",
       label: (
         <span>
-          <HistoryOutlined /> Lịch sử ca
+          <HistoryOutlined /> Lịch sử hoạt động
         </span>
       ),
       children: <ShiftHistoryPage />,
