@@ -260,26 +260,213 @@
   color: var(--color-error);
 }
 
-/* ===== Filter Bar ===== */
-.filter-bar {
+/* ===== Filter Section — Modern Design ===== */
+.filter-section {
   background: var(--color-bg-container);
   border: 1px solid var(--color-border-secondary);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  overflow: hidden;
   margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 第一行：核心筛选器 */
+.filter-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: var(--color-bg-container);
+  border-bottom: 1px solid transparent;
+  flex-wrap: wrap;
+}
+
+/* 搜索框 */
+.filter-item-search {
+  flex: 1;
+  min-width: 240px;
+  max-width: 380px;
+}
+
+.filter-search-input .ant-input-search {
+  border-radius: var(--radius-md) !important;
+}
+
+.filter-search-input .ant-input-search-button {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  width: 40px;
+}
+
+.filter-search-input .ant-input {
+  border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
+  font-size: var(--font-size-base);
+  height: 36px;
+}
+
+.filter-search-input .ant-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* 通用筛选器项 */
+.filter-item {
+  min-width: 160px;
+  flex: 1;
+}
+
+.filter-item-advanced {
+  min-width: auto;
+  flex: 0 0 auto;
+}
+
+.filter-item-clear {
+  min-width: auto;
+  flex: 0 0 auto;
+}
+
+/* Select 统一样式 */
+.filter-select {
+  width: 100%;
+}
+
+.filter-select .ant-select-selector {
+  border-radius: var(--radius-md) !important;
+  height: 36px !important;
+  padding: 0 28px 0 12px !important;
+  border-color: var(--color-border) !important;
+  font-size: var(--font-size-base) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.filter-select .ant-select-selection-placeholder {
+  color: var(--color-text-tertiary) !important;
+  font-size: var(--font-size-base) !important;
+  line-height: 34px !important;
+}
+
+.filter-select:hover .ant-select-selector {
+  border-color: var(--color-primary-hover) !important;
+}
+
+.filter-select.ant-select-focused .ant-select-selector {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
+}
+
+.filter-select .ant-select-selection-search {
+  line-height: 34px !important;
+}
+
+.filter-select .ant-select-selection-search-input {
+  height: 34px !important;
+}
+
+.filter-select .ant-select-selection-item {
+  line-height: 34px !important;
+  font-size: var(--font-size-base) !important;
+}
+
+/* Input 统一样式 */
+.filter-input {
+  border-radius: var(--radius-md) !important;
+  height: 36px;
+  font-size: var(--font-size-base);
+  border-color: var(--color-border) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.filter-input:hover {
+  border-color: var(--color-primary-hover) !important;
+}
+
+.filter-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
+}
+
+/* 高级筛选按钮 */
+.filter-advanced-btn {
+  height: 36px;
+  padding: 0 var(--spacing-lg);
+  border-radius: var(--radius-md) !important;
+  border: 1.5px solid var(--color-border) !important;
+  background: var(--color-bg-container) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: var(--font-size-base) !important;
+  font-weight: 500 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast) !important;
+}
+
+.filter-advanced-btn:hover {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: var(--color-primary-light) !important;
+}
+
+.filter-advanced-btn.has-filters {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: var(--color-primary-subtle) !important;
+}
+
+/* 清除按钮 */
+.filter-clear-btn {
+  height: 36px;
+  padding: 0 var(--spacing-lg);
+  border-radius: var(--radius-md) !important;
+  border: 1.5px solid var(--color-error-border) !important;
+  background: var(--color-bg-container) !important;
+  color: var(--color-error) !important;
+  font-size: var(--font-size-base) !important;
+  font-weight: 500 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast) !important;
+}
+
+.filter-clear-btn:hover {
+  background: var(--color-error-light) !important;
+  border-color: var(--color-error) !important;
+  color: var(--color-error) !important;
+}
+
+/* 第二行：高级筛选器折叠区域 */
+.filter-row-advanced {
+  border-top: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-spotlight);
+  animation: filterExpand 0.2s ease-out;
+}
+
+@keyframes filterExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-advanced-inner {
+  padding: var(--spacing-lg) var(--spacing-xl);
+}
+
+.filter-advanced-grid {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-md);
-  align-items: flex-end;
+  align-items: center;
 }
 
-.filter-bar .ant-form-item {
-  margin-bottom: 0;
-}
-
-.filter-bar .ant-form-item-label > label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+.filter-advanced-grid .filter-item {
+  min-width: 180px;
+  flex: 1;
 }
 
 /* ===== Data Table Styles ===== */

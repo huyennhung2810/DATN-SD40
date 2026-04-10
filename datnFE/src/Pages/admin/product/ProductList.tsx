@@ -8,14 +8,20 @@ import {
   ReloadOutlined,
   SettingOutlined,
   ShopOutlined,
+  FilterOutlined,
+  SearchOutlined,
   UploadOutlined,
+  DownOutlined,
+  UpOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
   App,
+  Badge,
   Button,
   Card,
   Col,
+  Collapse,
   Descriptions,
   Divider,
   Drawer,
@@ -166,6 +172,33 @@ const ProductPage: React.FC = () => {
     string | undefined
   >();
   const [selectedIso, setSelectedIso] = useState<string | undefined>();
+  const [advancedFilterOpen, setAdvancedFilterOpen] = useState(false);
+
+  // 计算当前激活的高级筛选器数量
+  const advancedFilterCount = [
+    selectedSensorType,
+    selectedLensMount,
+    selectedResolution,
+    selectedProcessor,
+    selectedImageFormat,
+    selectedVideoFormat,
+    selectedIso,
+  ].filter(Boolean).length;
+
+  // 清除所有筛选条件
+  const handleClearAllFilters = () => {
+    setKeyword("");
+    setSelectedCategory(undefined);
+    setSelectedStatus(undefined);
+    setSelectedSensorType(undefined);
+    setSelectedLensMount(undefined);
+    setSelectedResolution(undefined);
+    setSelectedProcessor(undefined);
+    setSelectedImageFormat(undefined);
+    setSelectedVideoFormat(undefined);
+    setSelectedIso(undefined);
+    setAdvancedFilterOpen(false);
+  };
   const [productDetails, setProductDetails] = useState<ProductDetailResponse[]>(
     [],
   );
@@ -1370,163 +1403,227 @@ const ProductPage: React.FC = () => {
         </Space>
       </div>
 
-      <div className="filter-bar" style={{ marginBottom: "var(--spacing-lg)" }}>
-        <Form form={form} layout="vertical">
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={6}>
-              <Form.Item name="keyword" label="Tìm kiếm">
-                <Search
-                  placeholder="Nhập tên sản phẩm..."
-                  allowClear
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+      {/* ===== 现代化过滤器区域 ===== */}
+      <div className="filter-section">
+        {/* 第一行：核心筛选器 — 始终可见 */}
+        <div className="filter-row-main">
+          {/* 搜索框 */}
+          <div className="filter-item filter-item-search">
+            <Input.Search
+              placeholder="Tìm theo tên sản phẩm..."
+              allowClear
+              enterButton={
+                <SearchOutlined style={{ fontSize: 14 }} />
+              }
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="filter-search-input"
+            />
+          </div>
+
+          {/* 产品类别筛选 */}
+          <div className="filter-item">
+            <Select
+              placeholder="Loại sản phẩm"
+              allowClear
+              value={selectedCategory}
+              onChange={(val) => setSelectedCategory(val)}
+              options={categories.map((cat) => ({
+                label: cat.name,
+                value: cat.id,
+              }))}
+              className="filter-select"
+              suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+            />
+          </div>
+
+          {/* 状态筛选 */}
+          <div className="filter-item">
+            <Select
+              placeholder="Trạng thái"
+              allowClear
+              value={selectedStatus}
+              onChange={(val) => setSelectedStatus(val)}
+              options={[
+                { label: "Hoạt động", value: "ACTIVE" },
+                { label: "Không hoạt động", value: "INACTIVE" },
+              ]}
+              className="filter-select"
+              suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+            />
+          </div>
+
+          {/* 高级筛选器折叠按钮 */}
+          <div className="filter-item filter-item-advanced">
+            <Button
+              className={`filter-advanced-btn ${advancedFilterCount > 0 ? "has-filters" : ""}`}
+              icon={<FilterOutlined style={{ fontSize: 13 }} />}
+              onClick={() => setAdvancedFilterOpen(!advancedFilterOpen)}
+            >
+              Lọc nâng cao
+              {advancedFilterCount > 0 && (
+                <Badge
+                  count={advancedFilterCount}
+                  style={{
+                    marginLeft: 6,
+                    backgroundColor: "#0A84FF",
+                    fontSize: 10,
+                    minWidth: 18,
+                    height: 18,
+                    lineHeight: "18px",
+                  }}
                 />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="idProductCategory" label="Loại sản phẩm">
-                <Select
-                  placeholder="Tất cả loại"
-                  allowClear
-                  value={selectedCategory}
-                  onChange={(val) => setSelectedCategory(val)}
-                  options={categories.map((cat) => ({
-                    label: cat.name,
-                    value: cat.id,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="status" label="Trạng thái">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  value={selectedStatus}
-                  onChange={(val) => setSelectedStatus(val)}
-                  options={[
-                    { label: "Hoạt động", value: "ACTIVE" },
-                    { label: "Không hoạt động", value: "INACTIVE" },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="sensorType" label="Loại cảm biến">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedSensorType}
-                  onChange={(val) => setSelectedSensorType(val)}
-                  loading={sensorTypeState.loading}
-                  options={sensorTypeState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={5}>
-              <Form.Item name="lensMount" label="Ngàm lens">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedLensMount}
-                  onChange={(val) => setSelectedLensMount(val)}
-                  loading={lensMountState.loading}
-                  options={lensMountState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={4}>
-              <Form.Item name="resolution" label="Độ phân giải">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedResolution}
-                  onChange={(val) => setSelectedResolution(val)}
-                  loading={resolutionState.loading}
-                  options={resolutionState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="processor" label="Bộ xử lý">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedProcessor}
-                  onChange={(val) => setSelectedProcessor(val)}
-                  loading={processorState.loading}
-                  options={processorState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="imageFormat" label="Định dạng ảnh">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedImageFormat}
-                  onChange={(val) => setSelectedImageFormat(val)}
-                  loading={imageFormatState.loading}
-                  options={imageFormatState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="videoFormat" label="Định dạng video">
-                <Select
-                  placeholder="Tất cả"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  value={selectedVideoFormat}
-                  onChange={(val) => setSelectedVideoFormat(val)}
-                  loading={videoFormatState.loading}
-                  options={videoFormatState.list.map((item) => ({
-                    label: item.name,
-                    value: item.name,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={4}>
-              <Form.Item name="iso" label="ISO">
-                <Input
-                  placeholder="Nhập ISO..."
-                  allowClear
-                  value={selectedIso}
-                  onChange={(e) => setSelectedIso(e.target.value)}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
+              )}
+            </Button>
+          </div>
+
+          {/* 清除全部按钮 — 仅在有筛选条件时显示 */}
+          {(keyword || selectedCategory || selectedStatus || advancedFilterCount > 0) && (
+            <div className="filter-item filter-item-clear">
+              <Button
+                className="filter-clear-btn"
+                icon={<CloseOutlined style={{ fontSize: 11 }} />}
+                onClick={handleClearAllFilters}
+              >
+                Xóa lọc
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* 第二行：高级筛选器折叠面板 */}
+        {advancedFilterOpen && (
+          <div className="filter-row-advanced">
+            <div className="filter-advanced-inner">
+              <div className="filter-advanced-grid">
+                {/* Loại cảm biến */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Loại cảm biến"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedSensorType}
+                    onChange={(val) => setSelectedSensorType(val)}
+                    loading={sensorTypeState.loading}
+                    options={sensorTypeState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* Ngàm lens */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Ngàm lens"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedLensMount}
+                    onChange={(val) => setSelectedLensMount(val)}
+                    loading={lensMountState.loading}
+                    options={lensMountState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* Độ phân giải */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Độ phân giải"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedResolution}
+                    onChange={(val) => setSelectedResolution(val)}
+                    loading={resolutionState.loading}
+                    options={resolutionState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* Bộ xử lý */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Bộ xử lý"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedProcessor}
+                    onChange={(val) => setSelectedProcessor(val)}
+                    loading={processorState.loading}
+                    options={processorState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* Định dạng ảnh */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Định dạng ảnh"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedImageFormat}
+                    onChange={(val) => setSelectedImageFormat(val)}
+                    loading={imageFormatState.loading}
+                    options={imageFormatState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* Định dạng video */}
+                <div className="filter-item">
+                  <Select
+                    placeholder="Định dạng video"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    value={selectedVideoFormat}
+                    onChange={(val) => setSelectedVideoFormat(val)}
+                    loading={videoFormatState.loading}
+                    options={videoFormatState.list.map((item) => ({
+                      label: item.name,
+                      value: item.name,
+                    }))}
+                    className="filter-select"
+                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                  />
+                </div>
+
+                {/* ISO */}
+                <div className="filter-item">
+                  <Input
+                    placeholder="ISO"
+                    allowClear
+                    value={selectedIso}
+                    onChange={(e) => setSelectedIso(e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="content-card" style={{ padding: 0, overflow: "hidden" }}>
