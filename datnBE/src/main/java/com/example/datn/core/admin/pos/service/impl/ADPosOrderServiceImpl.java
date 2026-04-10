@@ -702,7 +702,6 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         // Record checkout history
         OrderHistory lichSu = new OrderHistory();
         lichSu.setOrder(order);
-        lichSu.setHoaDon(order);
         lichSu.setTrangThai(order.getOrderStatus());
         lichSu.setThoiGian(LocalDateTime.now());
         lichSu.setNote(orderType == TypeInvoice.GIAO_HANG
@@ -1022,7 +1021,6 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
             OrderHistory lichSu = new OrderHistory();
             lichSu.setOrder(order);
-            lichSu.setHoaDon(order);
             lichSu.setTrangThai(finalStatus);
             lichSu.setThoiGian(LocalDateTime.now());
             lichSu.setNote(order.getOrderType() == TypeInvoice.GIAO_HANG

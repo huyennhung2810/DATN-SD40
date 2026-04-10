@@ -99,7 +99,8 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
         if (hasStatus && hasQ) {
             try {
                 OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-                orders = orderRepository.findByCustomerIdAndStatusAndCodeLike(customerId, orderStatus, "%" + q.trim() + "%", pageable);
+                orders = orderRepository.findByCustomerIdAndStatusAndCodeLike(customerId, orderStatus,
+                        "%" + q.trim() + "%", pageable);
             } catch (IllegalArgumentException e) {
                 orders = orderRepository.findByCustomerIdAndCodeLike(customerId, "%" + q.trim() + "%", pageable);
             }
@@ -177,7 +178,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .map(this::toItemResponse)
                 .collect(Collectors.toList());
 
-        List<OrderHistory> histories = orderHistoryRepository.findByHoaDonOrderByThoiGianAsc(order);
+        List<OrderHistory> histories = orderHistoryRepository.findByOrderOrderByThoiGianAsc(order);
         List<CustomerOrderHistoryResponse> timeline = toTimeline(histories, order.getOrderStatus());
 
         BigDecimal campaignDiscount = sumLinePromotionDiscount(details);
@@ -408,7 +409,6 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
 
         OrderHistory history = new OrderHistory();
         history.setOrder(savedOrder);
-        history.setHoaDon(savedOrder);
         history.setTrangThai(OrderStatus.DA_HUY);
         history.setThoiGian(LocalDateTime.now());
         history.setNote(reason != null && !reason.isBlank() ? reason : "Khách hàng tự hủy đơn");
@@ -512,7 +512,6 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
 
         OrderHistory history = new OrderHistory();
         history.setOrder(savedOrder);
-        history.setHoaDon(savedOrder);
         history.setTrangThai(OrderStatus.HOAN_THANH);
         history.setThoiGian(LocalDateTime.now());
         history.setNote("Khách hàng xác nhận đã nhận hàng");

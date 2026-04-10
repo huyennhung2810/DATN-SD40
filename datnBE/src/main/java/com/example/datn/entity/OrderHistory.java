@@ -1,6 +1,5 @@
 package com.example.datn.entity;
 
-
 import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.OrderStatus;
 import jakarta.persistence.*;
@@ -22,11 +21,6 @@ public class OrderHistory extends PrimaryEntity implements Serializable {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 
-    // Quan hệ N-1 với bảng Order (Hóa đơn)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_hoa_don", referencedColumnName = "id")
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    private Order hoaDon;
 
     // Enum trạng thái hóa đơn
     @Enumerated(EnumType.STRING)
