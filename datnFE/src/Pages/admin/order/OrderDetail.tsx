@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
@@ -224,13 +224,16 @@ const OrderDetailPage: React.FC = () => {
 
   // Derived state
   const currentStatus = order?.trangThaiHoaDon ?? "CHO_XAC_NHAN";
+  // 订单类型判断
   const isOnline =
     order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
+  const isOffline = order?.loaiHoaDon === "OFFLINE";
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
   const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
-  const showCancelButton = canCancelStatuses.includes(currentStatus);
+  // 柜台订单禁止取消，线上/配送订单在指定状态下才显示取消按钮
+  const showCancelButton = isOnline && canCancelStatuses.includes(currentStatus);
   
   let nextStatusKeys =
     currentStatus === "DANG_GIAO"
@@ -753,37 +756,30 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {step.label}
                 </Text>
-                {active &&
-                  nextStatusKeys.length > 0 &&
-                  !isCompleted &&
-                  currentStatus !== "GIAO_HANG_KHONG_THANH_CONG" && (
-                    <Space>
-                      {nextStatusKeys
-                        .filter((status) =>
-                          currentStatus === "DANG_GIAO" &&
-                          status === "HOAN_THANH" &&
-                          order?.trangThaiHoaDon ===
-                            "GIAO_HANG_KHONG_THANH_CONG"
-                            ? false
-                            : true,
-                        )
-                        .map((status) => (
-                          <Button
-                            key={status}
-                            size="small"
-                            type="primary"
-                            style={{
-                              marginTop: 6,
-                              fontSize: 11,
-                              padding: "0 8px",
-                            }}
-                            onClick={() => openStatusModal(status)}
-                          >
-                            {STATUS_LABELS[status] || status}
-                          </Button>
-                        ))}
-                    </Space>
-                  )}
+                {/* 线上订单且当前步骤处于激活状态时，显示状态操作按钮；柜台订单不显示任何操作按钮 */}
+                {active && isOnline && nextStatusKeys.length > 0 && !isCompleted && currentStatus !== "GIAO_HANG_KHONG_THANH_CONG" && (
+                  <Space style={{ marginTop: 6 }}>
+                    {nextStatusKeys
+                      .filter((status) =>
+                        currentStatus === "DANG_GIAO" &&
+                        status === "HOAN_THANH" &&
+                        order?.trangThaiHoaDon === "GIAO_HANG_KHONG_THANH_CONG"
+                          ? false
+                          : true,
+                      )
+                      .map((status) => (
+                        <Button
+                          key={status}
+                          size="small"
+                          type="primary"
+                          style={{ fontSize: 11, padding: "0 8px" }}
+                          onClick={() => openStatusModal(status)}
+                        >
+                          {STATUS_LABELS[status] || status}
+                        </Button>
+                      ))}
+                  </Space>
+                )}
               </div>
               {idx < steps.length - 1 && (
                 <div

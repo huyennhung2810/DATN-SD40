@@ -1,4 +1,4 @@
-﻿import {
+import {
   EyeOutlined,
   FileExcelOutlined,
   FilterOutlined,
@@ -47,6 +47,13 @@ const OrderStatuses = [
   { key: "HOAN_THANH", label: "Hoàn thành" },
   { key: "DA_HUY", label: "Đã hủy" },
 ];
+
+// 订单类型排序优先级：线上(ONLINE/GIAO_HANG)优先于柜台(OFFLINE)
+const ORDER_TYPE_PRIORITY: Record<string, number> = {
+  ONLINE: 1,
+  GIAO_HANG: 1,
+  OFFLINE: 2,
+};
 
 const OrderPage: React.FC = () => {
   const navigate = useNavigate();
@@ -458,7 +465,23 @@ const OrderPage: React.FC = () => {
 
         <Table
           columns={columns}
-          dataSource={ordersData?.page?.content || []}
+          dataSource={useMemo(() => {
+            const raw = ordersData?.page?.content || [];
+            // 排序规则：线上待确认订单优先，其他订单按创建时间倒序
+            return [...raw].sort((a, b) => {
+              const aIsOnline = a.loaiHoaDon === "ONLINE" || a.loaiHoaDon === "GIAO_HANG";
+              const bIsOnline = b.loaiHoaDon === "ONLINE" || b.loaiHoaDon === "GIAO_HANG";
+              const aIsOnlinePending = aIsOnline && a.status === "CHO_XAC_NHAN";
+              const bIsOnlinePending = bIsOnline && b.status === "CHO_XAC_NHAN";
+
+              // 1. 线上待确认订单排在最前
+              if (aIsOnlinePending && !bIsOnlinePending) return -1;
+              if (!aIsOnlinePending && bIsOnlinePending) return 1;
+
+              // 2. 同类型订单按创建时间倒序（新的在前）
+              return (b.createdDate ?? 0) - (a.createdDate ?? 0);
+            });
+          }, [ordersData?.page?.content])}
           loading={isLoadingList}
           rowKey="id"
           pagination={{
