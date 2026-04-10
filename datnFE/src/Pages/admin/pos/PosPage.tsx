@@ -411,12 +411,25 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const handleSelectCustomer = async (customerId: string) => {
+  const handleSelectCustomer = async (customerId: string | null) => {
     if (!activeKey) return;
+
+    // Nếu xóa khách hàng (customerId = null/undefined) → xóa khách và voucher khỏi hóa đơn
+    if (!customerId) {
+      try {
+        await posApi.removeVoucher(activeKey);
+        setAppliedVoucher(null);
+        await fetchOrderDetails(activeKey);
+        await fetchPendingOrders();
+      } catch {
+        // Lỗi removeVoucher không ảnh hưởng đến việc xóa khách
+      }
+      return;
+    }
+
     try {
       await posApi.setCustomer(activeKey, customerId);
       message.success("Đã cập nhật khách hàng cho hóa đơn");
-      // Refresh order details to show updated customer info
       await fetchOrderDetails(activeKey);
       await fetchPendingOrders();
     } catch (error: any) {
@@ -450,7 +463,10 @@ const PosPage: React.FC = () => {
         totalAmount: totalToCheck,
         orderId: activeKey,
       });
-      const res = await posApi.getApplicableVouchers(totalToCheck);
+      const res = await posApi.getApplicableVouchers(
+        totalToCheck,
+        activeOrder?.customer?.id || null,
+      );
       console.log("Vouchers từ API:", res.data?.data);
       setApplicableVouchers(res.data?.data || []);
       if (!res.data?.data || res.data.data.length === 0) {
@@ -1497,14 +1513,9 @@ const PosPage: React.FC = () => {
                           />
                         </Space>
                       ) : (
-                        <Button
-                          size="small"
-                          icon={<TagsOutlined />}
-                          onClick={openVoucherModal}
-                          disabled={!activeKey || cartDetails.length === 0}
-                        >
-                          Chọn voucher
-                        </Button>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Voucher sẽ được tự động áp dụng khi chọn khách hàng
+                        </Text>
                       )}
                     </div>
                   </div>

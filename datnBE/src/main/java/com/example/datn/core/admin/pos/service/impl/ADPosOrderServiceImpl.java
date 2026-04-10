@@ -459,7 +459,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         order.setRecipientPhone(customer.getPhoneNumber());
         order.setRecipientEmail(customer.getEmail());
 
-        // 🔥 Lấy địa chỉ mặc định
+        // Lấy địa chỉ mặc định
         Address address = customer.getAddresses().stream()
                 .filter(addr -> Boolean.TRUE.equals(addr.getIsDefault()))
                 .findFirst()
@@ -473,9 +473,84 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             order.setRecipientAddress(address.getFullAddress());
         }
 
+        // Tự động áp dụng voucher tốt nhất cho khách hàng
+        Voucher bestVoucher = findBestApplicableVoucher(order.getTotalAmount(), customerId);
+        if (bestVoucher != null) {
+            order.setVoucher(bestVoucher);
+            order.setTotalAfterDiscount(calculateTotalAfterVoucher(order.getTotalAmount(), bestVoucher));
+            logger.info("[POS] Đã tự động áp dụng voucher tốt nhất: {} (id={}) cho khách hàng {}",
+                    bestVoucher.getCode(), bestVoucher.getId(), customerId);
+        }
+
         posOrderRepository.save(order);
 
-        return ResponseObject.success(order, "Đã gắn khách hàng vào hóa đơn");
+        // Trả về thêm thông tin voucher đã áp dụng (nếu có)
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("orderId", order.getId());
+        resp.put("customerId", customerId);
+        resp.put("appliedVoucherId", bestVoucher != null ? bestVoucher.getId() : null);
+        resp.put("appliedVoucherCode", bestVoucher != null ? bestVoucher.getCode() : null);
+        resp.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        return ResponseObject.success(resp, "Đã gắn khách hàng vào hóa đơn và tự động áp dụng voucher tốt nhất");
+    }
+
+    /**
+     * Tìm voucher tốt nhất cho khách hàng dựa trên tổng tiền đơn hàng.
+     * Ưu tiên: voucher cá nhân (INDIVIDUAL) của khách + tất cả voucher chung (ALL),
+     * so sánh số tiền được giảm, chọn voucher giảm được nhiều nhất.
+     */
+    private Voucher findBestApplicableVoucher(java.math.BigDecimal orderTotal, String customerId) {
+        if (orderTotal == null || orderTotal.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        List<Voucher> candidates = adVouchersRepository.findAll().stream()
+                .filter(v -> v.getStatus() != null && (v.getStatus() == 1 || v.getStatus() == 2)
+                        && v.getQuantity() != null && v.getQuantity() > 0
+                        && v.getStartDate() != null && v.getStartDate() <= now
+                        && v.getEndDate() != null && v.getEndDate() >= now
+                        && (v.getConditions() == null || v.getConditions().compareTo(orderTotal) <= 0))
+                .filter(v -> {
+                    if ("INDIVIDUAL".equalsIgnoreCase(v.getVoucherType())) {
+                        if (v.getDetails() == null) return false;
+                        return v.getDetails().stream()
+                                .anyMatch(d -> d.getCustomer() != null
+                                        && d.getCustomer().getId().equals(customerId)
+                                        && d.getUsageStatus() != null
+                                        && d.getUsageStatus() == 0);
+                    }
+                    return true; // Voucher ALL luôn là ứng viên
+                })
+                .collect(Collectors.toList());
+
+        Voucher best = null;
+        java.math.BigDecimal bestSaving = java.math.BigDecimal.ZERO;
+        for (Voucher v : candidates) {
+            java.math.BigDecimal saving = calculateVoucherSaving(orderTotal, v);
+            if (saving.compareTo(bestSaving) > 0) {
+                bestSaving = saving;
+                best = v;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Tính số tiền được giảm bởi một voucher.
+     */
+    private java.math.BigDecimal calculateVoucherSaving(java.math.BigDecimal total, Voucher voucher) {
+        if (voucher == null) return java.math.BigDecimal.ZERO;
+        String unit = voucher.getDiscountUnit() != null ? voucher.getDiscountUnit().trim().toUpperCase() : "";
+        java.math.BigDecimal saving = java.math.BigDecimal.ZERO;
+        if ("%".equals(unit) || "PERCENT".equals(unit)) {
+            saving = total.multiply(voucher.getDiscountValue()).divide(new java.math.BigDecimal("100"));
+            if (voucher.getMaxDiscountAmount() != null && saving.compareTo(voucher.getMaxDiscountAmount()) > 0) {
+                saving = voucher.getMaxDiscountAmount();
+            }
+        } else {
+            saving = voucher.getDiscountValue() != null ? voucher.getDiscountValue() : java.math.BigDecimal.ZERO;
+        }
+        return saving;
     }
 
     @Override
@@ -711,7 +786,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     }
 
     @Override
-    public ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal) {
+    public ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal, String customerId) {
         long now = System.currentTimeMillis();
         List<VoucherResponse> applicable = adVouchersRepository.findAll().stream()
                 .filter(v -> v.getStatus() != null && (v.getStatus() == 1 || v.getStatus() == 2)
@@ -719,6 +794,25 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                         && v.getStartDate() != null && v.getStartDate() <= now
                         && v.getEndDate() != null && v.getEndDate() >= now
                         && (v.getConditions() == null || v.getConditions().compareTo(orderTotal) <= 0))
+                .filter(v -> {
+                    // Nếu có customerId → chỉ hiển thị voucher ALL, hoặc INDIVIDUAL mà khách hàng nằm trong danh sách
+                    if (customerId != null && !"INDIVIDUAL".equalsIgnoreCase(v.getVoucherType())) {
+                        return true; // Voucher công khai luôn hiển thị
+                    }
+                    if (customerId != null && "INDIVIDUAL".equalsIgnoreCase(v.getVoucherType())) {
+                        // Kiểm tra khách hàng có nằm trong danh sách voucher cá nhân không
+                        if (v.getDetails() != null) {
+                            return v.getDetails().stream()
+                                    .anyMatch(d -> d.getCustomer() != null
+                                            && d.getCustomer().getId().equals(customerId)
+                                            && d.getUsageStatus() != null
+                                            && d.getUsageStatus() == 0); // Chưa sử dụng
+                        }
+                        return false;
+                    }
+                    // Không có customerId → chỉ hiển thị voucher ALL (INDIVIDUAL ẩn đi)
+                    return !"INDIVIDUAL".equalsIgnoreCase(v.getVoucherType());
+                })
                 .map(VoucherResponse::new)
                 .collect(Collectors.toList());
 

@@ -82,8 +82,9 @@ public class POSOrderController {
     }
 
     @GetMapping("/applicable-vouchers")
-    public ResponseEntity<?> getApplicableVouchers(@RequestParam java.math.BigDecimal orderTotal) {
-        return ResponseEntity.ok(posOrderService.getApplicableVouchers(orderTotal));
+    public ResponseEntity<?> getApplicableVouchers(@RequestParam java.math.BigDecimal orderTotal,
+            @RequestParam(required = false) String customerId) {
+        return ResponseEntity.ok(posOrderService.getApplicableVouchers(orderTotal, customerId));
     }
 
     @PostMapping("/{orderId}/apply-voucher")
