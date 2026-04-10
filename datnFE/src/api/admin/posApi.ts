@@ -30,8 +30,8 @@ export const posApi = {
     cancelOrder: (orderId: string) => axiosInstance.delete(`/admin/pos/orders/${orderId}`),
     getAvailableSerials: (productDetailId: string) =>
         axiosInstance.get(`/admin/pos/orders/available-serials`, { params: { productDetailId } }),
-    getApplicableVouchers: (orderTotal: number) =>
-        axiosInstance.get(`/admin/pos/orders/applicable-vouchers`, { params: { orderTotal } }),
+    getApplicableVouchers: (orderTotal: number, customerId?: string | null) =>
+        axiosInstance.get(`/admin/pos/orders/applicable-vouchers`, { params: { orderTotal, customerId } }),
     applyVoucher: (orderId: string, voucherId: string) =>
         axiosInstance.post(`/admin/pos/orders/${orderId}/apply-voucher`, null, { params: { voucherId } }),
     removeVoucher: (orderId: string) =>

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ADDiscountDetailRepository extends DiscountDetailRepository {
@@ -42,6 +41,7 @@ public interface ADDiscountDetailRepository extends DiscountDetailRepository {
                 SELECT dd FROM DiscountDetail dd
                 WHERE dd.productDetail.id = :productDetailId
                 AND dd.discount.status = 2
+                AND dd.discount.quantity > 0
                 AND dd.discount.startDate <= :now
                 AND dd.discount.endDate >= :now
             """)
@@ -58,11 +58,15 @@ public interface ADDiscountDetailRepository extends DiscountDetailRepository {
      * các cột snapshot
      * chỉ dùng khi không có % hoặc để đối chiếu (xem
      * {@link com.example.datn.core.client.product.service.ProductPricingRules}).
+     * <p>
+     * <b>Lưu ý:</b> Query kiểm tra {@code discount.quantity > 0} để đảm bảo
+     * không hiển thị giảm giá khi số lượng đợt giảm giá đã hết.
      */
     @Query("""
             SELECT dd.productDetail.id, dd.discount.discountPercent, dd.priceAfter, dd.priceBefore FROM DiscountDetail dd
             WHERE dd.productDetail.id IN :productDetailIds
             AND dd.discount.status = 2
+            AND dd.discount.quantity > 0
             AND dd.discount.startDate <= :now
             AND dd.discount.endDate >= :now
             """)

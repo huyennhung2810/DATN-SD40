@@ -26,7 +26,7 @@ public interface ADPosOrderService {
 
     ResponseObject<?> getAvailableSerials(String productDetailId);
 
-    ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal);
+    ResponseObject<?> getApplicableVouchers(java.math.BigDecimal orderTotal, String customerId);
 
     ResponseObject<?> applyVoucher(String orderId, String voucherId);
 
