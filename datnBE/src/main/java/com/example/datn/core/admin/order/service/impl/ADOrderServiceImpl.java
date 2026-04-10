@@ -265,7 +265,6 @@ public class ADOrderServiceImpl implements ADOrderService {
 
         OrderHistory lichSu = new OrderHistory();
         lichSu.setOrder(hoaDon);
-        lichSu.setHoaDon(hoaDon);
         lichSu.setTrangThai(trangThai);
         lichSu.setThoiGian(LocalDateTime.now());
         lichSu.setNote(ghiChu != null ? ghiChu : "Cập nhật từ hệ thống quản trị");
@@ -282,7 +281,7 @@ public class ADOrderServiceImpl implements ADOrderService {
         Order hoaDon = adOrderRepository.findByMa(maHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
 
-        return orderHistoryRepository.findByHoaDonOrderByThoiGianDesc(hoaDon);
+        return orderHistoryRepository.findByOrderOrderByThoiGianDesc(hoaDon);
     }
 
     // Lấy thời gian của một trạng thái cụ thể từ lịch sử
@@ -291,7 +290,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
 
         return orderHistoryRepository
-                .findFirstByHoaDonAndTrangThaiOrderByThoiGianDesc(hoaDon, trangThai)
+                .findFirstByOrderAndTrangThaiOrderByThoiGianDesc(hoaDon, trangThai)
                 .map(OrderHistory::getThoiGian)
                 .orElse(null);
     }
@@ -302,7 +301,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
 
         List<OrderHistory> lichSu = orderHistoryRepository
-                .findByHoaDonOrderByThoiGianAsc(hoaDon);
+                .findByOrderOrderByThoiGianAsc(hoaDon);
 
         Map<String, Object> timeline = new LinkedHashMap<>();
         for (OrderHistory item : lichSu) {

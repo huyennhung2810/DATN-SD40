@@ -11,11 +11,15 @@ import java.util.Optional;
 
 @Repository
 public interface OrderHistoryRepository extends JpaRepository<OrderHistory, String> {
-    List<OrderHistory> findByHoaDonOrderByThoiGianDesc(Order hoaDon);
 
-    Optional<OrderHistory> findFirstByHoaDonAndTrangThaiOrderByThoiGianDesc(
-            Order hoaDon,
+    // Đã đổi HoaDon -> Order
+    List<OrderHistory> findByOrderOrderByThoiGianDesc(Order order);
+
+    // Đã đổi HoaDon -> Order
+    Optional<OrderHistory> findFirstByOrderAndTrangThaiOrderByThoiGianDesc(
+            Order order,
             OrderStatus trangThai);
 
-    List<OrderHistory> findByHoaDonOrderByThoiGianAsc(Order hoaDon);
+    // Đã đổi HoaDon -> Order
+    List<OrderHistory> findByOrderOrderByThoiGianAsc(Order order);
 }
