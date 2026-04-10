@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   Input,
@@ -9,9 +9,10 @@ import {
   Space,
   Spin,
   Tag,
+  type InputRef,
 } from "antd";
 import {
-  QrcodeOutlined,
+  BarcodeOutlined, // Đổi icon sang Barcode
   DeleteOutlined,
   CheckOutlined,
 } from "@ant-design/icons";
@@ -33,7 +34,6 @@ interface SerialAssignmentModalProps {
   requiredQuantity: number;
   productDetailId: string;
   onSuccess: () => void;
-  /** Already-assigned serials for this detail (passed when editing) */
   initialSerials?: AvailableSerial[];
 }
 
@@ -49,20 +49,22 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
   initialSerials = [],
 }) => {
   const [selectedSerials, setSelectedSerials] = useState<string[]>([]);
-  const [availableSerials, setAvailableSerials] = useState<AvailableSerial[]>(
-    [],
-  );
+  const [availableSerials, setAvailableSerials] = useState<AvailableSerial[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const inputRef = useRef<InputRef>(null);
+
   useEffect(() => {
     if (open) {
-      // Pre-populate with already-assigned serials
       setSelectedSerials(initialSerials.map((s) => s.serialNumber));
       setInputValue("");
       fetchAvailableSerials();
+      
+      // Tự động focus vào ô nhập liệu khi mở Modal
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open, productDetailId]);
 
@@ -72,8 +74,6 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       setLoadingAvailable(true);
       const res = await posApi.getAvailableSerials(productDetailId);
       const available: AvailableSerial[] = res.data?.data || [];
-      // Merge in the already-assigned serials (which are IN_ORDER, not in available list)
-      // so they can appear in the top table with "Đã chọn" indicator
       const merged = [
         ...initialSerials.filter(
           (s) => !available.find((a) => a.serialNumber === s.serialNumber),
@@ -89,31 +89,53 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
     }
   };
 
-  const handlePickSerial = (serialNumber: string) => {
+  // Hàm xử lý logic CHỌN IMEI (Có kiểm tra tồn tại)
+  const handlePickSerial = (serialNumber: string): boolean => {
+    // 1. Kiểm tra xem đã chọn chưa
     if (selectedSerials.includes(serialNumber)) {
-      message.warning("Mã Serial này đã được chọn");
-      return;
+      message.warning("Mã IMEI này đã được chọn!");
+      return false;
     }
+
+    // 2. KIỂM TRA QUAN TRỌNG: Mã IMEI quét được CÓ NẰM TRONG DANH SÁCH KHẢ DỤNG KHÔNG?
+    const exists = availableSerials.find(s => s.serialNumber === serialNumber);
+    if (!exists) {
+      message.error(`Mã IMEI ${serialNumber} không tồn tại hoặc không thuộc sản phẩm này!`);
+      return false;
+    }
+
+    // 3. Kiểm tra số lượng
     if (selectedSerials.length >= requiredQuantity) {
-      message.warning(
-        `Chỉ được phép chọn tối đa ${requiredQuantity} mã Serial`,
-      );
-      return;
+      message.warning(`Chỉ được phép chọn tối đa ${requiredQuantity} mã IMEI!`);
+      return false;
     }
-    setSelectedSerials([...selectedSerials, serialNumber]);
+
+    // Nếu qua hết các bước kiểm tra -> Thêm vào danh sách đã chọn
+    setSelectedSerials((prev) => [...prev, serialNumber]);
+    return true;
   };
 
   const handleAddManual = () => {
     if (!inputValue.trim()) return;
-    handlePickSerial(inputValue.trim());
-    setInputValue("");
+    const success = handlePickSerial(inputValue.trim());
+    
+    if (success) {
+      setInputValue("");
+    }
+    
+    // Luôn focus lại vào ô input để quét liên tục bằng máy quét cầm tay
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  // Xử lý khi Camera quét thành công
   const handleScanSuccess = (serialNumber: string) => {
-    handlePickSerial(serialNumber);
-    message.success(`Đã quét mã: ${serialNumber}`);
-    if (selectedSerials.length + 1 >= requiredQuantity) {
-      setIsScannerOpen(false);
+    const success = handlePickSerial(serialNumber);
+    if (success) {
+      message.success(`Đã quét và chọn mã: ${serialNumber}`);
+      // Nếu đã đủ số lượng thì tự động đóng Camera đi
+      if (selectedSerials.length + 1 >= requiredQuantity) {
+        setIsScannerOpen(false);
+      }
     }
   };
 
@@ -123,7 +145,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
 
   const handleConfirm = async () => {
     if (selectedSerials.length !== requiredQuantity) {
-      message.error(`Vui lòng chọn đúng ${requiredQuantity} mã Serial`);
+      message.error(`Vui lòng chọn đúng ${requiredQuantity} mã IMEI`);
       return;
     }
     try {
@@ -133,11 +155,11 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
         detailId,
         selectedSerials,
       );
-      message.success("Gán Serial thành công!");
+      message.success("Gán IMEI thành công!");
       onSuccess();
       onClose();
     } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi khi gán Serial");
+      message.error(error.response?.data?.message || "Lỗi khi gán IMEI");
     } finally {
       setLoading(false);
     }
@@ -152,7 +174,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       align: "center" as const,
     },
     {
-      title: "Mã Serial",
+      title: "Mã IMEI",
       dataIndex: "serialNumber",
       key: "serialNumber",
       render: (text: string) => <Typography.Text code>{text}</Typography.Text>,
@@ -198,7 +220,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       align: "center" as const,
     },
     {
-      title: "Serial đã chọn",
+      title: "IMEI đã chọn",
       dataIndex: "serial",
       key: "serial",
       render: (text: string) => <Typography.Text code>{text}</Typography.Text>,
@@ -223,7 +245,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
 
   return (
     <Modal
-      title={`Chọn Serial cho: ${productName}`}
+      title={`Chọn mã IMEI cho: ${productName}`}
       open={open}
       onCancel={onClose}
       onOk={handleConfirm}
@@ -236,7 +258,7 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
       width={680}
       destroyOnHidden
     >
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 16 }}>
         <Typography.Text strong>Yêu cầu chọn đủ: </Typography.Text>
         <Typography.Text
           type={
@@ -248,48 +270,20 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
           }
           strong
         >
-          {selectedSerials.length} / {requiredQuantity} Serial
+          {selectedSerials.length} / {requiredQuantity} IMEI
         </Typography.Text>
         {selectedSerials.length === requiredQuantity && (
           <Tag color="success" style={{ marginLeft: 8 }}>
             Đã đủ ✓
           </Tag>
         )}
-        {selectedSerials.length > requiredQuantity && (
-          <Tag color="error" style={{ marginLeft: 8 }}>
-            Vượt quá số lượng!
-          </Tag>
-        )}
       </div>
 
-      {/* ── Bảng danh sách Serial khả dụng ── */}
-      <Typography.Text strong style={{ display: "block", marginBottom: 6 }}>
-        Danh sách Serial có sẵn:
-      </Typography.Text>
-      <Spin spinning={loadingAvailable}>
-        <Table
-          dataSource={availableSerials}
-          columns={availableColumns}
-          rowKey="id"
-          pagination={{ pageSize: 5, size: "small" }}
-          size="small"
-          bordered
-          style={{ marginBottom: 16 }}
-          locale={{
-            emptyText: "Không có Serial nào khả dụng cho sản phẩm này",
-          }}
-          rowClassName={(record: AvailableSerial) =>
-            selectedSerials.includes(record.serialNumber)
-              ? "ant-table-row-selected"
-              : ""
-          }
-        />
-      </Spin>
-
-      {/* ── Nhập thủ công / Quét Camera ── */}
-      <Space style={{ marginBottom: 12, width: "100%" }}>
+      {/* ── Nhập thủ công / Quét Camera (Chuyển lên trên cho tiện thao tác) ── */}
+      <Space style={{ marginBottom: 16, width: "100%" }}>
         <Input
-          placeholder="Hoặc nhập thủ công mã Serial..."
+          ref={inputRef}
+          placeholder="Nhập/Quét mã IMEI..."
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onPressEnter={handleAddManual}
@@ -304,17 +298,41 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
           Thêm
         </Button>
         <Button
-          icon={<QrcodeOutlined />}
+          icon={<BarcodeOutlined />}
           onClick={() => setIsScannerOpen(true)}
           disabled={selectedSerials.length >= requiredQuantity}
         >
-          Quét Camera
+          Mở Camera Quét IMEI
         </Button>
       </Space>
 
-      {/* ── Bảng Serial đã chọn ── */}
+      {/* ── Bảng danh sách IMEI khả dụng ── */}
       <Typography.Text strong style={{ display: "block", marginBottom: 6 }}>
-        Serial đã chọn ({selectedSerials.length}/{requiredQuantity}):
+        Danh sách mã IMEI có sẵn trong kho:
+      </Typography.Text>
+      <Spin spinning={loadingAvailable}>
+        <Table
+          dataSource={availableSerials}
+          columns={availableColumns}
+          rowKey="id"
+          pagination={{ pageSize: 5, size: "small" }}
+          size="small"
+          bordered
+          style={{ marginBottom: 16 }}
+          locale={{
+            emptyText: "Không có IMEI nào khả dụng cho sản phẩm này",
+          }}
+          rowClassName={(record: AvailableSerial) =>
+            selectedSerials.includes(record.serialNumber)
+              ? "ant-table-row-selected"
+              : ""
+          }
+        />
+      </Spin>
+
+      {/* ── Bảng IMEI đã chọn ── */}
+      <Typography.Text strong style={{ display: "block", marginBottom: 6 }}>
+        Mã IMEI đã chọn ({selectedSerials.length}/{requiredQuantity}):
       </Typography.Text>
       <Table
         dataSource={selectedData}
@@ -323,9 +341,10 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
         pagination={false}
         size="small"
         bordered
-        locale={{ emptyText: "Chưa chọn Serial nào" }}
+        locale={{ emptyText: "Chưa chọn mã IMEI nào" }}
       />
 
+      {/* Tái sử dụng Component QrScannerModal cũ của bạn */}
       <QrScannerModal
         open={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}

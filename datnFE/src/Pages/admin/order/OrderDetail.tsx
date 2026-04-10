@@ -2,6 +2,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
+import SerialAssignmentModal from "../../../components/SerialAssignmentModal"; // <-- IMPORT MODAL MỚI VÀO ĐÂY
 import {
   Avatar,
   Button,
@@ -46,7 +47,6 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { orderApi } from "../../../api/admin/orderApi";
-import { posApi } from "../../../api/admin/posApi";
 import type {
   OrderDetailResponse,
   OrderHistoryType,
@@ -214,21 +214,13 @@ const OrderDetailPage: React.FC = () => {
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
 
-  // Serial info modal
+  // Serial info modal (Dùng khi xem list dạng Flat)
   const [serialInfoOpen, setSerialInfoOpen] = useState(false);
   const [serialInfoRow, setSerialInfoRow] = useState<FlatRow | null>(null);
 
-  // Serial change modal
+  // STATE DÀNH CHO MODAL CAMERA MỚI
   const [serialChangeOpen, setSerialChangeOpen] = useState(false);
-  const [serialChangeRow, setSerialChangeRow] = useState<FlatRow | null>(null);
-  const [availableSerials, setAvailableSerials] = useState<
-    Array<{ id: string; code: string }>
-  >([]);
-  const [loadingSerials, setLoadingSerials] = useState(false);
-  const [selectedNewSerial, setSelectedNewSerial] = useState<string | string[]>(
-    "",
-  );
-  const [changingSerial, setChangingSerial] = useState(false);
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderDetailResponse | null>(null);
 
   // Derived state
   const currentStatus = order?.trangThaiHoaDon ?? "CHO_XAC_NHAN";
@@ -236,19 +228,17 @@ const OrderDetailPage: React.FC = () => {
     order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
-  // Chỉ cho phép gán/đổi serial khi trạng thái là CHO_XAC_NHAN
   const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
-  // Chỉ cho phép hủy ở các trạng thái: CHO_XAC_NHAN, DA_XAC_NHAN, CHO_GIAO
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
   const showCancelButton = canCancelStatuses.includes(currentStatus);
-  // Nếu đang giao hàng thì cho phép chọn 2 trạng thái tiếp theo
+  
   let nextStatusKeys =
     currentStatus === "DANG_GIAO"
       ? ["HOAN_THANH", "GIAO_HANG_KHONG_THANH_CONG"]
       : NEXT_STATUS[currentStatus]
         ? [NEXT_STATUS[currentStatus]]
         : [];
-  // Nếu đã giao hàng không thành công thì không còn nút nào (ẩn hết)
+  
   if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
     nextStatusKeys = [];
   }
@@ -263,7 +253,6 @@ const OrderDetailPage: React.FC = () => {
       if (res.success && res.data?.content?.length) {
         const rows = res.data.content;
         setItems(rows);
-        // Đảm bảo đồng bộ trường avatarKhachHang nếu backend trả về
         setOrder({ ...rows[0] });
         setHistoryList(parseHistory(rows[0].lichSuTrangThai));
       }
@@ -276,7 +265,6 @@ const OrderDetailPage: React.FC = () => {
 
   useEffect(() => {
     fetchOrder();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const openStatusModal = (status: string) => {
@@ -287,9 +275,7 @@ const OrderDetailPage: React.FC = () => {
 
   const handleConfirmStatus = async () => {
     if (!order) return;
-    // Nếu chuyển sang ĐÃ XÁC NHẬN mà còn sản phẩm chưa gán serial thì chặn lại
     if (nextStatus === "DA_XAC_NHAN") {
-      // Kiểm tra tất cả items đã có serial
       const hasMissingSerial = items.some((item) => {
         const serials = parseSerials(item.danhSachImei);
         return !serials || serials.length === 0;
@@ -301,7 +287,6 @@ const OrderDetailPage: React.FC = () => {
         return;
       }
     }
-    // Nếu chọn GIAO_HANG_KHONG_THANH_CONG thì bắt buộc nhập lý do
     if (
       nextStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
       (!statusNote || !statusNote.trim())
@@ -361,151 +346,6 @@ const OrderDetailPage: React.FC = () => {
     setSerialInfoOpen(true);
   };
 
-  // Hiển thị danh sách serial hiện tại, cho phép chọn từng serial để đổi
-  const openSerialChange = async (row: FlatRow) => {
-    // Lấy danh sách serial hiện tại của sản phẩm này
-    const item = items.find(
-      (i) =>
-        i.productDetailId === row.productDetailId &&
-        i.maHoaDonChiTiet === row.detailId,
-    );
-    let currentSerials: { id: string; code: string }[] = [];
-    if (item) {
-      try {
-        currentSerials = parseSerials(item.danhSachImei);
-      } catch {
-        message.error("Không thể đọc danh sách serial hiện tại");
-      }
-    }
-    // Nếu chỉ có 1 serial hiện tại thì cho phép đổi luôn, nếu nhiều thì hiển thị danh sách để chọn
-    if (currentSerials.length <= 1) {
-      setSerialChangeRow({
-        ...row,
-        serialId: currentSerials[0]?.id || "",
-        serialCode: currentSerials[0]?.code || "",
-      });
-      setSelectedNewSerial("");
-      setSerialChangeOpen(true);
-      setLoadingSerials(true);
-      try {
-        const res = await posApi.getAvailableSerials(row.productDetailId);
-        const responseBody = (res as any)?.data;
-        const list: any[] = Array.isArray(responseBody?.data)
-          ? responseBody.data
-          : Array.isArray(responseBody)
-            ? responseBody
-            : [];
-        setAvailableSerials(
-          list.map((s: any) => ({
-            id: String(s.id ?? s.serialId ?? ""),
-            code: String(s.serialNumber ?? s.code ?? s.serialCode ?? ""),
-          })),
-        );
-      } catch (err) {
-        console.error("[openSerialChange] error:", err);
-        message.error("Không thể tải danh sách serial");
-      } finally {
-        setLoadingSerials(false);
-      }
-    } else {
-      // Hiển thị modal chọn serial hiện tại để đổi
-      Modal.info({
-        title: "Chọn serial muốn đổi",
-        content: (
-          <div>
-            {currentSerials.map((s) => (
-              <Button
-                key={s.id}
-                style={{ margin: 4 }}
-                onClick={async () => {
-                  Modal.destroyAll();
-                  setSerialChangeRow({
-                    ...row,
-                    serialId: s.id,
-                    serialCode: s.code,
-                  });
-                  setSelectedNewSerial("");
-                  setSerialChangeOpen(true);
-                  setLoadingSerials(true);
-                  try {
-                    const res = await posApi.getAvailableSerials(
-                      row.productDetailId,
-                    );
-                    const responseBody = (res as any)?.data;
-                    const list: any[] = Array.isArray(responseBody?.data)
-                      ? responseBody.data
-                      : Array.isArray(responseBody)
-                        ? responseBody
-                        : [];
-                    setAvailableSerials(
-                      list.map((s: any) => ({
-                        id: String(s.id ?? s.serialId ?? ""),
-                        code: String(
-                          s.serialNumber ?? s.code ?? s.serialCode ?? "",
-                        ),
-                      })),
-                    );
-                  } catch (err) {
-                    console.error("[openSerialChange] error:", err);
-                    message.error("Không thể tải danh sách serial");
-                  } finally {
-                    setLoadingSerials(false);
-                  }
-                }}
-              >
-                {s.code}
-              </Button>
-            ))}
-          </div>
-        ),
-        okText: "Đóng",
-        width: 400,
-      });
-    }
-  };
-
-  const handleSaveSerialChange = async () => {
-    if (!serialChangeRow) return;
-
-    const isSwapping = !!serialChangeRow.serialId;
-
-    const required = isSwapping ? 1 : serialChangeRow.soLuong || 1;
-
-    const selected = Array.isArray(selectedNewSerial)
-      ? selectedNewSerial
-      : selectedNewSerial
-        ? [selectedNewSerial]
-        : [];
-
-    if (selected.length !== required) {
-      message.warning(`Vui lòng chọn đủ ${required} serial`);
-      return;
-    }
-
-    setChangingSerial(true);
-    try {
-      for (const newImeiId of selected) {
-        await orderApi.assignSerials({
-          hoaDonChiTietId: serialChangeRow.detailId, // Trả về ID cũ nếu là thao tác Đổi, ngược lại rỗng
-          oldImeiId: isSwapping ? serialChangeRow.serialId : "",
-          newImeiId,
-        });
-      }
-      message.success(
-        isSwapping ? "Đổi serial thành công" : "Gán serial thành công",
-      );
-      setSerialChangeOpen(false);
-      await fetchOrder();
-    } catch (err: any) {
-      console.error("[assignSerials] error:", err);
-      const errMsg =
-        err?.message || err?.data?.message || err?.error || "Thao tác thất bại";
-      message.error(errMsg);
-    } finally {
-      setChangingSerial(false);
-    }
-  };
-
   const productColumns: ColumnsType<FlatRow> = [
     {
       title: "STT",
@@ -560,7 +400,6 @@ const OrderDetailPage: React.FC = () => {
         </Space>
       ),
     },
-    // XÓA các cột Serial, Đơn giá, SL, Thành tiền
     {
       title: "Thao tác",
       key: "action",
@@ -717,29 +556,19 @@ const OrderDetailPage: React.FC = () => {
         if (!canChangeSerial) return <Text type="secondary">—</Text>;
         const serials = parseSerials(r.danhSachImei);
         const firstSerial = serials[0];
-        const flatRow: FlatRow = {
-          rowKey: r.maHoaDonChiTiet,
-          detailId: r.maHoaDonChiTiet,
-          productDetailId: r.productDetailId,
-          tenSanPham: r.tenSanPham,
-          thuongHieu: r.thuongHieu,
-          mauSac: r.mauSac,
-          size: r.size,
-          anhSanPham: r.anhSanPham,
-          giaBan: r.giaBan,
-          soLuong: r.soLuong,
-          tongTien: r.tongTien,
-          serialId: firstSerial?.id || "",
-          serialCode: firstSerial?.code || "Chưa gán",
-        };
+        
         return (
           <Space>
+            {/* Truyền nguyên object OrderDetailResponse (r) vào state để ném vào Modal */}
             {!firstSerial && (
               <Button
                 size="small"
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => openSerialChange(flatRow)}
+                onClick={() => {
+                  setSelectedOrderDetail(r);
+                  setSerialChangeOpen(true);
+                }}
                 title="Gán serial"
               />
             )}
@@ -747,7 +576,10 @@ const OrderDetailPage: React.FC = () => {
               <Button
                 size="small"
                 icon={<SwapOutlined />}
-                onClick={() => openSerialChange(flatRow)}
+                onClick={() => {
+                  setSelectedOrderDetail(r);
+                  setSerialChangeOpen(true);
+                }}
                 title="Đổi serial"
               />
             )}
@@ -755,10 +587,6 @@ const OrderDetailPage: React.FC = () => {
         );
       },
     },
-  ];
-
-  const availableSerialColumns: ColumnsType<{ id: string; code: string }> = [
-    { title: "Serial", dataIndex: "code" },
   ];
 
   const historyColumns: ColumnsType<OrderHistoryType> = [
@@ -835,7 +663,6 @@ const OrderDetailPage: React.FC = () => {
       );
     }
 
-    // Tách logic theo loại đơn
     let steps;
     if (order?.loaiHoaDon === "GIAO_HANG" || order?.loaiHoaDon === "ONLINE") {
       steps = [...ONLINE_STEPS];
@@ -846,7 +673,6 @@ const OrderDetailPage: React.FC = () => {
         steps = steps.filter((s) => s.key !== "HOAN_THANH");
       }
     } else {
-      // POS lấy hàng tại quầy: chỉ 2 bước
       steps = [ONLINE_STEPS[0], ONLINE_STEPS[5]];
     }
     const stepKeys = steps.map((s) => s.key);
@@ -879,10 +705,9 @@ const OrderDetailPage: React.FC = () => {
           const active = idx === currentIdx;
           let circleColor = done ? "#52c41a" : active ? "#1677ff" : "#d9d9d9";
           let icon = null;
-          // Special case: delivery failed step
           if (step.key === "GIAO_HANG_KHONG_THANH_CONG") {
             if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG" || done) {
-              circleColor = "#fa541c"; // volcano
+              circleColor = "#fa541c";
               icon = <CloseCircleOutlined />;
             } else {
               icon = <CloseCircleOutlined style={{ opacity: 0.3 }} />;
@@ -935,7 +760,6 @@ const OrderDetailPage: React.FC = () => {
                     <Space>
                       {nextStatusKeys
                         .filter((status) =>
-                          // Nếu trạng thái hiện tại là DANG_GIAO, loại bỏ nút HOAN_THANH nếu đơn đã giao hàng không thành công
                           currentStatus === "DANG_GIAO" &&
                           status === "HOAN_THANH" &&
                           order?.trangThaiHoaDon ===
@@ -1642,89 +1466,27 @@ const OrderDetailPage: React.FC = () => {
         )}
       </Modal>
 
-      <Modal
-        title={serialChangeRow?.serialId ? "Đổi Serial" : "Gán Serial"}
-        open={serialChangeOpen}
-        onOk={handleSaveSerialChange}
-        onCancel={() => setSerialChangeOpen(false)}
-        confirmLoading={changingSerial}
-        okText={serialChangeRow?.serialId ? "Xác nhận đổi" : "Xác nhận gán"}
-        cancelText="Hủy"
-        width={580}
-      >
-        {serialChangeRow && (
-          <div style={{ marginTop: 8 }}>
-            {serialChangeRow.serialId && (
-              <p>
-                Serial hiện tại:{" "}
-                <Tag color="orange" style={{ fontFamily: "monospace" }}>
-                  {serialChangeRow.serialCode}
-                </Tag>
-              </p>
-            )}
-            <p style={{ marginBottom: 8 }}>
-              {serialChangeRow.serialId
-                ? "Chọn serial thay thế:"
-                : "Chọn serial để gán:"}
-            </p>
-            {loadingSerials ? (
-              <div style={{ textAlign: "center", padding: 32 }}>
-                <Spin />
-              </div>
-            ) : availableSerials.length === 0 ? (
-              <Text type="secondary">Không có serial khả dụng</Text>
-            ) : (
-              <Table<{ id: string; code: string }>
-                dataSource={availableSerials}
-                rowKey="id"
-                columns={availableSerialColumns}
-                pagination={false}
-                size="small"
-                rowSelection={(() => {
-                  const isSwapping = !!serialChangeRow?.serialId;
-                  const required = isSwapping
-                    ? 1
-                    : serialChangeRow?.soLuong || 1;
-
-                  // Đảm bảo selectedKeys luôn là mảng để Antd đọc được
-                  const selectedKeys = Array.isArray(selectedNewSerial)
-                    ? selectedNewSerial
-                    : selectedNewSerial
-                      ? [selectedNewSerial]
-                      : [];
-
-                  return {
-                    type: required > 1 ? "checkbox" : "radio", // Tự động đổi Radio/Checkbox
-                    selectedRowKeys: selectedKeys,
-                    onChange: (selectedRowKeys) => {
-                      if (required === 1) {
-                        // Trực tiếp lưu string nếu chỉ cần 1
-                        setSelectedNewSerial(selectedRowKeys[0] as string);
-                      } else {
-                        // Chặn chọn lố số lượng
-                        if (selectedRowKeys.length > required) {
-                          message.warning(
-                            `Chỉ được chọn tối đa ${required} serial`,
-                          );
-                          return;
-                        }
-                        setSelectedNewSerial(selectedRowKeys as string[]);
-                      }
-                    },
-                    getCheckboxProps: (record) => ({
-                      // Disable các ô chưa chọn nếu đã chọn đủ số lượng
-                      disabled:
-                        required > 1 &&
-                        selectedKeys.length >= required &&
-                        !selectedKeys.includes(record.id),
-                    }),
-                  };
-                })()}
-              />
-            )}
-          </div>
-        )}
-      </Modal>
+      {/* COMPONENT MODAL QUÉT MÃ MỚI */}
+      {selectedOrderDetail && order && (
+        <SerialAssignmentModal
+          open={serialChangeOpen}
+          onClose={() => {
+            setSerialChangeOpen(false);
+            setSelectedOrderDetail(null);
+          }}
+          orderId={order.maHoaDon || ""} 
+          detailId={selectedOrderDetail.maHoaDonChiTiet}
+          productName={selectedOrderDetail.tenSanPham}
+          requiredQuantity={selectedOrderDetail.soLuong}
+          productDetailId={selectedOrderDetail.productDetailId}
+          initialSerials={parseSerials(selectedOrderDetail.danhSachImei).map((s) => ({
+            id: s.id,
+            serialNumber: s.code, // Giả định code backend trả về chính là serialNumber hiển thị
+            code: s.code,
+          }))}
+          onSuccess={() => fetchOrder()} // Gán xong thì load lại giỏ hàng
+        />
+      )}
 
       {order && (
         <OrderReceiptTemplate ref={receiptRef} order={order} items={items} />

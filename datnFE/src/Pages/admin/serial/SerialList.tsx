@@ -24,7 +24,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { QRCodeSVG } from "qrcode.react";
+import Barcode from "react-barcode"; // Đã thay đổi: Import Barcode thay vì QRCode
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import productCategoryApi from "../../../api/productCategoryApi";
@@ -54,7 +54,6 @@ const SerialPage: React.FC = () => {
     list = [],
     loading,
     totalElements = 0,
-    currentSerial,
   } = useSelector((state: RootState) => state.serial || {});
 
   const [keyword, setKeyword] = useState("");
@@ -108,7 +107,7 @@ const SerialPage: React.FC = () => {
         setFilter((prev) => ({ ...prev, productId: undefined }));
       }
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedProduct]);
 
   const handleStatusChange = (status: string | undefined) => {
     setFilter((prev) => ({
@@ -175,11 +174,18 @@ const SerialPage: React.FC = () => {
       ),
     },
     {
-      title: "QR Code",
+      title: "Mã IMEI", // Đã thay đổi: Đổi title thành IMEI
       align: "center",
       render: (r) => (
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <QRCodeSVG value={r.serialNumber} size={64} />
+          {/* Đã thay đổi: Dùng Barcode thay vì QRCode */}
+          <Barcode 
+            value={r.serialNumber} 
+            width={1.2} 
+            height={40} 
+            displayValue={false} 
+            background="transparent"
+          />
         </div>
       ),
     },
@@ -249,10 +255,10 @@ const SerialPage: React.FC = () => {
             </div>
             <div>
               <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-                Quản lý Serial
+                Quản lý Serial / IMEI
               </Title>
               <Text type="secondary" style={{ fontSize: "13px" }}>
-                Quản lý mã Serial và trạng thái sản phẩm
+                Quản lý mã Serial/IMEI và trạng thái sản phẩm
               </Text>
             </div>
           </div>
@@ -334,12 +340,12 @@ const SerialPage: React.FC = () => {
               <Form.Item
                 label={
                   <Text strong>
-                    <SearchOutlined /> Tìm kiếm Serial
+                    <SearchOutlined /> Tìm kiếm IMEI / Serial
                   </Text>
                 }
               >
                 <Input.Search
-                  placeholder="Nhập số Serial hoặc mã định danh..."
+                  placeholder="Nhập số IMEI hoặc Serial..."
                   size="large"
                   allowClear
                   value={keyword}
@@ -357,7 +363,6 @@ const SerialPage: React.FC = () => {
                   <Radio.Group
                     size="large"
                     buttonStyle="solid"
-                    // LƯU Ý: Chỗ này là filter.serialStatus (không phải filter.status nữa nhé)
                     value={filter.serialStatus} 
                     onChange={(e) => handleStatusChange(e.target.value)}
                   >
@@ -451,7 +456,7 @@ const SerialPage: React.FC = () => {
       <Modal
         title={
           <span>
-            <AppstoreOutlined /> Chi tiết Serial
+            <AppstoreOutlined /> Chi tiết IMEI / Serial
           </span>
         }
         open={detailModalOpen}
@@ -471,7 +476,7 @@ const SerialPage: React.FC = () => {
                 style={{ marginBottom: 16, background: "#fafafa" }}
               >
                 <Descriptions column={2} size="small" colon>
-                  <Descriptions.Item label="Mã Serial">
+                  <Descriptions.Item label="Mã Serial / IMEI">
                     <Text strong style={{ color: "#1677ff" }}>
                       {detailSerial?.serialNumber ?? "---"}
                     </Text>
@@ -506,16 +511,17 @@ const SerialPage: React.FC = () => {
                   </Descriptions.Item>
                 </Descriptions>
 
-                <div style={{ textAlign: "center", marginTop: 12 }}>
-                  <QRCodeSVG
-                    value={detailSerial?.serialNumber ?? ""}
-                    size={120}
-                  />
-                  <div style={{ marginTop: 4 }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {detailSerial?.serialNumber}
-                    </Text>
-                  </div>
+                <div style={{ textAlign: "center", marginTop: 24, marginBottom: 12 }}>
+                  {/* Đã thay đổi: Hiển thị Barcode full trong chi tiết */}
+                  {detailSerial?.serialNumber && (
+                    <Barcode 
+                      value={detailSerial.serialNumber} 
+                      width={2} 
+                      height={60} 
+                      fontSize={16}
+                      background="transparent"
+                    />
+                  )}
                 </div>
               </Card>
 
