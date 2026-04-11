@@ -131,6 +131,13 @@ public class SecurityConfig {
                                                 // 3. CHỈ ADMIN (Quyền nhạy cảm: Tiền bạc, Nhân sự, Tài khoản)
                                                 .requestMatchers(MappingConstants.API_ADMIN_PREFIX_STATISTICS + "/**")
                                                 .hasAuthority(RoleConstant.ADMIN.name())
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**")
+                                                .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
+
+                                                .requestMatchers(HttpMethod.PATCH,
+                                                                MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**")
+                                                .hasAnyAuthority(RoleConstant.ADMIN.name(), RoleConstant.STAFF.name())
                                                 .requestMatchers(MappingConstants.API_ADMIN_PREFIX_EMPLOYEE + "/**")
                                                 .hasAuthority(RoleConstant.ADMIN.name())
                                                 .requestMatchers(MappingConstants.API_ADMIN_PREFIX_SHIFT_TEMPLATE
