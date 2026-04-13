@@ -1,6 +1,7 @@
 package com.example.datn.core.client.cartDetail.service.Impl;
 
 import com.example.datn.core.client.cart.model.AddToCartRequest;
+import com.example.datn.core.client.cart.model.MergeCartRequest;
 import com.example.datn.core.client.cart.model.response.CartItemResponse;
 import com.example.datn.core.client.cart.service.CartService;
 import com.example.datn.core.client.cartDetail.repository.CnCartDetailRepository;
@@ -216,4 +217,56 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
         }
         cnCartDetailRepository.deleteById(cartDetailId);
     }
+
+    @Override
+    @Transactional
+    public void mergeGuestCart(String customerId, MergeCartRequest request) {
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            return;
+        }
+
+        Cart cart = CartService.getOrCreateCart(customerId);
+
+        for (MergeCartRequest.MergeItem item : request.getItems()) {
+            // Kiểm tra sản phẩm tồn tại
+            ProductDetail productDetail = productDetailRepository.findById(item.getProductDetailId())
+                    .orElse(null);
+
+            if (productDetail == null) {
+                continue;
+            }
+
+            // Kiểm tra tồn kho
+            if (productDetail.getQuantity() <= 0) {
+                continue;
+            }
+
+            Optional<CartDetail> existingDetail = cnCartDetailRepository
+                    .findByCart_IdAndProductDetail_Id(cart.getId(), productDetail.getId());
+
+            if (existingDetail.isPresent()) {
+                // Đã có trong giỏ → cộng dồn số lượng (không vượt tồn kho)
+                CartDetail detail = existingDetail.get();
+                int newQuantity = detail.getQuantity() + item.getQuantity();
+                if (newQuantity > productDetail.getQuantity()) {
+                    newQuantity = productDetail.getQuantity();
+                }
+                detail.setQuantity(newQuantity);
+                detail.setCreatedDate(System.currentTimeMillis());
+                cnCartDetailRepository.save(detail);
+            } else {
+                // Chưa có trong giỏ → thêm mới
+                int quantityToAdd = Math.min(item.getQuantity(), productDetail.getQuantity());
+                if (quantityToAdd > 0) {
+                    CartDetail newDetail = new CartDetail();
+                    newDetail.setId(UUID.randomUUID().toString());
+                    newDetail.setCart(cart);
+                    newDetail.setProductDetail(productDetail);
+                    newDetail.setQuantity(quantityToAdd);
+                    newDetail.setCreatedDate(System.currentTimeMillis());
+                    cnCartDetailRepository.save(newDetail);
+                }
+            }
+        }
     }
+}

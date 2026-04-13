@@ -1,31 +1,37 @@
-import { createSlice,type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import guestCartService from '../../services/guestCartService';
 
 interface CartState {
   cartCount: number;
+  isGuestMode: boolean;
 }
 
 const initialState: CartState = {
   cartCount: 0,
+  isGuestMode: false,
 };
 
 const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    // Cập nhật lại toàn bộ số lượng (Dùng khi vừa load trang hoặc đăng nhập)
     setCartCount: (state, action: PayloadAction<number>) => {
       state.cartCount = action.payload;
     },
-    // Cộng thêm số lượng (Dùng khi khách bấm nút "Thêm vào giỏ" ở trang sản phẩm)
     increaseCartCount: (state) => {
       state.cartCount += 1;
     },
-    // Reset về 0 (Dùng khi khách đăng xuất)
     clearCartCount: (state) => {
       state.cartCount = 0;
-    }
+    },
+    setGuestMode: (state, action: PayloadAction<boolean>) => {
+      state.isGuestMode = action.payload;
+    },
+    syncGuestCartCount: (state) => {
+      state.cartCount = guestCartService.getCartCount();
+    },
   },
 });
 
-export const { setCartCount, increaseCartCount, clearCartCount } = cartSlice.actions;
+export const { setCartCount, increaseCartCount, clearCartCount, setGuestMode, syncGuestCartCount } = cartSlice.actions;
 export default cartSlice.reducer;

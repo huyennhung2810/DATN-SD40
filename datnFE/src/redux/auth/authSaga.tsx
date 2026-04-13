@@ -4,7 +4,11 @@ import { authActions } from "./authSlice";
 import { resetSessionId, chatSlice, clearMessages } from "../chat/chatSlice";
 import type { AuthResponse } from "../../models/auth";
 import authApi from "../../api/auth/authApi";
+import cartApi from "../../api/cartApi";
+import guestCartService from "../../services/guestCartService";
+import { setCartCount, setGuestMode } from "../cart/cartSlice";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import type { GuestCartItem } from "../../services/guestCartService";
 
 function* handleLoginFlow(
   apiFunc: any,
@@ -13,6 +17,7 @@ function* handleLoginFlow(
   try {
     const response: AuthResponse = yield call(apiFunc, payload.data);
 
+    // Lưu thông tin đăng nhập trước
     yield put(
       authActions.loginSuccess({
         user: {
@@ -27,6 +32,23 @@ function* handleLoginFlow(
         refreshToken: response.refreshToken,
       }),
     );
+
+    // Hợp nhất giỏ hàng khách vào tài khoản
+    const guestItems: GuestCartItem[] = guestCartService.getMergeItems();
+    if (guestItems.length > 0) {
+      try {
+        yield call(cartApi.mergeGuestCart, response.userId, guestItems);
+        notification.success({
+          message: "Đã hợp nhất giỏ hàng",
+          description: `${guestItems.length} sản phẩm từ giỏ hàng trước đó đã được thêm vào tài khoản của bạn.`,
+          duration: 4,
+        });
+      } catch (mergeError) {
+        console.error("Lỗi hợp nhất giỏ hàng:", mergeError);
+      }
+      // Xóa giỏ hàng khách sau khi hợp nhất
+      guestCartService.clearCart();
+    }
 
     // Reset sessionId và xóa sạch tin nhắn chat cũ khi đăng nhập tài khoản mới
     const newSessionId = resetSessionId();

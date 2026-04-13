@@ -20,10 +20,24 @@ public class CheckoutRequest {
     private Boolean isBuyNow;
     private List<ItemRequest> items;
 
+    // THÔNG TIN KHÁCH CHƯA ĐĂNG NHẬP
+    private GuestInfo guestInfo;
+
     @Getter
     @Setter
     public static class ItemRequest {
         private String productDetailId;
         private Integer quantity;
+    }
+
+    @Getter
+    @Setter
+    public static class GuestInfo {
+        private String receiverName;
+        private String phone;
+        private String provinceId;
+        private String districtId;
+        private String wardId;
+        private String addressDetail;
     }
 }

@@ -1,23 +1,37 @@
 import axiosClient from "./axiosClient";
+import type { GuestCartItem } from "../services/guestCartService";
 
 export interface CheckoutRequest {
-  customerId: string;
-  recipientName: string;
-  recipientPhone: string;
-  recipientEmail: string;
-  recipientAddress: string;
+  customerId?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  recipientEmail?: string;
+  recipientAddress?: string;
   paymentMethod: "COD" | "VNPAY";
   voucherCode?: string | null;
   note?: string;
-  /** Phí vận chuyển tính từ GHN (VNĐ). Mặc định 0 = miễn phí. */
-  phiVanChuyen?: number;
+  isBuyNow?: boolean;
+  items: {
+    productDetailId: string;
+    quantity: number;
+  }[];
+  /** THÔNG TIN KHÁCH CHƯA ĐĂNG NHẬP */
+  guestInfo?: GuestInfo;
+}
+
+export interface GuestInfo {
+  receiverName: string;
+  phone: string;
+  provinceId: string;
+  districtId: string;
+  wardId: string;
+  addressDetail: string;
 }
 
 export interface CheckoutResponse {
   orderId: string;
   orderCode: string;
   totalAmount: number;
-  /** SUCCESS (COD) | REDIRECT (VNPay) */
   status: string;
   paymentUrl?: string;
   message: string;

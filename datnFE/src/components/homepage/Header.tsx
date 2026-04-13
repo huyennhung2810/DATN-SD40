@@ -11,6 +11,7 @@ import {
   ShoppingCartOutlined,
   TagOutlined,
   UserOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -28,12 +29,13 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import { useNotifications } from "../../app/useNotifications";
 import { authActions } from "../../redux/auth/authSlice";
-import { clearCartCount, setCartCount } from "../../redux/cart/cartSlice";
+import { clearCartCount, setCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
 import {
   notificationActions,
   type AppNotification,
 } from "../../redux/notification/notificationSlice";
 import type { RootState } from "../../redux/store";
+import guestCartService from "../../services/guestCartService";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -147,7 +149,8 @@ const Header: React.FC<HeaderProps> = () => {
         })
         .catch((error) => console.error("Lỗi lấy số lượng giỏ hàng:", error));
     } else {
-      dispatch(clearCartCount());
+      // Khách chưa đăng nhập - lấy từ localStorage
+      dispatch(syncGuestCartCount());
     }
   }, [user, dispatch]);
 
@@ -336,7 +339,15 @@ const Header: React.FC<HeaderProps> = () => {
               <button
                 type="button"
                 className="action-btn cart-btn"
-                onClick={() => navigate("/client/cart")}
+                onClick={() => {
+                  if (isLoggedIn) {
+                    navigate("/client/cart");
+                  } else {
+                    message.warning("Vui lòng đăng nhập để xem giỏ hàng!");
+                    // 可以打开登录modal，这里简单跳转到登录页
+                    navigate("/login", { state: { from: "/client/cart" } });
+                  }
+                }}
               >
                 <Badge count={cartCount} showZero offset={[-4, 4]}>
                   <div className="action-icon-wrapper">

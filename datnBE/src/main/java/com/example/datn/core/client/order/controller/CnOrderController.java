@@ -23,7 +23,7 @@ public class CnOrderController {
 
     /**
      * Đặt hàng và thanh toán.
-     * customerId được trích xuất từ JWT token để đảm bảo bảo mật.
+     * Yêu cầu đăng nhập (bắt buộc có customerId).
      * - paymentMethod = "COD"   → Tạo đơn hàng, trả về SUCCESS
      * - paymentMethod = "VNPAY" → Tạo đơn hàng, trả về URL thanh toán VNPay
      */
@@ -32,8 +32,12 @@ public class CnOrderController {
             @RequestBody CheckoutRequest request,
             HttpServletRequest httpRequest) {
 
-        String customerId = getCurrentCustomerId();
-        CheckoutResponse response = cnOrderService.checkout(request, customerId, httpRequest);
+        // Yêu cầu bắt buộc có customerId (đã đăng nhập)
+        if (request.getCustomerId() == null || request.getCustomerId().isEmpty()) {
+            throw new RuntimeException("Vui lòng đăng nhập để đặt hàng!");
+        }
+
+        CheckoutResponse response = cnOrderService.checkout(request, request.getCustomerId(), httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -57,17 +61,5 @@ public class CnOrderController {
             result.put("message", e.getMessage());
         }
         return ResponseEntity.ok(result);
-    }
-
-    private String getCurrentCustomerId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new RuntimeException("Người dùng chưa đăng nhập");
-        }
-        Object principal = auth.getPrincipal();
-        if (principal instanceof UserPrincipal up) {
-            return up.getId();
-        }
-        throw new RuntimeException("Không xác định được danh tính người dùng");
     }
 }

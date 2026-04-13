@@ -22,7 +22,7 @@ import {
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
-import { increaseCartCount } from "../../redux/cart/cartSlice";
+import { increaseCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient";
 import type {
   CnProductResponse,
@@ -30,6 +30,7 @@ import type {
   ProductVariantResponse,
   RelatedProductResponse,
 } from "../../models/productVariant";
+import guestCartService from "../../services/guestCartService";
 
 const { Title } = Typography;
 
@@ -173,30 +174,46 @@ const ProductDetail: React.FC = () => {
   }, [id, loading]);
 
   const handleAddToCart = async () => {
-    if (!user || !user.userId) {
-      message.warning("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
-      navigate("/login", { state: { from: location.pathname } });
-      return;
-    }
-
     if (!selectedVariantId) {
       message.error("Vui lòng chọn phiên bản bạn muốn mua!");
       return;
     }
 
+    const isGuest = !user?.userId;
+
     try {
-      const payload = {
-        productDetailId: selectedVariantId,
-        quantity: quantity,
-      };
-      await axiosClient.post(
-        `/client/cart/add?customerId=${user.userId}`,
-        payload,
-      );
-      message.success("Đã thêm sản phẩm vào giỏ hàng!");
-      for (let i = 0; i < quantity; i++) {
-        dispatch(increaseCartCount());
+      if (isGuest) {
+        // Khách chưa đăng nhập - lưu vào localStorage
+        const activeVariant = product?.variants?.find(
+          (v) => v.id === selectedVariantId,
+        );
+
+        guestCartService.addToCart({
+          productDetailId: selectedVariantId,
+          productId: product?.id || "",
+          productName: product?.name || "",
+          variantName: activeVariant ? variantDisplayName(activeVariant) : undefined,
+          imageUrl: mainImage,
+          price: Number(activeVariant?.originalPrice ?? activeVariant?.salePrice ?? 0),
+          discountedPrice: Number(activeVariant?.displayPrice ?? activeVariant?.salePrice ?? 0),
+          quantity: quantity,
+        });
+        dispatch(syncGuestCartCount());
+      } else {
+        // Đã đăng nhập - gọi API
+        const payload = {
+          productDetailId: selectedVariantId,
+          quantity: quantity,
+        };
+        await axiosClient.post(
+          `/client/cart/add?customerId=${user.userId}`,
+          payload,
+        );
+        for (let i = 0; i < quantity; i++) {
+          dispatch(increaseCartCount());
+        }
       }
+      message.success("Đã thêm sản phẩm vào giỏ hàng!");
     } catch (error: any) {
       console.error("Lỗi thêm giỏ hàng:", error);
       const errorMessage =
@@ -206,11 +223,6 @@ const ProductDetail: React.FC = () => {
   };
 
   const handleCheckout = () => {
-    if (!user || !user.userId) {
-      message.warning("Vui lòng đăng nhập để mua hàng!");
-      navigate("/login", { state: { from: location.pathname } });
-      return;
-    }
     if (!selectedVariantId) {
       message.error("Vui lòng chọn phiên bản bạn muốn mua!");
       return;
