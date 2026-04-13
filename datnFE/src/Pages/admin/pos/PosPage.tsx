@@ -1613,7 +1613,7 @@ const PosPage: React.FC = () => {
 
                   {posPaymentMethod === "TIEN_MAT" && (
                     <>
-                      <div style={{ marginBottom: 16 }}>
+                      <div style={{ marginBottom: 12 }}>
                         <Text strong>Tiền khách đưa:</Text>
                         <InputNumber
                           style={{ width: "100%", marginTop: 8 }}
@@ -1629,6 +1629,51 @@ const PosPage: React.FC = () => {
                           addonAfter="đ"
                           placeholder="Nhập số tiền..."
                         />
+                      </div>
+                      {/* Quick cash buttons */}
+                      <div style={{ marginBottom: 16 }}>
+                        {(() => {
+                          const total =
+                            payableOrderSubtotal +
+                            (orderType === "GIAO_HANG" ? shippingFee : 0);
+                          const roundedSuggestions = [
+                            ...new Set(
+                              [
+                                Math.ceil(total / 10000) * 10000,
+                                Math.ceil(total / 50000) * 50000,
+                                Math.ceil(total / 100000) * 100000,
+                                Math.ceil(total / 200000) * 200000,
+                                Math.ceil(total / 500000) * 500000,
+                              ].filter((v) => v > total)
+                            ),
+                          ].slice(0, 3);
+                          return (
+                            <Space wrap size={6} style={{ width: "100%" }}>
+                              <Button
+                                size="small"
+                                type="primary"
+                                onClick={() => setCustomerCash(total)}
+                                style={{
+                                  background: "#52c41a",
+                                  borderColor: "#52c41a",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Đủ tiền ({total.toLocaleString("vi-VN")}đ)
+                              </Button>
+                              {roundedSuggestions.map((amt) => (
+                                <Button
+                                  key={amt}
+                                  size="small"
+                                  onClick={() => setCustomerCash(amt)}
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  {amt.toLocaleString("vi-VN")}đ
+                                </Button>
+                              ))}
+                            </Space>
+                          );
+                        })()}
                       </div>
                       <div
                         style={{
