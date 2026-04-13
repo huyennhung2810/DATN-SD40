@@ -861,8 +861,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                         (addr.getAddressDetail() != null ? addr.getAddressDetail() + ", " : "")
                         + addr.getWardCommune() + ", " + addr.getProvinceCity()
                 );
-            } else if (request.getDiaChi() != null && !request.getDiaChi().isBlank()) {
-                // Nếu nhập tay địa chỉ mới
+            } else if (request.getTinhThanhPho() != null && !request.getTinhThanhPho().isBlank()) {
+                // Nếu nhập tay địa chỉ mới (chỉ cần có tinhThanhPho là đủ)
                 if (request.getTenNguoiNhan() != null && !request.getTenNguoiNhan().isBlank())
                     hoaDon.setRecipientName(request.getTenNguoiNhan());
                 if (request.getSdtNguoiNhan() != null && !request.getSdtNguoiNhan().isBlank())
@@ -891,8 +891,6 @@ public class ADOrderServiceImpl implements ADOrderService {
             sb.append(req.getDiaChiChiTiet()).append(", ");
         if (req.getPhuongXa() != null && !req.getPhuongXa().isBlank())
             sb.append(req.getPhuongXa()).append(", ");
-        if (req.getQuanHuyen() != null && !req.getQuanHuyen().isBlank())
-            sb.append(req.getQuanHuyen()).append(", ");
         if (req.getTinhThanhPho() != null && !req.getTinhThanhPho().isBlank())
             sb.append(req.getTinhThanhPho());
         return sb.toString();
