@@ -217,9 +217,22 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
     @Override
     @Transactional
     public ResponseObject<?> assignSerialsToOrderDetail(String orderId, String detailId, List<String> serialNumbers) {
-        logger.info("[POS] Gán serial cho chi tiết hóa đơn {}: {} serial(s)", detailId, serialNumbers.size());
+        logger.info("[POS] Gán serial cho chi tiết hóa đơn {}: {} serial(s), orderId={}", detailId, serialNumbers.size(), orderId);
+
+        // Tìm Order: thử theo database ID trước, nếu không được thì thử theo code (VD: OTH59798424)
+        Order order = posOrderRepository.findById(orderId)
+                .orElseGet(() -> {
+                    logger.info("[POS] Không tìm thấy Order theo ID '{}', thử tìm theo code", orderId);
+                    return posOrderRepository.findByCode(orderId).orElse(null);
+                });
+
+        if (order == null) {
+            logger.warn("[POS] Không tìm thấy Order với ID/code: {}", orderId);
+            return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy hóa đơn");
+        }
+
         OrderDetail detail = posOrderDetailRepository.findById(detailId).orElse(null);
-        if (detail == null || !detail.getOrder().getId().equals(orderId)) {
+        if (detail == null || !detail.getOrder().getId().equals(order.getId())) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy chi tiết hóa đơn");
         }
 

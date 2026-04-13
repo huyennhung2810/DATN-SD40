@@ -16,4 +16,7 @@ public interface ADPosOrderRepository extends JpaRepository<Order, String> {
 
     // Lấy danh sách hóa đơn theo trạng thái và loại
     List<Order> findByOrderStatusAndOrderType(OrderStatus orderStatus, TypeInvoice orderType);
+
+    // Tìm đơn hàng theo mã code (VD: OTH59798424)
+    java.util.Optional<Order> findByCode(String code);
 }

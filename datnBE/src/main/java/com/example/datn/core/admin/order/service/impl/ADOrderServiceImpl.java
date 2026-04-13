@@ -169,6 +169,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                     break;
 
                 case DANG_GIAO:
+                    khoaThongTinGiaoHang(hoaDonDaCapNhat);
                     break;
 
                 case GIAO_HANG_KHONG_THANH_CONG:
@@ -366,21 +367,68 @@ public class ADOrderServiceImpl implements ADOrderService {
     }
 
     // Khóa IMEI khi hóa đơn chờ xác nhận / đã xác nhận
+    // Đồng thời tự động gán serial AVAILABLE cho sản phẩm chưa có serial
     private void khoaIMEIKhiChoXacNhan(Order hoaDon) {
         List<OrderDetail> danhSachChiTiet = adOrderDetailRepository.findByOrderId(hoaDon.getId());
 
-        int imeiCount = 0;
+        int imeiKhoaCount = 0;
+        int imeiAutoAssignedCount = 0;
+
         for (OrderDetail chiTiet : danhSachChiTiet) {
-            if (chiTiet.getSerials() != null && !chiTiet.getSerials().isEmpty()) {
+            if (chiTiet.getSerials() == null) {
+                chiTiet.setSerials(new java.util.ArrayList<>());
+            }
+
+            int soLuongMua = chiTiet.getQuantity() != null ? chiTiet.getQuantity() : 1;
+            int soSerialDaGan = chiTiet.getSerials().size();
+
+            // Bước 1: Khóa những serial đã gán
+            if (!chiTiet.getSerials().isEmpty()) {
                 for (Serial imei : chiTiet.getSerials()) {
                     imei.setSerialStatus(SerialStatus.IN_ORDER);
                     imei.setLockedAt(System.currentTimeMillis());
                 }
                 serialRepository.saveAll(chiTiet.getSerials());
-                imeiCount += chiTiet.getSerials().size();
+                imeiKhoaCount += chiTiet.getSerials().size();
+            }
+
+            // Bước 2: Tự động gán serial cho sản phẩm còn thiếu
+            if (soSerialDaGan < soLuongMua) {
+                int soSerialCanThem = soLuongMua - soSerialDaGan;
+                ProductDetail productDetail = chiTiet.getProductDetail();
+
+                List<Serial> availableSerials = serialRepository
+                        .findByProductDetailIdAndSerialStatus(productDetail.getId(), SerialStatus.AVAILABLE);
+
+                if (availableSerials.isEmpty()) {
+                    log.warn("Không có serial AVAILABLE cho sản phẩm '{}' (ProductDetail: {}), cần gán thủ công",
+                            productDetail.getProduct().getName(), productDetail.getId());
+                    continue;
+                }
+
+                int soSerialDuKien = Math.min(soSerialCanThem, availableSerials.size());
+
+                for (int i = 0; i < soSerialDuKien; i++) {
+                    Serial serial = availableSerials.get(i);
+                    serial.setSerialStatus(SerialStatus.IN_ORDER);
+                    serial.setOrderDetail(chiTiet);
+                    serial.setOrderHolding(hoaDon);
+                    serial.setLockedAt(System.currentTimeMillis());
+
+                    chiTiet.getSerials().add(serial);
+                }
+
+                serialRepository.saveAll(availableSerials.subList(0, soSerialDuKien));
+                adOrderDetailRepository.save(chiTiet);
+
+                imeiAutoAssignedCount += soSerialDuKien;
+                log.info("Đã tự động gán {} serial cho sản phẩm '{}' trong hóa đơn {}",
+                        soSerialDuKien, productDetail.getProduct().getName(), hoaDon.getCode());
             }
         }
-        log.info("Đã khóa {} IMEI cho hóa đơn {}", imeiCount, hoaDon.getCode());
+
+        log.info("Đã khóa {} IMEI, tự động gán {} IMEI cho hóa đơn {}",
+                imeiKhoaCount, imeiAutoAssignedCount, hoaDon.getCode());
     }
 
     // Đánh dấu IMEI đã bán khi chuyển sang chờ giao
@@ -399,6 +447,16 @@ public class ADOrderServiceImpl implements ADOrderService {
             }
         }
         log.info("Đã đánh dấu {} IMEI là đã bán cho hóa đơn {}", imeiCount, hoaDon.getCode());
+    }
+
+    // Khóa thông tin giao hàng khi bàn giao cho đơn vị vận chuyển
+    private void khoaThongTinGiaoHang(Order hoaDon) {
+        if (!Boolean.TRUE.equals(hoaDon.getIsShippingLocked())) {
+            hoaDon.setIsShippingLocked(true);
+            adOrderRepository.save(hoaDon);
+            log.info("Đã khóa thông tin giao hàng cho đơn hàng {} khi chuyển sang DANG_GIAO",
+                    hoaDon.getCode());
+        }
     }
 
     // Trả toàn bộ IMEI về trạng thái AVAILABLE khi hủy hóa đơn

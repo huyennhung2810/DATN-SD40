@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Builder
 @Getter
 @Setter
 @AllArgsConstructor
@@ -88,9 +89,20 @@ public class Order extends PrimaryEntity implements Serializable {
     @Column(name = "customer_paid", precision = 15, scale = 2)
     private BigDecimal customerPaid;
 
+    @Column(name = "is_shipping_locked")
+    private Boolean isShippingLocked = false;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<OrderHistory> orderHistories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<OrderChangeRequest> changeRequests = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<ShippingAuditLog> auditLogs = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "id_shift")

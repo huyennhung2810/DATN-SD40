@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   Input,
@@ -81,6 +81,15 @@ const SerialAssignmentModal: React.FC<SerialAssignmentModalProps> = ({
         ...available,
       ];
       setAvailableSerials(merged);
+
+      // Tự động chọn trước serial khả dụng nếu chưa có serial nào được gán
+      if (initialSerials.length === 0 && available.length > 0) {
+        const needed = requiredQuantity;
+        const toSelect = available
+          .slice(0, needed)
+          .map((s) => s.serialNumber);
+        setSelectedSerials(toSelect);
+      }
     } catch (error) {
       console.error("Không thể tải danh sách:", error);
       setAvailableSerials(initialSerials);

@@ -23,6 +23,7 @@ import {
   ShopOutlined,
   GlobalOutlined,
   CarOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -30,6 +31,8 @@ import {
   cancelOrder,
   confirmReceived,
   buyAgain,
+  updateShippingInfo,
+  type UpdateShippingInfoRequest,
 } from "../../models/customerOrder";
 import type { CustomerOrderDetailResponse } from "../../models/customerOrder";
 
@@ -87,6 +90,10 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
     unavailable: string[];
     cartCount: number;
   }>({ open: false, added: [], unavailable: [], cartCount: 0 });
+
+  const [shippingEditOpen, setShippingEditOpen] = useState(false);
+  const [shippingEditForm, setShippingEditForm] = useState<UpdateShippingInfoRequest>({});
+  const [shippingEditLoading, setShippingEditLoading] = useState(false);
 
   const loadOrder = useCallback(async () => {
     setLoading(true);
@@ -165,6 +172,41 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
       message.error(err?.data?.message ?? err?.message ?? "Mua lại thất bại");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleOpenShippingEdit = () => {
+    setShippingEditForm({
+      receiverName: order.recipientName ?? "",
+      receiverPhone: order.recipientPhone ?? "",
+      shippingAddress: order.recipientAddress ?? "",
+    });
+    setShippingEditOpen(true);
+  };
+
+  const handleSaveShippingEdit = async () => {
+    if (!shippingEditForm.receiverName?.trim()) {
+      message.warning("Vui lòng nhập tên người nhận");
+      return;
+    }
+    if (!shippingEditForm.receiverPhone?.trim()) {
+      message.warning("Vui lòng nhập số điện thoại người nhận");
+      return;
+    }
+    if (!shippingEditForm.shippingAddress?.trim()) {
+      message.warning("Vui lòng nhập địa chỉ giao hàng");
+      return;
+    }
+    setShippingEditLoading(true);
+    try {
+      await updateShippingInfo(orderId, shippingEditForm);
+      message.success("Cập nhật thông tin giao hàng thành công");
+      setShippingEditOpen(false);
+      loadOrder();
+    } catch (err: any) {
+      message.error(err?.data?.message ?? err?.message ?? "Cập nhật thất bại");
+    } finally {
+      setShippingEditLoading(false);
     }
   };
 
@@ -507,18 +549,38 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
           <div
             style={{ padding: "20px 28px", borderBottom: "1px solid #f3f4f6" }}
           >
-            <p
+            <div
               style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#374151",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 marginBottom: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
               }}
             >
-              Người nhận
-            </p>
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#374151",
+                  margin: 0,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Người nhận
+              </p>
+              {order.orderStatus === "CHO_XAC_NHAN" && (
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={handleOpenShippingEdit}
+                  style={{ borderRadius: 6 }}
+                >
+                  Sửa
+                </Button>
+              )}
+            </div>
+
             <div
               style={{
                 display: "flex",
@@ -1152,6 +1214,117 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                 Không có sản phẩm nào có thể thêm.
               </p>
             )}
+        </div>
+      </Modal>
+
+      {/* Sửa thông tin giao hàng */}
+      <Modal
+        title={<span style={{ fontWeight: 700 }}>Cập nhật thông tin giao hàng</span>}
+        open={shippingEditOpen}
+        onCancel={() => setShippingEditOpen(false)}
+        footer={
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <Button onClick={() => setShippingEditOpen(false)}>Hủy</Button>
+            <Button
+              type="primary"
+              loading={shippingEditLoading}
+              onClick={handleSaveShippingEdit}
+              style={{ backgroundColor: "#D32F2F", borderColor: "#D32F2F" }}
+            >
+              Lưu thay đổi
+            </Button>
+          </div>
+        }
+        width={500}
+      >
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 600,
+                fontSize: 13,
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Tên người nhận <span style={{ color: "#DC2626" }}>*</span>
+            </label>
+            <Input
+              placeholder="Nhập tên người nhận"
+              value={shippingEditForm.receiverName}
+              onChange={(e) =>
+                setShippingEditForm((prev) => ({
+                  ...prev,
+                  receiverName: e.target.value,
+                }))
+              }
+              maxLength={255}
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 600,
+                fontSize: 13,
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Số điện thoại <span style={{ color: "#DC2626" }}>*</span>
+            </label>
+            <Input
+              placeholder="Nhập số điện thoại (0xxx xxx xxx)"
+              value={shippingEditForm.receiverPhone}
+              onChange={(e) =>
+                setShippingEditForm((prev) => ({
+                  ...prev,
+                  receiverPhone: e.target.value,
+                }))
+              }
+              maxLength={11}
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 600,
+                fontSize: 13,
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Địa chỉ giao hàng <span style={{ color: "#DC2626" }}>*</span>
+            </label>
+            <Input.TextArea
+              rows={3}
+              placeholder="Nhập địa chỉ giao hàng đầy đủ"
+              value={shippingEditForm.shippingAddress}
+              onChange={(e) =>
+                setShippingEditForm((prev) => ({
+                  ...prev,
+                  shippingAddress: e.target.value,
+                }))
+              }
+              maxLength={500}
+              showCount
+            />
+          </div>
+          <div
+            style={{
+              padding: "10px 14px",
+              background: "#FEF3C7",
+              border: "1px solid #FDE68A",
+              borderRadius: 8,
+              fontSize: 13,
+              color: "#92400E",
+            }}
+          >
+            <WarningOutlined style={{ marginRight: 6 }} />
+            Chỉ có thể sửa khi đơn hàng còn ở trạng thái <strong>Chờ xác nhận</strong>. Đơn đã xác nhận vui lòng liên hệ <strong>0943888307</strong> để được hỗ trợ.
+          </div>
         </div>
       </Modal>
     </div>

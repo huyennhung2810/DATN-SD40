@@ -231,6 +231,8 @@ const OrderDetailPage: React.FC = () => {
   const isCompleted = currentStatus === "HOAN_THANH";
   const isCancelled = currentStatus === "DA_HUY";
   const canChangeSerial = isOnline && currentStatus === "CHO_XAC_NHAN";
+  // Chỉ cho phép sửa thông tin khách hàng khi đơn ở trạng thái Chờ xác nhận
+  const canEditCustomerInfo = isOnline && currentStatus === "CHO_XAC_NHAN";
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
   // 柜台订单禁止取消，线上/配送订单在指定状态下才显示取消按钮
   const showCancelButton = isOnline && canCancelStatuses.includes(currentStatus);
@@ -894,7 +896,7 @@ const OrderDetailPage: React.FC = () => {
               </Space>
             }
             extra={
-              isOnline && !isCompleted && !isCancelled ? (
+              canEditCustomerInfo ? (
                 <Button
                   size="small"
                   icon={<EditOutlined />}
@@ -1470,7 +1472,7 @@ const OrderDetailPage: React.FC = () => {
             setSerialChangeOpen(false);
             setSelectedOrderDetail(null);
           }}
-          orderId={order.maHoaDon || ""} 
+          orderId={order.orderId || ""} 
           detailId={selectedOrderDetail.maHoaDonChiTiet}
           productName={selectedOrderDetail.tenSanPham}
           requiredQuantity={selectedOrderDetail.soLuong}

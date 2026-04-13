@@ -15,6 +15,9 @@ public interface ADOrderDetailResponse {
 
     String getInvoiceId();
 
+    // UUID của Order (dùng cho API gán serial)
+    String getOrderId();
+
 
     // Thông tin sản phẩm
     String getMaSanPham(); // code của Product

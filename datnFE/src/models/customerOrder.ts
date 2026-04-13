@@ -173,3 +173,20 @@ export const buyAgain = async (
   );
   return res.data;
 };
+
+export interface UpdateShippingInfoRequest {
+  shippingAddress?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+}
+
+export const updateShippingInfo = async (
+  orderId: string,
+  data: UpdateShippingInfoRequest
+): Promise<ResponseObject<unknown>> => {
+  const res = await axiosClient.patch<ResponseObject<unknown>>(
+    `${BASE}/${orderId}/shipping-info`,
+    data
+  );
+  return res.data;
+};
