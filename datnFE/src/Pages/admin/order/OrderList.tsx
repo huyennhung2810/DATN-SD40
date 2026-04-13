@@ -251,7 +251,16 @@ const OrderPage: React.FC = () => {
       console.log("[Xuất Excel] API response:", res);
       console.log("[Xuất Excel] res.data:", res.data);
       console.log("[Xuất Excel] res.data.page:", res.data?.data?.page);
-      const allData = res.data?.data?.page?.content || [];
+      let allData = res.data?.data?.page?.content || [];
+
+      // 过滤：柜台订单 (OFFLINE) 只导出已完成的 (HOAN_THANH)
+      allData = allData.filter((order: any) => {
+        if (order.loaiHoaDon === "OFFLINE") {
+          return order.status === "HOAN_THANH";
+        }
+        return true; // 在线订单导出全部
+      });
+
       message.info(`Số bản ghi lấy được: ${allData.length}`);
       if (!allData.length) {
         message.warning("Không có dữ liệu để xuất!");
@@ -403,6 +412,11 @@ const OrderPage: React.FC = () => {
                 { value: "ONLINE", label: "Online" },
               ]}
             />
+            {orderType === "OFFLINE" && (
+              <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
+                Chỉ hiển thị đơn hàng đã hoàn thành
+              </Text>
+            )}
           </Col>
           <Col span={4}>
             <Text strong>Trạng thái</Text>
@@ -467,8 +481,15 @@ const OrderPage: React.FC = () => {
           columns={columns}
           dataSource={useMemo(() => {
             const raw = ordersData?.page?.content || [];
+            // 过滤：柜台订单 (OFFLINE) 只显示已完成的 (HOAN_THANH)
+            const filtered = raw.filter((order: any) => {
+              if (order.loaiHoaDon === "OFFLINE") {
+                return order.status === "HOAN_THANH";
+              }
+              return true; // 在线订单显示全部
+            });
             // 排序规则：线上待确认订单优先，其他订单按创建时间倒序
-            return [...raw].sort((a, b) => {
+            return [...filtered].sort((a, b) => {
               const aIsOnline = a.loaiHoaDon === "ONLINE" || a.loaiHoaDon === "GIAO_HANG";
               const bIsOnline = b.loaiHoaDon === "ONLINE" || b.loaiHoaDon === "GIAO_HANG";
               const aIsOnlinePending = aIsOnline && a.status === "CHO_XAC_NHAN";
