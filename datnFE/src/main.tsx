@@ -7,6 +7,7 @@ import App from "./App";
 import adminTheme from "./theme/adminTheme";
 import "./styles/admin.css";
 import "./styles/customer.css";
+import "./styles/homepage.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

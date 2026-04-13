@@ -5,7 +5,6 @@ import com.example.datn.infrastructure.constant.EntityProperties;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.listener.CreatePrimaryEntityListener;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

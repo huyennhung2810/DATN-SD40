@@ -1,11 +1,11 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +33,10 @@ public class Customer extends NameEntity implements Serializable {
 
     @Column(name = "image")
     private String image;
+
+    // Thêm precision và scale cho chuẩn tiền tệ
+    @Column(name = "totalSpent", precision = 15, scale = 2)
+    private BigDecimal totalSpent = BigDecimal.ZERO;
 
     @ManyToOne
     @JoinColumn(name = "id_account", referencedColumnName = "id")

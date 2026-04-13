@@ -1,17 +1,23 @@
 import { call, put, takeLatest } from "redux-saga/effects";
 import { notification } from "antd";
 import { authActions } from "./authSlice";
+import { resetSessionId, chatSlice, clearMessages } from "../chat/chatSlice";
 import type { AuthResponse } from "../../models/auth";
 import authApi from "../../api/auth/authApi";
+import cartApi from "../../api/cartApi";
+import guestCartService from "../../services/guestCartService";
+import { setCartCount, setGuestMode } from "../cart/cartSlice";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import type { GuestCartItem } from "../../services/guestCartService";
 
 function* handleLoginFlow(
   apiFunc: any,
-  payload: { data: any; navigate: () => void },
+  payload: { data: any; navigate: (role?: string) => void },
 ) {
   try {
     const response: AuthResponse = yield call(apiFunc, payload.data);
 
+    // Lưu thông tin đăng nhập trước
     yield put(
       authActions.loginSuccess({
         user: {
@@ -27,13 +33,37 @@ function* handleLoginFlow(
       }),
     );
 
+    // Hợp nhất giỏ hàng khách vào tài khoản
+    const guestItems: GuestCartItem[] = guestCartService.getMergeItems();
+    if (guestItems.length > 0) {
+      try {
+        yield call(cartApi.mergeGuestCart, response.userId, guestItems);
+        notification.success({
+          message: "Đã hợp nhất giỏ hàng",
+          description: `${guestItems.length} sản phẩm từ giỏ hàng trước đó đã được thêm vào tài khoản của bạn.`,
+          duration: 4,
+        });
+      } catch (mergeError) {
+        console.error("Lỗi hợp nhất giỏ hàng:", mergeError);
+      }
+      // Xóa giỏ hàng khách sau khi hợp nhất
+      guestCartService.clearCart();
+    }
+
+    // Reset sessionId và xóa sạch tin nhắn chat cũ khi đăng nhập tài khoản mới
+    const newSessionId = resetSessionId();
+    yield put(chatSlice.actions.setSessionId(newSessionId));
+    yield put(clearMessages());
+
     notification.success({
       message: "Thành công",
       description: `Chào mừng ${response.fullName} quay trở lại!`,
       placement: "topRight",
     });
 
-    payload.navigate();
+    // Lấy role và truyền vào hàm navigate
+    const userRole = response.roles?.[0];
+    payload.navigate(userRole);
   } catch (error: any) {
     const message = error?.message || "Thông tin đăng nhập không chính xác";
     yield put(authActions.authFailed(message));
@@ -69,6 +99,10 @@ function* handleLogout(
     console.error("Lỗi logout API:", e);
   } finally {
     yield put(authActions.logoutAction());
+
+    // Reset sessionId on logout and update Redux state
+    const newSessionId = resetSessionId();
+    yield put(chatSlice.actions.setSessionId(newSessionId));
 
     const isAdmin = action.payload?.isAdmin;
     if (isAdmin) {

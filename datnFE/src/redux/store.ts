@@ -28,6 +28,9 @@ import shiftTemplateReducer from "./shiftTemplate/ShiftTemplateSlice";
 import authReducer from "./auth/authSlice";
 import chatReducer from "./chat/chatSlice";
 import cartReducer from "./cart/cartSlice";
+import orderReducer from "./order/OrderSlice"
+import notificationReducer from "./notification/notificationSlice"
+
 
 export const store = configureStore({
   reducer: {
@@ -43,7 +46,6 @@ export const store = configureStore({
     productDetail: productDetailReducer,
     color: colorReducer,
     storage: storageCapacityReducer,
-    //voucher: voucherReducer, // Đăng ký voucher reducer vào store
     productCategory: productCategoryReducer,
     techSpec: techSpecReducer,
     product: productReducer,
@@ -58,6 +60,8 @@ export const store = configureStore({
     techSpecDefinition: techSpecDefinitionReducer,
     chat: chatReducer,
     cart: cartReducer,
+    order: orderReducer,
+    notification: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

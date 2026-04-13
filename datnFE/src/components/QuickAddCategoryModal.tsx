@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Modal, Form, Input, message, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import productCategoryApi from "../api/productCategoryApi";
@@ -66,7 +66,7 @@ const QuickAddCategoryModal: React.FC<QuickAddCategoryModalProps> = ({
       cancelText="Hủy"
       confirmLoading={loading}
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <Typography.Text
         type="secondary"

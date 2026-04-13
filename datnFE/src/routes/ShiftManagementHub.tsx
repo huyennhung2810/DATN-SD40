@@ -1,15 +1,14 @@
-import React, { useState } from "react";
-import { Tabs, Card, Typography } from "antd";
-import {
+﻿import {
   CalendarOutlined,
   ClockCircleOutlined,
   HistoryOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
-import WorkSchedulePage from "../Pages/admin/workSchedule/WorkSchedulePage";
+import { Card, Tabs, Typography } from "antd";
+import React, { useState } from "react";
 import ShiftHistoryPage from "../Pages/admin/shiftHandover/ShiftHistoryPage";
 import ShiftTemplatePage from "../Pages/admin/shiftTemplate/ShiftTemplatePage";
-
-const { Title, Text } = Typography;
+import WorkSchedulePage from "../Pages/admin/workSchedule/WorkSchedulePage";
 
 const ShiftManagementHub: React.FC = () => {
   const [activeTab, setActiveTab] = useState("1");
@@ -19,7 +18,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "1",
       label: (
         <span>
-          <CalendarOutlined /> Phân lịch làm việc
+          <CalendarOutlined /> Quản lý lịch làm việc
         </span>
       ),
       children: <WorkSchedulePage />,
@@ -28,7 +27,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "2",
       label: (
         <span>
-          <ClockCircleOutlined /> Ca mẫu
+          <ClockCircleOutlined /> Quản lý ca làm việc
         </span>
       ),
       children: <ShiftTemplatePage />,
@@ -37,7 +36,7 @@ const ShiftManagementHub: React.FC = () => {
       key: "3",
       label: (
         <span>
-          <HistoryOutlined /> Lịch sử ca
+          <HistoryOutlined /> Lịch sử hoạt động
         </span>
       ),
       children: <ShiftHistoryPage />,
@@ -45,19 +44,49 @@ const ShiftManagementHub: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <Title level={2} style={{ marginBottom: 4 }}>
-          Trung Tâm Quản Lý Ca Trực
-        </Title>
-        <Text type="secondary">
-          Quản lý toàn bộ quy trình từ thiết lập khung giờ, phân lịch nhân viên
-          đến đối soát tiền mặt cuối ca.
-        </Text>
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
+      <div
+        className="solid-card"
+        style={{
+          padding: "16px 20px",
+          marginBottom: "16px",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "var(--color-primary-light)",
+            padding: "12px",
+            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <ScheduleOutlined
+            style={{
+              fontSize: "22px",
+              color: "var(--color-primary)",
+            }}
+          />
+        </div>
+
+        <div>
+          <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+            Trung Tâm Quản Lý Ca Trực
+          </Typography.Title>
+
+          <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+            Quản lý phân ca, ca mẫu và lịch sử ca làm việc của nhân viên
+          </Typography.Text>
+        </div>
       </div>
 
       <Card
-        bordered={false}
+        variant="borderless"
         style={{
           borderRadius: "12px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.05)",

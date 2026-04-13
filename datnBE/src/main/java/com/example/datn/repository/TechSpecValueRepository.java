@@ -33,4 +33,17 @@ public interface TechSpecValueRepository extends JpaRepository<TechSpecValue, St
         ORDER BY d.techSpecGroup.displayOrder ASC NULLS LAST, d.displayOrder ASC NULLS LAST
     """)
     List<TechSpecValue> findByProductIdWithDefinition(@Param("productId") String productId);
+
+    /**
+     * Batch fetch TechSpecValue for multiple products in a single query.
+     * Used by RelatedProductService to load specs for all candidates at once.
+     */
+    @Query("""
+        SELECT v FROM TechSpecValue v
+        JOIN FETCH v.techSpecDefinition d
+        JOIN FETCH d.techSpecGroup
+        WHERE v.product.id IN :productIds
+        ORDER BY d.techSpecGroup.displayOrder ASC NULLS LAST, d.displayOrder ASC NULLS LAST
+    """)
+    List<TechSpecValue> findByProductIdsWithDefinition(@Param("productIds") List<String> productIds);
 }

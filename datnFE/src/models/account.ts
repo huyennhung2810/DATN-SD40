@@ -1,6 +1,6 @@
-import type { BaseEntity, CommonStatus, UserRole } from "./base";
+import type { BaseEntity, CommonStatus} from "./base";
 
-export type AccountRole = "ADMIN" | "STAFF";
+export type AccountRole = "ADMIN" | "STAFF" | "CUSTOMER";
 export type AccountProvider = "local" | "google";
 
 export interface AccountResponse extends BaseEntity {

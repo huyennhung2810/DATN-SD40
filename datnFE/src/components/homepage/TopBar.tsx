@@ -1,5 +1,12 @@
 import React from "react";
-import { PhoneOutlined, RightOutlined } from "@ant-design/icons";
+import {
+  PhoneOutlined,
+  RightOutlined,
+  FacebookOutlined,
+  YoutubeOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Link } from "react-router-dom";
 
 interface TopBarProps {
   news?: Array<{ id: string; text: string; link?: string }>;
@@ -7,124 +14,152 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = () => {
   const news = [
-    { id: "1", text: "🎉 Giảm giá lên đến 30% các dòng Sony Alpha tháng này!", link: "/client/catalog?sale=true" },
-    { id: "2", text: "📷 Canon EOS R5 giảm 5 triệu - Limited time!", link: "/client/catalog?brand=canon" },
-    { id: "3", text: "🚚 Miễn phí vận chuyển toàn quốc đơn hàng từ 2 triệu", link: "/client/catalog" },
+    { id: "1", text: "Ưu đãi Canon — trả góp 0% cho body & kit chọn lọc", link: "/client/catalog?brand=canon" },
+    { id: "2", text: "Miễn phí vận chuyển toàn quốc đơn từ 2 triệu", link: "/client/catalog" },
+    { id: "3", text: "Tư vấn chọn máy & ống kính Canon — hotline 1900 1909", link: "tel:19001909" },
   ];
 
-  return (
-    <div className="top-bar">
-      <div className="top-bar-container">
-        {/* Hotline Section */}
-        <div className="top-bar-hotline">
-          <PhoneOutlined className="hotline-icon" />
-          <span className="hotline-text">Hotline:</span>
-          <a href="tel:19001909" className="hotline-number">1900 1909</a>
-        </div>
+  const tickerItems = [...news, ...news];
 
-        {/* News Ticker */}
-        <div className="top-bar-news">
-          <div className="news-ticker">
-            {news.map((item, index) => (
-              <a
-                key={item.id}
-                href={item.link || "#"}
-                className="news-item"
-                style={{ animationDelay: `${index * 5}s` }}
-              >
-                <span className="news-text">{item.text}</span>
-                <RightOutlined className="news-arrow" />
-              </a>
+  const NewsLine = ({
+    item,
+  }: {
+    item: (typeof news)[0];
+  }) => {
+    const inner = (
+      <>
+        <span>{item.text}</span>
+        <RightOutlined className="shop-topbar-news-arrow" />
+      </>
+    );
+    if (!item.link) {
+      return (
+        <span className="shop-topbar-news-link shop-topbar-news-link--static">
+          {inner}
+        </span>
+      );
+    }
+    if (item.link.startsWith("tel:")) {
+      return (
+        <a href={item.link} className="shop-topbar-news-link">
+          {inner}
+        </a>
+      );
+    }
+    return (
+      <Link to={item.link} className="shop-topbar-news-link">
+        {inner}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="shop-topbar">
+      <div className="shop-topbar-inner">
+        <span className="shop-topbar-badge">Hot News</span>
+
+        <div className="shop-topbar-ticker-wrap">
+          <div className="shop-topbar-ticker">
+            {tickerItems.map((item, index) => (
+              <NewsLine key={`${item.id}-${index}`} item={item} />
             ))}
           </div>
+        </div>
+
+        <div className="shop-topbar-utils">
+          <a href="tel:19001909" className="shop-topbar-icon-link" title="Hotline">
+            <PhoneOutlined />
+          </a>
+          <a
+            href="https://facebook.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shop-topbar-icon-link"
+            title="Facebook"
+          >
+            <FacebookOutlined />
+          </a>
+          <a
+            href="https://youtube.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shop-topbar-icon-link"
+            title="YouTube"
+          >
+            <YoutubeOutlined />
+          </a>
+          <Link to="/login" className="shop-topbar-icon-link" title="Tài khoản">
+            <UserOutlined />
+          </Link>
         </div>
       </div>
 
       <style>{`
-        .top-bar {
-          background: linear-gradient(90deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
-          height: 40px;
+        .shop-topbar {
+          background: #000;
+          color: #fff;
           font-size: 13px;
-          position: relative;
-          overflow: hidden;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        .top-bar-container {
+        .shop-topbar-inner {
           max-width: 1400px;
           margin: 0 auto;
+          padding: 0 20px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .shop-topbar-badge {
+          flex-shrink: 0;
+          background: #c62828;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          padding: 4px 10px;
+          border-radius: 4px;
+        }
+
+        .shop-topbar-ticker-wrap {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
           height: 100%;
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 0 24px;
         }
 
-        .top-bar-hotline {
+        .shop-topbar-ticker {
           display: flex;
+          gap: 48px;
+          width: max-content;
+          animation: shop-ticker 28s linear infinite;
+        }
+
+        .shop-topbar-news-link {
+          display: inline-flex;
           align-items: center;
           gap: 8px;
-          flex-shrink: 0;
-          padding-right: 24px;
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .hotline-icon {
-          color: #D32F2F;
-          font-size: 14px;
-        }
-
-        .hotline-text {
-          color: rgba(255, 255, 255, 0.6);
-        }
-
-        .hotline-number {
-          color: #fff;
-          font-weight: 600;
+          color: rgba(255, 255, 255, 0.88);
           text-decoration: none;
+          white-space: nowrap;
           transition: color 0.2s;
         }
 
-        .hotline-number:hover {
-          color: #D32F2F;
+        .shop-topbar-news-link:hover {
+          color: #ff8a80;
         }
 
-        .top-bar-news {
-          flex: 1;
-          overflow: hidden;
-          margin-left: 24px;
-        }
-
-        .news-ticker {
-          display: flex;
-          gap: 32px;
-          animation: ticker 20s linear infinite;
-        }
-
-        .news-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.9);
-          text-decoration: none;
-          white-space: nowrap;
-          transition: all 0.2s;
-        }
-
-        .news-item:hover {
-          color: #D32F2F;
-        }
-
-        .news-item:hover .news-arrow {
-          transform: translateX(4px);
-        }
-
-        .news-arrow {
+        .shop-topbar-news-arrow {
           font-size: 10px;
-          opacity: 0.6;
-          transition: transform 0.2s;
+          opacity: 0.55;
         }
 
-        @keyframes ticker {
+        @keyframes shop-ticker {
           0% {
             transform: translateX(0);
           }
@@ -133,38 +168,52 @@ const TopBar: React.FC<TopBarProps> = () => {
           }
         }
 
+        .shop-topbar-ticker-wrap:hover .shop-topbar-ticker {
+          animation-play-state: paused;
+        }
+
+        .shop-topbar-utils {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .shop-topbar-icon-link {
+          color: rgba(255, 255, 255, 0.75);
+          font-size: 15px;
+          transition: color 0.2s;
+        }
+
+        .shop-topbar-icon-link:hover {
+          color: #fff;
+        }
+
         @media (max-width: 768px) {
-          .top-bar-container {
-            padding: 0 16px;
+          .shop-topbar-inner {
+            padding: 0 12px;
+            height: 36px;
           }
 
-          .top-bar-hotline {
-            padding-right: 16px;
+          .shop-topbar-ticker-wrap {
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
           }
 
-          .hotline-text {
-            display: none;
-          }
-
-          .top-bar-news {
-            margin-left: 12px;
-          }
-
-          .news-text {
-            max-width: 200px;
+          .shop-topbar-news-link span {
+            max-width: 180px;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .shop-topbar-utils {
+            gap: 10px;
           }
         }
 
         @media (max-width: 480px) {
-          .top-bar {
-            height: 36px;
-            font-size: 12px;
-          }
-
-          .news-ticker {
-            gap: 24px;
+          .shop-topbar-badge {
+            font-size: 10px;
+            padding: 3px 8px;
           }
         }
       `}</style>

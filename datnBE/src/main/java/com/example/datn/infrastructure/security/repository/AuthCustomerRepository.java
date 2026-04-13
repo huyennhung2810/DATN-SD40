@@ -15,4 +15,6 @@ public interface AuthCustomerRepository extends CustomerRepository {
 
     @Query("SELECT c FROM Customer c JOIN Account a ON c.account.id = a.id WHERE a.username = :username")
     Optional<Customer> findByAccountUsername(@Param("username") String username);
+
+    boolean existsByPhoneNumber(String phoneNumber);
 }

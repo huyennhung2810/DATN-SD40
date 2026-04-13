@@ -13,4 +13,7 @@ public interface AuthAccountRepository extends JpaRepository<Account, String> {
 
     // Kiểm tra xem username đã tồn tại chưa
     boolean existsByUsername(String username);
+
+    // Tìm account theo username, dùng findFirst để tránh NonUniqueResultException khi có dữ liệu trùng
+    Account findFirstByUsername(String username);
 }

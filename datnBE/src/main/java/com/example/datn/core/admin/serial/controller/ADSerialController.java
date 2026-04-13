@@ -5,6 +5,7 @@ import com.example.datn.core.admin.serial.service.ADSerialService;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.MappingConstants;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,12 +21,19 @@ public class ADSerialController {
 
     private final ADSerialService adSerialService;
 
-    @GetMapping
-    public ResponseObject<?> getAllSerials(
-            @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "status", required = false) EntityStatus status
-    ) {
-        return adSerialService.getAllSerials(keyword, status);
+    @GetMapping // Hoặc @PostMapping(search) tùy dự án của bạn
+    public ResponseEntity<?> getAllSerials(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) EntityStatus status,
+
+            // BẮT BUỘC PHẢI THÊM DÒNG NÀY ĐỂ NHẬN DỮ LIỆU TỪ FRONTEND
+            @RequestParam(required = false) SerialStatus serialStatus,
+
+            @RequestParam(required = false) String productCategoryId,
+            @RequestParam(required = false) String productId) {
+
+        // Truyền serialStatus xuống Service
+        return ResponseEntity.ok(adSerialService.getAllSerials(keyword, status, serialStatus, productCategoryId, productId));
     }
 
     @GetMapping("/product-detail/{productDetailId}")

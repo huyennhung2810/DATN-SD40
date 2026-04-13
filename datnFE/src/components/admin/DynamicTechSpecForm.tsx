@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+﻿import React, { useEffect, useState, useCallback } from "react";
 import {
   Row,
   Col,
@@ -111,7 +111,7 @@ const DynamicTechSpecForm: React.FC<DynamicTechSpecFormProps> = ({ form }) => {
   if (groupState.loading || defState.loading) {
     return (
       <div style={{ textAlign: "center", padding: "40px" }}>
-        <Spin tip="Đang tải cấu hình thông số kỹ thuật..." />
+        <Spin description="Đang tải cấu hình thông số kỹ thuật..." />
       </div>
     );
   }
@@ -182,7 +182,7 @@ const DynamicTechSpecForm: React.FC<DynamicTechSpecFormProps> = ({ form }) => {
             filterOption={(input, option) =>
               (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
             }
-            dropdownRender={(menu) => (
+            popupRender={(menu) => (
               <>
                 {menu}
                 <div style={{ padding: "8px 12px", borderTop: "1px solid #f0f0f0" }}>

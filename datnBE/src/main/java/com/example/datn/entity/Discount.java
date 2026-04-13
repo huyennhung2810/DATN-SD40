@@ -1,7 +1,5 @@
 package com.example.datn.entity;
 
-import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -58,7 +56,6 @@ public class Discount implements Serializable {
 
     @Column(name = "updated_by")
     private String updatedBy;
-
 
     @OneToMany(mappedBy = "discount", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("discount") // ✅ Bỏ tham chiếu ngược

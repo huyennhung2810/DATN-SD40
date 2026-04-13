@@ -5,13 +5,17 @@ import type { RootState } from "../redux/store";
 
 interface PrivateRouteProps {
   allowedRoles?: string[];
+  loginPath?: string;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  allowedRoles,
+  loginPath = "/admin/login",
+}) => {
   const { isLoggedIn, user } = useSelector((state: RootState) => state.auth);
 
   if (!isLoggedIn || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0) {

@@ -14,4 +14,6 @@ public interface CnCartDetailRepository extends JpaRepository<CartDetail, String
     Optional<CartDetail> findByCart_IdAndProductDetail_Id(String cartId, String productDetailId);
     List<CartDetail> findAllByCart_IdOrderByCreatedDateDesc(String cartId);
     List<CartDetail> findByCart_Id(String cartId);
+
+    void deleteByCart_Id(String id);
 }

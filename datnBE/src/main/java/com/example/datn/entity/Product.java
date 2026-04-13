@@ -1,7 +1,6 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,9 +20,6 @@ public class Product extends NameEntity implements Serializable {
 
     @Column(length = EntityProperties.LENGTH_DESCRIPTION)
     private String description;
-
-    @Column(name = "price", precision = 15, scale = 2)
-    private java.math.BigDecimal price;
 
     @ManyToOne
     @JoinColumn(name = "id_tech_spec", referencedColumnName = "id")

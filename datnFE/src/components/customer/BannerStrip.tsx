@@ -16,7 +16,7 @@ const BannerStrip: React.FC<BannerStripProps> = ({ position = "HOME_TOP", column
     const fetchBanners = async () => {
       try {
         const data = await bannerApi.getBannersByPosition(position);
-        setBanners(data.slice(0, columns));
+        setBanners(data.filter((b: BannerResponse) => b.imageUrl && b.imageUrl.trim() !== "").slice(0, columns));
       } catch (error) {
         console.error("Error fetching banners:", error);
       } finally {

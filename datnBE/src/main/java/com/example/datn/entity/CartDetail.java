@@ -1,6 +1,5 @@
 package com.example.datn.entity;
 
-import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +13,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @ToString
 @Table(name = "cart_detail", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_cart_product", columnNames = {"id_cart", "id_product_detail"})
+        @UniqueConstraint(name = "uk_cart_product", columnNames = { "id_cart", "id_product_detail" })
 })
 public class CartDetail implements Serializable {
     @Id

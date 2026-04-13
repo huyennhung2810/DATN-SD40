@@ -1,5 +1,7 @@
+// Mình rút gọn các phần import nhé
 import React from "react";
 import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
+import { App as AntdApp } from "antd";
 import MainLayout from "./layout/admin/MainLayout";
 import { AdminRoutes } from "./routes/AdminRoutes";
 import { CustomerRoutes } from "./routes/CustomerRoutes";
@@ -14,29 +16,44 @@ const HomePage = () => (
   </div>
 );
 
+const AppContent: React.FC = () => {
+  return (
+    <Routes>
+      {/* Các trang Login/Register công khai */}
+      {PublicRoutes()}
+
+      <Route element={<MainLayout />}>
+        <Route
+          element={
+            <PrivateRoute
+              allowedRoles={["ADMIN", "STAFF"]}
+              loginPath="/admin/login"
+            />
+          }
+        >
+          <Route path="/" element={<HomePage />} />
+        </Route>
+
+        {AdminRoutes()}
+        {EmployeeRoutes()}
+      </Route>
+
+      {/* Trang cho Khách hàng */}
+      {CustomerRoutes()}
+
+      {/* Điều hướng linh hoạt */}
+      <Route path="/home" element={<Navigate to="/client" replace />} />
+      <Route path="*" element={<Navigate to="/403" replace />} />
+    </Routes>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        {/*Các trang Login/Register công khai */}
-        {PublicRoutes()}
-
-        <Route element={<MainLayout />}>
-          <Route element={<PrivateRoute allowedRoles={["ADMIN", "STAFF"]} />}>
-            <Route path="/" element={<HomePage />} />
-          </Route>
-
-          {AdminRoutes()}
-          {EmployeeRoutes()}
-        </Route>
-
-        {/*Trang cho Khách hàng */}
-        {CustomerRoutes()}
-
-        {/* Điều hướng linh hoạt */}
-        <Route path="/home" element={<Navigate to="/client" replace />} />
-        <Route path="*" element={<Navigate to="/403" replace />} />
-      </Routes>
+      <AntdApp>
+        <AppContent />
+      </AntdApp>
     </BrowserRouter>
   );
 };

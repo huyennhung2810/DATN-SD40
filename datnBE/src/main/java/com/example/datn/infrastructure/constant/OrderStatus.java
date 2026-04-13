@@ -4,29 +4,75 @@ import lombok.Getter;
 
 @Getter
 public enum OrderStatus {
-    PENDING("Chờ xác nhận", "#FFC107", 1),
-    CONFIRMED("Đã xác nhận", "#0D6EFD", 2),
-    PACKAGING("Đang đóng gói", "#17A2B8", 3),
-    SHIPPING("Đang vận chuyển", "#6F42C1", 4),
-    DELIVERY_FAILED("Giao hàng thất bại", "#E74C3C", 5),
-    COMPLETED("Đã hoàn thành", "#198754", 6),
-    CANCELED("Đã huỷ", "#DC3545", 7),
-    RETURNED("Đã trả hàng", "#FD7E14", 8);
+    CHO_XAC_NHAN(0),    // PENDING - Chờ xác nhận
+    DA_XAC_NHAN(1),     // CONFIRMED - Đã xác nhận
+    CHO_GIAO(2),        // PACKING - Đóng gói / Chờ giao
+    DANG_GIAO(3),       // HANDOVER + SHIPPING - Đã bàn giao & Đang giao
+    GIAO_HANG_KHONG_THANH_CONG(4), // FAILED - Giao hàng thất bại
+    HOAN_THANH(5),      // DELIVERED - Hoàn thành
+    DA_HUY(6),          // CANCELLED - Đã hủy
+    LUU_TAM(7);         // Lưu tạm
 
-    private final String label;   // Hiển thị UI
-    private final String color;   // Màu badge / chart
-    private final int order;      // Thứ tự hiển thị
+    private final int order;
 
-    OrderStatus(String label, String color, int order) {
-        this.label = label;
-        this.color = color;
+    OrderStatus(int order) {
         this.order = order;
     }
 
-    public static OrderStatus fromName(String name) {
-        for (OrderStatus status : OrderStatus.values()) {
-            if (status.name().equalsIgnoreCase(name)) return status;
+    /**
+     * Trả về true nếu trạng thái cho phép cập nhật thông tin giao hàng trực tiếp.
+     * Chỉ cho phép khi trạng thái < DANG_GIAO (tức CHƯA bàn giao cho đơn vị vận chuyển).
+     */
+    public boolean allowDirectShippingUpdate() {
+        return this.order < DANG_GIAO.order;
+    }
+
+    /**
+     * Trả về true nếu khách hàng được phép tự sửa địa chỉ/SĐT từ trang của mình.
+     * Chỉ cho phép khi đơn hàng còn ở trạng thái CHỜ XÁC NHẬN.
+     * Các trạng thái khác phải liên hệ admin.
+     */
+    public boolean allowCustomerSelfUpdate() {
+        return this == CHO_XAC_NHAN;
+    }
+
+    /**
+     * Trả về true nếu đơn hàng đã bàn giao cho đơn vị vận chuyển.
+     * Kể từ trạng thái này, khách hàng không thể cập nhật trực tiếp mà phải tạo yêu cầu thay đổi.
+     */
+    public boolean isShipped() {
+        return this.order >= DANG_GIAO.order && this != LUU_TAM;
+    }
+
+    /**
+     * Trả về true nếu đơn hàng ở trạng thái terminal (không thể thay đổi).
+     * Bao gồm: HOAN_THANH, DA_HUY.
+     */
+    public boolean isTerminal() {
+        return this == HOAN_THANH || this == DA_HUY;
+    }
+
+    /**
+     * Trả về true nếu đơn hàng đang ở trạng thái tạm khóa mọi thao tác thay đổi.
+     */
+    public boolean isLocked() {
+        return this == HOAN_THANH || this == DA_HUY || this == LUU_TAM;
+    }
+
+    /**
+     * Lấy text hiển thị tiếng Việt cho trạng thái.
+     */
+    public String getDisplayText() {
+        switch (this) {
+            case CHO_XAC_NHAN: return "Chờ xác nhận";
+            case DA_XAC_NHAN:  return "Đã xác nhận";
+            case CHO_GIAO:     return "Chờ giao hàng";
+            case DANG_GIAO:    return "Đang giao hàng";
+            case GIAO_HANG_KHONG_THANH_CONG: return "Giao hàng không thành công";
+            case HOAN_THANH:   return "Hoàn thành";
+            case DA_HUY:       return "Đã hủy";
+            case LUU_TAM:      return "Lưu tạm";
+            default:           return this.name();
         }
-        return PENDING;
     }
 }

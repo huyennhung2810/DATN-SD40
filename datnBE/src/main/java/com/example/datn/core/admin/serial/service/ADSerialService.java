@@ -3,11 +3,12 @@ package com.example.datn.core.admin.serial.service;
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.core.common.base.ResponseObject;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.SerialStatus;
 import org.springframework.http.ResponseEntity;
 
 public interface ADSerialService {
 
-    ResponseObject<?> getAllSerials(String keyword, EntityStatus status);
+    ResponseObject<?> getAllSerials(String keyword, EntityStatus status, SerialStatus serialStatus, String productCategoryId, String productId);
 
     ResponseObject<?> findById(String id);
 

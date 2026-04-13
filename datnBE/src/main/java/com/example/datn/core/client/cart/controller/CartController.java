@@ -59,4 +59,17 @@ public class CartController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // API HỢP NHẤT GIỎ HÀNG KHÁCH (Khi đăng nhập)
+    @PostMapping("/merge")
+    public ResponseEntity<?> mergeGuestCart(
+            @RequestParam("customerId") String customerId,
+            @RequestBody com.example.datn.core.client.cart.model.MergeCartRequest request) {
+        try {
+            cnCartDetailService.mergeGuestCart(customerId, request);
+            return ResponseEntity.ok("Hợp nhất giỏ hàng thành công!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

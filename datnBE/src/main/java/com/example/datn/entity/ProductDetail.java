@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -58,7 +57,8 @@ public class ProductDetail extends PrimaryEntity implements Serializable {
     @Column(name = "image_url")
     private String imageUrl;
 
-    // Liên kết tới ảnh của sản phẩm mẹ - dùng cho client hiển thị ảnh theo màu/biến thể
+    // Liên kết tới ảnh của sản phẩm mẹ - dùng cho client hiển thị ảnh theo màu/biến
+    // thể
     @Column(name = "selected_image_id")
     private String selectedImageId;
 }

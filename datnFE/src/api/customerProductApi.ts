@@ -19,7 +19,7 @@ export const customerProductApi = {
   // Get all variants for a product
   getVariants: async (productId: string): Promise<ProductVariantResponse[]> => {
     const res = await axiosClient.get<ResponseObject<ProductVariantResponse[]>>(`/public/products/${productId}/variants`);
-    return res.data.data;
+    return res.data.data ?? [];
   },
 
   // Get all active categories for filter

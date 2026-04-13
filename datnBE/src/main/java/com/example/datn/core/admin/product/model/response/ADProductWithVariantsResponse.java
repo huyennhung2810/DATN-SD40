@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -35,6 +36,9 @@ public class ADProductWithVariantsResponse {
 
     // Danh sách ảnh của sản phẩm mẹ (để chọn cho biến thể)
     private List<ADProductImageSimpleResponse> productImages;
+
+    /** Thông số kỹ thuật động (key-value) — key: spec_{definitionCode} */
+    private Map<String, Object> techSpecDynamic;
 
     // Thông tin tổng hợp từ các biến thể con
     private Integer totalQuantity;       // Tổng tồn kho từ các biến thể

@@ -9,6 +9,6 @@ import java.util.Optional;
 @Repository
 public interface CnCartRepository extends JpaRepository<Cart, String> {
 
-    // Tìm giỏ hàng theo ID của Customer
-    Optional<Cart> findByCustomer_Id(String customerId);
+    // Tìm giỏ hàng theo ID của Customer (dùng findFirst để tránh lỗi non-unique nếu có dữ liệu trùng)
+    Optional<Cart> findFirstByCustomer_Id(String customerId);
 }

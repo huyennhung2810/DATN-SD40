@@ -17,7 +17,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({ position = "HOME_HERO",
     const fetchBanners = async () => {
       try {
         const data = await bannerApi.getBannersByPosition(position);
-        setBanners(data);
+        setBanners(data.filter((b: BannerResponse) => b.imageUrl && b.imageUrl.trim() !== ""));
       } catch (error) {
         console.error("Error fetching banners:", error);
       } finally {

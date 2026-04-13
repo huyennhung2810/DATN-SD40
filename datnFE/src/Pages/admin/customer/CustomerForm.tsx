@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
 import {
   Form,
   Input,
@@ -24,7 +23,6 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
-  ScanOutlined,
   EnvironmentOutlined,
   SaveOutlined,
   UserOutlined,
@@ -44,7 +42,6 @@ import type { AppDispatch, RootState } from "../../../redux/store";
 import {
   mapResponseToFormValues,
   type CustomerRequest,
-  type CustomerResponse,
 } from "../../../models/customer";
 import type { AddressRequest } from "../../../models/address";
 import type { DefaultOptionType } from "antd/es/cascader";
@@ -61,7 +58,6 @@ export interface CustomerFormValues {
   name: string;
   email: string;
   phoneNumber: string;
-  identityCard: string;
   gender: boolean;
   dateOfBirth: dayjs.Dayjs | null;
   addresses: AddressRequest[];
@@ -93,7 +89,7 @@ const CustomerForm: React.FC = () => {
   const [communesMap, setCommunesMap] = useState<
     Record<number, AdministrativeUnit[]>
   >({});
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
   //  Tải danh sách Tỉnh/Thành phố khi khởi tạo
   const fetchedRef = React.useRef(false);
@@ -104,7 +100,7 @@ const CustomerForm: React.FC = () => {
 
     axios
       .get<AdministrativeUnit[]>(
-        "https://provinces.open-api.vn/api/v2/p/?depth=1",
+        "/api/provinces/v2/p/?depth=1",
       )
       .then((res) => setProvinces(res.data))
       .catch(() => {
@@ -118,7 +114,7 @@ const CustomerForm: React.FC = () => {
   const loadCommunes = useCallback(async (pCode: number, index: number) => {
     try {
       const res = await axios.get(
-        `https://provinces.open-api.vn/api/v2/p/${pCode}?depth=2`,
+        `/api/provinces/v2/p/${pCode}?depth=2`,
       );
       if (res.data.wards) {
         setCommunesMap((prev) => ({ ...prev, [index]: res.data.wards }));
@@ -126,6 +122,7 @@ const CustomerForm: React.FC = () => {
     } catch (error) {
       console.error("Error loading communes:", error);
       notification.error({ message: "Lỗi tải danh sách Phường/Xã mới nhất" });
+      throw error;
     }
   }, []);
 
@@ -141,12 +138,7 @@ const CustomerForm: React.FC = () => {
   );
 
   const duplicateValidator = useCallback(
-    (
-      field: keyof Pick<
-        CustomerFormValues,
-        "identityCard" | "email" | "phoneNumber"
-      >,
-    ) => {
+    (field: keyof Pick<CustomerFormValues, "email" | "phoneNumber">) => {
       return async (_: RuleObject, value: string): Promise<void> => {
         if (!value || value.trim() === "") {
           return Promise.resolve();
@@ -159,121 +151,30 @@ const CustomerForm: React.FC = () => {
           });
 
           if (response.data) {
-            const fieldLabel =
-              field === "identityCard"
-                ? "Số CCCD"
-                : field === "email"
-                  ? "Email"
-                  : "Số điện thoại";
+            const fieldLabel = field === "email" ? "Email" : "Số điện thoại";
 
             return Promise.reject(new Error(`${fieldLabel} này đã tồn tại!`));
           }
           return Promise.resolve();
         } catch (error: unknown) {
           console.error("Duplicate check error:", error);
-          return Promise.resolve();
+          return Promise.reject(error);
         }
       };
     },
     [id],
   );
-
-  // Logic Quét QR CCCD
-  const onScanSuccess = useCallback(
-    async (decodedText: string): Promise<void> => {
-      try {
-        setIsScannerOpen(false);
-        const parts = decodedText.split("|");
-
-        if (provinces.length === 0) {
-          notification.warning({
-            message:
-              "Dữ liệu hành chính đang được tải, vui lòng thử lại sau giây lát!",
-          });
-          return;
-        }
-        if (parts.length < 6) {
-          notification.warning({ message: "Mã QR không đúng định dạng CCCD" });
-          return;
-        }
-
-        const [cccd, , fullName, dobStr, genderStr, address] = parts;
-
-        const birthDate =
-          dobStr && dobStr.length === 8 ? dayjs(dobStr, "DDMMYYYY") : null;
-
-        form.setFieldsValue({
-          identityCard: cccd,
-          name: fullName,
-          gender: genderStr.toLowerCase() === "nam",
-          dateOfBirth: birthDate,
-        });
-
-        if (address) {
-          const index = 0;
-          const addrParts = address
-            .split(",")
-            .map((s) => s.trim())
-            .filter((s) => s);
-
-          const pNameInQR = addrParts[addrParts.length - 1] || "";
-          const normPName = normalizeString(pNameInQR);
-
-          const foundProv = provinces.find((p) => {
-            const normAPI = normalizeString(p.name);
-            return normAPI.includes(normPName) || normPName.includes(normAPI);
-          });
-
-          if (foundProv) {
-            const res = await axios.get<{ wards: AdministrativeUnit[] }>(
-              `https://provinces.open-api.vn/api/v2/p/${foundProv.code}?depth=2`,
-            );
-            const wardList = res.data.wards || [];
-
-            setCommunesMap((prev) => ({ ...prev, [index]: wardList }));
-
-            let foundComm: AdministrativeUnit | undefined = undefined;
-            const searchParts = addrParts.slice(0, -1).reverse();
-
-            for (const part of searchParts) {
-              const normPart = normalizeString(part);
-              foundComm = wardList.find((w) => {
-                const normWardAPI = normalizeString(w.name);
-                return (
-                  normPart === normWardAPI ||
-                  (normPart.length > 4 && normWardAPI.includes(normPart)) ||
-                  (normWardAPI.length > 4 && normPart.includes(normWardAPI))
-                );
-              });
-              if (foundComm) break;
-            }
-
-            const currentAddresses = form.getFieldValue("addresses") || [{}];
-            currentAddresses[index] = {
-              ...currentAddresses[index],
-              provinceCode: foundProv.code,
-              provinceCity: foundProv.name,
-              wardCode: foundComm?.code,
-              wardCommune: foundComm?.name || "",
-              addressDetail: address,
-              name: fullName,
-            };
-            form.setFieldsValue({ addresses: [...currentAddresses] });
-          }
-        }
-        notification.success({ message: "Đã quét thông tin CCCD thành công!" });
-      } catch (e) {
-        console.error(e);
-        notification.error({ message: "Lỗi khi xử lý dữ liệu QR" });
-      }
-    },
-    [form, provinces],
-  );
-
   //Xử lý dữ liệu khi Chỉnh sửa (Edit Mode)
   useEffect(() => {
-    if (isEdit && id) {
-      customerApi.getCustomerById(id).then(async (res: CustomerResponse) => {
+    if (!isEdit || !id) return;
+
+    let isMounted = true;
+
+    const loadCustomer = async () => {
+      setIsLoadingEdit(true);
+      try {
+        const res = await customerApi.getCustomerById(id);
+
         const sortedAddresses = res.addresses
           ? [...res.addresses].sort((a, b) =>
               a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1,
@@ -291,38 +192,54 @@ const CustomerForm: React.FC = () => {
           const keys = sortedAddresses.map((_, i) => i.toString());
           setActiveKeys(keys);
 
-          await Promise.all(
-            sortedAddresses.map(async (addr, i) => {
-              if (addr.provinceCode)
-                await loadCommunes(Number(addr.provinceCode), i);
-            }),
-          );
+          try {
+            await Promise.all(
+              sortedAddresses.map(async (addr, i) => {
+                if (addr.provinceCode)
+                  await loadCommunes(Number(addr.provinceCode), i);
+              }),
+            );
+          } catch (error) {
+            console.error("Error loading communes for addresses:", error);
+            notification.error({
+              message: "Lỗi tải danh sách Phường/Xã cho địa chỉ hiện tại",
+            });
+          }
         }
-        form.setFieldsValue(formValues);
-      });
-    }
-  }, [id, isEdit, form, loadCommunes]);
 
-  useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
-    if (isScannerOpen) {
-      scanner = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: 250 },
-        false,
-      );
-      scanner.render(onScanSuccess, (err) => console.warn(err));
-    }
-    return () => {
-      if (scanner) scanner.clear().catch((e) => console.error(e));
+        if (isMounted) {
+          form.setFieldsValue(formValues);
+        }
+      } catch (error) {
+        console.error("Error loading customer:", error);
+        notification.error({
+          message: "Lỗi tải thông tin khách hàng",
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingEdit(false);
+        }
+      }
     };
-  }, [isScannerOpen, onScanSuccess]);
+
+    loadCustomer();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isEdit, form, loadCommunes]);
 
   const validateAge = (
     _: RuleObject,
     value: dayjs.Dayjs | null,
   ): Promise<void> => {
     if (value) {
+      if (value.isAfter(dayjs(), "day")) {
+        return Promise.reject(
+          new Error("Ngày sinh không được lớn hơn ngày hiện tại"),
+        );
+      }
+
       const age = dayjs().diff(value, "year");
       if (age < 15) {
         return Promise.reject(new Error("Khách hàng phải từ 15 tuổi trở lên"));
@@ -490,9 +407,7 @@ const CustomerForm: React.FC = () => {
               {...restField}
               name={[name, "phoneNumber"]}
               label="SĐT nhận"
-              rules={[
-                { required: true, pattern: /^(0|84)(3|5|7|8|9)([0-9]{8})$/ },
-              ]}
+              rules={[{ required: true, pattern: /^0(3|5|7|8|9)\d{8}$/ }]}
             >
               <Input size="large" maxLength={10} />
             </Form.Item>
@@ -507,6 +422,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Tỉnh/Thành phố"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 options={provinces.map((p) => ({
                   label: p.name,
                   value: p.code,
@@ -532,6 +455,14 @@ const CustomerForm: React.FC = () => {
               <Select
                 showSearch
                 size="large"
+                placeholder="Chọn Xã/Phường/Thị trấn"
+                filterOption={(input, option) => {
+                  const label = normalizeString(
+                    option?.label ? String(option.label) : "",
+                  );
+                  const search = normalizeString(input);
+                  return label.includes(search);
+                }}
                 disabled={!communesMap[index]}
                 options={communesMap[index]?.map((w) => ({
                   label: w.name,
@@ -642,31 +573,6 @@ const CustomerForm: React.FC = () => {
                   </Upload>
                 </div>
                 <Form.Item
-                  name="identityCard"
-                  label={<Text strong>Số CCCD</Text>}
-                  validateTrigger="onBlur"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                      pattern: /^\d{12}$/,
-                      message: "CCCD phải đủ 12 số",
-                    },
-                    { validator: duplicateValidator("identityCard") },
-                  ]}
-                >
-                  <Input
-                    size="large"
-                    maxLength={12}
-                    suffix={
-                      <ScanOutlined
-                        onClick={() => setIsScannerOpen(true)}
-                        style={{ color: "#1890ff", cursor: "pointer" }}
-                      />
-                    }
-                  />
-                </Form.Item>
-                <Form.Item
                   name="name"
                   label={<Text strong>Họ và tên</Text>}
                   rules={[
@@ -752,7 +658,7 @@ const CustomerForm: React.FC = () => {
                   rules={[
                     {
                       required: true,
-                      pattern: /^(0|84)(3|5|7|8|9)([0-9]{8})$/,
+                      pattern: /^0(3|5|7|8|9)\d{8}$/,
                       message: "SĐT không đúng định dạng",
                     },
                     { validator: duplicateValidator("phoneNumber") },
@@ -836,6 +742,7 @@ const CustomerForm: React.FC = () => {
                       size="large"
                       icon={<SaveOutlined />}
                       loading={loading}
+                      disabled={isLoadingEdit}
                     >
                       Lưu thông tin
                     </Button>
@@ -845,20 +752,6 @@ const CustomerForm: React.FC = () => {
             </Col>
           </Row>
         </Form>
-
-        <Modal
-          title="Quét QR CCCD Gắn Chip"
-          open={isScannerOpen}
-          onCancel={() => setIsScannerOpen(false)}
-          footer={null}
-          centered
-          width={600}
-        >
-          <div
-            id="reader"
-            style={{ width: "100%", borderRadius: 12, overflow: "hidden" }}
-          ></div>
-        </Modal>
       </div>
     </ConfigProvider>
   );

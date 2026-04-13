@@ -1,35 +1,21 @@
-version: '3.8'
-
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: datn_mysql
-    restart: unless-stopped
+  db:
+    image: mysql:8.4 # Bản LTS ổn định cho dự án Java của bạn
+    container_name: msi_mysql_bind
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: 281003
       MYSQL_DATABASE: datn
-      MYSQL_USER: datn_user
-      MYSQL_PASSWORD: datn_password
+      TZ: Asia/Ho_Chi_Minh  # <--- Bổ sung múi giờ cho MySQL
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - datn_mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
-             --character-set-server=utf8mb4
-             --collation-server=utf8mb4_unicode_ci
+      # BIND MOUNT: [Đường dẫn máy MSI] : [Đường dẫn trong Container]
+      - ./mysql_data:/var/lib/mysql
+      - ./mysql_config:/etc/mysql/conf.d
+      # (Tùy chọn) Nếu chạy trên Linux, bạn có thể mount trực tiếp file localtime của máy host:
+      # - /etc/localtime:/etc/localtime:ro 
 
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: datn_phpmyadmin
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      - PMA_HOST=mysql
-      - MYSQL_ROOT_PASSWORD=root
-    depends_on:
-      - mysql
-
-volumes:
-  datn_mysql_data:
-    driver: local
+networks:
+  default:
+    name: hikari_network

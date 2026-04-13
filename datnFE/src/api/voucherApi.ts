@@ -34,3 +34,7 @@ export const voucherApi = {
         return axiosClient.patch(`${BASE_URL}/detail/${detailId}/status`, params);
     },
 };
+
+export const getClientVouchers = (): Promise<any> => {
+    return axiosClient.get('/client/vouchers');
+};

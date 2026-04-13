@@ -12,11 +12,21 @@ export interface ProductResponse {
   idTechSpec?: string;
   techSpecName?: string;
   techSpec?: TechSpecResponse;
+  /** Giá hiển thị = giá sau giảm (nếu có campaign) hoặc giá gốc. Dùng trực tiếp cho UI. */
   price?: number;
+  /** Giá gốc (chưa giảm) - dùng để hiển thị khi có đợt giảm giá */
+  originalPrice?: number;
+  /**
+   * True nếu biến thể có giá gốc nhỏ nhất đang có đợt giảm giá active.
+   * Frontend dùng field này thay vì threshold cứng để hiển thị badge giảm giá.
+   */
+  hasActiveSaleCampaign?: boolean;
   status: CommonStatus;
   createdDate: number;
   lastModifiedDate: number;
   imageUrls?: string[];
+  /** Số lượng biến thể của sản phẩm */
+  variantCount?: number;
   /** Thông số động (tech_spec_value), key: spec_{definitionCode} */
   techSpecDynamic?: Record<string, string | number | null | undefined>;
 }

@@ -33,7 +33,7 @@ public class Employee extends NameEntity implements Serializable {
     @Column(name = "email")
     private String email;
 
-     @Column(name = "employee_image")
+    @Column(name = "employee_image")
     private String employeeImage;
 
     @Column(name = "province_city")
@@ -44,7 +44,6 @@ public class Employee extends NameEntity implements Serializable {
 
     @Column(name = "province_code")
     private Integer provinceCode;
-
 
     @Column(name = "ward_code")
     private Integer wardCode;

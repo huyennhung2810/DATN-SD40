@@ -18,7 +18,15 @@ const AdminLoginPage: React.FC = () => {
     dispatch(
       authActions.loginAdmin({
         data: values,
-        navigate: () => navigate("/"),
+        //Nhận role từ Redux Slice trả về để điều hướng
+        navigate: (role: string) => {
+          if (role === "ADMIN") {
+            navigate("/statistics", { replace: true });
+          } else {
+            // Mặc định nhân viên (STAFF) vào màn hình POS
+            navigate("/pos", { replace: true });
+          }
+        },
       }),
     );
   };
@@ -82,6 +90,7 @@ const AdminLoginPage: React.FC = () => {
               src="https://www.google.com/favicon.ico"
               width={16}
               style={{ marginRight: 8 }}
+              alt="Google"
             />
             Google Workspace
           </Button>

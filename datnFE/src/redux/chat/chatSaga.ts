@@ -6,15 +6,17 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
 
 
-function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: string }>) {
+function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: string; userId?: string; customerName?: string }>) {
   try {
-    const { content, sessionId } = action.payload;
+    const { content, sessionId, userId, customerName } = action.payload;
 
     yield put(addMessage({ content, sender: 'CUSTOMER', sessionId }));
 
     const response: { data: ChatResponse } = yield call(postChatMessage, { 
       message: content, 
-      sessionId 
+      sessionId,
+      userId,
+      customerName,
     });
 
     if (response.data.sender === 'AI') {
@@ -31,13 +33,17 @@ function* handleSendMessage(action: PayloadAction<{ content: string; sessionId: 
   }
 }
 
-function* handleRequestStaffSaga(action: PayloadAction<{ sessionId: string }>) {
+function* handleRequestStaffSaga(action: PayloadAction<{ sessionId: string; customerName?: string; customerImage?: string }>) {
   try {
-    yield call(axiosClient.post, `/support/request-staff?sessionId=${action.payload.sessionId}`);
+    const { sessionId, customerName, customerImage } = action.payload;
+    const params = new URLSearchParams({ sessionId });
+    if (customerName) params.append('customerName', customerName);
+    if (customerImage) params.append('customerImage', customerImage);
+    yield call(axiosClient.post, `/support/request-staff?${params.toString()}`);
     yield put(addMessage({
       content: "_Yêu cầu của bạn đã được gửi tới nhân viên hỗ trợ. Vui lòng chờ trong giây lát!_",
       sender: 'SYSTEM',
-      sessionId: action.payload.sessionId
+      sessionId,
     }));
   } catch (error) {
     console.error("Request staff failed", error);

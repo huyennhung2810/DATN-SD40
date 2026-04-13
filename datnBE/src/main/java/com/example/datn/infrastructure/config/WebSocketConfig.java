@@ -20,7 +20,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Điểm kết nối WebSocket (Dùng SockJS để hỗ trợ các trình duyệt cũ)
-        registry.addEndpoint("/ws-chat").setAllowedOrigins("http://localhost:6688").withSockJS();
+        registry.addEndpoint("/ws-chat")
+                .setAllowedOrigins(
+                        "http://localhost:6688",
+                        "http://localhost:5173",
+                        "http://localhost:3000"
+                )
+                .withSockJS();
     }
 
 }

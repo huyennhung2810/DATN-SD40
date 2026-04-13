@@ -1,7 +1,6 @@
 import React from "react";
-import { Row, Col, Button } from "antd";
 import { RightOutlined } from "@ant-design/icons";
-import ProductCard from "./ProductCard";
+import { useNavigate } from "react-router-dom";
 
 interface Product {
   id: string;
@@ -10,6 +9,7 @@ interface Product {
   originalPrice?: number;
   imageUrls?: string[];
   categoryName?: string;
+  brandName?: string;
   rating?: number;
   reviewCount?: number;
   isNew?: boolean;
@@ -24,6 +24,7 @@ interface ProductSectionProps {
   showViewAll?: boolean;
   viewAllLink?: string;
   backgroundColor?: string;
+  backgroundAlt?: boolean; // alternates bg between sections
 }
 
 const ProductSection: React.FC<ProductSectionProps> = ({
@@ -32,115 +33,125 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   products,
   showViewAll = true,
   viewAllLink = "/client/catalog",
-  backgroundColor = "#f8f9fa"
+  backgroundColor,
+  backgroundAlt = false,
 }) => {
+  const navigate = useNavigate();
+  const bg = backgroundColor ?? (backgroundAlt ? "var(--hw-bg-white)" : "var(--hw-bg)");
+
   return (
-    <section className="product-section" style={{ backgroundColor }}>
-      <div className="section-container">
-        <div className="section-header">
-          <div className="header-left">
-            <h2 className="section-title">{title}</h2>
-            {subtitle && <p className="section-subtitle">{subtitle}</p>}
+    <section className="hw-section" style={{ background: bg }}>
+      <div className="hw-container">
+        {/* Section header — uses shared design system class */}
+        <div className="hw-section-header">
+          <div>
+            <h2 className="hw-section-title">{title}</h2>
+            {subtitle && <p className="hw-section-subtitle">{subtitle}</p>}
           </div>
           {showViewAll && (
-            <a href={viewAllLink} className="view-all-link">
+            <a href={viewAllLink} className="hw-section-link">
               Xem tất cả <RightOutlined />
             </a>
           )}
         </div>
 
-        <Row gutter={[20, 20]} className="product-grid">
-          {products.map((product) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
-              <ProductCard product={product} />
-            </Col>
-          ))}
-        </Row>
+        {/* Product grid */}
+        {products.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--hw-gray)" }}>
+            Không có sản phẩm nào.
+          </div>
+        ) : (
+          <div className="hw-product-grid">
+            {products.map((product) => (
+              <a
+                key={product.id}
+                href={`/client/product/${product.id}`}
+                className="hw-product-card"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(`/client/product/${product.id}`);
+                }}
+              >
+                {/* Image */}
+                <div className="hw-product-card__img-wrap">
+                  {product.imageUrls && product.imageUrls.length > 0 ? (
+                    <img
+                      src={product.imageUrls[0]}
+                      alt={product.name}
+                      className="hw-product-card__img"
+                    />
+                  ) : (
+                    <div className="hw-product-card__img-placeholder">
+                      Chưa có hình ảnh
+                    </div>
+                  )}
+
+                  {/* Badges */}
+                  {product.isNew && (
+                    <div className="hw-product-card__badge hw-product-card__badge--new">
+                      Mới
+                    </div>
+                  )}
+                  {product.isSale && (
+                    <div className="hw-product-card__badge hw-product-card__badge--sale">
+                      Giảm giá
+                    </div>
+                  )}
+
+                  {/* Hover action bar */}
+                  <div className="hw-product-card__actions">
+                    <button
+                      className="hw-product-card__action-btn hw-product-card__action-btn--ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/client/product/${product.id}`);
+                      }}
+                    >
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="hw-product-card__info">
+                  <div className="hw-product-card__category">
+                    {product.categoryName || "Máy ảnh"}
+                  </div>
+                  <div className="hw-product-card__name">{product.name}</div>
+                  <div className="hw-product-card__price-row">
+                    {product.originalPrice && product.originalPrice > product.price ? (
+                      <>
+                        <span className="hw-product-card__price-old">
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                            maximumFractionDigits: 0,
+                          }).format(product.originalPrice)}
+                        </span>
+                        <span className="hw-product-card__price-current">
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                            maximumFractionDigits: 0,
+                          }).format(product.price)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="hw-product-card__price-current">
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                          maximumFractionDigits: 0,
+                        }).format(product.price)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
-
-      <style>{`
-        .product-section {
-          padding: 60px 0;
-        }
-
-        .section-container {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 24px;
-        }
-
-        .section-header {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          margin-bottom: 32px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #e5e5e5;
-        }
-
-        .header-left {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .section-title {
-          font-size: 28px;
-          font-weight: 800;
-          color: #1a1a1a;
-          margin: 0;
-          letter-spacing: -0.5px;
-        }
-
-        .section-subtitle {
-          font-size: 15px;
-          color: #666;
-          margin: 0;
-        }
-
-        .view-all-link {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: #D32F2F;
-          text-decoration: none;
-          font-weight: 600;
-          font-size: 14px;
-          transition: all 0.2s;
-        }
-
-        .view-all-link:hover {
-          gap: 10px;
-        }
-
-        .product-grid {
-          margin-top: 0;
-        }
-
-        @media (max-width: 768px) {
-          .product-section {
-            padding: 40px 0;
-          }
-
-          .section-container {
-            padding: 0 16px;
-          }
-
-          .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-
-          .section-title {
-            font-size: 22px;
-          }
-
-          .view-all-link {
-            font-size: 13px;
-          }
-        }
-      `}</style>
     </section>
   );
 };

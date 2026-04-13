@@ -4,10 +4,16 @@ import type {
     CustomerRequest,
     CustomerResponse,
 } from "../models/customer";
+import type { AddressResponse } from "../models/address";
 import axiosClient from "./axiosClient";
 
 
 const BASE_URL = "/admin/customers";
+
+export const getAddressesByCustomer = async (customerId: string): Promise<AddressResponse[]> => {
+    const res = await axiosClient.get<ResponseObject<AddressResponse[]>>(`${BASE_URL}/${customerId}/addresses`);
+    return res.data.data;
+};
 
 const convertToFormData = (data: CustomerRequest): FormData => {
   const formData = new FormData();
@@ -109,6 +115,22 @@ export const checkDuplicate = async (params: {
   return res.data;
 };
 
+export const addAddress = async (customerId: string, data: AddressRequest): Promise<AddressResponse> => {
+    const payload = {
+        name: data.name?.trim() || "",
+        phoneNumber: data.phoneNumber?.trim() || "",
+        provinceCity: data.provinceCity?.trim() || "",
+        wardCommune: data.wardCommune?.trim() || "",
+        addressDetail: data.addressDetail?.trim() || "",
+        isDefault: data.isDefault === true,
+        provinceCode: typeof data.provinceCode === "number" ? data.provinceCode : undefined,
+        wardCode: typeof data.wardCode === "number" ? data.wardCode : undefined,
+    };
+    console.log(`[addAddress] POST /admin/customers/${customerId}/addresses`, payload);
+    const res = await axiosClient.post<ResponseObject<AddressResponse>>(`${BASE_URL}/${customerId}/addresses`, payload);
+    return res.data.data;
+};
+
 export const customerApi = {
     getAll,
     getCustomerById,
@@ -117,6 +139,8 @@ export const customerApi = {
     changeStatusCustomer,
     exportExcel,
     checkDuplicate,
+    getAddressesByCustomer,
+    addAddress,
 };
 
 export default {

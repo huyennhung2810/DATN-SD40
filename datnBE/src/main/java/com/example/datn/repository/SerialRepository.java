@@ -22,6 +22,17 @@ public interface SerialRepository extends JpaRepository<Serial, String> {
 
     java.util.List<Serial> findBySerialNumberIn(Collection<String> serialNumbers);
 
+    // Lấy danh sách serial theo orderDetailId
+    List<Serial> findByOrderDetail_Id(String orderDetailId);
 
+    // Đếm số lượng serial theo orderDetailId
+    long countByOrderDetail_Id(String orderDetailId);
+
+    // Lấy danh sách serial theo orderDetailId và loại trừ serialNumber
+    List<Serial> findByOrderDetail_IdAndSerialNumberNotIn(String orderDetailId, Collection<String> serialNumbers);
+
+    // Lấy danh sách serial theo productDetailId và trạng thái
     List<Serial> findByProductDetailIdAndSerialStatus(String productDetailId, SerialStatus serialStatus);
+
+    List<Serial> findByOrderDetailId(String id);
 }

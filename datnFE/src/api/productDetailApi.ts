@@ -55,7 +55,11 @@ export const productDetailApi = {
     update,
     changeStatus,
     exportExcel,
-    getAllProduct, // Đã thêm vào export
+    getAllProduct,
+    batchCreate: async (productId: string, data: any) => {
+        const res = await axiosClient.post<any>(`${BASE_URL}/batch/${productId}`, data);
+        return res.data;
+    },
 };
 
 export default productDetailApi;

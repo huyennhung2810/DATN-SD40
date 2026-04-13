@@ -74,14 +74,6 @@ public class ADVoucherDetailServiceImpl implements ADVoucherDetailService {
                     detail.setReason("Admin bỏ chọn khỏi danh sách");
                     adVoucherDetailRepository.save(detail);
                 }
-            } else {
-                // Nếu khách hàng có trong list mới và cũng đã có trong DB
-                // Nếu trước đó bị vô hiệu hóa (status = 2) thì kích hoạt lại (status = 0)
-                if (detail.getUsageStatus() == 2) {
-                    detail.setUsageStatus(0);
-                    detail.setReason("Admin chọn lại vào danh sách");
-                    adVoucherDetailRepository.save(detail);
-                }
             }
         }
 
@@ -173,7 +165,14 @@ public class ADVoucherDetailServiceImpl implements ADVoucherDetailService {
         // 1. Tìm bản ghi VoucherDetail
         VoucherDetail detail = adVoucherDetailRepository.findById(detailId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết voucher"));
-
+        Voucher voucher = detail.getVoucher();
+        // THÊM ĐOẠN BẮT LỖI Ở ĐÂY: Nếu đang muốn Vô hiệu hóa (status = 2) một người đang Active (usageStatus = 0)
+        if (status == 2 && detail.getUsageStatus() == 0) {
+            int currentActiveCount = adVoucherDetailRepository.countByVoucherIdAndUsageStatus(voucher.getId(), 0);
+            if (currentActiveCount <= 1) {
+                throw new RuntimeException("Không thể vô hiệu hóa! Voucher cá nhân phải có ít nhất 1 khách hàng được áp dụng.");
+            }
+        }
         // 2. Cập nhật trạng thái và lý do (usageStatus = 2 là vô hiệu hóa)
         detail.setUsageStatus(status);
         detail.setReason(reason);
@@ -181,7 +180,7 @@ public class ADVoucherDetailServiceImpl implements ADVoucherDetailService {
 
         // 3. ĐỒNG BỘ: Tính toán lại quantity của Voucher cha
         // Số lượng = số bản ghi có usageStatus = 0
-        Voucher voucher = detail.getVoucher();
+
         int activeCount = adVoucherDetailRepository.countByVoucherIdAndUsageStatus(voucher.getId(), 0);
 
         voucher.setQuantity(activeCount);

@@ -24,7 +24,7 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public Cart getOrCreateCart(String customerId) {
         // Cố gắng tìm giỏ hàng hiện tại của khách
-        return cartRepository.findByCustomer_Id(customerId)
+        return cartRepository.findFirstByCustomer_Id(customerId)
                 .orElseGet(() -> {
                     // Nếu chưa có (orElseGet), thì tạo mới 1 giỏ hàng
                     Customer customer = customerRepository.findById(customerId)

@@ -24,6 +24,8 @@ import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 import watchColorFlow from "../redux/color/colorSaga";
 import watchStorageFlow from "../redux/storage/storageSaga";
 import { watchChatSaga } from "../redux/chat/chatSaga";
+import orderSaga from "../redux/order/orderSaga";
+import { shippingSaga } from "../redux/shipping/shippingSaga";
 
 export default function* rootSaga() {
   yield all([
@@ -52,6 +54,7 @@ export default function* rootSaga() {
     fork(watchTechSpecGroupFlow),
     fork(watchTechSpecDefinitionFlow),
     fork(watchChatSaga),
-  
+    fork(orderSaga),
+    fork(shippingSaga)
   ]);
 }

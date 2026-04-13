@@ -1,14 +1,14 @@
 export interface CheckInRequest {
-    scheduleId: string;
-    initialCash?: number;
-    note?: string;
+  scheduleId: string;
+  initialCash?: number;
+  note?: string;
 }
 
 export interface CheckOutRequest {
   scheduleId: string;
   actualCash: number;    
   withdrawAmount?: number;   
-  note?: string;           
+  note?: string;          
 }
 
 // Thông tin kiểm kê 1 sản phẩm
@@ -20,27 +20,37 @@ export interface ProductAuditRequest {
 
 export interface ShiftHandoverStatsResponse {
   handoverId: string;
+  scheduleId: string;
   initialCash: number;
+  totalCashSales: number;
+  totalBankSales: number; 
 }
 
 export interface ShiftHistoryItem {
-    employeeName: string;
-    checkInTime: number;
-    checkOutTime?: number;
-    totalCashSales: number;
-    actualCashAtEnd: number;
-    differenceAmount: number;
-    status: string;
-    note?: string;
+  id: string;
+  code: string;
+  employeeName: string;
+  checkInTime: number;
+  checkOutTime?: number;
+  initialCash: number;
+  totalCashSales: number;
+  totalBankSales?: number;
+  cashWithdraw?: number;
+  actualCashAtEnd: number;
+  differenceAmount: number;
+  note?: string;
+  status: string;
 }
 
 // Thông tin chi tiết của 1 Phiếu giao ca 
 export interface ShiftHandoverResponse {
   id: string;
+  scheduleId?: string; 
   checkInTime: number; 
   checkOutTime?: number; 
   initialCash: number;
   totalCashSales?: number;
+  totalBankSales?: number; 
   cashWithdraw?: number;
   actualCashAtEnd?: number;
   differenceAmount?: number;

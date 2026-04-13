@@ -32,7 +32,7 @@ public class ADEmployeeController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> addEmployee (@Valid @ModelAttribute ADEmployeeRequest request) {
+    public ResponseEntity<?> addEmployee(@Valid @ModelAttribute ADEmployeeRequest request) {
         return Helper.createResponseEntity(ademployeeService.addEmployee(request));
     }
 
@@ -40,8 +40,7 @@ public class ADEmployeeController {
     public ResponseEntity<?> updateEmployee(@PathVariable String id, @ModelAttribute ADEmployeeRequest request) {
         request.setId(id);
         return Helper.createResponseEntity(
-                ademployeeService.updateEmployee(request)
-        );
+                ademployeeService.updateEmployee(request));
     }
 
     @PutMapping("/{id}/change-status")
@@ -53,7 +52,8 @@ public class ADEmployeeController {
     public ResponseEntity<byte[]> export() {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customers.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(ademployeeService.exportAllEmployees());
     }
 
@@ -78,11 +78,10 @@ public class ADEmployeeController {
             @RequestParam("otp") String otp,
             @RequestParam("newPassword") String newPassword) {
         return Helper.createResponseEntity(
-                ademployeeService.resetPasswordWithOTP(email, otp, newPassword)
-        );
+                ademployeeService.resetPasswordWithOTP(email, otp, newPassword));
     }
 
-    @PutMapping("/change-password/{username}")
+    @PostMapping("/change-password/{username}")
     public ResponseEntity<?> changePassword(
             @PathVariable("username") String username,
             @RequestBody com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request) {

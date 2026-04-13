@@ -1,560 +1,892 @@
-import React, { useState } from "react";
-import { Button, Dropdown } from "antd";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  MenuOutlined,
+  DownOutlined,
   RightOutlined,
+  CloseOutlined,
+  MenuOutlined,
   CameraOutlined,
   AimOutlined,
-  VideoCameraOutlined,
   ThunderboltOutlined,
   GiftOutlined,
-  PhoneOutlined,
+  FireOutlined,
+  VideoCameraOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { customerProductApi } from "../../api/customerProductApi";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface NavCategory {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+  icon?: React.ReactNode;
+  children?: NavItem[];
+}
+
+// ─── Icon mapping (based on category name patterns) ───────────────────────────
+
+const categoryIconMap: Record<string, React.ReactNode> = {
+  "may-anh": <CameraOutlined />,
+  "máy ảnh": <CameraOutlined />,
+  "camera": <CameraOutlined />,
+  "ong-kinh": <AimOutlined />,
+  "ống kính": <AimOutlined />,
+  "lens": <AimOutlined />,
+  "may-quay": <VideoCameraOutlined />,
+  "máy quay": <VideoCameraOutlined />,
+  "gimbal": <ThunderboltOutlined />,
+  "den-flash": <FireOutlined />,
+  "đèn flash": <FireOutlined />,
+  "flash": <FireOutlined />,
+  "phu-kien": <GiftOutlined />,
+  "phụ kiện": <GiftOutlined />,
+  "accessories": <GiftOutlined />,
+};
+
+const getCategoryIcon = (name: string): React.ReactNode =>
+  categoryIconMap[name.toLowerCase()] ?? <GiftOutlined />;
+
+// ─── Static nav items (non-category links) ────────────────────────────────────
+
+const staticNavItems: NavItem[] = [
+  {
+    id: "tin-tuc",
+    label: "Tin tức",
+    href: "/client/news",
+  },
+  {
+    id: "lien-he",
+    label: "Liên hệ",
+    href: "/client/contact",
+  },
+];
+
+// ─── Build navigation from flat category list ─────────────────────────────────
+
+function buildNavItems(categories: NavCategory[]): NavItem[] {
+  const canon = categories.filter(
+    (c) => c.code === "may-anh" || c.name.toLowerCase().includes("máy ảnh"),
+  );
+  const lens = categories.filter(
+    (c) => c.code === "ong-kinh" || c.name.toLowerCase().includes("ống kính"),
+  );
+  const flash = categories.filter(
+    (c) =>
+      c.code === "den-flash" ||
+      c.name.toLowerCase().includes("đèn flash") ||
+      c.name.toLowerCase().includes("flash"),
+  );
+  const accessory = categories.filter(
+    (c) =>
+      c.code === "phu-kien" ||
+      c.name.toLowerCase().includes("phụ kiện") ||
+      c.name.toLowerCase().includes("accessories"),
+  );
+  const others = categories.filter(
+    (c) =>
+      c.id !== canon[0]?.id &&
+      c.id !== lens[0]?.id &&
+      c.id !== flash[0]?.id &&
+      c.id !== accessory[0]?.id,
+  );
+
+  const mapCat = (cat: NavCategory): NavItem => ({
+    id: cat.id,
+    label: cat.name,
+    href: `/client/catalog?categoryId=${cat.id}`,
+    icon: getCategoryIcon(cat.name),
+  });
+
+  const items: NavItem[] = [];
+
+  if (canon.length) {
+    const c = canon[0];
+    items.push({
+      id: c.id,
+      label: "Máy ảnh Canon",
+      href: `/client/catalog?brand=canon&categoryId=${c.id}`,
+      icon: <CameraOutlined />,
+      children: canon.map(mapCat),
+    });
+  }
+
+  if (lens.length) {
+    const c = lens[0];
+    items.push({
+      id: c.id,
+      label: "Ống kính",
+      href: `/client/catalog?categoryId=${c.id}`,
+      icon: <AimOutlined />,
+      children: lens.map(mapCat),
+    });
+  }
+
+  if (flash.length) {
+    const c = flash[0];
+    items.push({
+      id: c.id,
+      label: "Đèn flash",
+      href: `/client/catalog?categoryId=${c.id}`,
+      icon: <FireOutlined />,
+      children: flash.map(mapCat),
+    });
+  }
+
+  if (accessory.length) {
+    const c = accessory[0];
+    items.push({
+      id: c.id,
+      label: "Phụ kiện",
+      href: `/client/catalog?categoryId=${c.id}`,
+      icon: <GiftOutlined />,
+      children: accessory.map(mapCat),
+    });
+  }
+
+  if (others.length) {
+    items.push({
+      id: "other",
+      label: "Khác",
+      href: `/client/catalog`,
+      icon: <GiftOutlined />,
+      children: others.map(mapCat),
+    });
+  }
+
+  return items;
+}
+
+// ─── Sub-component: dropdown panel ────────────────────────────────────────────
+
+interface DropdownPanelProps {
+  item: NavItem;
+  onClose: () => void;
+}
+
+const DropdownPanel: React.FC<DropdownPanelProps> = ({ item, onClose }) => {
+  const navigate = useNavigate();
+
+  if (!item.children?.length) return null;
+
+  return (
+    <div className="nav-dp">
+      <div className="nav-dp-header">
+        <span className="nav-dp-icon">{item.icon}</span>
+        <span className="nav-dp-title">{item.label}</span>
+      </div>
+      <div className="nav-dp-items">
+        {item.children.map((child) => (
+          <button
+            key={child.id}
+            type="button"
+            className="nav-dp-item"
+            onClick={() => {
+              navigate(child.href);
+              onClose();
+            }}
+          >
+            <span className="nav-dp-item-icon">{child.icon}</span>
+            <span>{child.label}</span>
+            <RightOutlined className="nav-dp-arrow" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Navigation component ───────────────────────────────────────────────
 
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  const mainNavItems = [
-    { key: "may-anh", label: "Máy ảnh", href: "/client/catalog?category=may-anh" },
-    { key: "ong-kinh", label: "Ống kính", href: "/client/catalog?category=ong-kinh" },
-    { key: "may-quay", label: "Máy quay", href: "/client/catalog?category=may-quay" },
-    { key: "gimbal", label: "Gimbal", href: "/client/catalog?category=gimbal" },
-    { key: "den-flash", label: "Đèn flash", href: "/client/catalog?category=den-flash" },
-    { key: "phu-kien", label: "Phụ kiện", href: "/client/catalog?category=phu-kien" },
-    { key: "tin-tuc", label: "Tin tức", href: "/client/news" },
+  const [categories, setCategories] = useState<NavCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Desktop hover state
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mobile menu state
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Build nav items from fetched categories
+  const navItems: NavItem[] = [
+    ...buildNavItems(categories),
+    ...staticNavItems,
   ];
 
-  const megaMenuData = {
-    "may-anh": {
-      title: "Máy ảnh",
-      icon: <CameraOutlined />,
-      categories: [
-        {
-          name: "Theo loại",
-          items: [
-            { name: "Mirrorless", href: "/client/catalog?type=mirrorless" },
-            { name: "DSLR", href: "/client/catalog?type=dslr" },
-            { name: "Compact", href: "/client/catalog?type=compact" },
-            { name: "Medium Format", href: "/client/catalog?type=medium-format" },
-          ],
-        },
-        {
-          name: "Theo hãng",
-          items: [
-            { name: "Canon", href: "/client/catalog?brand=canon" },
-            { name: "Sony", href: "/client/catalog?brand=sony" },
-            { name: "Nikon", href: "/client/catalog?brand=nikon" },
-            { name: "Fujifilm", href: "/client/catalog?brand=fujifilm" },
-          ],
-        },
-      ],
-    },
-    "ong-kinh": {
-      title: "Ống kính",
-      icon: <AimOutlined />,
-      categories: [
-        {
-          name: "Theo ngàm",
-          items: [
-            { name: "Canon RF/RF-S", href: "/client/catalog?brand=canon&mount=rf" },
-            { name: "Sony E-mount", href: "/client/catalog?brand=sony&mount=e" },
-            { name: "Nikon Z", href: "/client/catalog?brand=nikon&mount=z" },
-            { name: "Fujifilm X", href: "/client/catalog?brand=fujifilm&mount=x" },
-          ],
-        },
-        {
-          name: "Theo tiêu cự",
-          items: [
-            { name: "Wide Angle", href: "/client/catalog?focal=wide" },
-            { name: "Standard", href: "/client/catalog?focal=standard" },
-            { name: "Telephoto", href: "/client/catalog?focal=telephoto" },
-            { name: "Prime", href: "/client/catalog?focal=prime" },
-          ],
-        },
-      ],
-    },
-    "may-quay": {
-      title: "Máy quay",
-      icon: <VideoCameraOutlined />,
-      categories: [
-        {
-          name: "Loại máy",
-          items: [
-            { name: "Action Cam", href: "/client/catalog?category=action-cam" },
-            { name: "Camcorder", href: "/client/catalog?category=camcorder" },
-            { name: "Cinema", href: "/client/catalog?category=cinema" },
-            { name: "Drone", href: "/client/catalog?category=drone" },
-          ],
-        },
-        {
-          name: "Thương hiệu",
-          items: [
-            { name: "Sony", href: "/client/catalog?brand=sony&category=cam" },
-            { name: "Canon", href: "/client/catalog?brand=canon&category=cam" },
-            { name: "DJI", href: "/client/catalog?brand=dji" },
-            { name: "GoPro", href: "/client/catalog?brand=gopro" },
-          ],
-        },
-      ],
-    },
-    "gimbal": {
-      title: "Gimbal",
-      icon: <ThunderboltOutlined />,
-      categories: [
-        {
-          name: "Loại gimbal",
-          items: [
-            { name: "Handheld", href: "/client/catalog?category=gimbal-handheld" },
-            { name: "Wearable", href: "/client/catalog?category=gimbal-wearable" },
-            { name: "Combo", href: "/client/catalog?category=gimbal-combo" },
-          ],
-        },
-        {
-          name: "Thương hiệu",
-          items: [
-            { name: "DJI", href: "/client/catalog?brand=dji&category=gimbal" },
-            { name: "Zhiyun", href: "/client/catalog?brand=zhiyun" },
-            { name: "FeiyuTech", href: "/client/catalog?brand=feiyu" },
-          ],
-        },
-      ],
-    },
-    "phu-kien": {
-      title: "Phụ kiện",
-      icon: <GiftOutlined />,
-      categories: [
-        {
-          name: "Lưu trữ",
-          items: [
-            { name: "Thẻ nhớ", href: "/client/catalog?category=memory" },
-            { name: "Ổ cứng", href: "/client/catalog?category=hard-drive" },
-          ],
-        },
-        {
-          name: "Năng lượng",
-          items: [
-            { name: "Pin & Sạc", href: "/client/catalog?category=battery" },
-            { name: "Pin sạc dự phòng", href: "/client/catalog?category=power-bank" },
-          ],
-        },
-        {
-          name: "Bảo vệ",
-          items: [
-            { name: "Túi & Balo", href: "/client/catalog?category=bag" },
-            { name: "Kính lọc", href: "/client/catalog?category=filter" },
-            { name: "Tripod", href: "/client/catalog?category=tripod" },
-          ],
-        },
-      ],
-    },
+  // ── Fetch categories from API ─────────────────────────────────────────────
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await customerProductApi.getCategories();
+        if (!cancelled && data.length > 0) {
+          setCategories(data);
+        }
+      } catch {
+        // silently keep empty list on failure
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── Desktop hover handlers ────────────────────────────────────────────────
+
+  const handleMouseEnter = (id: string) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoveredId(id);
   };
 
-  const renderMegaMenu = (menuKey: string) => {
-    const menuData = megaMenuData[menuKey as keyof typeof megaMenuData];
-    if (!menuData) return null;
+  const handleMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => setHoveredId(null), 160);
+  };
 
-    return (
-      <div className="mega-menu">
-        <div className="mega-menu-content">
-          <div className="mega-menu-header">
-            <span className="mega-menu-icon">{menuData.icon}</span>
-            <span className="mega-menu-title">{menuData.title}</span>
-          </div>
-          <div className="mega-menu-grid">
-            {menuData.categories.map((category, idx) => (
-              <div key={idx} className="mega-menu-column">
-                <div className="mega-menu-category">{category.name}</div>
-                <ul className="mega-menu-list">
-                  {category.items.map((item, itemIdx) => (
-                    <li key={itemIdx}>
-                      <a href={item.href} className="mega-menu-link">
-                        {item.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="mega-menu-promo">
-            <div className="promo-card">
-              <GiftOutlined className="promo-icon" />
-              <div className="promo-text">
-                <strong>Khuyến mãi đặc biệt</strong>
-                <span>Giảm giá lên đến 30%</span>
-              </div>
-              <a href="/client/catalog?sale=true" className="promo-link">
-                Xem ngay <RightOutlined />
-              </a>
-            </div>
-          </div>
-        </div>
+  // ── Mobile accordion handlers ─────────────────────────────────────────────
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // ── Render mobile nav ──────────────────────────────────────────────────────
+
+  const renderMobileNav = () => (
+    <div className={`nav-mobile ${mobileOpen ? "nav-mobile--open" : ""}`}>
+      <div className="nav-mobile-header">
+        <span className="nav-mobile-title">Danh mục sản phẩm</span>
+        <button
+          type="button"
+          className="nav-mobile-close"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Đóng menu"
+        >
+          <CloseOutlined />
+        </button>
       </div>
+
+      <div className="nav-mobile-body">
+        {loading ? (
+          <div className="nav-mobile-loading">
+            <LoadingOutlined spin />
+            <span>Đang tải danh mục…</span>
+          </div>
+        ) : (
+          navItems.map((item) => {
+            const isExpanded = expandedIds.has(item.id);
+            const hasChildren = Boolean(item.children?.length);
+
+            return (
+              <div key={item.id} className="nav-mobile-section">
+                <div className="nav-mobile-row">
+                  {hasChildren ? (
+                    <button
+                      type="button"
+                      className="nav-mobile-item nav-mobile-item--parent"
+                      onClick={() => toggleExpand(item.id)}
+                    >
+                      <span className="nav-mobile-item-icon">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="nav-mobile-item nav-mobile-item--leaf"
+                      onClick={() => {
+                        navigate(item.href);
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <span className="nav-mobile-item-icon">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  )}
+
+                  {hasChildren && (
+                    <button
+                      type="button"
+                      className={`nav-mobile-expand ${isExpanded ? "nav-mobile-expand--open" : ""}`}
+                      onClick={() => toggleExpand(item.id)}
+                      aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
+                    >
+                      <DownOutlined />
+                    </button>
+                  )}
+                </div>
+
+                {hasChildren && isExpanded && (
+                  <div className="nav-mobile-children">
+                    {item.children!.map((child) => (
+                      <button
+                        key={child.id}
+                        type="button"
+                        className="nav-mobile-child"
+                        onClick={() => {
+                          navigate(child.href);
+                          setMobileOpen(false);
+                        }}
+                      >
+                        <span className="nav-mobile-child-icon">{child.icon}</span>
+                        <span>{child.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Overlay ────────────────────────────────────────────────────────────────
+
+  const renderOverlay = () => {
+    if (!mobileOpen) return null;
+    return (
+      <div
+        className="nav-overlay"
+        onClick={() => setMobileOpen(false)}
+        aria-hidden
+      />
     );
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
-    <nav className="main-navigation">
-      <div className="nav-container">
-        {/* Category Menu */}
-        <div className="category-menu-wrapper">
-          <Button
-            type="text"
-            className="category-menu-btn"
-            onMouseEnter={() => setActiveMenu("category")}
-            onMouseLeave={() => setActiveMenu(null)}
+    <>
+      <nav className="shop-nav" role="navigation" aria-label="Thanh điều hướng chính">
+        <div className="shop-nav-inner">
+
+          {/* ── Mobile hamburger ───────────────────────────────────────── */}
+          <button
+            type="button"
+            className="nav-hamburger"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Mở menu"
+            aria-expanded={mobileOpen}
           >
             <MenuOutlined />
-            <span>Danh mục</span>
-            <RightOutlined className="menu-arrow" />
-          </Button>
-          {activeMenu === "category" && (
-            <div
-              className="category-dropdown"
-              onMouseEnter={() => setActiveMenu("category")}
-              onMouseLeave={() => setActiveMenu(null)}
-            >
-              <div className="category-list">
-                {[
-                  { key: "may-anh", icon: <CameraOutlined />, name: "Máy ảnh", count: 120 },
-                  { key: "ong-kinh", icon: <AimOutlined />, name: "Ống kính", count: 85 },
-                  { key: "may-quay", icon: <VideoCameraOutlined />, name: "Máy quay", count: 45 },
-                  { key: "gimbal", icon: <ThunderboltOutlined />, name: "Gimbal", count: 32 },
-                  { key: "den-flash", icon: <GiftOutlined />, name: "Đèn flash", count: 28 },
-                  { key: "phu-kien", icon: <GiftOutlined />, name: "Phụ kiện", count: 200 },
-                ].map((cat) => (
-                  <div
-                    key={cat.key}
-                    className={`category-item ${activeMenu === cat.key ? "active" : ""}`}
-                    onMouseEnter={() => setActiveMenu(cat.key)}
+          </button>
+
+          {/* ── Desktop nav items ──────────────────────────────────────── */}
+          <div className="nav-links">
+            {loading ? (
+              <span className="nav-loading-hint">
+                <LoadingOutlined spin />
+              </span>
+            ) : (
+              navItems.map((item) => {
+                const isHovered = hoveredId === item.id;
+                const hasChildren = Boolean(item.children?.length);
+
+                if (hasChildren) {
+                  return (
+                    <div
+                      key={item.id}
+                      className="nav-item-wrap"
+                      onMouseEnter={() => handleMouseEnter(item.id)}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <button
+                        type="button"
+                        className={`nav-item nav-item--has-children ${isHovered ? "nav-item--hovered" : ""}`}
+                      >
+                        <span>{item.label}</span>
+                        <DownOutlined className="nav-chevron" />
+                      </button>
+
+                      {isHovered && (
+                        <div className="nav-dropdown">
+                          <DropdownPanel
+                            item={item}
+                            onClose={() => setHoveredId(null)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    className="nav-item nav-item--link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(item.href);
+                    }}
                   >
-                    <a href={`/client/catalog?category=${cat.key}`} className="category-link">
-                      <span className="category-icon">{cat.icon}</span>
-                      <span className="category-name">{cat.name}</span>
-                      <span className="category-count">{cat.count}</span>
-                    </a>
-                    <RightOutlined className="category-arrow" />
-                  </div>
-                ))}
-              </div>
-              {renderMegaMenu("may-anh")}
-            </div>
-          )}
+                    {item.label}
+                  </a>
+                );
+              })
+            )}
+          </div>
+
+          {/* ── Hotline (desktop) ──────────────────────────────────────── */}
+          <a href="tel:19001909" className="nav-hotline">
+            <span className="nav-hotline-icon">☎</span>
+            <span>1900 1909</span>
+          </a>
         </div>
 
-        {/* Main Nav Links */}
-        <div className="nav-links">
-          {mainNavItems.map((item) => (
-            <a
-              key={item.key}
-              href={item.href}
-              className="nav-link"
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Hotline */}
-        <div className="nav-hotline">
-          <PhoneOutlined />
-          <a href="tel:19001909">1900 1909</a>
-        </div>
-      </div>
+        {/* ── Mobile nav panel ──────────────────────────────────────────── */}
+        {renderMobileNav()}
+        {renderOverlay()}
+      </nav>
 
       <style>{`
-        .main-navigation {
-          background: #fff;
-          border-bottom: 1px solid #e5e5e5;
+        /* ─── Base ──────────────────────────────────────────────────────────── */
+        .shop-nav {
+          background: #0a0a0a;
+          border-top: 1px solid rgba(255, 255, 255, 0.12);
+          position: sticky;
+          top: 0;
+          z-index: 200;
+          font-family: inherit;
         }
 
-        .nav-container {
+        .shop-nav-inner {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 24px;
+          padding: 0 20px;
+          min-height: 48px;
           display: flex;
           align-items: center;
-          height: 52px;
-          gap: 8px;
+          gap: 0;
         }
 
-        /* Category Menu */
-        .category-menu-wrapper {
-          position: relative;
-        }
-
-        .category-menu-btn {
-          display: flex;
+        /* ─── Hamburger (mobile only) ──────────────────────────────────────── */
+        .nav-hamburger {
+          display: none;
           align-items: center;
-          gap: 10px;
+          justify-content: center;
+          width: 44px;
           height: 44px;
-          padding: 0 18px;
-          background: #1a1a1a !important;
-          color: #fff !important;
-          border-radius: 10px;
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .category-menu-btn:hover {
-          background: #333 !important;
-        }
-
-        .menu-arrow {
-          font-size: 10px;
-          opacity: 0.7;
-        }
-
-        .category-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          display: flex;
-          background: #fff;
-          border-radius: 0 12px 12px 12px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-          z-index: 100;
-          min-width: 900px;
-          overflow: hidden;
-        }
-
-        .category-list {
-          width: 280px;
-          background: #fafafa;
-          padding: 12px;
-          flex-shrink: 0;
-        }
-
-        .category-item {
-          position: relative;
-          border-radius: 8px;
-          margin-bottom: 4px;
-        }
-
-        .category-item:last-child {
-          margin-bottom: 0;
-        }
-
-        .category-item:hover,
-        .category-item.active {
-          background: #fff;
-        }
-
-        .category-link {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 14px;
-          color: #1a1a1a;
-          text-decoration: none;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .category-icon {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.9);
           font-size: 18px;
-          color: #666;
+          cursor: pointer;
+          flex-shrink: 0;
+          margin-right: 8px;
         }
 
-        .category-item:hover .category-icon,
-        .category-item.active .category-icon {
-          color: #D32F2F;
+        .nav-hamburger:hover {
+          color: #fff;
         }
 
-        .category-count {
-          margin-left: auto;
-          font-size: 12px;
-          color: #999;
-          font-weight: 400;
-        }
-
-        .category-arrow {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          font-size: 10px;
-          color: #ccc;
-        }
-
-        .category-item:hover .category-arrow {
-          color: #D32F2F;
-        }
-
-        /* Mega Menu */
-        .mega-menu {
-          flex: 1;
-          padding: 20px 24px;
-          background: #fff;
-          border-left: 1px solid #f0f0f0;
-        }
-
-        .mega-menu-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 20px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-
-        .mega-menu-icon {
-          font-size: 20px;
-          color: #D32F2F;
-        }
-
-        .mega-menu-title {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1a1a1a;
-        }
-
-        .mega-menu-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 24px 40px;
-        }
-
-        .mega-menu-category {
-          font-size: 13px;
-          font-weight: 600;
-          color: #1a1a1a;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .mega-menu-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .mega-menu-list li {
-          margin-bottom: 8px;
-        }
-
-        .mega-menu-link {
-          color: #666;
-          text-decoration: none;
-          font-size: 14px;
-          transition: all 0.2s;
-          display: inline-block;
-        }
-
-        .mega-menu-link:hover {
-          color: #D32F2F;
-          transform: translateX(4px);
-        }
-
-        .mega-menu-promo {
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid #f0f0f0;
-        }
-
-        .promo-card {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px;
-          background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
-          border-radius: 10px;
-          border: 1px solid #ffcdd2;
-        }
-
-        .promo-icon {
-          font-size: 28px;
-          color: #D32F2F;
-        }
-
-        .promo-text {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .promo-text strong {
-          font-size: 14px;
-          color: #1a1a1a;
-        }
-
-        .promo-text span {
-          font-size: 13px;
-          color: #D32F2F;
-        }
-
-        .promo-link {
-          color: #D32F2F;
-          text-decoration: none;
-          font-size: 13px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .promo-link:hover {
-          text-decoration: underline;
-        }
-
-        /* Nav Links */
+        /* ─── Nav links ─────────────────────────────────────────────────────── */
         .nav-links {
           display: flex;
           align-items: center;
-          gap: 4px;
           flex: 1;
+          gap: 2px;
         }
 
-        .nav-link {
+        .nav-loading-hint {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 13px;
+          padding: 12px 0;
+        }
+
+        /* ─── Nav item ─────────────────────────────────────────────────────── */
+        .nav-item-wrap {
+          position: relative;
+        }
+
+        .nav-item {
           display: inline-flex;
           align-items: center;
-          padding: 10px 16px;
-          color: #1a1a1a;
+          gap: 6px;
+          padding: 13px 16px;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.88);
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          cursor: pointer;
+          font-family: inherit;
+          white-space: nowrap;
+          transition: color 0.2s, background 0.2s;
+          border-radius: 2px;
           text-decoration: none;
-          font-weight: 500;
+          line-height: 1;
+        }
+
+        .nav-item:hover,
+        .nav-item--hovered {
+          color: #fff;
+          background: rgba(255, 255, 255, 0.07);
+        }
+
+        .nav-item--link {
+          /* anchor variant */
+        }
+
+        .nav-chevron {
+          font-size: 9px;
+          opacity: 0.7;
+          transition: transform 0.2s;
+        }
+
+        .nav-item--hovered .nav-chevron {
+          transform: rotate(180deg);
+        }
+
+        /* ─── Dropdown ─────────────────────────────────────────────────────── */
+        .nav-dropdown {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          min-width: 240px;
+          z-index: 300;
+        }
+
+        /* ─── Dropdown panel ───────────────────────────────────────────────── */
+        .nav-dp {
+          background: #fff;
+          border-radius: 6px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+          overflow: hidden;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-dp-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 18px 12px;
+          border-bottom: 1px solid #f0f0f0;
+          background: #fafafa;
+        }
+
+        .nav-dp-icon {
+          font-size: 18px;
+          color: #c62828;
+        }
+
+        .nav-dp-title {
           font-size: 14px;
-          border-radius: 8px;
-          transition: all 0.2s;
+          font-weight: 700;
+          color: #1a1a1a;
+          letter-spacing: 0.02em;
         }
 
-        .nav-link:hover {
+        .nav-dp-items {
+          padding: 8px;
+        }
+
+        .nav-dp-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 10px 14px;
+          background: transparent;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 14px;
+          color: #444;
+          text-align: left;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .nav-dp-item:hover {
           background: #f5f5f5;
-          color: #D32F2F;
+          color: #c62828;
         }
 
-        /* Hotline */
+        .nav-dp-item-icon {
+          font-size: 15px;
+          color: #888;
+          flex-shrink: 0;
+        }
+
+        .nav-dp-item:hover .nav-dp-item-icon {
+          color: #c62828;
+        }
+
+        .nav-dp-arrow {
+          margin-left: auto;
+          font-size: 10px;
+          color: #bbb;
+          flex-shrink: 0;
+        }
+
+        .nav-dp-item:hover .nav-dp-arrow {
+          color: #c62828;
+        }
+
+        /* ─── Hotline ──────────────────────────────────────────────────────── */
         .nav-hotline {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 10px 16px;
-          background: #f5f5f5;
-          border-radius: 10px;
-          font-size: 14px;
-          color: #1a1a1a;
-        }
-
-        .nav-hotline a {
-          color: #D32F2F;
+          padding: 8px 14px;
+          margin-left: 8px;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #fff;
+          font-size: 13px;
           font-weight: 700;
           text-decoration: none;
+          flex-shrink: 0;
+          white-space: nowrap;
+          transition: background 0.2s;
         }
 
-        .nav-hotline a:hover {
-          text-decoration: underline;
+        .nav-hotline:hover {
+          background: rgba(255, 255, 255, 0.12);
         }
 
+        .nav-hotline-icon {
+          font-size: 14px;
+        }
+
+        /* ─── Mobile overlay ───────────────────────────────────────────────── */
+        .nav-overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          z-index: 210;
+        }
+
+        /* ─── Mobile panel ─────────────────────────────────────────────────── */
+        .nav-mobile {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 300px;
+          background: #fff;
+          z-index: 220;
+          flex-direction: column;
+          transform: translateX(-100%);
+          transition: transform 0.28s ease;
+          overflow: hidden;
+        }
+
+        .nav-mobile--open {
+          transform: translateX(0);
+        }
+
+        .nav-mobile-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          background: #1a1a1a;
+          flex-shrink: 0;
+        }
+
+        .nav-mobile-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #fff;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .nav-mobile-close {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 16px;
+          cursor: pointer;
+          border-radius: 4px;
+          transition: color 0.2s;
+        }
+
+        .nav-mobile-close:hover {
+          color: #fff;
+        }
+
+        .nav-mobile-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 0;
+        }
+
+        .nav-mobile-loading {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 24px 20px;
+          color: #666;
+          font-size: 14px;
+        }
+
+        .nav-mobile-section {
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .nav-mobile-row {
+          display: flex;
+          align-items: center;
+        }
+
+        .nav-mobile-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          padding: 14px 20px;
+          background: transparent;
+          border: none;
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 600;
+          color: #1a1a1a;
+          cursor: pointer;
+          text-align: left;
+          transition: background 0.15s;
+        }
+
+        .nav-mobile-item--parent {
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .nav-mobile-item--leaf {
+          /* leaf styling */
+        }
+
+        .nav-mobile-item-icon {
+          font-size: 16px;
+          color: #888;
+          flex-shrink: 0;
+        }
+
+        .nav-mobile-expand {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          color: #888;
+          font-size: 12px;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: transform 0.2s, color 0.15s;
+        }
+
+        .nav-mobile-expand--open {
+          transform: rotate(180deg);
+          color: #c62828;
+        }
+
+        .nav-mobile-children {
+          background: #fafafa;
+          padding: 4px 0 8px;
+        }
+
+        .nav-mobile-child {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 10px 20px 10px 40px;
+          background: transparent;
+          border: none;
+          font-family: inherit;
+          font-size: 13px;
+          color: #555;
+          cursor: pointer;
+          text-align: left;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .nav-mobile-child:hover {
+          background: #f0f0f0;
+          color: #c62828;
+        }
+
+        .nav-mobile-child-icon {
+          font-size: 14px;
+          color: #aaa;
+          flex-shrink: 0;
+        }
+
+        .nav-mobile-child:hover .nav-mobile-child-icon {
+          color: #c62828;
+        }
+
+        /* ─── Responsive ────────────────────────────────────────────────────── */
         @media (max-width: 1023px) {
-          .main-navigation {
+          .shop-nav {
+            position: relative;
+          }
+
+          .nav-hamburger {
+            display: flex;
+          }
+
+          .nav-links {
             display: none;
+          }
+
+          .nav-hotline {
+            display: none;
+          }
+
+          .nav-overlay {
+            display: block;
+          }
+
+          .nav-mobile {
+            display: flex;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .nav-mobile {
+            width: 85vw;
           }
         }
       `}</style>
-    </nav>
+    </>
   );
 };
 
