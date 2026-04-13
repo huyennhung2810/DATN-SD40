@@ -56,7 +56,18 @@ public class OrderShippingServiceImpl implements OrderShippingService {
 
         // Chỉ cho phép khách tự sửa khi đơn ở trạng thái CHỜ XÁC NHẬN
         if (!currentStatus.allowCustomerSelfUpdate()) {
-            return buildSuccessResponse(order, null, "Đơn hàng không ở trạng thái cho phép tự cập nhật.");
+            return UpdateShippingInfoResponse.builder()
+                    .orderId(order.getId())
+                    .orderCode(order.getCode())
+                    .orderStatus(order.getOrderStatus())
+                    .directUpdate(false)
+                    .message("Đơn hàng không ở trạng thái cho phép tự cập nhật. Vui lòng liên hệ 0943888307 để được hỗ trợ.")
+                    .shippingInfo(UpdateShippingInfoResponse.ShippingInfoInfo.builder()
+                            .recipientName(order.getRecipientName())
+                            .recipientPhone(order.getRecipientPhone())
+                            .recipientAddress(order.getRecipientAddress())
+                            .build())
+                    .build();
         }
 
         // Bước 1: Ghi nhận các thay đổi, phân loại thành trực tiếp hoặc change request

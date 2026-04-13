@@ -5,11 +5,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-  port: 6688
-  
-},
-define: {
-    // Định nghĩa global là window để các thư viện cũ không bị lỗi
-    global: 'window',
+    port: 6688,
+    proxy: {
+      "/api/provinces": {
+        target: "https://provinces.open-api.vn",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/provinces/, "/api"),
+        secure: false,
+      },
+    },
   },
-})
+  define: {
+    global: "window",
+  },
+});

@@ -68,6 +68,7 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                 kh.email AS email,
                 kh.image AS avatarKhachHang,
                 COALESCE(hd.recipient_address, '') AS diaChi,
+                kh.id AS customerId,
 
                 -- ===== LỊCH SỬ TRẠNG THÁI (FIX THEO ENTITY ORDERHISTORY) =====
                 (

@@ -14,7 +14,9 @@ import {
   Input,
   message,
   Modal,
+  Radio,
   Row,
+  Select,
   Space,
   Spin,
   Table,
@@ -46,11 +48,14 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import axios from "axios";
 import { orderApi } from "../../../api/admin/orderApi";
+import { customerApi } from "../../../api/customerApi";
 import type {
   OrderDetailResponse,
   OrderHistoryType,
 } from "../../../models/order";
+import type { AddressResponse } from "../../../models/address";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -187,7 +192,6 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
 const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [form] = Form.useForm();
   const receiptRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
@@ -213,6 +217,13 @@ const OrderDetailPage: React.FC = () => {
   // Customer modal
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<AddressResponse[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressMode, setAddressMode] = useState<"saved" | "new">("saved");
+  const [addrForm] = Form.useForm();
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [loadingWards, setLoadingWards] = useState(false);
 
   // Serial info modal (Dùng khi xem list dạng Flat)
   const [serialInfoOpen, setSerialInfoOpen] = useState(false);
@@ -316,27 +327,89 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const openCustomerModal = () => {
+  // Load provinces for address form
+  useEffect(() => {
+    axios.get("/api/provinces/v2/p/?depth=1")
+      .then(res => setProvinces(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Province → Wards cascade (load wards directly from province API with depth=2)
+  useEffect(() => {
+    const load = async () => {
+      const val = addrForm.getFieldValue("provinceCode");
+      if (!val) return;
+      setLoadingWards(true);
+      setWards([]);
+      try {
+        const res = await axios.get(`/api/provinces/v2/p/${val}?depth=2`);
+        setWards(res.data.wards ?? []);
+      } catch {
+        setWards([]);
+      } finally {
+        setLoadingWards(false);
+      }
+    };
+    load();
+  }, [addrForm.getFieldValue("provinceCode")]);
+
+  const loadWardsFromProvince = async (provinceCode: number) => {
+    setLoadingWards(true);
+    setWards([]);
+    addrForm.setFieldsValue({ wardCode: undefined, phuongXa: "" });
+    try {
+      const res = await axios.get(`/api/provinces/v2/p/${provinceCode}?depth=2`);
+      setWards(res.data.wards ?? []);
+    } catch {
+      setWards([]);
+    } finally {
+      setLoadingWards(false);
+    }
+  };
+
+  const openCustomerModal = async () => {
     if (!order) return;
-    form.setFieldsValue({
-      tenKhachHang: order.tenKhachHang,
-      sdtKH: order.sdtKH,
-      email: order.email,
-      diaChi: order.diaChi,
-    });
+    addrForm.resetFields();
+    setAddressMode("saved");
+    setWards([]);
     setCustomerModalOpen(true);
+
+    // Load saved addresses
+    if (order.customerId) {
+      setLoadingAddresses(true);
+      try {
+        const addrs = await customerApi.getAddressesByCustomer(order.customerId);
+        setSavedAddresses(addrs || []);
+      } catch {
+        setSavedAddresses([]);
+      } finally {
+        setLoadingAddresses(false);
+      }
+    } else {
+      setSavedAddresses([]);
+    }
   };
 
   const handleSaveCustomer = async () => {
     if (!order) return;
+    setSavingCustomer(true);
     try {
-      const values = await form.validateFields();
-      setSavingCustomer(true);
-      await orderApi.updateCustomerInfo({
-        maHoaDon: order.maHoaDon,
-        ...values,
-      });
-      message.success("Cập nhật thông tin khách hàng thành công");
+      const values = await addrForm.validateFields();
+      const payload: any = { maHoaDon: order.maHoaDon };
+
+      if (addressMode === "saved" && values.addressId) {
+        payload.addressId = values.addressId;
+      } else {
+        // Nhập địa chỉ mới
+        if (values.tenNguoiNhan) payload.tenNguoiNhan = values.tenNguoiNhan;
+        if (values.sdtNguoiNhan) payload.sdtNguoiNhan = values.sdtNguoiNhan;
+        if (values.diaChiChiTiet) payload.diaChiChiTiet = values.diaChiChiTiet;
+        if (values.tinhThanhPho) payload.tinhThanhPho = values.tinhThanhPho;
+        if (values.phuongXa) payload.phuongXa = values.phuongXa;
+      }
+
+      await orderApi.updateCustomerInfo(payload);
+      message.success("Cập nhật thông tin giao hàng thành công");
       setCustomerModalOpen(false);
       fetchOrder();
     } catch (err: any) {
@@ -892,7 +965,7 @@ const OrderDetailPage: React.FC = () => {
             title={
               <Space>
                 <UserOutlined />
-                <span>Thông tin khách hàng</span>
+                <span>Thông tin giao hàng</span>
               </Space>
             }
             extra={
@@ -902,7 +975,7 @@ const OrderDetailPage: React.FC = () => {
                   icon={<EditOutlined />}
                   onClick={openCustomerModal}
                 >
-                  Sửa
+                  Sửa địa chỉ
                 </Button>
               ) : null
             }
@@ -1398,41 +1471,136 @@ const OrderDetailPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Cập nhật thông tin khách hàng"
+        title="Cập nhật địa chỉ giao hàng"
         open={customerModalOpen}
         onOk={handleSaveCustomer}
         onCancel={() => setCustomerModalOpen(false)}
         confirmLoading={savingCustomer}
         okText="Lưu"
         cancelText="Hủy"
+        width={640}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item
-            name="tenKhachHang"
-            label="Tên khách hàng"
-            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="sdtKH"
-            label="Số điện thoại"
-            rules={[
-              { required: true, message: "Vui lòng nhập SĐT" },
-              {
-                pattern: /^0\d{9}$/,
-                message: "SĐT không hợp lệ (10 số, bắt đầu bằng 0)",
-              },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item name="email" label="Email">
-            <Input />
-          </Form.Item>
-          <Form.Item name="diaChi" label="Địa chỉ giao hàng">
-            <TextArea rows={2} />
-          </Form.Item>
+        <Form form={addrForm} layout="vertical" style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 16 }}>
+            <Radio.Group
+              value={addressMode}
+              onChange={(e) => {
+                setAddressMode(e.target.value);
+                addrForm.resetFields(["addressId", "tenNguoiNhan", "sdtNguoiNhan", "provinceCode", "phuongXa", "diaChiChiTiet"]);
+                setWards([]);
+              }}
+              style={{ marginBottom: 12 }}
+            >
+              <Radio value="saved">Chọn địa chỉ có sẵn</Radio>
+              <Radio value="new">Nhập địa chỉ mới</Radio>
+            </Radio.Group>
+          </div>
+
+          {addressMode === "saved" ? (
+            <Form.Item
+              name="addressId"
+              label="Địa chỉ giao hàng"
+              rules={[{ required: true, message: "Vui lòng chọn địa chỉ" }]}
+            >
+              {loadingAddresses ? (
+                <Text type="secondary">Đang tải địa chỉ...</Text>
+              ) : savedAddresses.length === 0 ? (
+                <Text type="secondary">Khách hàng chưa có địa chỉ nào. Vui lòng nhập địa chỉ mới.</Text>
+              ) : (
+                <Select
+                  placeholder="-- Chọn địa chỉ --"
+                  size="large"
+                  onChange={(val) => {
+                    const selected = savedAddresses.find(a => a.id === val);
+                    if (selected) {
+                      addrForm.setFieldsValue({
+                        tenNguoiNhan: selected.name,
+                        sdtNguoiNhan: selected.phoneNumber,
+                      });
+                    }
+                  }}
+                >
+                  {savedAddresses.map(addr => (
+                    <Select.Option key={addr.id} value={addr.id}>
+                      <div style={{ padding: "4px 0" }}>
+                        <Text strong>{addr.name} - {addr.phoneNumber}</Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {addr.addressDetail}, {addr.wardCommune}, {addr.provinceCity}
+                        </Text>
+                      </div>
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
+            </Form.Item>
+          ) : (
+            <>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item name="tenNguoiNhan" label="Tên người nhận" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+                    <Input placeholder="VD: Nguyễn Văn A" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="sdtNguoiNhan" label="SĐT người nhận" rules={[
+                    { required: true, message: "Vui lòng nhập SĐT" },
+                    { pattern: /^0\d{9}$/, message: "SĐT gồm 10 số, bắt đầu bằng 0" }
+                  ]}>
+                    <Input placeholder="0xxxxxxxxx" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item name="provinceCode" label="Tỉnh/Thành phố" rules={[{ required: true, message: "Chọn tỉnh/thành phố" }]}>
+                <Select
+                  placeholder="-- Tỉnh/Thành phố --"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label?.toString() ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                  onChange={(val, opt) => {
+                    const label = (opt as any)?.label ?? "";
+                    addrForm.setFieldsValue({ tinhThanhPho: label, phuongXa: "", wardCode: undefined });
+                    setWards([]);
+                    if (val) loadWardsFromProvince(val);
+                  }}
+                >
+                  {provinces.map(p => (
+                    <Select.Option key={p.code} value={p.code} label={p.name}>
+                      {p.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="wardCode" label="Xã/Phường/Thị trấn" rules={[{ required: true, message: "Chọn Xã/Phường/Thị trấn" }]}>
+                <Select
+                  placeholder="-- Xã/Phường/Thị trấn --"
+                  showSearch
+                  disabled={!addrForm.getFieldValue("provinceCode") || loadingWards}
+                  filterOption={(input, option) =>
+                    (option?.label?.toString() ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                  loading={loadingWards}
+                  onChange={(val, opt) => {
+                    const label = (opt as any)?.label ?? "";
+                    addrForm.setFieldsValue({ phuongXa: label });
+                  }}
+                >
+                  {wards.map(w => (
+                    <Select.Option key={w.code} value={w.code} label={w.name}>
+                      {w.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="diaChiChiTiet" label="Địa chỉ cụ thể" rules={[{ required: true, message: "Nhập số nhà, đường..." }]}>
+                <Input placeholder="VD: 123 Nguyễn Trãi, P.2" />
+              </Form.Item>
+            </>
+          )}
         </Form>
       </Modal>
 

@@ -4,10 +4,16 @@ import type {
     CustomerRequest,
     CustomerResponse,
 } from "../models/customer";
+import type { AddressResponse } from "../models/address";
 import axiosClient from "./axiosClient";
 
 
 const BASE_URL = "/admin/customers";
+
+export const getAddressesByCustomer = async (customerId: string): Promise<AddressResponse[]> => {
+    const res = await axiosClient.get<ResponseObject<AddressResponse[]>>(`${BASE_URL}/${customerId}/addresses`);
+    return res.data.data;
+};
 
 const convertToFormData = (data: CustomerRequest): FormData => {
   const formData = new FormData();
@@ -117,6 +123,7 @@ export const customerApi = {
     changeStatusCustomer,
     exportExcel,
     checkDuplicate,
+    getAddressesByCustomer,
 };
 
 export default {

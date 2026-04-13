@@ -50,6 +50,9 @@ public interface ADOrderDetailResponse {
 
     String getDiaChi();
 
+    // UUID khách hàng (để lấy danh sách địa chỉ)
+    String getCustomerId();
+
     // Link ảnh khách hàng (từ entity Customer)
     String getAvatarKhachHang();
 

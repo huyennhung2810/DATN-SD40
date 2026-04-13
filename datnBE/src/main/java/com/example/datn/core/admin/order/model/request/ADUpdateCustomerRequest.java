@@ -8,8 +8,16 @@ import lombok.Setter;
 public class ADUpdateCustomerRequest {
 
     private String maHoaDon;
-    private String tenKhachHang;
-    private String sdtKH;
-    private String email;
-    private String diaChi;
+
+    // Chọn địa chỉ có sẵn của khách
+    private String addressId;
+
+    // Hoặc nhập địa chỉ mới
+    private String diaChi;          // địa chỉ đầy đủ (đã ghép)
+    private String diaChiChiTiet;   // số nhà, đường
+    private String tinhThanhPho;
+    private String quanHuyen;
+    private String phuongXa;
+    private String sdtNguoiNhan;
+    private String tenNguoiNhan;
 }

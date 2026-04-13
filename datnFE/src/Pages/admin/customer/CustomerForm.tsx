@@ -100,7 +100,7 @@ const CustomerForm: React.FC = () => {
 
     axios
       .get<AdministrativeUnit[]>(
-        "https://provinces.open-api.vn/api/v2/p/?depth=1",
+        "/api/provinces/v2/p/?depth=1",
       )
       .then((res) => setProvinces(res.data))
       .catch(() => {
@@ -114,7 +114,7 @@ const CustomerForm: React.FC = () => {
   const loadCommunes = useCallback(async (pCode: number, index: number) => {
     try {
       const res = await axios.get(
-        `https://provinces.open-api.vn/api/v2/p/${pCode}?depth=2`,
+        `/api/provinces/v2/p/${pCode}?depth=2`,
       );
       if (res.data.wards) {
         setCommunesMap((prev) => ({ ...prev, [index]: res.data.wards }));
@@ -122,7 +122,7 @@ const CustomerForm: React.FC = () => {
     } catch (error) {
       console.error("Error loading communes:", error);
       notification.error({ message: "Lỗi tải danh sách Phường/Xã mới nhất" });
-      throw error; // Throw error để Promise.all có thể catch
+      throw error;
     }
   }, []);
 

@@ -50,6 +50,7 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final SimpMessagingTemplate messagingTemplate;
     private final OrderDetailRepository orderDetailRepository;
     private final ProductDetailRepository productDetailRepository;
+    private final AddressRepository addressRepository;
 
     @Override
     @Transactional
@@ -850,29 +851,51 @@ public class ADOrderServiceImpl implements ADOrderService {
                         "Chỉ được cập nhật thông tin khi đơn hàng ở trạng thái Chờ xác nhận");
             }
 
-            if (request.getTenKhachHang() != null && !request.getTenKhachHang().isBlank())
-                hoaDon.setRecipientName(request.getTenKhachHang());
+            // Ưu tiên xử lý chọn địa chỉ có sẵn
+            if (request.getAddressId() != null && !request.getAddressId().isBlank()) {
+                Address addr = addressRepository.findById(request.getAddressId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy địa chỉ"));
+                hoaDon.setRecipientName(addr.getName());
+                hoaDon.setRecipientPhone(addr.getPhoneNumber());
+                hoaDon.setRecipientAddress(
+                        (addr.getAddressDetail() != null ? addr.getAddressDetail() + ", " : "")
+                        + addr.getWardCommune() + ", " + addr.getProvinceCity()
+                );
+            } else if (request.getDiaChi() != null && !request.getDiaChi().isBlank()) {
+                // Nếu nhập tay địa chỉ mới
+                if (request.getTenNguoiNhan() != null && !request.getTenNguoiNhan().isBlank())
+                    hoaDon.setRecipientName(request.getTenNguoiNhan());
+                if (request.getSdtNguoiNhan() != null && !request.getSdtNguoiNhan().isBlank())
+                    hoaDon.setRecipientPhone(request.getSdtNguoiNhan());
 
-            if (request.getSdtKH() != null && !request.getSdtKH().isBlank())
-                hoaDon.setRecipientPhone(request.getSdtKH());
-
-            if (request.getEmail() != null)
-                hoaDon.setRecipientEmail(request.getEmail());
-
-            if (request.getDiaChi() != null)
-                hoaDon.setRecipientAddress(request.getDiaChi());
+                String fullAddress = buildFullAddress(request);
+                hoaDon.setRecipientAddress(fullAddress);
+            }
 
             adOrderRepository.save(hoaDon);
 
-            log.info("Đã cập nhật thông tin khách hàng cho hóa đơn: {}", request.getMaHoaDon());
+            log.info("Đã cập nhật thông tin giao hàng cho hóa đơn: {}", request.getMaHoaDon());
 
             return ResponseObject.success(HttpStatus.OK,
-                    "Cập nhật thông tin khách hàng thành công");
+                    "Cập nhật thông tin giao hàng thành công");
 
         } catch (RuntimeException e) {
-            log.error("Lỗi cập nhật thông tin khách hàng: {}", e.getMessage(), e);
+            log.error("Lỗi cập nhật thông tin giao hàng: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    private String buildFullAddress(ADUpdateCustomerRequest req) {
+        StringBuilder sb = new StringBuilder();
+        if (req.getDiaChiChiTiet() != null && !req.getDiaChiChiTiet().isBlank())
+            sb.append(req.getDiaChiChiTiet()).append(", ");
+        if (req.getPhuongXa() != null && !req.getPhuongXa().isBlank())
+            sb.append(req.getPhuongXa()).append(", ");
+        if (req.getQuanHuyen() != null && !req.getQuanHuyen().isBlank())
+            sb.append(req.getQuanHuyen()).append(", ");
+        if (req.getTinhThanhPho() != null && !req.getTinhThanhPho().isBlank())
+            sb.append(req.getTinhThanhPho());
+        return sb.toString();
     }
 
     private void capNhatTrangThaiSerialBiHuy(Order hoaDon) {

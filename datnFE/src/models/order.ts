@@ -25,10 +25,13 @@ export interface ADAssignSerialRequest {
 
 export interface ADUpdateCustomerRequest {
     maHoaDon: string;
-    tenKhachHang?: string;
-    sdtKH?: string;
-    email?: string;
-    diaChi?: string;
+    addressId?: string;           // Chọn địa chỉ có sẵn
+    tenNguoiNhan?: string;
+    sdtNguoiNhan?: string;
+    tinhThanhPho?: string;
+    quanHuyen?: string;
+    phuongXa?: string;
+    diaChiChiTiet?: string;
 }
 
 
@@ -105,7 +108,8 @@ export interface OrderDetailResponse {
     sdtKH: string;
     email: string;
     diaChi: string;
-    avatarKhachHang?: string; // link ảnh khách hàng
+    customerId?: string;           // UUID khách hàng để lấy địa chỉ
+    avatarKhachHang?: string;      // link ảnh khách hàng
 
     // Sản phẩm
     productDetailId: string;
