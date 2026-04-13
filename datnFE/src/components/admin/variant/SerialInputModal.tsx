@@ -121,7 +121,7 @@ const SerialInputModal: React.FC<SerialInputModalProps> = ({
         </Button>,
       ]}
     >
-      <Space direction="vertical" style={{ width: "100%" }} size="middle">
+      <Space orientation="vertical" style={{ width: "100%" }} size="middle">
         {/* Nhập text */}
         <div>
           <Text strong style={{ display: "block", marginBottom: 8 }}>

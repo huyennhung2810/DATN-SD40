@@ -187,7 +187,7 @@ const EmployeeWeeklySchedule: React.FC = () => {
           if (!cellSchedules || cellSchedules.length === 0) return null;
 
           return (
-            <Space direction="vertical" style={{ width: "100%" }} size="small">
+            <Space orientation="vertical" style={{ width: "100%" }} size="small">
               {cellSchedules.map((sch) => {
                 const statusConfig = STATUS_MAP[sch.status] || {
                   color: "default",

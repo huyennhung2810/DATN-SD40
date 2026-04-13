@@ -131,7 +131,7 @@ const ShiftHistoryPage: React.FC = () => {
       dataIndex: "employeeName",
       key: "employee",
       render: (text: string) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{text}</Text>
         </Space>
       ),

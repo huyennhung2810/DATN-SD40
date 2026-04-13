@@ -2265,7 +2265,7 @@ const PosPage: React.FC = () => {
           >
             Khách quét mã, chuyển khoản xong nhấn xác nhận bên dưới.
           </Text>
-          <Space style={{ width: "100%" }} direction="vertical">
+          <Space style={{ width: "100%" }} orientation="vertical">
             <Button
               type="primary"
               size="large"

@@ -477,7 +477,7 @@ const BatchCreateVariantModal: React.FC<BatchCreateVariantModalProps> = ({
       align: "center",
       width: 130,
       render: (_, r) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Tag color={r.serials.length > 0 ? "blue" : "default"}>
             {r.serials.length} serial
           </Tag>

@@ -210,6 +210,21 @@ const Sidebar: React.FC = () => {
 
   const items = filterMenuItems(rawItems, currentUserRole);
 
+  // Lọc bỏ allowedRoles trước khi truyền cho Menu để tránh warning prop
+  const menuItems = items.map((item: any) => {
+    const { allowedRoles: _allowedRoles, ...rest } = item;
+    if (item.children) {
+      return {
+        ...rest,
+        children: item.children.map((child: any) => {
+          const { allowedRoles: _cr, ...cr } = child;
+          return cr;
+        }),
+      };
+    }
+    return rest;
+  });
+
   const getSelectedKey = () => {
     const path = location.pathname;
     if (path.startsWith("/admin/orders")) return "/orders";
@@ -256,7 +271,7 @@ const Sidebar: React.FC = () => {
             borderRight: 0,
             background: "transparent",
           }}
-          items={items}
+          items={menuItems}
           onClick={({ key }) => {
             if (typeof key === "string" && key.startsWith("/")) {
               navigate(key);

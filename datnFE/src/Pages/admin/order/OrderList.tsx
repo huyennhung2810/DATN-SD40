@@ -123,7 +123,7 @@ const OrderPage: React.FC = () => {
         title: "Khách hàng",
         key: "customer",
         render: (_: any, record: OrderResponse) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong>{record.tenKhachHang || "Khách vãng lai"}</Text>
             {record.sdtKhachHang && (
               <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -137,7 +137,7 @@ const OrderPage: React.FC = () => {
         title: "Nhân viên",
         key: "staff",
         render: (_: any, record: OrderResponse) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>{record.tenNhanVien || "N/A"}</Text>
             <Text
               type="secondary"

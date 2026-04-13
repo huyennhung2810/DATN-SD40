@@ -4,6 +4,7 @@ import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
 import SerialAssignmentModal from "../../../components/SerialAssignmentModal"; // <-- IMPORT MODAL MỚI VÀO ĐÂY
 import {
+  App,
   Avatar,
   Button,
   Card,
@@ -12,7 +13,6 @@ import {
   Divider,
   Form,
   Input,
-  message,
   Modal,
   Radio,
   Row,
@@ -193,6 +193,7 @@ const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const receiptRef = useRef<HTMLDivElement>(null);
+  const { message } = App.useApp();
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
     documentTitle: `HoaDon_${id}`,
@@ -334,25 +335,7 @@ const OrderDetailPage: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // Province → Wards cascade (load wards directly from province API with depth=2)
-  useEffect(() => {
-    const load = async () => {
-      const val = addrForm.getFieldValue("provinceCode");
-      if (!val) return;
-      setLoadingWards(true);
-      setWards([]);
-      try {
-        const res = await axios.get(`/api/provinces/v2/p/${val}?depth=2`);
-        setWards(res.data.wards ?? []);
-      } catch {
-        setWards([]);
-      } finally {
-        setLoadingWards(false);
-      }
-    };
-    load();
-  }, [addrForm.getFieldValue("provinceCode")]);
-
+  // Province → Wards cascade: load wards when province changes
   const loadWardsFromProvince = async (provinceCode: number) => {
     setLoadingWards(true);
     setWards([]);
@@ -400,12 +383,25 @@ const OrderDetailPage: React.FC = () => {
       if (addressMode === "saved" && values.addressId) {
         payload.addressId = values.addressId;
       } else {
-        // Nhập địa chỉ mới
-        if (values.tenNguoiNhan) payload.tenNguoiNhan = values.tenNguoiNhan;
-        if (values.sdtNguoiNhan) payload.sdtNguoiNhan = values.sdtNguoiNhan;
-        if (values.diaChiChiTiet) payload.diaChiChiTiet = values.diaChiChiTiet;
-        if (values.tinhThanhPho) payload.tinhThanhPho = values.tinhThanhPho;
-        if (values.phuongXa) payload.phuongXa = values.phuongXa;
+        if (!order.customerId) {
+          message.error("Không tìm thấy thông tin khách hàng");
+          return;
+        }
+        // Tạo địa chỉ mới cho khách hàng
+        const addressPayload = {
+          name: values.tenNguoiNhan?.trim() || "",
+          phoneNumber: values.sdtNguoiNhan?.trim() || "",
+          provinceCity: values.tinhThanhPho?.trim() || "",
+          wardCommune: values.phuongXa?.trim() || "",
+          addressDetail: values.diaChiChiTiet?.trim() || "",
+          provinceCode: typeof values.provinceCode === "number" ? values.provinceCode : undefined,
+          wardCode: typeof values.wardCode === "number" ? values.wardCode : undefined,
+          isDefault: false,
+        };
+        console.log("[handleSaveCustomer] Creating address with payload:", addressPayload);
+        const newAddress = await customerApi.addAddress(order.customerId, addressPayload);
+        // Dùng ID địa chỉ vừa tạo để cập nhật vào đơn hàng
+        payload.addressId = newAddress.id;
       }
 
       await orderApi.updateCustomerInfo(payload);
@@ -1479,6 +1475,7 @@ const OrderDetailPage: React.FC = () => {
         okText="Lưu"
         cancelText="Hủy"
         width={640}
+        forceRender
       >
         <Form form={addrForm} layout="vertical" style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 16 }}>
@@ -1536,6 +1533,9 @@ const OrderDetailPage: React.FC = () => {
             </Form.Item>
           ) : (
             <>
+              <Form.Item name="tinhThanhPho" hidden><Input /></Form.Item>
+              <Form.Item name="phuongXa" hidden><Input /></Form.Item>
+
               <Row gutter={12}>
                 <Col span={12}>
                   <Form.Item name="tenNguoiNhan" label="Tên người nhận" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
