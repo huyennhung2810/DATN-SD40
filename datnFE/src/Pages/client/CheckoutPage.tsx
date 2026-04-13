@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   Form,
@@ -40,6 +40,7 @@ import VoucherPickerModal from "../../components/customer/VoucherPickerModal";
 import { getProfile } from "../../api/clientProfileApi";
 import type { AddressResponse } from "../../models/address";
 import { useLocation } from "react-router-dom";
+import { getClientVouchers } from "../../api/voucherApi";
 
 const { Title, Text } = Typography;
 
@@ -110,7 +111,10 @@ const CheckoutPage: React.FC = () => {
     null,
   );
   const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+  const [autoAppliedBestVoucher, setAutoAppliedBestVoucher] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  // Dùng ref để track đã apply voucher tự động chưa, tránh dependency conflict
+  const hasAutoAppliedRef = useRef(false);
 
   useEffect(() => {
     if (!user?.userId) {
@@ -122,6 +126,28 @@ const CheckoutPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userId]);
 
+  // Tự động áp voucher tốt nhất khi cartItems thay đổi (sau khi setCartItems hoàn tất)
+  useEffect(() => {
+    if (cartItems.length > 0 && !hasAutoAppliedRef.current) {
+      const st = cartItems.reduce(
+        (sum, item) =>
+          sum +
+          (() => {
+            const orig = toNum(item.price);
+            const disc =
+              item.discountedPrice != null && item.discountedPrice !== ""
+                ? toNum(item.discountedPrice)
+                : orig;
+            return (disc > 0 && disc < orig ? disc : orig) * toNum(item.quantity);
+          })(),
+        0,
+      );
+      console.log("[DEBUG] useEffect triggered, subTotal:", st, "cartItems:", cartItems.length);
+      autoApplyBestVoucher(st);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems]);
+
   const fetchCart = async () => {
     // 1. Kiểm tra xem có phải dữ liệu từ "Mua ngay" truyền sang không
     const state = location.state as any;
@@ -129,10 +155,8 @@ const CheckoutPage: React.FC = () => {
     if (state?.isBuyNow && state?.checkoutItems) {
       setCartItems(state.checkoutItems);
       setLoading(false);
-      return; // Thoát hàm, không gọi API nữa
+      return;
     }
-
-    // 2. Nếu không có state (người dùng vào từ Giỏ hàng), mới gọi API
     setLoading(true);
     try {
       const response = await axiosClient.get(
@@ -288,12 +312,112 @@ const CheckoutPage: React.FC = () => {
       discountUnit: v.discountUnit,
       maxDiscountAmount: v.maxDiscountAmount,
     });
+    setAutoAppliedBestVoucher(false);
+    hasAutoAppliedRef.current = true;
     message.success(`Áp dụng mã "${v.code}" thành công!`);
   };
 
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null);
+    setAutoAppliedBestVoucher(false);
+    hasAutoAppliedRef.current = false;
     message.info("Đã bỏ mã giảm giá.");
+  };
+
+  const calcVoucherDiscount = (v: Voucher, subTotal: number): number => {
+    let discount = 0;
+    if (v.discountUnit === "PERCENT") {
+      discount = (subTotal * v.discountValue) / 100;
+      if (v.maxDiscountAmount) {
+        discount = Math.min(discount, v.maxDiscountAmount);
+      }
+    } else {
+      discount = v.discountValue;
+    }
+    return Math.min(discount, subTotal);
+  };
+
+  const autoApplyBestVoucher = async (subTotal: number) => {
+    if (subTotal <= 0) {
+      console.log("[DEBUG] autoApplyBestVoucher skipped: subTotal =", subTotal);
+      return;
+    }
+    try {
+      console.log("[DEBUG] Fetching vouchers for subTotal:", subTotal);
+      const res: any = await getClientVouchers();
+      // API có thể trả về { data: [...] } hoặc trực tiếp là [...]
+      let vouchers: Voucher[] = [];
+      if (Array.isArray(res)) {
+        vouchers = res;
+      } else if (res?.data) {
+        vouchers = Array.isArray(res.data) ? res.data : [];
+      }
+      console.log("[DEBUG] Total vouchers fetched:", vouchers.length);
+      const now = Date.now();
+
+      const eligible = vouchers.filter((v) => {
+        // Backend trả về voucher có status != 0, nên chấp nhận status >= 1
+        if (v.status < 1) return false;
+        if (v.endDate && v.endDate < now) return false;
+        if (v.startDate && v.startDate > now) return false;
+        if (v.conditions && subTotal < v.conditions) return false;
+        return true;
+      });
+
+      console.log("[DEBUG] Eligible vouchers:", eligible.length);
+      if (eligible.length === 0) {
+        console.log("[DEBUG] === VOUCHER DETAILS ===");
+        vouchers.forEach((v, i) => {
+          console.log(`[DEBUG] Voucher ${i + 1}:`, {
+            code: v.code,
+            status: v.status,
+            endDate: v.endDate,
+            endDateReadable: v.endDate ? new Date(v.endDate).toISOString() : null,
+            startDate: v.startDate,
+            startDateReadable: v.startDate ? new Date(v.startDate).toISOString() : null,
+            conditions: v.conditions,
+            conditionsMet: v.conditions ? subTotal >= v.conditions : true,
+          });
+        });
+        console.log("[DEBUG] Current time:", new Date(now).toISOString());
+        return;
+      }
+
+      const best = eligible.reduce((prev, curr) => {
+        const prevDiscount = calcVoucherDiscount(prev, subTotal);
+        const currDiscount = calcVoucherDiscount(curr, subTotal);
+        return currDiscount > prevDiscount ? curr : prev;
+      });
+
+      const bestDiscount = calcVoucherDiscount(best, subTotal);
+      console.log("[DEBUG] Best voucher:", best.code, "discount:", bestDiscount);
+      if (bestDiscount > 0) {
+        setAppliedVoucher({
+          code: best.code,
+          discountValue: best.discountValue,
+          discountUnit: best.discountUnit,
+          maxDiscountAmount: best.maxDiscountAmount,
+        });
+        setAutoAppliedBestVoucher(true);
+        hasAutoAppliedRef.current = true;
+        message.info({
+          content: (
+            <span>
+              Đã tự động áp dụng voucher <strong>"{best.code}"</strong> giúp bạn tiết kiệm{" "}
+              <strong>{formatPrice(bestDiscount)}</strong>!
+              <span style={{ color: "#888", fontSize: 12, display: "block", marginTop: 4 }}>
+                Bạn có thể chọn voucher khác nếu muốn.
+              </span>
+            </span>
+          ),
+          duration: 4,
+        });
+      } else {
+        console.log("[DEBUG] Best voucher found but discount is 0:", best.code);
+      }
+    } catch (err) {
+      console.error("[DEBUG] Error in autoApplyBestVoucher:", err);
+    }
   };
 
   const selectedAddr =
@@ -914,51 +1038,92 @@ const CheckoutPage: React.FC = () => {
                   <Text strong style={{ display: "block", marginBottom: 8 }}>
                     <TagOutlined style={{ marginRight: 6 }} />
                     Mã giảm giá
+                    {autoAppliedBestVoucher && appliedVoucher && (
+                      <Tag
+                        color="gold"
+                        style={{ marginLeft: 8, fontSize: 11, verticalAlign: "middle" }}
+                      >
+                        Tự động chọn
+                      </Tag>
+                    )}
                   </Text>
                   {appliedVoucher ? (
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 12px",
+                        flexDirection: "column",
+                        gap: 8,
+                        padding: "10px 12px",
                         background: "#fff5f5",
                         border: "1.5px dashed #D32F2F",
                         borderRadius: 8,
                       }}
                     >
-                      <Space>
-                        <TagOutlined style={{ color: "#D32F2F" }} />
-                        <Tag
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Space>
+                          <TagOutlined style={{ color: "#D32F2F" }} />
+                          <Tag
+                            style={{
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              fontSize: 13,
+                              background: "#fff",
+                              border: "1px solid #D32F2F",
+                              color: "#D32F2F",
+                            }}
+                          >
+                            {appliedVoucher.code}
+                          </Tag>
+                          <Text style={{ fontSize: 12, color: "#374151" }}>
+                            {appliedVoucher.discountUnit === "PERCENT"
+                              ? `Giảm ${appliedVoucher.discountValue}%${
+                                  appliedVoucher.maxDiscountAmount
+                                    ? ` (tối đa ${formatPrice(appliedVoucher.maxDiscountAmount)})`
+                                    : ""
+                                }`
+                              : `Giảm ${formatPrice(appliedVoucher.discountValue)}`}
+                          </Text>
+                        </Space>
+                        <CloseCircleOutlined
                           style={{
-                            fontFamily: "monospace",
-                            fontWeight: 700,
-                            fontSize: 13,
-                            background: "#fff",
-                            border: "1px solid #D32F2F",
+                            color: "#9ca3af",
+                            cursor: "pointer",
+                            fontSize: 16,
+                          }}
+                          onClick={handleRemoveVoucher}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, color: "#52c41a" }}>
+                          Tiết kiệm: {formatPrice(voucherDiscountAmount)}
+                        </Text>
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<TagOutlined />}
+                          onClick={() => setVoucherModalOpen(true)}
+                          style={{
+                            padding: "2px 0",
+                            height: "auto",
                             color: "#D32F2F",
+                            fontSize: 12,
                           }}
                         >
-                          {appliedVoucher.code}
-                        </Tag>
-                        <Text style={{ fontSize: 12, color: "#374151" }}>
-                          {appliedVoucher.discountUnit === "PERCENT"
-                            ? `Giảm ${appliedVoucher.discountValue}%${
-                                appliedVoucher.maxDiscountAmount
-                                  ? ` (tối đa ${formatPrice(appliedVoucher.maxDiscountAmount)})`
-                                  : ""
-                              }`
-                            : `Giảm ${formatPrice(appliedVoucher.discountValue)}`}
-                        </Text>
-                      </Space>
-                      <CloseCircleOutlined
-                        style={{
-                          color: "#9ca3af",
-                          cursor: "pointer",
-                          fontSize: 16,
-                        }}
-                        onClick={handleRemoveVoucher}
-                      />
+                          Thay đổi
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <Button

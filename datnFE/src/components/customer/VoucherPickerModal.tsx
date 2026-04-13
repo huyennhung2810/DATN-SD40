@@ -45,10 +45,20 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     setLoading(true);
     getClientVouchers()
       .then((res: any) => {
-        const data = res?.data ?? res;
-        setVouchers(Array.isArray(data) ? data : []);
+        console.log("[DEBUG VoucherPickerModal] Raw response:", res);
+        let data: any[] = [];
+        if (Array.isArray(res)) {
+          data = res;
+        } else if (res?.data) {
+          data = Array.isArray(res.data) ? res.data : [];
+        }
+        console.log("[DEBUG VoucherPickerModal] Parsed vouchers:", data);
+        setVouchers(data);
       })
-      .catch(() => message.error("Không thể tải danh sách phiếu giảm giá"))
+      .catch((err) => {
+        console.error("[DEBUG VoucherPickerModal] Error:", err);
+        message.error("Không thể tải danh sách phiếu giảm giá");
+      })
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -88,10 +98,38 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     return `Giảm ${formatPrice(v.discountValue)}`;
   };
 
+  const calcSavings = (v: Voucher): number => {
+    let discount = 0;
+    if (v.discountUnit === "PERCENT") {
+      discount = (subTotal * v.discountValue) / 100;
+      if (v.maxDiscountAmount) {
+        discount = Math.min(discount, v.maxDiscountAmount);
+      }
+    } else {
+      discount = v.discountValue;
+    }
+    return Math.min(discount, subTotal);
+  };
+
   const canApply = (v: Voucher): boolean => {
     if (!v.conditions) return true;
     return subTotal >= v.conditions;
   };
+
+  const sortedVouchers = useMemo(() => {
+    return [...vouchers].sort((a, b) => {
+      const eligibleA = canApply(a) && !(a.endDate && a.endDate < now);
+      const eligibleB = canApply(b) && !(b.endDate && b.endDate < now);
+      if (eligibleA && !eligibleB) return -1;
+      if (!eligibleA && eligibleB) return 1;
+      if (eligibleA && eligibleB) {
+        const savingsA = calcSavings(a);
+        const savingsB = calcSavings(b);
+        return savingsB - savingsA;
+      }
+      return 0;
+    });
+  }, [vouchers, subTotal, now]);
 
   return (
     <Modal
@@ -145,10 +183,11 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
             paddingRight: 4,
           }}
         >
-          {vouchers.map((v) => {
+          {sortedVouchers.map((v) => {
             const isApplied = appliedCode === v.code;
             const eligible = canApply(v);
             const expired = v.endDate && v.endDate < now;
+            const savings = calcSavings(v);
 
             return (
               <div
@@ -206,6 +245,20 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
                   >
                     {getDiscountLabel(v)}
                   </div>
+                  {eligible && !expired && savings > 0 && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#52c41a",
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      Tiết kiệm: {formatPrice(savings)}
+                    </div>
+                  )}
                   {v.conditions > 0 && (
                     <div
                       style={{
