@@ -37,7 +37,7 @@ const ChangePasswordPage: React.FC = () => {
         description: "Mật khẩu đã được cập nhật. Vui lòng đăng nhập lại!",
       });
 
-      navigate("/login");
+      navigate("/admin/login");
     } catch (error: any) {
       // 3. XỬ LÝ LỖI: Hiện thông báo nếu mật khẩu cũ sai hoặc không đúng định dạng
       notification.error({
