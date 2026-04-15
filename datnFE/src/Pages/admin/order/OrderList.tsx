@@ -57,10 +57,10 @@ const OrderPage: React.FC = () => {
     (state: any) => state.order,
   );
 
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [activeTab, setActiveTab] = useState("CHO_XAC_NHAN");
   const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState<any>(null);
-  const [orderType, setOrderType] = useState<string | undefined>(undefined);
+  const [orderType, setOrderType] = useState<string | undefined>("ONLINE");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -364,8 +364,8 @@ const OrderPage: React.FC = () => {
             onClick={() => {
               setKeyword("");
               setDateRange(null);
-              setActiveTab("ALL");
-              setOrderType(undefined);
+              setActiveTab("CHO_XAC_NHAN");
+              setOrderType("ONLINE");
               setCurrentPage(1);
             }}
           />
