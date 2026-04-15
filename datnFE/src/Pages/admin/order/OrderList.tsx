@@ -48,12 +48,7 @@ const OrderStatuses = [
   { key: "DA_HUY", label: "Đã hủy" },
 ];
 
-// 订单类型排序优先级：线上(ONLINE/GIAO_HANG)优先于柜台(OFFLINE)
-const ORDER_TYPE_PRIORITY: Record<string, number> = {
-  ONLINE: 1,
-  GIAO_HANG: 1,
-  OFFLINE: 2,
-};
+
 
 const OrderPage: React.FC = () => {
   const navigate = useNavigate();

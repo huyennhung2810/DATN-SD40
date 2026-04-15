@@ -92,7 +92,8 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
   }>({ open: false, added: [], unavailable: [], cartCount: 0 });
 
   const [shippingEditOpen, setShippingEditOpen] = useState(false);
-  const [shippingEditForm, setShippingEditForm] = useState<UpdateShippingInfoRequest>({});
+  const [shippingEditForm, setShippingEditForm] =
+    useState<UpdateShippingInfoRequest>({});
   const [shippingEditLoading, setShippingEditLoading] = useState(false);
 
   const loadOrder = useCallback(async () => {
@@ -764,6 +765,7 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                   )}
                 </div>
               </div>
+              {/* ===== CỘT ĐƠN GIÁ ===== */}
               <div
                 style={{
                   fontSize: 13,
@@ -772,29 +774,43 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-end",
-                  gap: 2,
                 }}
               >
                 {(() => {
                   const saleU = toNum(item.unitPrice);
-                  const listU =
-                    item.listUnitPrice != null
-                      ? toNum(item.listUnitPrice)
-                      : saleU;
-                  const linePromo = toNum(item.discountAmount);
-                  if (linePromo > 0 && listU > saleU) {
-                    return (
-                      <>
-                        <Text delete type="secondary" style={{ fontSize: 12 }}>
+                  // Lấy originalPrice nếu có, không thì lấy listUnitPrice
+                  const listU = toNum(
+                    (item as any).originalPrice ?? item.listUnitPrice ?? saleU,
+                  );
+                  // CHỈ CẦN SO SÁNH GIÁ GỐC > GIÁ BÁN LÀ ĐƯỢC
+                  const hasDiscount = listU > saleU;
+
+                  return (
+                    <>
+                      <Text
+                        strong
+                        style={{
+                          color: hasDiscount ? "#cf1322" : undefined,
+                          display: "block",
+                        }}
+                      >
+                        {formatPrice(saleU)}
+                      </Text>
+                      {hasDiscount && (
+                        <Text
+                          delete
+                          style={{
+                            color: "#888",
+                            fontSize: 12,
+                            display: "block",
+                            marginTop: 2,
+                          }}
+                        >
                           {formatPrice(listU)}
                         </Text>
-                        <Text strong style={{ color: "#DC2626", fontSize: 13 }}>
-                          {formatPrice(saleU)}
-                        </Text>
-                      </>
-                    );
-                  }
-                  return <span>{formatPrice(item.unitPrice)}</span>;
+                      )}
+                    </>
+                  );
                 })()}
               </div>
               <span
@@ -807,6 +823,8 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
               >
                 {item.quantity}
               </span>
+              {/* ===== CỘT THÀNH TIỀN ===== */}
+              {/* ===== CỘT THÀNH TIỀN ===== */}
               <div
                 style={{
                   fontSize: 13,
@@ -816,26 +834,26 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-end",
-                  gap: 2,
                 }}
               >
                 {(() => {
-                  const lineSale = toNum(item.totalPrice);
-                  const linePromo = toNum(item.discountAmount);
-                  const lineOrig = lineSale + linePromo;
-                  if (linePromo > 0 && lineOrig > lineSale) {
-                    return (
-                      <>
-                        <Text delete type="secondary" style={{ fontSize: 12 }}>
-                          {formatPrice(lineOrig)}
-                        </Text>
-                        <span style={{ color: "#DC2626" }}>
-                          {formatPrice(lineSale)}
-                        </span>
-                      </>
-                    );
-                  }
-                  return <span>{formatPrice(item.totalPrice)}</span>;
+                  const saleU = toNum(item.unitPrice);
+                  const qty = toNum(item.quantity) || 1;
+
+                  // Chỉ tính giá thực tế phải trả (Đơn giá sau giảm * Số lượng)
+                  const lineSale = saleU * qty;
+
+                  return (
+                    <Text
+                      strong
+                      style={{
+                        color: "#cf1322", // Luôn hiển thị màu đỏ
+                        display: "block",
+                      }}
+                    >
+                      {formatPrice(lineSale)}
+                    </Text>
+                  );
                 })()}
               </div>
             </div>
@@ -1219,7 +1237,9 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
 
       {/* Sửa thông tin giao hàng */}
       <Modal
-        title={<span style={{ fontWeight: 700 }}>Cập nhật thông tin giao hàng</span>}
+        title={
+          <span style={{ fontWeight: 700 }}>Cập nhật thông tin giao hàng</span>
+        }
         open={shippingEditOpen}
         onCancel={() => setShippingEditOpen(false)}
         footer={
@@ -1237,7 +1257,14 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
         }
         width={500}
       >
-        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
           <div>
             <label
               style={{
@@ -1323,7 +1350,9 @@ const OrderDetailEmbed: React.FC<Props> = ({ orderId, onBack }) => {
             }}
           >
             <WarningOutlined style={{ marginRight: 6 }} />
-            Chỉ có thể sửa khi đơn hàng còn ở trạng thái <strong>Chờ xác nhận</strong>. Đơn đã xác nhận vui lòng liên hệ <strong>0943888307</strong> để được hỗ trợ.
+            Chỉ có thể sửa khi đơn hàng còn ở trạng thái{" "}
+            <strong>Chờ xác nhận</strong>. Đơn đã xác nhận vui lòng liên hệ{" "}
+            <strong>0943888307</strong> để được hỗ trợ.
           </div>
         </div>
       </Modal>

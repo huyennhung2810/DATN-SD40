@@ -29,6 +29,7 @@ public class OrderTrackingResponse {
         private String variantName;
         private String imageUrl;
         private Integer quantity;
+        private BigDecimal originalPrice;
         private BigDecimal unitPrice;
         private BigDecimal totalPrice;
     }

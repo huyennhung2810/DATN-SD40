@@ -42,6 +42,7 @@ interface TrackedOrder {
     variantName?: string;
     imageUrl: string;
     quantity: number;
+    originalPrice: number;
     unitPrice: number;
     totalPrice: number;
   }>;
@@ -129,10 +130,45 @@ const OrderTrackingPage: React.FC = () => {
     },
     {
       title: "Đơn giá",
-      dataIndex: "unitPrice",
       key: "unitPrice",
       align: "right" as const,
-      render: (price: number) => <Text>{formatPrice(price)}</Text>,
+      width: 150,
+      render: (_: unknown, r: any) => {
+        const hasDiscount =
+          typeof r.originalPrice === "number" && r.originalPrice > r.unitPrice;
+        return (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+            }}
+          >
+            <Text
+              strong
+              style={{
+                color: hasDiscount ? "#cf1322" : undefined,
+                display: "block",
+              }}
+            >
+              {formatPrice(r.unitPrice)}
+            </Text>
+            {hasDiscount && (
+              <Text
+                delete
+                style={{
+                  color: "#888",
+                  fontSize: 12,
+                  display: "block",
+                  marginTop: 2,
+                }}
+              >
+                {formatPrice(r.originalPrice)}
+              </Text>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Số lượng",

@@ -75,8 +75,9 @@ public class CnPublicOrderController {
                     .id(od.getId())
                     .productName(od.getProductDetail().getProduct().getName())
                     .variantName(variantName.trim())
-                    .imageUrl(imageUrl) // Ảnh đã được lấy an toàn
+                    .imageUrl(imageUrl)
                     .quantity(od.getQuantity())
+                    .originalPrice(od.getOriginalPrice())
                     .unitPrice(od.getUnitPrice())
                     .totalPrice(od.getTotalPrice())
                     .build();

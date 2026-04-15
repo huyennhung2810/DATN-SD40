@@ -16,6 +16,7 @@ export interface CustomerOrderListResponse {
   totalAfterDiscount: number | null;
   shippingFee: number | null;
   campaignDiscount: number | null;
+  originalSubtotal: number | null;
   voucherDiscount: number | null;
   voucherCode: string | null;
   itemCount: number;

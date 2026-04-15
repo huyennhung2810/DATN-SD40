@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Spin, Pagination, Empty, message, Input } from "antd"; // Thêm Input từ antd
+import { Spin, Pagination, Empty, message, Input } from "antd";
 import dayjs from "dayjs";
 import { getOrderList } from "../../models/customerOrder";
 import type { CustomerOrderListResponse } from "../../models/customerOrder";
@@ -47,8 +47,6 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState("all");
-
-  // State mới cho tìm kiếm
   const [searchKeyword, setSearchKeyword] = useState("");
 
   const load = async (status: string, p: number, keyword: string) => {
@@ -58,7 +56,7 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
         status === "all" ? undefined : status,
         p,
         PAGE_SIZE,
-        keyword, // Truyền keyword vào API
+        keyword,
       );
       setOrders(res.data.content ?? []);
       setTotal(res.data.totalElements ?? 0);
@@ -80,7 +78,7 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
 
   const handleSearch = (value: string) => {
     setSearchKeyword(value.trim());
-    setPage(0); // Reset về trang 1 khi tìm kiếm
+    setPage(0);
   };
 
   return (
@@ -100,9 +98,9 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
           borderBottom: "1px solid #f3f4f6",
           background: "linear-gradient(90deg,#fff 70%,#fff8f8 100%)",
           display: "flex",
-          justifyContent: "space-between", // Căn 2 bên
+          justifyContent: "space-between",
           alignItems: "center",
-          flexWrap: "wrap", // Tránh lỗi giao diện trên màn hình nhỏ
+          flexWrap: "wrap",
           gap: 16,
         }}
       >
@@ -142,7 +140,6 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
           )}
         </div>
 
-        {/* Thanh tìm kiếm */}
         <Input.Search
           placeholder="Tìm theo mã sản phẩm hoặc đơn hàng..."
           allowClear
@@ -336,7 +333,6 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
                     </div>
                   </div>
 
-                  {/* Price + Action */}
                   <div
                     style={{
                       display: "flex",
@@ -346,15 +342,50 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
                       flexShrink: 0,
                     }}
                   >
-                    <span
+                    <div
                       style={{
-                        fontWeight: 800,
-                        color: "#D32F2F",
-                        fontSize: 15,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
                       }}
                     >
-                      {formatPrice(order.totalAfterDiscount)}
-                    </span>
+                      {(() => {
+                        // Tổng tiền khách thực trả
+                        // Giá khách trả
+                        const saleTotal = order.totalAfterDiscount ?? 0;
+
+                        // Giá gốc chuẩn từ backend
+                        const listTotal = order.originalSubtotal ?? 0;
+
+                        // Có giảm giá hay không
+                        const hasDiscount = listTotal > saleTotal;
+                        return (
+                          <>
+                            {hasDiscount && (
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  color: "#888",
+                                  fontSize: 12,
+                                  marginBottom: 2,
+                                }}
+                              >
+                                {formatPrice(listTotal)}
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                fontWeight: 800,
+                                color: "#D32F2F",
+                                fontSize: 15,
+                              }}
+                            >
+                              {formatPrice(saleTotal)}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
                     <button
                       onClick={() =>
                         onViewDetail

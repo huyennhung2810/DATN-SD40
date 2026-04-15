@@ -135,6 +135,31 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
         BigDecimal campaignDiscount = sumLinePromotionDiscount(details);
         BigDecimal voucherDiscount = resolveVoucherDiscount(order);
 
+        BigDecimal totalAfterDiscount = order.getTotalAfterDiscount() != null
+                ? order.getTotalAfterDiscount()
+                : BigDecimal.ZERO;
+
+        BigDecimal originalSubtotal = details.stream()
+                .map(d -> {
+                    ProductDetail pd = d.getProductDetail();
+
+                    // 👉 Giá gốc = giá sản phẩm (salePrice)
+                    BigDecimal originalPrice = null;
+
+                    if (pd != null && pd.getSalePrice() != null) {
+                        originalPrice = pd.getSalePrice();
+                    } else if (d.getOriginalPrice() != null) {
+                        originalPrice = d.getOriginalPrice();
+                    } else {
+                        originalPrice = BigDecimal.ZERO;
+                    }
+
+                    int qty = d.getQuantity() != null ? d.getQuantity() : 0;
+
+                    return originalPrice.multiply(BigDecimal.valueOf(qty));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return CustomerOrderListResponse.builder()
                 .id(order.getId())
                 .code(order.getCode())
@@ -143,9 +168,9 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .orderStatusLabel(labelOrderStatus(order.getOrderStatus()))
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .paymentStatusLabel(labelPaymentStatus(order.getPaymentStatus()))
-                .paymentMethod(order.getPaymentMethod())
                 .paymentMethodLabel(labelPaymentMethod(order.getPaymentMethod()))
                 .totalAmount(order.getTotalAmount())
+                .originalSubtotal(originalSubtotal) // ✅ FIX
                 .totalAfterDiscount(order.getTotalAfterDiscount())
                 .shippingFee(order.getShippingFee())
                 .campaignDiscount(campaignDiscount)
@@ -246,12 +271,16 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
             imageUrl = product.getImages().get(0).getUrl();
         }
 
+        // Đơn giá bán thực tế (Giá lưu trong bill, đã trừ khuyến mãi đợt)
         BigDecimal unit = detail.getUnitPrice() != null ? detail.getUnitPrice() : BigDecimal.ZERO;
-        BigDecimal linePromo = detail.getDiscountAmount() != null ? detail.getDiscountAmount() : BigDecimal.ZERO;
-        int q = detail.getQuantity() != null ? detail.getQuantity() : 0;
-        BigDecimal listUnitPrice = unit;
-        if (q > 0 && linePromo.compareTo(BigDecimal.ZERO) > 0) {
-            listUnitPrice = unit.add(linePromo.divide(BigDecimal.valueOf(q), 0, RoundingMode.HALF_UP));
+
+        // CẬP NHẬT LOGIC LẤY GIÁ GỐC Ở ĐÂY:
+        // Mặc định lấy OriginalPrice nếu có lưu trong OrderDetail
+        BigDecimal listUnitPrice = detail.getOriginalPrice();
+
+        // Nếu OriginalPrice = null hoặc bằng 0, ráng mò vào ProductDetail lấy SalePrice
+        if (listUnitPrice == null || listUnitPrice.compareTo(BigDecimal.ZERO) == 0) {
+            listUnitPrice = (pd != null && pd.getSalePrice() != null) ? pd.getSalePrice() : unit;
         }
 
         return CustomerOrderItemResponse.builder()
@@ -264,8 +293,8 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
                 .colorName(color != null ? color.getName() : null)
                 .storageLabel(storage != null ? storage.getName() : null)
                 .quantity(detail.getQuantity())
-                .listUnitPrice(listUnitPrice)
-                .unitPrice(detail.getUnitPrice())
+                .listUnitPrice(listUnitPrice) // <--- Đã được cấp đúng giá gốc
+                .unitPrice(unit)
                 .discountAmount(detail.getDiscountAmount())
                 .totalPrice(detail.getTotalPrice())
                 .serialNumbers(serialNumbers)
@@ -400,7 +429,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
             throw new RuntimeException("Không thể hủy đơn hàng ở trạng thái '" + labelOrderStatus(currentStatus) + "'");
         }
 
-        order.setOrderStatus(OrderStatus.DA_HUY);
+        order.setPaymentStatus(PaymentStatus.THANH_TOAN_THAT_BAI);
         order.setLastModifiedDate(System.currentTimeMillis());
         if (order.getPaymentDate() != null) {
             order.setPaymentDate(null);
@@ -479,7 +508,7 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
         refund.setTransactionType("HOAN_TIEN");
         refund.setTransactionCode("REFUND-" + order.getCode() + "-" + System.currentTimeMillis());
         refund.setNote("Hoàn tiền do khách hàng hủy đơn hàng");
-        refund.setTrangThaiThanhToan(PaymentStatus.CHUA_THANH_TOAN);
+        refund.setTrangThaiThanhToan(PaymentStatus.DA_THANH_TOAN);
         paymentHistoryRepository.save(refund);
 
         order.setPaymentDate(null);
