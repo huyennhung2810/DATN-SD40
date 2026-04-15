@@ -89,6 +89,8 @@ public class SecurityConfig {
                                                 // 1. Tài nguyên công khai (Ảnh, Auth, Common)
                                                 .requestMatchers("/api/upload/**", "/uploads/**").permitAll()
                                                 .requestMatchers(MappingConstants.API_AUTH_PREFIX + "/**").permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/client/orders/checkout")
+                                                .permitAll()
                                                 .requestMatchers(MappingConstants.API_COMMON + "/**").permitAll()
                                                 .requestMatchers("/api/v1/admin/employee/change-password/**")
                                                 .permitAll()

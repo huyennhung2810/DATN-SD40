@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,12 +46,6 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final ProductDetailRepository productDetailRepository;
     private final DiscountDetailRepository discountDetailRepository;
 
-    /**
-     * Đơn giá sau đợt khuyến mãi — phải trùng logic {@link com.example.datn.core.client.cartDetail.service.Impl.CnCartDetailServiceImpl#getCartDetails}.
-     * Chỉ dùng giá KM khi bản ghi discount cha đang active (status = 2), không dùng
-     * {@code findFirstByProductDetail_IdAndStatus(..., 1)} vì có thể khớp dòng detail cũ
-     * trong khi đợt KM đã tắt → lệch giá so với checkout.
-     */
     private BigDecimal resolveCampaignUnitPrice(ProductDetail pd) {
         BigDecimal salePrice = pd.getSalePrice();
         if (salePrice == null) {
@@ -68,17 +61,28 @@ public class CnOrderServiceImpl implements CnOrderService {
     @Override
     @Transactional
     public CheckoutResponse checkout(CheckoutRequest request, String customerId, HttpServletRequest httpRequest) {
-        // 1. Lấy thông tin khách hàng
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
+        // 1. Lấy thông tin khách hàng NẾU CÓ ĐĂNG NHẬP
+        Customer customer = null;
+        if (customerId != null && !customerId.trim().isEmpty()) {
+            customer = customerRepository.findById(customerId).orElse(null);
+        }
 
         // 2. KHỞI TẠO DANH SÁCH CHI TIẾT ĐƠN HÀNG TẠM THỜI
         List<OrderDetail> tempOrderDetails = new java.util.ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // 3. XỬ LÝ NGUỒN HÀNG (MUA NGAY HOẶC GIỎ HÀNG)
-        if (Boolean.TRUE.equals(request.getIsBuyNow()) && request.getItems() != null && !request.getItems().isEmpty()) {
-            // TRƯỜNG HỢP: MUA NGAY
+        // Lấy danh sách ID sản phẩm mà Frontend truyền lên (những item được tick chọn)
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Không có sản phẩm nào được chọn để thanh toán!");
+        }
+
+        List<String> selectedProductIds = request.getItems().stream()
+                .map(CheckoutRequest.ItemRequest::getProductDetailId)
+                .toList();
+
+        // 3. XỬ LÝ NGUỒN HÀNG
+        if (Boolean.TRUE.equals(request.getIsBuyNow())) {
+            // MUA NGAY (Khách vãng lai và Khách có tk đều như nhau)
             for (CheckoutRequest.ItemRequest itemReq : request.getItems()) {
                 ProductDetail pd = productDetailRepository.findById(itemReq.getProductDetailId())
                         .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại hoặc đã bị xóa!"));
@@ -98,48 +102,64 @@ public class CnOrderServiceImpl implements CnOrderService {
                 totalAmount = totalAmount.add(itemTotal);
             }
         } else {
-            // TRƯỜNG HỢP: MUA TỪ GIỎ HÀNG
-            Cart cart = cartService.getOrCreateCart(customerId);
-            List<CartDetail> cartItems = cartDetailRepository.findByCart_Id(cart.getId());
+            // MUA TỪ GIỎ HÀNG
+            if (customer != null) {
+                // Đã đăng nhập: Check giỏ hàng trong database
+                Cart cart = cartService.getOrCreateCart(customerId);
+                List<CartDetail> cartItems = cartDetailRepository.findByCart_Id(cart.getId());
 
-            if (cartItems == null || cartItems.isEmpty()) {
-                throw new RuntimeException("Giỏ hàng của bạn đang trống!");
-            }
+                if (cartItems == null || cartItems.isEmpty()) {
+                    throw new RuntimeException("Giỏ hàng của bạn đang trống!");
+                }
 
-            // MỚI: Lấy danh sách ID sản phẩm mà Frontend truyền lên (những item được tick chọn)
-            List<String> selectedProductIds = request.getItems().stream()
-                    .map(CheckoutRequest.ItemRequest::getProductDetailId)
-                    .toList();
+                List<CartDetail> selectedCartItems = cartItems.stream()
+                        .filter(cd -> selectedProductIds.contains(cd.getProductDetail().getId()))
+                        .toList();
 
-            // MỚI: Chỉ lọc ra những sản phẩm trong giỏ hàng có ID trùng với danh sách được chọn
-            List<CartDetail> selectedCartItems = cartItems.stream()
-                    .filter(cd -> selectedProductIds.contains(cd.getProductDetail().getId()))
-                    .toList();
+                if (selectedCartItems.isEmpty()) {
+                    throw new RuntimeException("Không có sản phẩm nào khớp trong giỏ hàng!");
+                }
 
-            if (selectedCartItems.isEmpty()) {
-                throw new RuntimeException("Không có sản phẩm nào được chọn để thanh toán!");
-            }
+                for (CartDetail cd : selectedCartItems) {
+                    ProductDetail pd = cd.getProductDetail();
+                    BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+                    BigDecimal unit = resolveCampaignUnitPrice(pd);
 
-            // Đổi vòng lặp sang chạy trên danh sách đã lọc (selectedCartItems)
-            for (CartDetail cd : selectedCartItems) {
-                ProductDetail pd = cd.getProductDetail();
-                BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
-                BigDecimal unit = resolveCampaignUnitPrice(pd);
+                    OrderDetail od = new OrderDetail();
+                    od.setProductDetail(pd);
+                    od.setQuantity(cd.getQuantity());
+                    od.setOriginalPrice(salePrice);
+                    od.setUnitPrice(unit);
+                    BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(cd.getQuantity()));
+                    od.setTotalPrice(itemTotal);
 
-                OrderDetail od = new OrderDetail();
-                od.setProductDetail(pd);
-                od.setQuantity(cd.getQuantity()); // Có thể dùng request item quantity nếu FE cho phép đổi slg ở trang checkout
-                od.setOriginalPrice(salePrice);
-                od.setUnitPrice(unit);
-                BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(cd.getQuantity()));
-                od.setTotalPrice(itemTotal);
+                    tempOrderDetails.add(od);
+                    totalAmount = totalAmount.add(itemTotal);
+                }
+            } else {
+                // KHÁCH VÃNG LAI: Lấy trực tiếp từ Request (vì FE gửi kèm quantity)
+                for (CheckoutRequest.ItemRequest itemReq : request.getItems()) {
+                    ProductDetail pd = productDetailRepository.findById(itemReq.getProductDetailId())
+                            .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại hoặc đã bị xóa!"));
 
-                tempOrderDetails.add(od);
-                totalAmount = totalAmount.add(itemTotal);
+                    BigDecimal salePrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+                    BigDecimal unit = resolveCampaignUnitPrice(pd);
+
+                    OrderDetail od = new OrderDetail();
+                    od.setProductDetail(pd);
+                    od.setQuantity(itemReq.getQuantity());
+                    od.setOriginalPrice(salePrice);
+                    od.setUnitPrice(unit);
+                    BigDecimal itemTotal = unit.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                    od.setTotalPrice(itemTotal);
+
+                    tempOrderDetails.add(od);
+                    totalAmount = totalAmount.add(itemTotal);
+                }
             }
         }
 
-        // 4. XỬ LÝ VOUCHER & TÍNH TIỀN (Dùng totalAmount đã tính ở trên)
+        // 4. XỬ LÝ VOUCHER & TÍNH TIỀN
         BigDecimal discountAmount = BigDecimal.ZERO;
         Voucher appliedVoucher = null;
 
@@ -147,8 +167,6 @@ public class CnOrderServiceImpl implements CnOrderService {
             appliedVoucher = voucherRepository.findByCode(request.getVoucherCode())
                     .orElseThrow(() -> new RuntimeException("Mã giảm giá không hợp lệ!"));
 
-            // 4.1. Kiểm tra trạng thái và số lượng
-            // Chỉ chặn khi status = 0 (buộc dừng thủ công); timing kiểm tra ở bước 4.3
             if (appliedVoucher.getStatus() != null && appliedVoucher.getStatus() == 0) {
                 throw new RuntimeException("Mã giảm giá đã bị vô hiệu hoá!");
             }
@@ -156,14 +174,15 @@ public class CnOrderServiceImpl implements CnOrderService {
                 throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
             }
 
-            // 4.2. Kiểm tra voucher cá nhân: phải thuộc khách hàng và chưa sử dụng
             if ("INDIVIDUAL".equals(appliedVoucher.getVoucherType())) {
+                if (customerId == null || customerId.isEmpty()) {
+                    throw new RuntimeException("Voucher này chỉ áp dụng cho tài khoản nhất định. Vui lòng đăng nhập!");
+                }
                 voucherDetailRepository.findUnusedByVoucherAndCustomer(appliedVoucher.getId(), customerId)
                         .orElseThrow(() -> new RuntimeException(
                                 "Mã giảm giá này không áp dụng cho tài khoản của bạn hoặc đã được sử dụng!"));
             }
 
-            // 4.3. Kiểm tra thời hạn (startDate, endDate)
             long currentTime = System.currentTimeMillis();
             if (appliedVoucher.getStartDate() != null && currentTime < appliedVoucher.getStartDate()) {
                 throw new RuntimeException("Mã giảm giá chưa đến thời gian áp dụng!");
@@ -172,12 +191,10 @@ public class CnOrderServiceImpl implements CnOrderService {
                 throw new RuntimeException("Mã giảm giá đã hết hạn sử dụng!");
             }
 
-            // 4.4. Kiểm tra giá trị đơn hàng tối thiểu (conditions)
             if (appliedVoucher.getConditions() != null && totalAmount.compareTo(appliedVoucher.getConditions()) < 0) {
                 throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã!");
             }
 
-            // 4.5. Tính số tiền giảm
             if ("PERCENT".equalsIgnoreCase(appliedVoucher.getDiscountUnit())
                     || "%".equals(appliedVoucher.getDiscountUnit())) {
                 discountAmount = totalAmount.multiply(appliedVoucher.getDiscountValue())
@@ -194,7 +211,7 @@ public class CnOrderServiceImpl implements CnOrderService {
 
         // 5. TẠO THỰC THỂ ORDER
         Order order = new Order();
-        order.setCustomer(customer);
+        order.setCustomer(customer); // NẾU KHÁCH VÃNG LAI, customer SẼ LÀ NULL
         order.setRecipientName(request.getRecipientName());
         order.setRecipientPhone(request.getRecipientPhone());
         order.setRecipientEmail(request.getRecipientEmail());
@@ -232,8 +249,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             appliedVoucher.setQuantity(appliedVoucher.getQuantity() - 1);
             voucherRepository.save(appliedVoucher);
 
-            // Đánh dấu VoucherDetail là đã sử dụng (usageStatus = 1) nếu là INDIVIDUAL
-            if ("INDIVIDUAL".equals(appliedVoucher.getVoucherType())) {
+            if ("INDIVIDUAL".equals(appliedVoucher.getVoucherType()) && customerId != null) {
                 voucherDetailRepository.findUnusedByVoucherAndCustomer(appliedVoucher.getId(), customerId)
                         .ifPresent(vd -> {
                             vd.setUsageStatus(1);
@@ -244,20 +260,15 @@ public class CnOrderServiceImpl implements CnOrderService {
             }
         }
 
-        // 8. XÓA GIỎ HÀNG (chỉ xóa những sản phẩm đã đặt mua)
-        if (!"VNPAY".equalsIgnoreCase(request.getPaymentMethod()) && !Boolean.TRUE.equals(request.getIsBuyNow())) {
+        // 8. XÓA GIỎ HÀNG CHO KHÁCH CÓ TÀI KHOẢN (Khách vãng lai FE đã tự xóa
+        // localStorage)
+        if (customer != null && !"VNPAY".equalsIgnoreCase(request.getPaymentMethod())
+                && !Boolean.TRUE.equals(request.getIsBuyNow())) {
             Cart cart = cartService.getOrCreateCart(customerId);
             List<CartDetail> allCartItems = cartDetailRepository.findByCart_Id(cart.getId());
-
-            // Lọc ra các item đã mua để xóa
-            List<String> orderedProductIds = request.getItems().stream()
-                    .map(CheckoutRequest.ItemRequest::getProductDetailId)
-                    .toList();
-
             List<CartDetail> itemsToRemove = allCartItems.stream()
-                    .filter(cd -> orderedProductIds.contains(cd.getProductDetail().getId()))
+                    .filter(cd -> selectedProductIds.contains(cd.getProductDetail().getId()))
                     .toList();
-
             cartDetailRepository.deleteAll(itemsToRemove);
         }
 
@@ -266,7 +277,9 @@ public class CnOrderServiceImpl implements CnOrderService {
             Map<String, Object> notif = new HashMap<>();
             notif.put("type", "NEW_ORDER");
             notif.put("title", "Đơn hàng mới");
-            notif.put("message", "Khách hàng " + customer.getName() + " vừa đặt đơn hàng " + savedOrder.getCode());
+            String buyerName = customer != null ? customer.getName()
+                    : (request.getRecipientName() + " (Khách vãng lai)");
+            notif.put("message", "Khách hàng " + buyerName + " vừa đặt đơn hàng " + savedOrder.getCode());
             notif.put("refId", savedOrder.getId());
             notif.put("refCode", savedOrder.getCode());
             notif.put("timestamp", System.currentTimeMillis());
@@ -329,7 +342,6 @@ public class CnOrderServiceImpl implements CnOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + orderId));
 
-        // Idempotency: nếu đơn đã được xử lý rồi thì bỏ qua (VNPay gọi lại lần 2)
         if (order.getPaymentStatus() == PaymentStatus.DA_THANH_TOAN) {
             return;
         }
@@ -353,7 +365,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             order.setCustomerPaid(amount);
             history.setTrangThaiThanhToan(PaymentStatus.DA_THANH_TOAN);
 
-            // Xóa giỏ hàng sau khi VNPay xác nhận thanh toán thành công
+            // Xóa giỏ hàng NẾU ĐƠN LÀ CỦA TÀI KHOẢN
             if (order.getCustomer() != null) {
                 String cartId = cartService.getOrCreateCart(order.getCustomer().getId()).getId();
                 List<CartDetail> remaining = cartDetailRepository.findByCart_Id(cartId);
@@ -362,18 +374,15 @@ public class CnOrderServiceImpl implements CnOrderService {
                 }
             }
         } else {
-            // Thanh toán thất bại / quá thời gian → hoàn lại voucher
             order.setPaymentStatus(PaymentStatus.THANH_TOAN_THAT_BAI);
             history.setTrangThaiThanhToan(PaymentStatus.THANH_TOAN_THAT_BAI);
 
             Voucher voucher = order.getVoucher();
             if (voucher != null) {
-                // Hoàn lại 1 lượt sử dụng
                 if (voucher.getQuantity() != null) {
                     voucher.setQuantity(voucher.getQuantity() + 1);
                     voucherRepository.save(voucher);
                 }
-                // Nếu là INDIVIDUAL: hoàn lại VoucherDetail về chưa sử dụng
                 if ("INDIVIDUAL".equals(voucher.getVoucherType())) {
                     VoucherDetail vd = voucherDetailRepository.findByOrder_Id(order.getId());
                     if (vd != null && Integer.valueOf(1).equals(vd.getUsageStatus())) {
