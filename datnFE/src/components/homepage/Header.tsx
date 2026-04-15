@@ -28,7 +28,7 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import { useNotifications } from "../../app/useNotifications";
 import { authActions } from "../../redux/auth/authSlice";
-import { setCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
+import { setCartCount } from "../../redux/cart/cartSlice";
 import {
   notificationActions,
   type AppNotification,
@@ -56,7 +56,6 @@ const Header: React.FC<HeaderProps> = () => {
   const clientNotifs = notifications.filter((n) => n.type === "ORDER_STATUS");
   const unreadCount = clientNotifs.filter((n) => !n.read).length;
 
-  // Subscribe to order status notifications for this customer
   const isCustomer = !!(
     isLoggedIn &&
     user?.userId &&
@@ -147,11 +146,10 @@ const Header: React.FC<HeaderProps> = () => {
         })
         .catch((error) => console.error("Lỗi lấy số lượng giỏ hàng:", error));
     } else {
-      // FIX: Khách chưa đăng nhập - Đọc trực tiếp từ localStorage giống như CartPage
       try {
         const guestCartString = localStorage.getItem("guestCart");
         const guestCart = guestCartString ? JSON.parse(guestCartString) : [];
-        dispatch(setCartCount(guestCart.length)); // Đếm chính xác số mặt hàng
+        dispatch(setCartCount(guestCart.length));
       } catch (error) {
         console.error("Lỗi đọc giỏ hàng khách vãng lai:", error);
         dispatch(setCartCount(0));
@@ -208,6 +206,22 @@ const Header: React.FC<HeaderProps> = () => {
         { key: "login", label: "Đăng nhập", icon: <LoginOutlined /> },
         { key: "register", label: "Đăng ký", icon: <UserOutlined /> },
       ];
+
+  // Logic điều hướng thông minh dựa vào trạng thái đăng nhập
+  const navigateToOrderTracking = () => {
+    // Nếu đã đăng nhập thì về profile xem lịch sử, nếu chưa thì vào trang tra cứu
+    if (isLoggedIn) {
+      navigate("/client/profile?tab=orders");
+    } else {
+      navigate("/client/order-tracking"); // <-- Bạn sẽ cần tạo Route và Component cho URL này
+    }
+    setMobileMenuVisible(false);
+  };
+
+  const navigateToVouchers = () => {
+    navigate("/client/vouchers"); // Trang voucher tổng dành cho mọi người
+    setMobileMenuVisible(false);
+  };
 
   return (
     <>
@@ -274,14 +288,14 @@ const Header: React.FC<HeaderProps> = () => {
                 <button
                   type="button"
                   className="utility-btn"
-                  onClick={() => navigate("/client/profile?tab=orders")}
+                  onClick={navigateToOrderTracking}
                 >
                   <FileSearchOutlined /> Tra cứu đơn hàng
                 </button>
                 <button
                   type="button"
                   className="utility-btn"
-                  onClick={() => navigate("/client/profile?tab=vouchers")}
+                  onClick={navigateToVouchers}
                 >
                   <TagOutlined /> Khuyến mãi
                 </button>
@@ -430,14 +444,20 @@ const Header: React.FC<HeaderProps> = () => {
               type="primary"
               icon={<LoginOutlined />}
               block
-              onClick={() => navigate("/login")}
+              onClick={() => {
+                navigate("/login");
+                setMobileMenuVisible(false);
+              }}
             >
               Đăng nhập
             </Button>
             <Button
               icon={<UserOutlined />}
               block
-              onClick={() => navigate("/register")}
+              onClick={() => {
+                navigate("/register");
+                setMobileMenuVisible(false);
+              }}
             >
               Đăng ký
             </Button>
@@ -446,12 +466,21 @@ const Header: React.FC<HeaderProps> = () => {
 
         <div className="mobile-nav-list">
           <div className="nav-title">Hỗ trợ khách hàng</div>
-          <a href="/client/profile?tab=orders" className="nav-item-link">
+          {/* Cập nhật các thẻ a thành button hoặc div có onClick để dùng chung logic */}
+          <div
+            className="nav-item-link"
+            onClick={navigateToOrderTracking}
+            style={{ cursor: "pointer" }}
+          >
             <FileSearchOutlined /> Tra cứu đơn hàng
-          </a>
-          <a href="/client/vouchers" className="nav-item-link">
+          </div>
+          <div
+            className="nav-item-link"
+            onClick={navigateToVouchers}
+            style={{ cursor: "pointer" }}
+          >
             <TagOutlined /> Phiếu giảm giá
-          </a>
+          </div>
           <a href="tel:19001909" className="nav-item-link">
             <PhoneOutlined /> Gọi tư vấn (1900 1909)
           </a>

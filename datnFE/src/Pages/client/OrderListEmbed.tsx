@@ -54,7 +54,6 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
   const load = async (status: string, p: number, keyword: string) => {
     setLoading(true);
     try {
-      // BẠN CẦN CẬP NHẬT getOrderList để nhận thêm tham số keyword này nhé
       const res = await getOrderList(
         status === "all" ? undefined : status,
         p,
