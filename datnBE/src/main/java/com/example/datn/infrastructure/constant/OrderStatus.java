@@ -8,10 +8,11 @@ public enum OrderStatus {
     DA_XAC_NHAN(1),     // CONFIRMED - Đã xác nhận
     CHO_GIAO(2),        // PACKING - Đóng gói / Chờ giao
     DANG_GIAO(3),       // HANDOVER + SHIPPING - Đã bàn giao & Đang giao
-    GIAO_HANG_KHONG_THANH_CONG(4), // FAILED - Giao hàng thất bại
+    GIAO_HANG_KHONG_THANH_CONG(4), // FAILED_DELIVERY - Giao hàng thất bại
     HOAN_THANH(5),      // DELIVERED - Hoàn thành
     DA_HUY(6),          // CANCELLED - Đã hủy
-    LUU_TAM(7);         // Lưu tạm
+    LUU_TAM(7),         // Lưu tạm
+    DA_HOAN_HANG(8);    // RETURNED - Hàng đã hoàn về kho
 
     private final int order;
 
@@ -72,6 +73,7 @@ public enum OrderStatus {
             case HOAN_THANH:   return "Hoàn thành";
             case DA_HUY:       return "Đã hủy";
             case LUU_TAM:      return "Lưu tạm";
+            case DA_HOAN_HANG: return "Đã hoàn hàng";
             default:           return this.name();
         }
     }

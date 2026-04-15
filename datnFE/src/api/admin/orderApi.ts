@@ -34,5 +34,25 @@ export const orderApi = {
     //cập nhật tt giao hàng
     updateCustomerInfo: (data: ADUpdateCustomerRequest): Promise<ResponseObject<any>> => {
         return axiosClient.put(`${PREFIX}/cap-nhat-khach-hang`, data);
-    }
+    },
+
+    // Đánh dấu giao hàng không thành công (chỉ SHIPPING → FAILED_DELIVERY)
+    failDelivery: (maHoaDon: string, reason: string): Promise<ResponseObject<any>> => {
+        return axiosClient.post(`${PREFIX}/${maHoaDon}/fail`, { reason });
+    },
+
+    // Giao lại đơn (FAILED_DELIVERY → SHIPPING)
+    redeliver: (maHoaDon: string): Promise<ResponseObject<any>> => {
+        return axiosClient.post(`${PREFIX}/${maHoaDon}/redeliver`, {});
+    },
+
+    // Xác nhận hoàn hàng về kho (FAILED_DELIVERY → RETURNED, tăng tồn kho)
+    returnOrder: (maHoaDon: string): Promise<ResponseObject<any>> => {
+        return axiosClient.post(`${PREFIX}/${maHoaDon}/return`, {});
+    },
+
+    // Hủy đơn sau khi hoàn hàng (RETURNED → CANCELLED)
+    cancelAfterReturn: (maHoaDon: string, reason: string): Promise<ResponseObject<any>> => {
+        return axiosClient.post(`${PREFIX}/${maHoaDon}/cancel`, { reason });
+    },
 };

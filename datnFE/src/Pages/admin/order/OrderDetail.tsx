@@ -69,6 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
   HOAN_THANH: "Hoàn thành",
   DA_HUY: "Đã hủy",
   LUU_TAM: "Lưu tạm",
+  DA_HOAN_HANG: "Đã hoàn hàng",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -80,6 +81,7 @@ const STATUS_COLORS: Record<string, string> = {
   HOAN_THANH: "green",
   DA_HUY: "red",
   LUU_TAM: "default",
+  DA_HOAN_HANG: "purple",
 };
 
 const NEXT_STATUS: Record<string, string> = {
@@ -94,6 +96,7 @@ const ONLINE_STEPS = [
   { key: "CHO_GIAO", label: "Chờ giao hàng" },
   { key: "DANG_GIAO", label: "Đang giao hàng" },
   { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
+  { key: "DA_HOAN_HANG", label: "Đã hoàn hàng" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
@@ -247,16 +250,33 @@ const OrderDetailPage: React.FC = () => {
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
   const showCancelButton = isOnline && canCancelStatuses.includes(currentStatus);
   
-  let nextStatusKeys =
-    currentStatus === "DANG_GIAO"
-      ? ["HOAN_THANH", "GIAO_HANG_KHONG_THANH_CONG"]
-      : NEXT_STATUS[currentStatus]
-        ? [NEXT_STATUS[currentStatus]]
-        : [];
-  
-  if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
-    nextStatusKeys = [];
-  }
+  // Các hành động theo trạng thái
+  const getNextActions = (): { key: string; label: string }[] => {
+    switch (currentStatus) {
+      case "CHO_XAC_NHAN":
+        return [{ key: "DA_XAC_NHAN", label: "Đã xác nhận" }];
+      case "DA_XAC_NHAN":
+        return [{ key: "CHO_GIAO", label: "Chờ giao hàng" }];
+      case "CHO_GIAO":
+        return [{ key: "DANG_GIAO", label: "Đang giao hàng" }];
+      case "DANG_GIAO":
+        return [
+          { key: "HOAN_THANH", label: "Hoàn thành" },
+          { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
+        ];
+      case "GIAO_HANG_KHONG_THANH_CONG":
+        return [
+          { key: "GIAO_LAI", label: "Giao lại" },
+          { key: "XAC_NHAN_HOAN_HANG", label: "Xác nhận hoàn hàng" },
+        ];
+      case "DA_HOAN_HANG":
+        return [{ key: "HUY_SAU_HOAN_HANG", label: "Hủy đơn" }];
+      default:
+        return [];
+    }
+  };
+
+  const nextActions = getNextActions();
   const totalProductAmount = items.reduce((s, r) => s + (r.tongTien ?? 0), 0);
   const flatRows = buildFlatRows(items);
 
@@ -290,6 +310,8 @@ const OrderDetailPage: React.FC = () => {
 
   const handleConfirmStatus = async () => {
     if (!order) return;
+
+    // Kiểm tra serial trước khi xác nhận
     if (nextStatus === "DA_XAC_NHAN") {
       const hasMissingSerial = items.some((item) => {
         const serials = parseSerials(item.danhSachImei);
@@ -302,6 +324,8 @@ const OrderDetailPage: React.FC = () => {
         return;
       }
     }
+
+    // Kiểm tra lý do khi giao không thành công
     if (
       nextStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
       (!statusNote || !statusNote.trim())
@@ -309,14 +333,53 @@ const OrderDetailPage: React.FC = () => {
       message.warning("Vui lòng nhập lý do giao hàng không thành công!");
       return;
     }
+
+    // Kiểm tra lý do khi hủy đơn
+    if (
+      nextStatus === "DA_HUY" &&
+      (!statusNote || !statusNote.trim())
+    ) {
+      message.warning("Vui lòng nhập lý do hủy đơn hàng!");
+      return;
+    }
+
     setIsUpdating(true);
     try {
-      await orderApi.updateOrderStatus({
-        maHoaDon: order.maHoaDon,
-        statusTrangThaiHoaDon: nextStatus,
-        note: statusNote,
-      });
-      message.success("Cập nhật trạng thái thành công");
+      switch (nextStatus) {
+        case "GIAO_HANG_KHONG_THANH_CONG":
+          // Dùng API riêng để đánh dấu giao không thành công
+          await orderApi.failDelivery(order.maHoaDon, statusNote);
+          message.success("Đã đánh dấu giao hàng không thành công");
+          break;
+
+        case "GIAO_LAI":
+          // Giao lại đơn
+          await orderApi.redeliver(order.maHoaDon);
+          message.success("Đã chuyển sang trạng thái đang giao hàng");
+          break;
+
+        case "XAC_NHAN_HOAN_HANG":
+          // Xác nhận hoàn hàng về kho
+          await orderApi.returnOrder(order.maHoaDon);
+          message.success("Đã xác nhận hoàn hàng về kho, tồn kho đã được cập nhật");
+          break;
+
+        case "HUY_SAU_HOAN_HANG":
+          // Hủy đơn sau khi hoàn hàng
+          await orderApi.cancelAfterReturn(order.maHoaDon, statusNote);
+          message.success("Đã hủy đơn hàng");
+          break;
+
+        default:
+          // Các thao tác còn lại dùng API chung
+          await orderApi.updateOrderStatus({
+            maHoaDon: order.maHoaDon,
+            statusTrangThaiHoaDon: nextStatus,
+            note: statusNote,
+          });
+          message.success("Cập nhật trạng thái thành công");
+          break;
+      }
       setStatusModalOpen(false);
       fetchOrder();
     } catch {
@@ -738,21 +801,32 @@ const OrderDetailPage: React.FC = () => {
     let steps;
     if (order?.loaiHoaDon === "GIAO_HANG" || order?.loaiHoaDon === "ONLINE") {
       steps = [...ONLINE_STEPS];
+      // Khi hoàn thành: ẩn nhánh giao thất bại
       if (currentStatus === "HOAN_THANH") {
-        steps = steps.filter((s) => s.key !== "GIAO_HANG_KHONG_THANH_CONG");
+        steps = steps.filter((s) =>
+          s.key !== "GIAO_HANG_KHONG_THANH_CONG" && s.key !== "DA_HOAN_HANG",
+        );
       }
+      // Khi giao không thành công: ẩn nút hoàn thành
       if (currentStatus === "GIAO_HANG_KHONG_THANH_CONG") {
         steps = steps.filter((s) => s.key !== "HOAN_THANH");
       }
+      // Khi đã hoàn hàng: ẩn nút hoàn thành
+      if (currentStatus === "DA_HOAN_HANG") {
+        steps = steps.filter((s) => s.key !== "HOAN_THANH");
+      }
     } else {
-      steps = [ONLINE_STEPS[0], ONLINE_STEPS[5]];
+      steps = [ONLINE_STEPS[0], ONLINE_STEPS[ONLINE_STEPS.length - 1]];
     }
     const stepKeys = steps.map((s) => s.key);
     const currentIdx = stepKeys.indexOf(currentStatus);
 
-    const stepIcon = (key: string, _done: boolean, _active: boolean) => {
+    const stepIcon = (key: string) => {
       if (key === "GIAO_HANG_KHONG_THANH_CONG") {
         return <CloseCircleOutlined />;
+      }
+      if (key === "DA_HOAN_HANG") {
+        return <ReloadOutlined />;
       }
       switch (key) {
         case "CHO_XAC_NHAN":
@@ -784,11 +858,18 @@ const OrderDetailPage: React.FC = () => {
             } else {
               icon = <CloseCircleOutlined style={{ opacity: 0.3 }} />;
             }
+          } else if (step.key === "DA_HOAN_HANG") {
+            if (currentStatus === "DA_HOAN_HANG" || done) {
+              circleColor = "#722ed1";
+              icon = <ReloadOutlined />;
+            } else {
+              icon = <ReloadOutlined style={{ opacity: 0.3 }} />;
+            }
           } else {
             icon = done ? (
               <CheckCircleOutlined />
             ) : (
-              stepIcon(step.key, done, active)
+              stepIcon(step.key)
             );
           }
 
@@ -825,28 +906,37 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {step.label}
                 </Text>
-                {/* 线上订单且当前步骤处于激活状态时，显示状态操作按钮；柜台订单不显示任何操作按钮 */}
-                {active && isOnline && nextStatusKeys.length > 0 && !isCompleted && currentStatus !== "GIAO_HANG_KHONG_THANH_CONG" && (
-                  <Space style={{ marginTop: 6 }}>
-                    {nextStatusKeys
-                      .filter((status) =>
-                        currentStatus === "DANG_GIAO" &&
-                        status === "HOAN_THANH" &&
-                        order?.trangThaiHoaDon === "GIAO_HANG_KHONG_THANH_CONG"
-                          ? false
-                          : true,
-                      )
-                      .map((status) => (
-                        <Button
-                          key={status}
-                          size="small"
-                          type="primary"
-                          style={{ fontSize: 11, padding: "0 8px" }}
-                          onClick={() => openStatusModal(status)}
-                        >
-                          {STATUS_LABELS[status] || status}
-                        </Button>
-                      ))}
+                {/* Hiển thị lý do giao không thành công */}
+                {active && currentStatus === "GIAO_HANG_KHONG_THANH_CONG" && order?.failureReason && (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "#fa541c",
+                      marginTop: 4,
+                      padding: "2px 4px",
+                      background: "#fff2e8",
+                      borderRadius: 4,
+                      maxWidth: 80,
+                    }}
+                  >
+                    {order.failureReason}
+                  </div>
+                )}
+                {/* Hiển thị nút hành động theo trạng thái */}
+                {active && isOnline && nextActions.length > 0 && !isCompleted && !isCancelled && (
+                  <Space direction="vertical" size={2} style={{ marginTop: 6 }}>
+                    {nextActions.map((action) => (
+                      <Button
+                        key={action.key}
+                        size="small"
+                        type={action.key === "XAC_NHAN_HOAN_HANG" ? "default" : "primary"}
+                        danger={action.key === "XAC_NHAN_HOAN_HANG" || action.key === "HUY_SAU_HOAN_HANG"}
+                        style={{ fontSize: 11, padding: "0 8px" }}
+                        onClick={() => openStatusModal(action.key)}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
                   </Space>
                 )}
               </div>
@@ -1414,7 +1504,9 @@ const OrderDetailPage: React.FC = () => {
         cancelText="Hủy"
         okButtonProps={{
           disabled:
-            (nextStatus === "DA_HUY" && !statusNote.trim()) || isUpdating,
+            ((nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") && !statusNote.trim()) ||
+            (nextStatus === "GIAO_HANG_KHONG_THANH_CONG" && !statusNote.trim()) ||
+            isUpdating,
         }}
       >
         <div
@@ -1434,18 +1526,18 @@ const OrderDetailPage: React.FC = () => {
           </Tag>
           <Text style={{ fontSize: 20 }}>→</Text>
           <Tag
-            color={STATUS_COLORS[nextStatus]}
+            color={nextStatus === "GIAO_LAI" ? "geekblue" : nextStatus === "XAC_NHAN_HOAN_HANG" ? "purple" : nextStatus === "HUY_SAU_HOAN_HANG" ? "red" : STATUS_COLORS[nextStatus] ?? "default"}
             style={{ fontSize: 14, padding: "4px 12px" }}
           >
-            {STATUS_LABELS[nextStatus] ?? nextStatus}
+            {nextStatus === "GIAO_LAI" ? "Giao lại" : nextStatus === "XAC_NHAN_HOAN_HANG" ? "Xác nhận hoàn hàng" : nextStatus === "HUY_SAU_HOAN_HANG" ? "Hủy đơn" : STATUS_LABELS[nextStatus] ?? nextStatus}
           </Tag>
         </div>
         <TextArea
           rows={3}
           placeholder={
             nextStatus === "GIAO_HANG_KHONG_THANH_CONG"
-              ? "Bắt buộc nhập lý do..."
-              : nextStatus === "DA_HUY"
+              ? "Bắt buộc nhập lý do giao hàng không thành công..."
+              : nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG"
                 ? "Bắt buộc nhập lý do hủy đơn..."
                 : "Ghi chú (tùy chọn)..."
           }
@@ -1457,9 +1549,19 @@ const OrderDetailPage: React.FC = () => {
             * Bắt buộc nhập lý do giao hàng không thành công
           </div>
         )}
-        {nextStatus === "DA_HUY" && !statusNote.trim() && (
+        {(nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") && !statusNote.trim() && (
           <div style={{ color: "#fa541c", marginTop: 8 }}>
             * Vui lòng nhập lý do hủy đơn hàng
+          </div>
+        )}
+        {nextStatus === "XAC_NHAN_HOAN_HANG" && (
+          <div style={{ color: "#722ed1", marginTop: 8 }}>
+            * Hành động này sẽ hoàn hàng về kho và tăng tồn kho. Bạn có thể hủy đơn sau khi hoàn hàng.
+          </div>
+        )}
+        {nextStatus === "GIAO_LAI" && (
+          <div style={{ color: "#1677ff", marginTop: 8 }}>
+            * Hành động này sẽ chuyển đơn về trạng thái đang giao hàng để giao lại.
           </div>
         )}
       </Modal>

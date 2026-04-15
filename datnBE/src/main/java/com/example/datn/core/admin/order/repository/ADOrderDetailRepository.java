@@ -126,7 +126,9 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                     SELECT COUNT(*)
                     FROM serial i
                     WHERE i.id_order_detail = hdct.id
-                ) AS soLuongImei
+                ) AS soLuongImei,
+
+                hd.failure_reason AS failureReason
 
             FROM `order` hd
             INNER JOIN order_detail hdct ON hdct.id_order = hd.id

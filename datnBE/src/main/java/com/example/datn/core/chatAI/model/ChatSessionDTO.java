@@ -1,11 +1,12 @@
 package com.example.datn.core.chatAI.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ChatSessionDTO {
     private String sessionId;
     private String lastMessage;

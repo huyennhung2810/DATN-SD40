@@ -92,6 +92,9 @@ public class Order extends PrimaryEntity implements Serializable {
     @Column(name = "is_shipping_locked")
     private Boolean isShippingLocked = false;
 
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<OrderHistory> orderHistories = new ArrayList<>();

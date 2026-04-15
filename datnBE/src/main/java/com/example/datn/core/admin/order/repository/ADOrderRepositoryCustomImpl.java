@@ -36,7 +36,9 @@ public class ADOrderRepositoryCustomImpl implements ADOrderRepositoryCustom {
                                 hd.totalAfterDiscount,
                                 hd.orderType,
                                 hd.createdDate,
-                                hd.orderStatus
+                                hd.orderStatus,
+                                hd.paymentMethod,
+                                hd.failureReason
                             )
                             FROM Order hd
                             LEFT JOIN hd.customer kh

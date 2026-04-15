@@ -145,6 +145,9 @@ export interface OrderDetailResponse {
 
     // Giá bán gốc (sale_price từ backend)
     giaBanGoc?: number;
+
+    // Lý do giao hàng không thành công
+    failureReason?: string;
 }
 
 export interface OrderDetailPageResponse {

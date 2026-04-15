@@ -11,6 +11,14 @@ public interface ADOrderService {
 
     ResponseObject<?> capNhatTrangThaiHoaDon(ADChangeStatusRequest adChangeStatusRequest);
 
+    ResponseObject<?> failDelivery(String maHoaDon, String reason);
+
+    ResponseObject<?> redeliverOrder(String maHoaDon);
+
+    ResponseObject<?> returnOrder(String maHoaDon);
+
+    ResponseObject<?> cancelAfterReturn(String maHoaDon, String reason);
+
     ResponseObject<?> doiImei(ADAssignSerialRequest request);
 
     ResponseObject<?> capNhatThongTinKhachHang(ADUpdateCustomerRequest request);

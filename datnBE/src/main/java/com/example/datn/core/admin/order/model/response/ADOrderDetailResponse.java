@@ -113,4 +113,7 @@ public interface ADOrderDetailResponse {
     String getProductDetailId();
 
     String getTenNhanVien();
+
+    // Lý do giao hàng không thành công
+    String getFailureReason();
 }

@@ -275,6 +275,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         for (Serial serial : targetSerials) {
             serial.setOrderDetail(detail);
+            serial.setOrderHolding(order); // Quan trọng: set cả orderHolding để đồng bộ
             serial.setSerialStatus(SerialStatus.IN_ORDER);
         }
         serialRepository.saveAll(targetSerials);

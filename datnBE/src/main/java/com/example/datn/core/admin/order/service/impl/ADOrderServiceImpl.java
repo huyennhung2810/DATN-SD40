@@ -174,19 +174,12 @@ public class ADOrderServiceImpl implements ADOrderService {
                     break;
 
                 case GIAO_HANG_KHONG_THANH_CONG:
-                    // Bắt buộc phải có lý do khi chuyển sang trạng thái này
+                    // Chỉ lưu lý do, KHÔNG tăng tồn kho ở đây
+                    // Tồn kho sẽ được tăng khi chuyển sang DA_HOAN_HANG
                     if (request.getNote() == null || request.getNote().trim().isEmpty()) {
                         throw new RuntimeException("Vui lòng nhập lý do giao hàng không thành công!");
                     }
-                    capNhatTrangThaiSerialBiHuy(hoaDon);
-
-                    orderDetail = orderDetailRepository.findByOrderId(hoaDon.getId());
-                    for (OrderDetail item : orderDetail) {
-                        ProductDetail product = item.getProductDetail();
-                        int soLuongMua = item.getQuantity();
-                        product.setQuantity(product.getQuantity() + soLuongMua);
-                        productDetailRepository.save(product);
-                    }
+                    // failureReason sẽ được set trong phương thức failDelivery riêng
                     break;
 
                 case HOAN_THANH:
@@ -346,6 +339,10 @@ public class ADOrderServiceImpl implements ADOrderService {
                 Arrays.asList(OrderStatus.DANG_GIAO, OrderStatus.DA_HUY));
         validTransitions.put(OrderStatus.DANG_GIAO,
                 Arrays.asList(OrderStatus.HOAN_THANH, OrderStatus.GIAO_HANG_KHONG_THANH_CONG));
+        validTransitions.put(OrderStatus.GIAO_HANG_KHONG_THANH_CONG,
+                Arrays.asList(OrderStatus.DANG_GIAO, OrderStatus.DA_HOAN_HANG));
+        validTransitions.put(OrderStatus.DA_HOAN_HANG,
+                Collections.singletonList(OrderStatus.DA_HUY));
 
         if (!validTransitions.getOrDefault(trangThaiCu, new ArrayList<>())
                 .contains(trangThaiMoi)) {
@@ -387,6 +384,7 @@ public class ADOrderServiceImpl implements ADOrderService {
             if (!chiTiet.getSerials().isEmpty()) {
                 for (Serial imei : chiTiet.getSerials()) {
                     imei.setSerialStatus(SerialStatus.IN_ORDER);
+                    imei.setOrderHolding(hoaDon); // Đảm bảo có orderHolding để returnOrder tìm thấy
                     imei.setLockedAt(System.currentTimeMillis());
                 }
                 serialRepository.saveAll(chiTiet.getSerials());
@@ -805,9 +803,10 @@ public class ADOrderServiceImpl implements ADOrderService {
             // Gán IMEI mới → IN_ORDER (đang trong đơn hàng)
             imeiMoi.setSerialStatus(SerialStatus.IN_ORDER);
             imeiMoi.setOrderDetail(chiTiet);
+            imeiMoi.setOrderHolding(hoaDon); // Quan trọng: set cả orderHolding để returnOrder tìm thấy
             imeiMoi.setLockedAt(System.currentTimeMillis());
             serialRepository.save(imeiMoi);
-            log.info("Đã gán Serial mới: {}", imeiMoi.getCode());
+            log.info("Đã gán Serial mới: {} cho đơn hàng {}", imeiMoi.getCode(), hoaDon.getCode());
 
             // Cập nhật danh sách IMEI trong OrderDetail
             if (hasOldSerial) {
@@ -896,27 +895,223 @@ public class ADOrderServiceImpl implements ADOrderService {
         return sb.toString();
     }
 
+    @Override
+    @Transactional
+    public ResponseObject<?> failDelivery(String maHoaDon, String reason) {
+        try {
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new RuntimeException("Vui lòng nhập lý do giao hàng không thành công!");
+            }
+
+            Order hoaDon = adOrderRepository.findByMa(maHoaDon)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
+
+            if (hoaDon.getOrderStatus() != OrderStatus.DANG_GIAO) {
+                throw new RuntimeException("Chỉ có thể đánh dấu giao hàng thất bại khi đơn đang ở trạng thái Đang giao hàng!");
+            }
+
+            hoaDon.setOrderStatus(OrderStatus.GIAO_HANG_KHONG_THANH_CONG);
+            hoaDon.setFailureReason(reason);
+            hoaDon.setLastModifiedDate(System.currentTimeMillis());
+
+            Employee nhanVien = getCurrentEmployee();
+            Order saved = adOrderRepository.save(hoaDon);
+
+            luuOrderHistory(saved, OrderStatus.GIAO_HANG_KHONG_THANH_CONG, reason, nhanVien);
+
+            sendStatusUpdateEmailAsync(saved, OrderStatus.GIAO_HANG_KHONG_THANH_CONG);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("maHoaDon", saved.getCode());
+            responseData.put("trangThaiMoi", OrderStatus.GIAO_HANG_KHONG_THANH_CONG);
+            responseData.put("lyDo", reason);
+
+            return ResponseObject.success(responseData, "Đã đánh dấu giao hàng không thành công");
+
+        } catch (RuntimeException e) {
+            log.error("Lỗi failDelivery: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> redeliverOrder(String maHoaDon) {
+        try {
+            Order hoaDon = adOrderRepository.findByMa(maHoaDon)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
+
+            if (hoaDon.getOrderStatus() != OrderStatus.GIAO_HANG_KHONG_THANH_CONG) {
+                throw new RuntimeException("Chỉ có thể giao lại khi đơn đang ở trạng thái Giao hàng không thành công!");
+            }
+
+            hoaDon.setOrderStatus(OrderStatus.DANG_GIAO);
+            hoaDon.setLastModifiedDate(System.currentTimeMillis());
+
+            Employee nhanVien = getCurrentEmployee();
+            Order saved = adOrderRepository.save(hoaDon);
+
+            luuOrderHistory(saved, OrderStatus.DANG_GIAO, "Giao lại đơn hàng", nhanVien);
+
+            sendStatusUpdateEmailAsync(saved, OrderStatus.DANG_GIAO);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("maHoaDon", saved.getCode());
+            responseData.put("trangThaiMoi", OrderStatus.DANG_GIAO);
+
+            return ResponseObject.success(responseData, "Đã chuyển sang trạng thái đang giao hàng");
+
+        } catch (RuntimeException e) {
+            log.error("Lỗi redeliverOrder: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> returnOrder(String maHoaDon) {
+        try {
+            Order hoaDon = adOrderRepository.findByMa(maHoaDon)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
+
+            if (hoaDon.getOrderStatus() != OrderStatus.GIAO_HANG_KHONG_THANH_CONG) {
+                throw new RuntimeException("Chỉ có thể xác nhận hoàn hàng khi đơn đang ở trạng thái Giao hàng không thành công!");
+            }
+
+            // Giải phóng Serial về trạng thái AVAILABLE (sản phẩm đã được trả về kho)
+            // Tìm qua orderHolding để đảm bảo tất cả Serial được giải phóng
+            List<Serial> allSerials = serialRepository.findByOrderHolding_Id(hoaDon.getId());
+            int releasedCount = 0;
+            for (Serial s : allSerials) {
+                // Safeguard: Chỉ cập nhật serial đang ở IN_ORDER, không đụng vào serial đã SOLD
+                if (s.getSerialStatus() == SerialStatus.IN_ORDER) {
+                    s.setSerialStatus(SerialStatus.AVAILABLE);
+                    s.setOrderDetail(null);
+                    s.setOrderHolding(null);
+                    s.setLockedAt(null);
+                    releasedCount++;
+                    log.debug("Đã giải phóng Serial {} về AVAILABLE cho đơn hàng {}",
+                            s.getSerialNumber(), hoaDon.getCode());
+                }
+                // Serial đã SOLD thì giữ nguyên (đơn đã hoàn thành trước đó thì không cho hoàn)
+            }
+            if (releasedCount > 0) {
+                serialRepository.saveAll(allSerials);
+                log.info("Đã giải phóng {} Serial cho đơn hàng {} khi xác nhận hoàn hàng",
+                        releasedCount, hoaDon.getCode());
+            }
+
+            // Hoàn trả tồn kho sản phẩm
+            List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(hoaDon.getId());
+            for (OrderDetail item : orderDetails) {
+                ProductDetail product = item.getProductDetail();
+                int soLuongMua = item.getQuantity();
+                product.setQuantity(product.getQuantity() + soLuongMua);
+                productDetailRepository.save(product);
+                log.info("Đã tăng tồn kho {} đơn vị cho sản phẩm {} khi hoàn hàng",
+                        soLuongMua, product.getProduct().getName());
+            }
+
+            hoaDon.setOrderStatus(OrderStatus.DA_HOAN_HANG);
+            hoaDon.setLastModifiedDate(System.currentTimeMillis());
+
+            Employee nhanVien = getCurrentEmployee();
+            Order saved = adOrderRepository.save(hoaDon);
+
+            luuOrderHistory(saved, OrderStatus.DA_HOAN_HANG, "Xác nhận hoàn hàng về kho", nhanVien);
+
+            hoanTraVoucher(hoaDon);
+            hoanTienNeuCan(hoaDon, nhanVien);
+
+            sendStatusUpdateEmailAsync(saved, OrderStatus.DA_HOAN_HANG);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("maHoaDon", saved.getCode());
+            responseData.put("trangThaiMoi", OrderStatus.DA_HOAN_HANG);
+
+            return ResponseObject.success(responseData, "Đã xác nhận hoàn hàng về kho, tồn kho và Serial đã được cập nhật");
+
+        } catch (RuntimeException e) {
+            log.error("Lỗi returnOrder: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public ResponseObject<?> cancelAfterReturn(String maHoaDon, String reason) {
+        try {
+            Order hoaDon = adOrderRepository.findByMa(maHoaDon)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
+
+            if (hoaDon.getOrderStatus() != OrderStatus.DA_HOAN_HANG) {
+                throw new RuntimeException("Chỉ có thể hủy đơn khi đơn đã ở trạng thái Đã hoàn hàng!");
+            }
+
+            // Giải phóng Serial về trạng thái AVAILABLE
+            capNhatTrangThaiSerialBiHuy(hoaDon);
+
+            // Hoàn trả tồn kho sản phẩm (đã bị trừ khi xác nhận đơn hàng)
+            List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(hoaDon.getId());
+            for (OrderDetail item : orderDetails) {
+                ProductDetail product = item.getProductDetail();
+                int soLuongMua = item.getQuantity();
+                product.setQuantity(product.getQuantity() + soLuongMua);
+                productDetailRepository.save(product);
+                log.info("Đã hoàn trả tồn kho {} đơn vị cho sản phẩm {} khi hủy đơn sau hoàn hàng",
+                        soLuongMua, product.getProduct().getName());
+            }
+
+            hoaDon.setOrderStatus(OrderStatus.DA_HUY);
+            hoaDon.setLastModifiedDate(System.currentTimeMillis());
+
+            Employee nhanVien = getCurrentEmployee();
+            Order saved = adOrderRepository.save(hoaDon);
+
+            luuOrderHistory(saved, OrderStatus.DA_HUY,
+                    (reason != null && !reason.trim().isEmpty()) ? reason : "Hủy đơn sau khi hoàn hàng", nhanVien);
+
+            sendStatusUpdateEmailAsync(saved, OrderStatus.DA_HUY);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("maHoaDon", saved.getCode());
+            responseData.put("trangThaiMoi", OrderStatus.DA_HUY);
+
+            return ResponseObject.success(responseData, "Đã hủy đơn hàng sau khi hoàn hàng");
+
+        } catch (RuntimeException e) {
+            log.error("Lỗi cancelAfterReturn: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Giải phóng Serial khi hủy đơn hàng
+     * Chỉ giải phóng Serial đang ở trạng thái IN_ORDER, không đụng vào Serial đã SOLD
+     */
     private void capNhatTrangThaiSerialBiHuy(Order hoaDon) {
-        List<OrderDetail> details = orderDetailRepository.findByOrderId(hoaDon.getId());
+        // Tìm tất cả serial thuộc đơn hàng qua orderHolding
+        List<Serial> serials = serialRepository.findByOrderHolding_Id(hoaDon.getId());
 
-        for (OrderDetail item : details) {
-            // Lấy danh sách serial gắn với chi tiết hóa đơn này
-            List<Serial> serials = serialRepository.findByOrderDetailId(item.getId());
-
-            for (Serial s : serials) {
-                // 1. Quan trọng: Đưa về trạng thái CÓ SẴN trong kho
+        int releasedCount = 0;
+        for (Serial s : serials) {
+            // Safeguard: Chỉ cập nhật serial đang ở IN_ORDER, không đụng vào serial đã SOLD
+            if (s.getSerialStatus() == SerialStatus.IN_ORDER) {
                 s.setSerialStatus(SerialStatus.AVAILABLE);
-
-                // 2. Xóa các thông tin giữ chỗ
                 s.setOrderDetail(null);
                 s.setOrderHolding(null);
                 s.setLockedAt(null);
-
-                // 3. Set status hiển thị (nếu cần)
-                s.setStatus(EntityStatus.ACTIVE);
+                s.setStatus(EntityStatus.ACTIVE); // Reset về ACTIVE vì serial chưa bán
+                releasedCount++;
+                log.debug("Đã giải phóng Serial {} về AVAILABLE cho đơn hàng {}",
+                        s.getSerialNumber(), hoaDon.getCode());
             }
+            // Nếu Serial đã SOLD thì không làm gì cả (đơn đã hoàn thành thì không cho hủy)
+        }
+
+        if (releasedCount > 0) {
             serialRepository.saveAll(serials);
         }
-        log.info("Đã giải phóng Serial cho hóa đơn {} về trạng thái AVAILABLE", hoaDon.getCode());
+        log.info("Đã giải phóng {} Serial cho hóa đơn {} về trạng thái AVAILABLE", releasedCount, hoaDon.getCode());
     }
 }

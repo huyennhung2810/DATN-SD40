@@ -11,6 +11,7 @@ import com.example.datn.infrastructure.constant.PaymentStatus;
 import com.example.datn.infrastructure.constant.TypeInvoice;
 import com.example.datn.infrastructure.payment.VNPayService;
 import com.example.datn.repository.*;
+import com.example.datn.utils.DataGeneratorUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -211,6 +212,7 @@ public class CnOrderServiceImpl implements CnOrderService {
 
         // 5. TẠO THỰC THỂ ORDER
         Order order = new Order();
+        order.setCode(DataGeneratorUtils.generateRandomCode("ORD-"));
         order.setCustomer(customer); // NẾU KHÁCH VÃNG LAI, customer SẼ LÀ NULL
         order.setRecipientName(request.getRecipientName());
         order.setRecipientPhone(request.getRecipientPhone());

@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/v1/admin/orders")
@@ -51,5 +53,31 @@ public class ADOrderController {
         return Helper.createResponseEntity(
                 service.capNhatThongTinKhachHang(request)
         );
+    }
+
+    @PostMapping("/{id}/fail")
+    public ResponseEntity<?> failDelivery(
+            @PathVariable("id") String maHoaDon,
+            @RequestBody Map<String, String> body) {
+        String reason = body.get("reason");
+        return Helper.createResponseEntity(service.failDelivery(maHoaDon, reason));
+    }
+
+    @PostMapping("/{id}/redeliver")
+    public ResponseEntity<?> redeliverOrder(@PathVariable("id") String maHoaDon) {
+        return Helper.createResponseEntity(service.redeliverOrder(maHoaDon));
+    }
+
+    @PostMapping("/{id}/return")
+    public ResponseEntity<?> returnOrder(@PathVariable("id") String maHoaDon) {
+        return Helper.createResponseEntity(service.returnOrder(maHoaDon));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelAfterReturn(
+            @PathVariable("id") String maHoaDon,
+            @RequestBody Map<String, String> body) {
+        String reason = body.get("reason");
+        return Helper.createResponseEntity(service.cancelAfterReturn(maHoaDon, reason));
     }
 }
