@@ -236,7 +236,6 @@ const OrderDetailPage: React.FC = () => {
 
   // Derived state
   const currentStatus = order?.trangThaiHoaDon ?? "CHO_XAC_NHAN";
-  // 订单类型判断
   const isOnline =
     order?.loaiHoaDon === "ONLINE" || order?.loaiHoaDon === "GIAO_HANG";
   const isOffline = order?.loaiHoaDon === "OFFLINE";
@@ -246,7 +245,6 @@ const OrderDetailPage: React.FC = () => {
   // Chỉ cho phép sửa thông tin khách hàng khi đơn ở trạng thái Chờ xác nhận
   const canEditCustomerInfo = isOnline && currentStatus === "CHO_XAC_NHAN";
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
-  // 柜台订单禁止取消，线上/配送订单在指定状态下才显示取消按钮
   const showCancelButton = isOnline && canCancelStatuses.includes(currentStatus);
   
   let nextStatusKeys =

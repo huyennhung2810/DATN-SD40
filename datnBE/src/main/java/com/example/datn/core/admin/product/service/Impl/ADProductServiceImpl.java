@@ -58,7 +58,7 @@ public class ADProductServiceImpl implements ADProductService {
     public PageableObject<ADProductResponse> search(ADProductSearchRequest request) {
         int page = request.getPage() > 0 ? request.getPage() - 1 : 0;
         Pageable pageable = PageRequest.of(page, request.getSize());
-        
+
         //
         List<Object[]> results = productRepository.searchBasic(
                 request.getName(),
@@ -73,9 +73,8 @@ public class ADProductServiceImpl implements ADProductService {
                 request.getImageFormat(),
                 request.getVideoFormat(),
                 request.getIso(),
-                pageable
-        );
-        
+                pageable);
+
         // Chuyển đổi Object[] sang ADProductResponse
         List<ADProductResponse> responses = results.stream()
                 .map(row -> {
@@ -92,7 +91,7 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setStatus((EntityStatus) row[9]);
                     response.setCreatedDate((Long) row[10]);
                     response.setLastModifiedDate((Long) row[11]);
-                    
+
                     // Lấy thông số kỹ thuật
                     String techSpecId = (String) row[7];
                     if (techSpecId != null && !techSpecId.isEmpty()) {
@@ -113,7 +112,7 @@ public class ADProductServiceImpl implements ADProductService {
                             response.setTechSpec(techSpecResponse);
                         }
                     }
-                    
+
                     // Lấy ảnh
                     String productId = (String) row[0];
                     List<ProductImage> images = productImageRepository.findImagesByProductId(productId);
@@ -121,14 +120,14 @@ public class ADProductServiceImpl implements ADProductService {
                             .map(ProductImage::getUrl)
                             .collect(Collectors.toList());
                     response.setImageUrls(imageUrls);
-                    
+
                     return response;
                 })
                 .collect(Collectors.toList());
-        
+
         // Đếm ảnh
         long totalElements = productRepository.count();
-        
+
         return new PageableObject<>(new PageImpl<>(responses, pageable, totalElements));
     }
 
@@ -138,25 +137,28 @@ public class ADProductServiceImpl implements ADProductService {
         ProductCategory category = null;
         if (request.getIdProductCategory() != null && !request.getIdProductCategory().isEmpty()) {
             category = categoryRepository.findById(request.getIdProductCategory())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
         }
 
         Brand brand = null;
         if (request.getIdBrand() != null && !request.getIdBrand().isEmpty()) {
             brand = brandRepository.findById(request.getIdBrand())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
+                    .orElseThrow(
+                            () -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
         }
 
         TechSpec techSpec = null;
         if (request.getIdTechSpec() != null && !request.getIdTechSpec().isEmpty()) {
             techSpec = techSpecRepository.findById(request.getIdTechSpec())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông số kỹ thuật với ID: " + request.getIdTechSpec()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Không tìm thấy thông số kỹ thuật với ID: " + request.getIdTechSpec()));
         }
 
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-        //product.setPrice(request.getPrice());
+        // product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setBrand(brand);
         product.setTechSpec(techSpec);
@@ -191,26 +193,29 @@ public class ADProductServiceImpl implements ADProductService {
         ProductCategory category = null;
         if (request.getIdProductCategory() != null && !request.getIdProductCategory().isEmpty()) {
             category = categoryRepository.findById(request.getIdProductCategory())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Không tìm thấy danh mục với ID: " + request.getIdProductCategory()));
         }
 
         // Xử lý brand
         Brand brand = null;
         if (request.getIdBrand() != null && !request.getIdBrand().isEmpty()) {
             brand = brandRepository.findById(request.getIdBrand())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
+                    .orElseThrow(
+                            () -> new RuntimeException("Không tìm thấy thương hiệu với ID: " + request.getIdBrand()));
         }
 
         // Xử lý techSpec
         TechSpec techSpec = null;
         if (request.getIdTechSpec() != null && !request.getIdTechSpec().isEmpty()) {
             techSpec = techSpecRepository.findById(request.getIdTechSpec())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông số kỹ thuật với ID: " + request.getIdTechSpec()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Không tìm thấy thông số kỹ thuật với ID: " + request.getIdTechSpec()));
         }
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-      //  product.setPrice(request.getPrice());
+        // product.setPrice(request.getPrice());
         product.setProductCategory(category);
         product.setBrand(brand);
         product.setTechSpec(techSpec);
@@ -222,7 +227,7 @@ public class ADProductServiceImpl implements ADProductService {
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
             // Xóa ảnh cũ
             product.getImages().clear();
-            
+
             // Thêm ảnh mới
             int order = 1;
             for (String url : request.getImageUrls()) {
@@ -258,7 +263,7 @@ public class ADProductServiceImpl implements ADProductService {
                     response.setId(product.getId());
                     response.setName(product.getName());
                     response.setDescription(product.getDescription());
-                   // response.setPrice(product.getPrice());
+                    // response.setPrice(product.getPrice());
                     response.setStatus(product.getStatus());
                     response.setCreatedDate(product.getCreatedDate());
                     response.setLastModifiedDate(product.getLastModifiedDate());
@@ -323,7 +328,7 @@ public class ADProductServiceImpl implements ADProductService {
                 .id(product.getId())
                 .name(product.getName())
                 .description(product.getDescription())
-                //.price(product.getPrice())
+                // .price(product.getPrice())
                 .status(product.getStatus())
                 .createdDate(product.getCreatedDate())
                 .lastModifiedDate(product.getLastModifiedDate())
@@ -366,7 +371,8 @@ public class ADProductServiceImpl implements ADProductService {
                     .collect(Collectors.toList());
             response.setImageUrls(imageUrls);
 
-            // Lấy danh sách ảnh chi tiết (bao gồm id, url, displayOrder) để chọn cho biến thể
+            // Lấy danh sách ảnh chi tiết (bao gồm id, url, displayOrder) để chọn cho biến
+            // thể
             List<ADProductImageSimpleResponse> productImages = product.getImages().stream()
                     .sorted((a, b) -> Integer.compare(
                             a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
@@ -441,8 +447,10 @@ public class ADProductServiceImpl implements ADProductService {
         response.setSelectedImageId(variant.getSelectedImageId());
 
         // Nếu có selectedImageId, lấy URL từ ProductImage của sản phẩm mẹ
-        if (variant.getSelectedImageId() != null && !variant.getSelectedImageId().isEmpty() && variant.getProduct() != null) {
-            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+        if (variant.getSelectedImageId() != null && !variant.getSelectedImageId().isEmpty()
+                && variant.getProduct() != null) {
+            List<ProductImage> productImages = productImageRepository
+                    .findImagesByProductId(variant.getProduct().getId());
             productImages.stream()
                     .filter(img -> img.getId().equals(variant.getSelectedImageId()))
                     .findFirst()
@@ -500,8 +508,7 @@ public class ADProductServiceImpl implements ADProductService {
         boolean exists = productDetailRepository.existsByProductIdAndColorIdAndStorageCapacityId(
                 productId,
                 request.getColorId(),
-                request.getStorageCapacityId()
-        );
+                request.getStorageCapacityId());
 
         if (exists) {
             throw new RuntimeException("Biến thể với màu sắc và dung lượng này đã tồn tại trong sản phẩm!");
@@ -582,7 +589,8 @@ public class ADProductServiceImpl implements ADProductService {
             if (!serialNumbers.isEmpty()) {
                 List<String> existingInSystem = serialRepository.findExistingSerialNumbers(serialNumbers);
                 if (!existingInSystem.isEmpty()) {
-                    throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+                    throw new RuntimeException(
+                            "Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
                 }
 
                 // Lưu các serial mới
@@ -622,8 +630,7 @@ public class ADProductServiceImpl implements ADProductService {
                     variant.getProduct().getId(),
                     request.getColorId(),
                     request.getStorageCapacityId(),
-                    variantId
-            );
+                    variantId);
 
             if (exists) {
                 throw new RuntimeException("Biến thể với màu sắc và dung lượng này đã tồn tại trong sản phẩm!");
@@ -632,7 +639,8 @@ public class ADProductServiceImpl implements ADProductService {
 
         // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ
         if (request.getSelectedImageId() != null && !request.getSelectedImageId().isEmpty()) {
-            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+            List<ProductImage> productImages = productImageRepository
+                    .findImagesByProductId(variant.getProduct().getId());
             boolean imageBelongsToProduct = productImages.stream()
                     .anyMatch(img -> img.getId().equals(request.getSelectedImageId()));
             if (!imageBelongsToProduct) {
@@ -645,7 +653,8 @@ public class ADProductServiceImpl implements ADProductService {
             variant.setCode(request.getCode());
         }
 
-        // LEVEL 1: Auto-generate version name khi có variantVersion mới hoặc color/storage thay đổi
+        // LEVEL 1: Auto-generate version name khi có variantVersion mới hoặc
+        // color/storage thay đổi
         String colorName = variant.getColor() != null ? variant.getColor().getName() : "";
         String storageName = variant.getStorageCapacity() != null ? variant.getStorageCapacity().getName() : "";
 
@@ -733,13 +742,15 @@ public class ADProductServiceImpl implements ADProductService {
                     .collect(Collectors.toList());
 
             if (!duplicateWithExisting.isEmpty()) {
-                throw new RuntimeException("Các serial sau đã tồn tại trong biến thể: " + String.join(", ", duplicateWithExisting));
+                throw new RuntimeException(
+                        "Các serial sau đã tồn tại trong biến thể: " + String.join(", ", duplicateWithExisting));
             }
 
             // Kiểm tra serial đã tồn tại trong toàn hệ thống (nếu có yêu cầu)
             List<String> existingInSystem = serialRepository.findExistingSerialNumbers(newSerialList);
             if (!existingInSystem.isEmpty()) {
-                throw new RuntimeException("Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
+                throw new RuntimeException(
+                        "Các serial sau đã tồn tại trong hệ thống: " + String.join(", ", existingInSystem));
             }
 
             // Thêm các serial mới vào biến thể
@@ -773,7 +784,8 @@ public class ADProductServiceImpl implements ADProductService {
 
         // Validate selectedImageId nếu có - phải thuộc về sản phẩm mẹ
         if (selectedImageId != null && !selectedImageId.isEmpty()) {
-            List<ProductImage> productImages = productImageRepository.findImagesByProductId(variant.getProduct().getId());
+            List<ProductImage> productImages = productImageRepository
+                    .findImagesByProductId(variant.getProduct().getId());
             boolean imageBelongsToProduct = productImages.stream()
                     .anyMatch(img -> img.getId().equals(selectedImageId));
             if (!imageBelongsToProduct) {

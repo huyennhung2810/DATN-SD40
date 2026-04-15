@@ -45,22 +45,37 @@ public class CnPublicOrderController {
         // 3. Lấy chi tiết & Build Response
         List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(order.getId());
         List<OrderTrackingResponse.OrderDetailItem> detailItems = orderDetails.stream().map(od -> {
-            String variantName = od.getProductDetail().getColor() != null ? od.getProductDetail().getColor().getName()
-                    : "";
+
+            // Xử lý nối tên phân loại (Màu sắc, Dung lượng)
+            String variantName = "";
+            if (od.getProductDetail().getColor() != null) {
+                variantName += od.getProductDetail().getColor().getName();
+            }
             if (od.getProductDetail().getStorageCapacity() != null) {
                 variantName += " " + od.getProductDetail().getStorageCapacity().getName();
             }
 
+            // XỬ LÝ ẢNH CHỐNG LỖI (Fix ở đây)
             String imageUrl = od.getProductDetail().getImageUrl();
-            if (imageUrl == null && !od.getProductDetail().getProduct().getImages().isEmpty()) {
-                imageUrl = od.getProductDetail().getProduct().getImages().get(0).getUrl();
+
+            // Kiểm tra: Nếu imageUrl bị null HOẶC là chuỗi rỗng
+            if (imageUrl == null || imageUrl.trim().isEmpty()) {
+                // Lấy ảnh từ Product cha một cách an toàn
+                if (od.getProductDetail().getProduct() != null &&
+                        od.getProductDetail().getProduct().getImages() != null &&
+                        !od.getProductDetail().getProduct().getImages().isEmpty()) {
+
+                    imageUrl = od.getProductDetail().getProduct().getImages().get(0).getUrl();
+                } else {
+                    imageUrl = ""; // Nếu không có ảnh nào, trả về rỗng để FE dùng ảnh mặc định
+                }
             }
 
             return OrderTrackingResponse.OrderDetailItem.builder()
                     .id(od.getId())
                     .productName(od.getProductDetail().getProduct().getName())
                     .variantName(variantName.trim())
-                    .imageUrl(imageUrl)
+                    .imageUrl(imageUrl) // Ảnh đã được lấy an toàn
                     .quantity(od.getQuantity())
                     .unitPrice(od.getUnitPrice())
                     .totalPrice(od.getTotalPrice())
