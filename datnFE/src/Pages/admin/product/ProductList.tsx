@@ -12,7 +12,7 @@ import {
   SearchOutlined,
   UploadOutlined,
   DownOutlined,
-  UpOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -21,7 +21,6 @@ import {
   Button,
   Card,
   Col,
-  Collapse,
   Descriptions,
   Divider,
   Drawer,
@@ -1371,6 +1370,64 @@ const ProductPage: React.FC = () => {
     );
   };
 
+  // Xử lý xuất Excel danh sách sản phẩm
+  const handleExportExcel = () => {
+    if (totalElements === 0) {
+      notification.warning({
+        message: "Thông báo",
+        description: "Hệ thống không có dữ liệu sản phẩm để xuất file!",
+      });
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận xuất file",
+      content: `Bạn có chắc chắn muốn xuất danh sách ${totalElements} sản phẩm ra file Excel không?`,
+      okText: "Đồng ý",
+      cancelText: "Hủy",
+      onOk: () => {
+        notification.info({
+          message: "Đang xử lý",
+          description:
+            "Hệ thống đang khởi tạo tệp Excel cho toàn bộ danh sách sản phẩm...",
+        });
+
+        try {
+          const exportData = list.map(
+            (item: ProductResponse, index: number) => ({
+              STT: index + 1,
+              "Tên sản phẩm": item.name,
+              "Mã SP (ID)": item.id,
+              "Loại sản phẩm": getCategoryName(item.idProductCategory),
+              "Trạng thái":
+                item.status === "ACTIVE" ? "Hoạt động" : "Không hoạt động",
+              "Ngày tạo": item.createdDate
+                ? dayjs(item.createdDate).format("DD/MM/YYYY HH:mm")
+                : "---",
+            }),
+          );
+
+          const worksheet = XLSX.utils.json_to_sheet(exportData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachSanPham");
+
+          const fileName = `Hikari_Store_Products_${dayjs().format("DDMMYYYY_HHmm")}.xlsx`;
+          XLSX.writeFile(workbook, fileName);
+
+          notification.success({ message: "Xuất file Excel thành công!" });
+        } catch (error) {
+          notification.error({ message: "Có lỗi xảy ra khi xuất tệp!" });
+        }
+      },
+      onCancel: () => {
+        notification.info({
+          message: "Hủy xuất file",
+          description: "Bạn đã hủy yêu cầu xuất file Excel.",
+        });
+      },
+    });
+  };
+
   return (
     <div
       style={{
@@ -1412,9 +1469,7 @@ const ProductPage: React.FC = () => {
             <Input.Search
               placeholder="Tìm theo tên sản phẩm..."
               allowClear
-              enterButton={
-                <SearchOutlined style={{ fontSize: 14 }} />
-              }
+              enterButton={<SearchOutlined style={{ fontSize: 14 }} />}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               className="filter-search-input"
@@ -1433,7 +1488,9 @@ const ProductPage: React.FC = () => {
                 value: cat.id,
               }))}
               className="filter-select"
-              suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+              suffixIcon={
+                <DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />
+              }
             />
           </div>
 
@@ -1449,7 +1506,9 @@ const ProductPage: React.FC = () => {
                 { label: "Không hoạt động", value: "INACTIVE" },
               ]}
               className="filter-select"
-              suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+              suffixIcon={
+                <DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />
+              }
             />
           </div>
 
@@ -1478,7 +1537,10 @@ const ProductPage: React.FC = () => {
           </div>
 
           {/* 清除全部按钮 — 仅在有筛选条件时显示 */}
-          {(keyword || selectedCategory || selectedStatus || advancedFilterCount > 0) && (
+          {(keyword ||
+            selectedCategory ||
+            selectedStatus ||
+            advancedFilterCount > 0) && (
             <div className="filter-item filter-item-clear">
               <Button
                 className="filter-clear-btn"
@@ -1511,7 +1573,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1530,7 +1596,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1549,7 +1619,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1568,7 +1642,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1587,7 +1665,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1606,7 +1688,11 @@ const ProductPage: React.FC = () => {
                       value: item.name,
                     }))}
                     className="filter-select"
-                    suffixIcon={<DownOutlined style={{ fontSize: 10, color: "#8C8C8F" }} />}
+                    suffixIcon={
+                      <DownOutlined
+                        style={{ fontSize: 10, color: "#8C8C8F" }}
+                      />
+                    }
                   />
                 </div>
 
@@ -1645,6 +1731,18 @@ const ProductPage: React.FC = () => {
               onClick={() => openModal()}
             >
               Thêm mới
+            </Button>
+            <Button
+              icon={<FileExcelOutlined />}
+              onClick={handleExportExcel}
+              loading={loading}
+              style={{
+                borderRadius: "20px",
+                color: "#1d7444",
+                borderColor: "#1d7444",
+              }}
+            >
+              Xuất Excel
             </Button>
             <Button
               icon={<ReloadOutlined spin={loading} />}
