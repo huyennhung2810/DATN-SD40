@@ -42,8 +42,7 @@ const toCard = (p: ProductResponse): CardProduct => ({
   categoryName: p.productCategoryName ?? "",
   brandName: p.brandName ?? "",
   isNew:
-    !!p.createdDate &&
-    Date.now() - p.createdDate < 30 * 24 * 60 * 60 * 1000,
+    !!p.createdDate && Date.now() - p.createdDate < 30 * 24 * 60 * 60 * 1000,
   isSale: !!p.hasActiveSaleCampaign,
 });
 
@@ -91,12 +90,14 @@ const ClientHomePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "60vh",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -115,7 +116,9 @@ const ClientHomePage: React.FC = () => {
         <ProductSection
           title="Sản phẩm mới"
           subtitle="Những sản phẩm mới nhất"
-          products={newProducts.length > 0 ? newProducts : allProducts.slice(0, 8)}
+          products={
+            newProducts.length > 0 ? newProducts : allProducts.slice(0, 8)
+          }
           viewAllLink="/client/catalog?sortBy=createdDate&orderBy=desc"
         />
 

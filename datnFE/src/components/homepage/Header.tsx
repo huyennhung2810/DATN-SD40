@@ -11,7 +11,6 @@ import {
   ShoppingCartOutlined,
   TagOutlined,
   UserOutlined,
-  LockOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -29,13 +28,12 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import { useNotifications } from "../../app/useNotifications";
 import { authActions } from "../../redux/auth/authSlice";
-import { clearCartCount, setCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
+import { setCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
 import {
   notificationActions,
   type AppNotification,
 } from "../../redux/notification/notificationSlice";
 import type { RootState } from "../../redux/store";
-import guestCartService from "../../services/guestCartService";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -149,8 +147,15 @@ const Header: React.FC<HeaderProps> = () => {
         })
         .catch((error) => console.error("Lỗi lấy số lượng giỏ hàng:", error));
     } else {
-      // Khách chưa đăng nhập - lấy từ localStorage
-      dispatch(syncGuestCartCount());
+      // FIX: Khách chưa đăng nhập - Đọc trực tiếp từ localStorage giống như CartPage
+      try {
+        const guestCartString = localStorage.getItem("guestCart");
+        const guestCart = guestCartString ? JSON.parse(guestCartString) : [];
+        dispatch(setCartCount(guestCart.length)); // Đếm chính xác số mặt hàng
+      } catch (error) {
+        console.error("Lỗi đọc giỏ hàng khách vãng lai:", error);
+        dispatch(setCartCount(0));
+      }
     }
   }, [user, dispatch]);
 
@@ -339,15 +344,7 @@ const Header: React.FC<HeaderProps> = () => {
               <button
                 type="button"
                 className="action-btn cart-btn"
-                onClick={() => {
-                  if (isLoggedIn) {
-                    navigate("/client/cart");
-                  } else {
-                    message.warning("Vui lòng đăng nhập để xem giỏ hàng!");
-                    // 可以打开登录modal，这里简单跳转到登录页
-                    navigate("/login", { state: { from: "/client/cart" } });
-                  }
-                }}
+                onClick={() => navigate("/client/cart")}
               >
                 <Badge count={cartCount} showZero offset={[-4, 4]}>
                   <div className="action-icon-wrapper">

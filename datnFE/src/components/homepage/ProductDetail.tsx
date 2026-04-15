@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Row,
   Col,
@@ -22,7 +22,11 @@ import {
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
-import { increaseCartCount, syncGuestCartCount } from "../../redux/cart/cartSlice";
+import {
+  increaseCartCount,
+  setCartCount,
+  syncGuestCartCount,
+} from "../../redux/cart/cartSlice";
 import axiosClient from "../../api/axiosClient";
 import type {
   CnProductResponse,
@@ -30,13 +34,9 @@ import type {
   ProductVariantResponse,
   RelatedProductResponse,
 } from "../../models/productVariant";
-import guestCartService from "../../services/guestCartService";
 
 const { Title } = Typography;
 
-// ============================================================
-// Map label tiếng Việt cho fixed specs
-// ============================================================
 const FIXED_SPEC_KEYS = [
   "sensorType",
   "lensMount",
@@ -100,7 +100,10 @@ function hasAnyDynamicSpec(groups?: DynamicSpecGroup[]): boolean {
 
 function hasAnySpec(techSpec?: CnProductResponse["techSpec"]): boolean {
   if (!techSpec) return false;
-  return !isFixedSpecEmpty(techSpec.fixedSpecs as Record<string, unknown> | null) || hasAnyDynamicSpec(techSpec.dynamicSpecs);
+  return (
+    !isFixedSpecEmpty(techSpec.fixedSpecs as Record<string, unknown> | null) ||
+    hasAnyDynamicSpec(techSpec.dynamicSpecs)
+  );
 }
 
 function legacySpecifications(product: CnProductResponse) {
@@ -118,7 +121,6 @@ function legacySpecifications(product: CnProductResponse) {
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch();
 
   const { user } = useSelector((state: RootState) => state.auth);
@@ -128,7 +130,9 @@ const ProductDetail: React.FC = () => {
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [mainImage, setMainImage] = useState<string>("");
-  const [relatedProducts, setRelatedProducts] = useState<RelatedProductResponse[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<
+    RelatedProductResponse[]
+  >([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
@@ -157,9 +161,12 @@ const ProductDetail: React.FC = () => {
       if (!id) return;
       setRelatedLoading(true);
       try {
-        const response = await axiosClient.get(`/client/product/${id}/related`, {
-          params: { size: 8 },
-        });
+        const response = await axiosClient.get(
+          `/client/product/${id}/related`,
+          {
+            params: { size: 8 },
+          },
+        );
         setRelatedProducts(response.data || []);
       } catch (error) {
         console.error("Lỗi khi tải sản phẩm liên quan:", error);
@@ -181,26 +188,71 @@ const ProductDetail: React.FC = () => {
 
     const isGuest = !user?.userId;
 
-    try {
-      if (isGuest) {
-        // Khách chưa đăng nhập - lưu vào localStorage
-        const activeVariant = product?.variants?.find(
-          (v) => v.id === selectedVariantId,
+    // Tìm thông tin phiên bản đang được chọn
+    const activeVariant = product?.variants?.find(
+      (v) => v.id === selectedVariantId,
+    );
+
+    if (isGuest) {
+      // 1. LOGIC CHO KHÁCH VÃNG LAI (Lưu trực tiếp vào guestCart)
+      try {
+        const guestCartString = localStorage.getItem("guestCart");
+        const guestCart = guestCartString ? JSON.parse(guestCartString) : [];
+
+        // Kiểm tra xem variant này đã có trong giỏ chưa
+        const existingItemIndex = guestCart.findIndex(
+          (item: any) => item.productDetail?.id === selectedVariantId,
         );
 
-        guestCartService.addToCart({
-          productDetailId: selectedVariantId,
-          productId: product?.id || "",
-          productName: product?.name || "",
-          variantName: activeVariant ? variantDisplayName(activeVariant) : undefined,
-          imageUrl: mainImage,
-          price: Number(activeVariant?.originalPrice ?? activeVariant?.salePrice ?? 0),
-          discountedPrice: Number(activeVariant?.displayPrice ?? activeVariant?.salePrice ?? 0),
-          quantity: quantity,
-        });
-        dispatch(syncGuestCartCount());
-      } else {
-        // Đã đăng nhập - gọi API
+        if (existingItemIndex > -1) {
+          // Đã có -> Tăng số lượng
+          guestCart[existingItemIndex].quantity += quantity;
+        } else {
+          // Chưa có -> Thêm mới với cấu trúc chuẩn cho CartPage
+          const newItem = {
+            id: selectedVariantId, // Dùng variantId làm ID cho item trong giỏ
+            productId: product?.id || "",
+            productName: product?.name || "",
+            version: activeVariant
+              ? variantDisplayName(activeVariant)
+              : undefined,
+            imageUrl: mainImage,
+            price: Number(
+              activeVariant?.originalPrice ??
+                activeVariant?.salePrice ??
+                product?.originalPrice ??
+                0,
+            ),
+            discountedPrice: Number(
+              activeVariant?.displayPrice ??
+                activeVariant?.salePrice ??
+                product?.displayPrice ??
+                0,
+            ),
+            quantity: quantity,
+            productDetail: {
+              id: selectedVariantId,
+              colorName: activeVariant?.colorName || "",
+              storageCapacityName: activeVariant?.storageCapacityName || "",
+            },
+            stock: activeVariant ? variantStock(activeVariant) : 99,
+          };
+          guestCart.push(newItem);
+        }
+
+        // Lưu lại vào localStorage
+        localStorage.setItem("guestCart", JSON.stringify(guestCart));
+        // Báo cho Redux cập nhật số đếm trên Header
+        dispatch(setCartCount(guestCart.length));
+
+        message.success("Đã thêm sản phẩm vào giỏ hàng!");
+      } catch (error) {
+        console.error("Lỗi khi lưu giỏ hàng vãng lai:", error);
+        message.error("Không thể thêm vào giỏ hàng!");
+      }
+    } else {
+      // 2. LOGIC CHO NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP (Gọi API như cũ)
+      try {
         const payload = {
           productDetailId: selectedVariantId,
           quantity: quantity,
@@ -212,13 +264,13 @@ const ProductDetail: React.FC = () => {
         for (let i = 0; i < quantity; i++) {
           dispatch(increaseCartCount());
         }
+        message.success("Đã thêm sản phẩm vào giỏ hàng!");
+      } catch (error: any) {
+        console.error("Lỗi thêm giỏ hàng:", error);
+        const errorMessage =
+          error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
+        message.error(errorMessage);
       }
-      message.success("Đã thêm sản phẩm vào giỏ hàng!");
-    } catch (error: any) {
-      console.error("Lỗi thêm giỏ hàng:", error);
-      const errorMessage =
-        error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
-      message.error(errorMessage);
     }
   };
 
@@ -271,10 +323,10 @@ const ProductDetail: React.FC = () => {
     (v) => v.id === selectedVariantId,
   );
   const displayPrice = activeVariant
-    ? activeVariant.displayPrice ?? activeVariant.salePrice
+    ? (activeVariant.displayPrice ?? activeVariant.salePrice)
     : product.displayPrice;
   const displayOriginalPrice = activeVariant
-    ? activeVariant.originalPrice ?? activeVariant.salePrice
+    ? (activeVariant.originalPrice ?? activeVariant.salePrice)
     : product.originalPrice;
   const maxStock = activeVariant ? variantStock(activeVariant) : 1;
 
@@ -350,7 +402,8 @@ const ProductDetail: React.FC = () => {
                 </Title>
 
                 <div className="price-box">
-                  {displayOriginalPrice && displayOriginalPrice !== displayPrice ? (
+                  {displayOriginalPrice &&
+                  displayOriginalPrice !== displayPrice ? (
                     <>
                       <span className="current-price">
                         {formatPrice(displayPrice)}
@@ -395,9 +448,7 @@ const ProductDetail: React.FC = () => {
                             {variantDisplayName(variant)}
                           </div>
                           <div className="variant-stock">
-                            {isOutOfStock
-                              ? "Hết hàng"
-                              : `Còn ${stock} sp`}
+                            {isOutOfStock ? "Hết hàng" : `Còn ${stock} sp`}
                           </div>
                           {variant.hasActiveSaleCampaign ? (
                             <div className="variant-price">
@@ -496,10 +547,7 @@ const ProductDetail: React.FC = () => {
         {/* ============================================================ */}
         {showTechSpec ? (
           <div className="hikari-card tech-spec-card">
-            <Title
-              level={4}
-              className="tech-spec-title"
-            >
+            <Title level={4} className="tech-spec-title">
               <SettingOutlined /> Thông số kỹ thuật
             </Title>
 
@@ -524,14 +572,13 @@ const ProductDetail: React.FC = () => {
                     if (!group.items || group.items.length === 0) return null;
                     return (
                       <div key={group.groupId} className="spec-group">
-                        <div className="spec-group-header">{group.groupName}</div>
+                        <div className="spec-group-header">
+                          {group.groupName}
+                        </div>
                         <div className="spec-table">
                           {group.items.map((item) => {
                             const raw = item.value;
-                            if (
-                              raw == null ||
-                              String(raw).trim() === ""
-                            ) {
+                            if (raw == null || String(raw).trim() === "") {
                               return null;
                             }
                             const u = item.unit?.trim();
@@ -606,7 +653,9 @@ const ProductDetail: React.FC = () => {
                   <Col xs={12} sm={12} md={6} key={item.productId}>
                     <div
                       className="related-card"
-                      onClick={() => navigate(`/client/product/${item.productId}`)}
+                      onClick={() =>
+                        navigate(`/client/product/${item.productId}`)
+                      }
                     >
                       {item.hasActiveSaleCampaign && item.discountPercent && (
                         <span className="related-badge-sale">
@@ -615,13 +664,18 @@ const ProductDetail: React.FC = () => {
                       )}
                       <div className="related-card-img">
                         <img
-                          src={item.thumbnail || "https://via.placeholder.com/200"}
+                          src={
+                            item.thumbnail || "https://via.placeholder.com/200"
+                          }
                           alt={item.productName}
                         />
                       </div>
                       <div className="related-card-body">
                         <div className="related-card-brand">{item.brand}</div>
-                        <div className="related-card-name" title={item.productName}>
+                        <div
+                          className="related-card-name"
+                          title={item.productName}
+                        >
                           {item.productName}
                         </div>
                         <div className="related-card-price">

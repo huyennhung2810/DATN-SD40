@@ -102,8 +102,8 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
 
-                                                // CHO PHÉP HỢP NHẤT GIỎ HÀNG (Khi đăng nhập, nhưng vẫn có thể gọi sau khi login)
-                                                .requestMatchers("/api/v1/client/cart/merge").authenticated()
+                                                .requestMatchers("/api/v1/client/cart/**").permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/client/checkout").permitAll()
 
                                                 // 2. Quyền xem sản phẩm cho khách vãng lai (Public Read)
                                                 .requestMatchers(HttpMethod.GET,
