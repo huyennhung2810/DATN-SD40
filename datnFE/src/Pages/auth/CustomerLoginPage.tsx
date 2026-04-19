@@ -41,9 +41,11 @@ const CustomerLoginPage: React.FC = () => {
   const handleOAuth2 = (provider: "google" | "github") => {
     // Truyền trạng thái checkout qua URL cho OAuth2 callback
     const stateParam = checkoutAfterLogin
-      ? Buffer.from(JSON.stringify({ checkoutAfterLogin: true })).toString("base64")
+      ? btoa(JSON.stringify({ checkoutAfterLogin: true }))
       : "";
-    const redirectUrl = getSocialLoginUrl(provider, "CUSTOMER") + (stateParam ? `&state=${stateParam}` : "");
+    const redirectUrl =
+      getSocialLoginUrl(provider, "CUSTOMER") +
+      (stateParam ? `&state=${stateParam}` : "");
     window.location.href = redirectUrl;
   };
 

@@ -116,6 +116,7 @@ export interface BuyAgainResponse {
   message: string;
 }
 
+
 export interface ConfirmReceivedResponse {
   orderId: string;
   orderCode: string;
@@ -131,10 +132,17 @@ const BASE = "/client/orders";
 export const getOrderList = async (
   status?: string,
   page = 0,
-  size = 8
+  size = 8,
+  keyword?: string
 ): Promise<OrderPageResponse> => {
   const params: Record<string, string | number> = { page, size };
+  
   if (status && status !== "all") params.status = status;
+  
+  if (keyword) {
+  params.q = keyword;
+}
+
   const res = await axiosClient.get<ResponseObject<Page<CustomerOrderListResponse>>>(BASE, { params });
   return res.data;
 };

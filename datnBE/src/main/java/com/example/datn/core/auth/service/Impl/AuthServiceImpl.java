@@ -8,6 +8,7 @@ import com.example.datn.entity.Customer;
 import com.example.datn.entity.Employee;
 import com.example.datn.entity.RefreshToken;
 import com.example.datn.infrastructure.constant.AuthProvider;
+import com.example.datn.infrastructure.constant.EntityStatus;
 import com.example.datn.infrastructure.constant.RoleConstant;
 import com.example.datn.infrastructure.email.EmailService;
 import com.example.datn.infrastructure.exception.ServiceException;
@@ -25,7 +26,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -184,6 +184,7 @@ public class AuthServiceImpl implements AuthService {
         customer.setEmail(request.getEmail());
         customer.setPhoneNumber(request.getPhoneNumber());
         customer.setAccount(account);
+        customer.setStatus(EntityStatus.ACTIVE);
         customerRepository.save(customer);
 
         log.info("Registered new customer: {}", request.getUsername());

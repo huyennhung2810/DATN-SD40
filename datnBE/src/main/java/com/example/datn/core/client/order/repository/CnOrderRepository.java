@@ -14,23 +14,35 @@ import java.util.Optional;
 @Repository
 public interface CnOrderRepository extends JpaRepository<Order, String> {
 
-    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId ORDER BY o.createdDate DESC")
-    Page<Order> findByCustomerId(@Param("customerId") String customerId, Pageable pageable);
+        @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId ORDER BY o.createdDate DESC")
+        Page<Order> findByCustomerId(@Param("customerId") String customerId, Pageable pageable);
 
-    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.orderStatus = :status ORDER BY o.createdDate DESC")
-    Page<Order> findByCustomerIdAndStatus(
-            @Param("customerId") String customerId,
-            @Param("status") OrderStatus status,
-            Pageable pageable);
+        @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.orderStatus = :status ORDER BY o.createdDate DESC")
+        Page<Order> findByCustomerIdAndStatus(
+                        @Param("customerId") String customerId,
+                        @Param("status") OrderStatus status,
+                        Pageable pageable);
 
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderHistories WHERE o.id = :orderId")
-    Optional<Order> findByIdWithHistories(@Param("orderId") String orderId);
+        @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderHistories WHERE o.id = :orderId")
+        Optional<Order> findByIdWithHistories(@Param("orderId") String orderId);
 
-    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.code LIKE :code ORDER BY o.createdDate DESC")
-    Page<Order> findByCustomerIdAndCodeLike(@Param("customerId") String customerId, @Param("code") String code,
-            Pageable pageable);
+        @Query("""
+                        SELECT o FROM Order o
+                        WHERE o.customer.id = :customerId
+                        AND (:status IS NULL OR o.orderStatus = :status)
+                        AND (
+                            :q IS NULL OR :q = '' OR
+                            LOWER(o.code) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                        )
+                        ORDER BY o.createdDate DESC
+                        """)
+        Page<Order> searchOrders(
+                        @Param("customerId") String customerId,
+                        @Param("status") OrderStatus status,
+                        @Param("q") String q,
+                        Pageable pageable);
 
-    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.orderStatus = :status AND o.code LIKE :code ORDER BY o.createdDate DESC")
-    Page<Order> findByCustomerIdAndStatusAndCodeLike(@Param("customerId") String customerId,
-            @Param("status") OrderStatus status, @Param("code") String code, Pageable pageable);
+        @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId AND o.orderStatus = :status AND o.code LIKE :code ORDER BY o.createdDate DESC")
+        Page<Order> findByCustomerIdAndStatusAndCodeLike(@Param("customerId") String customerId,
+                        @Param("status") OrderStatus status, @Param("code") String code, Pageable pageable);
 }

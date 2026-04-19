@@ -141,7 +141,7 @@ const OrderListEmbed: React.FC<Props> = ({ onViewDetail }) => {
         </div>
 
         <Input.Search
-          placeholder="Tìm theo mã sản phẩm hoặc đơn hàng..."
+          placeholder="Tìm theo mã đơn hàng..."
           allowClear
           onSearch={handleSearch}
           style={{ width: 300 }}
