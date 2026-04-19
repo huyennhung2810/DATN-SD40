@@ -15,6 +15,7 @@ public class OrderTrackingResponse {
     private Long createdDate;
     private BigDecimal totalAmount;
     private String recipientName;
+    private String recipientEmail;
     private String recipientPhone;
     private String recipientAddress;
     private String paymentMethod;

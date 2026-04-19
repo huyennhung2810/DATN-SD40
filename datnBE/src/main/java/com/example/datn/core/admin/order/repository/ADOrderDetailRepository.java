@@ -65,7 +65,8 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
 
                 COALESCE(hd.recipient_name, '') AS tenKhachHang,
                 COALESCE(hd.recipient_phone, '') AS sdtKH,
-                kh.email AS email,
+                COALESCE(hd.recipient_email, kh.email) AS email,
+                kh.email AS email2,
                 kh.image AS avatarKhachHang,
                 COALESCE(hd.recipient_address, '') AS diaChi,
                 kh.id AS customerId,

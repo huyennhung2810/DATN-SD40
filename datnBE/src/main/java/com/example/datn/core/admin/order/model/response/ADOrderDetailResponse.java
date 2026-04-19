@@ -18,14 +18,19 @@ public interface ADOrderDetailResponse {
     // UUID của Order (dùng cho API gán serial)
     String getOrderId();
 
-
     // Thông tin sản phẩm
     String getMaSanPham(); // code của Product
+
     String getMaChiTietSanPham(); // code của ProductDetail
+
     String getTenSanPham();
+
     String getAnhSanPham();
+
     String getThuongHieu();
+
     String getMauSac();
+
     String getSize();
 
     Integer getSoLuong();
@@ -49,6 +54,8 @@ public interface ADOrderDetailResponse {
     String getEmail();
 
     String getDiaChi();
+
+    String getRecipientEmail();
 
     // UUID khách hàng (để lấy danh sách địa chỉ)
     String getCustomerId();

@@ -91,6 +91,7 @@ public class CnPublicOrderController {
                 .totalAmount(order.getTotalAmount())
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
+                .recipientEmail(order.getRecipientEmail())
                 .recipientAddress(order.getRecipientAddress())
                 .paymentMethod(order.getPaymentMethod())
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : "CHUA_THANH_TOAN")

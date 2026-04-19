@@ -248,9 +248,6 @@ public class ADOrderServiceImpl implements ADOrderService {
         }
     }
 
-    private void doiTrangThaiImel(Order hoaDonDaCapNhat) {
-    }
-
     // luu ls thay doi trạng thía hóa đơn
     private OrderHistory luuOrderHistory(
             Order hoaDon,
@@ -858,8 +855,7 @@ public class ADOrderServiceImpl implements ADOrderService {
                 hoaDon.setRecipientPhone(addr.getPhoneNumber());
                 hoaDon.setRecipientAddress(
                         (addr.getAddressDetail() != null ? addr.getAddressDetail() + ", " : "")
-                        + addr.getWardCommune() + ", " + addr.getProvinceCity()
-                );
+                                + addr.getWardCommune() + ", " + addr.getProvinceCity());
             } else if (request.getTinhThanhPho() != null && !request.getTinhThanhPho().isBlank()) {
                 // Nếu nhập tay địa chỉ mới (chỉ cần có tinhThanhPho là đủ)
                 if (request.getTenNguoiNhan() != null && !request.getTenNguoiNhan().isBlank())
@@ -907,7 +903,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
 
             if (hoaDon.getOrderStatus() != OrderStatus.DANG_GIAO) {
-                throw new RuntimeException("Chỉ có thể đánh dấu giao hàng thất bại khi đơn đang ở trạng thái Đang giao hàng!");
+                throw new RuntimeException(
+                        "Chỉ có thể đánh dấu giao hàng thất bại khi đơn đang ở trạng thái Đang giao hàng!");
             }
 
             hoaDon.setOrderStatus(OrderStatus.GIAO_HANG_KHONG_THANH_CONG);
@@ -975,7 +972,8 @@ public class ADOrderServiceImpl implements ADOrderService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
 
             if (hoaDon.getOrderStatus() != OrderStatus.GIAO_HANG_KHONG_THANH_CONG) {
-                throw new RuntimeException("Chỉ có thể xác nhận hoàn hàng khi đơn đang ở trạng thái Giao hàng không thành công!");
+                throw new RuntimeException(
+                        "Chỉ có thể xác nhận hoàn hàng khi đơn đang ở trạng thái Giao hàng không thành công!");
             }
 
             // Giải phóng Serial về trạng thái AVAILABLE (sản phẩm đã được trả về kho)
@@ -1029,7 +1027,8 @@ public class ADOrderServiceImpl implements ADOrderService {
             responseData.put("maHoaDon", saved.getCode());
             responseData.put("trangThaiMoi", OrderStatus.DA_HOAN_HANG);
 
-            return ResponseObject.success(responseData, "Đã xác nhận hoàn hàng về kho, tồn kho và Serial đã được cập nhật");
+            return ResponseObject.success(responseData,
+                    "Đã xác nhận hoàn hàng về kho, tồn kho và Serial đã được cập nhật");
 
         } catch (RuntimeException e) {
             log.error("Lỗi returnOrder: {}", e.getMessage(), e);
@@ -1087,7 +1086,8 @@ public class ADOrderServiceImpl implements ADOrderService {
 
     /**
      * Giải phóng Serial khi hủy đơn hàng
-     * Chỉ giải phóng Serial đang ở trạng thái IN_ORDER, không đụng vào Serial đã SOLD
+     * Chỉ giải phóng Serial đang ở trạng thái IN_ORDER, không đụng vào Serial đã
+     * SOLD
      */
     private void capNhatTrangThaiSerialBiHuy(Order hoaDon) {
         // Tìm tất cả serial thuộc đơn hàng qua orderHolding
