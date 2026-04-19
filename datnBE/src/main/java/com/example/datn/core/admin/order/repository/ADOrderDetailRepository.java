@@ -17,134 +17,138 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
     List<OrderDetail> findByOrderId(String orderId);
 
     @Query(value = """
-            SELECT
-                hd.id AS orderId,
-                hd.code AS maHoaDon,
-                hd.code AS tenHoaDon,
-                hd.order_type AS loaiHoaDon,
+                        SELECT
+                            hd.id AS orderId,
+                            hd.code AS maHoaDon,
+                            hd.code AS tenHoaDon,
+                            hd.order_type AS loaiHoaDon,
 
-                hdct.id AS id,
-                hdct.id AS maHoaDonChiTiet,
-                hdct.quantity AS soLuong,
-                hdct.unit_price AS giaBan,
-                hdct.total_price AS tongTien,
-                hd.total_after_discount AS tongTienSauGiam,
+                            hdct.id AS id,
+                            hdct.id AS maHoaDonChiTiet,
+                            hdct.quantity AS soLuong,
+                            hdct.unit_price AS giaBan,
+                            hdct.total_price AS tongTien,
+                            hd.total_after_discount AS tongTienSauGiam,
 
-                v.code AS maVoucher,
-                v.name AS tenVoucher,
-                COALESCE(hd.total_amount - hd.total_after_discount, 0) AS giaTriVoucher,
+                            v.code AS maVoucher,
+                            v.name AS tenVoucher,
+                            COALESCE(hd.total_amount - hd.total_after_discount, 0) AS giaTriVoucher,
 
-                s.name AS tenNhanVien,
+                            s.name AS tenNhanVien,
 
-                sp.name AS tenSanPham,
-                spct.id AS productDetailId,
-                spct.image_url AS anhSanPham,
-                brand.name AS thuongHieu,
-                color.name AS mauSac,
-                COALESCE(sc.name, '') AS size,
-
-
-                hd.order_status AS trangThaiHoaDon,
-                hd.payment_status AS trangThaiThanhToan,
-                hd.created_date AS ngayTao,
-                hd.payment_date AS ngayThanhToan,
-                COALESCE(hd.shipping_fee, 0) AS phiVanChuyen,
-                hd.payment_method AS phuongThucThanhToan,
+                            sp.name AS tenSanPham,
+                            spct.id AS productDetailId,
+                            COALESCE(
+                NULLIF(spct.image_url, ''),
+                (SELECT img.url FROM product_image img WHERE img.id_product = sp.id ORDER BY img.display_order ASC LIMIT 1),
+                ''
+            ) AS anhSanPham,
+                            brand.name AS thuongHieu,
+                            color.name AS mauSac,
+                            COALESCE(sc.name, '') AS size,
 
 
-                COALESCE(hdct.original_price, spct.sale_price) AS giaBanGoc,
+                            hd.order_status AS trangThaiHoaDon,
+                            hd.payment_status AS trangThaiThanhToan,
+                            hd.created_date AS ngayTao,
+                            hd.payment_date AS ngayThanhToan,
+                            COALESCE(hd.shipping_fee, 0) AS phiVanChuyen,
+                            hd.payment_method AS phuongThucThanhToan,
 
-                sp.code AS maSanPham,
-                spct.code AS maChiTietSanPham,
 
-                (
-                    SELECT COALESCE(SUM(hdsub.quantity * hdsub.unit_price), 0)
-                    FROM order_detail hdsub
-                    WHERE hdsub.id_order = hd.id
-                ) AS thanhTien,
+                            COALESCE(hdct.original_price, spct.sale_price) AS giaBanGoc,
 
-                COALESCE(hd.recipient_name, '') AS tenKhachHang,
-                COALESCE(hd.recipient_phone, '') AS sdtKH,
-                COALESCE(hd.recipient_email, kh.email) AS email,
-                kh.email AS email2,
-                kh.image AS avatarKhachHang,
-                COALESCE(hd.recipient_address, '') AS diaChi,
-                kh.id AS customerId,
+                            sp.code AS maSanPham,
+                            spct.code AS maChiTietSanPham,
 
-                -- ===== LỊCH SỬ TRẠNG THÁI (FIX THEO ENTITY ORDERHISTORY) =====
-                (
-                    SELECT JSON_ARRAYAGG(
-                        JSON_OBJECT(
-                            'id', lst.id,
-                            'trangThai', lst.trang_thai,
-                            'tenTrangThai',
-                                CASE lst.trang_thai
-                                    WHEN 'CHO_XAC_NHAN' THEN 'Chờ xác nhận'
-                                    WHEN 'DA_XAC_NHAN' THEN 'Đã xác nhận'
-                                    WHEN 'CHO_GIAO' THEN 'Chờ giao hàng'
-                                    WHEN 'DANG_GIAO' THEN 'Đang giao hàng'
-                                    WHEN 'HOAN_THANH' THEN 'Hoàn thành'
-                                    WHEN 'DA_HUY' THEN 'Đã hủy'
-                                    ELSE 'Không xác định'
-                                END,
-                            'thoiGian', lst.thoi_gian,
-                            'ghiChu', COALESCE(lst.ghi_chu, ''),
-                            'nhanVien', COALESCE(nv.name, '')
-                        )
-                    )
-                    FROM order_history lst
-                    LEFT JOIN employee nv ON lst.id_nhan_vien = nv.id
-                    WHERE lst.id_order = hd.id
-                ) AS lichSuTrangThai,
+                            (
+                                SELECT COALESCE(SUM(hdsub.quantity * hdsub.unit_price), 0)
+                                FROM order_detail hdsub
+                                WHERE hdsub.id_order = hd.id
+                            ) AS thanhTien,
 
-                -- ===== DANH SÁCH SERIAL =====
-                COALESCE(
-                    (
-                        SELECT JSON_ARRAYAGG(
-                            JSON_OBJECT(
-                                'id', i.id,
-                                'code', i.serial_number,
-                                'status', i.serial_status,
-                                'statusText',
-                                    CASE i.serial_status
-                                        WHEN 'AVAILABLE' THEN 'Khả dụng'
-                                        WHEN 'IN_ORDER' THEN 'Đang trong đơn'
-                                        WHEN 'SOLD' THEN 'Đã bán'
-                                        WHEN 'DEFECTIVE' THEN 'Lỗi'
-                                        WHEN 'WARRANTY' THEN 'Đang bảo hành'
-                                        ELSE 'Không xác định'
-                                    END,
-                                'assignedAt', i.created_date
-                            )
-                        )
-                        FROM serial i
-                        WHERE i.id_order_detail = hdct.id
-                    ),
-                    JSON_ARRAY()
-                ) AS danhSachImei,
+                            COALESCE(hd.recipient_name, '') AS tenKhachHang,
+                            COALESCE(hd.recipient_phone, '') AS sdtKH,
+                            COALESCE(hd.recipient_email, kh.email) AS email,
+                            kh.email AS email2,
+                            kh.image AS avatarKhachHang,
+                            COALESCE(hd.recipient_address, '') AS diaChi,
+                            kh.id AS customerId,
 
-                (
-                    SELECT COUNT(*)
-                    FROM serial i
-                    WHERE i.id_order_detail = hdct.id
-                ) AS soLuongImei,
+                            -- ===== LỊCH SỬ TRẠNG THÁI (FIX THEO ENTITY ORDERHISTORY) =====
+                            (
+                                SELECT JSON_ARRAYAGG(
+                                    JSON_OBJECT(
+                                        'id', lst.id,
+                                        'trangThai', lst.trang_thai,
+                                        'tenTrangThai',
+                                            CASE lst.trang_thai
+                                                WHEN 'CHO_XAC_NHAN' THEN 'Chờ xác nhận'
+                                                WHEN 'DA_XAC_NHAN' THEN 'Đã xác nhận'
+                                                WHEN 'CHO_GIAO' THEN 'Chờ giao hàng'
+                                                WHEN 'DANG_GIAO' THEN 'Đang giao hàng'
+                                                WHEN 'HOAN_THANH' THEN 'Hoàn thành'
+                                                WHEN 'DA_HUY' THEN 'Đã hủy'
+                                                ELSE 'Không xác định'
+                                            END,
+                                        'thoiGian', lst.thoi_gian,
+                                        'ghiChu', COALESCE(lst.ghi_chu, ''),
+                                        'nhanVien', COALESCE(nv.name, '')
+                                    )
+                                )
+                                FROM order_history lst
+                                LEFT JOIN employee nv ON lst.id_nhan_vien = nv.id
+                                WHERE lst.id_order = hd.id
+                            ) AS lichSuTrangThai,
 
-                hd.failure_reason AS failureReason
+                            -- ===== DANH SÁCH SERIAL =====
+                            COALESCE(
+                                (
+                                    SELECT JSON_ARRAYAGG(
+                                        JSON_OBJECT(
+                                            'id', i.id,
+                                            'code', i.serial_number,
+                                            'status', i.serial_status,
+                                            'statusText',
+                                                CASE i.serial_status
+                                                    WHEN 'AVAILABLE' THEN 'Khả dụng'
+                                                    WHEN 'IN_ORDER' THEN 'Đang trong đơn'
+                                                    WHEN 'SOLD' THEN 'Đã bán'
+                                                    WHEN 'DEFECTIVE' THEN 'Lỗi'
+                                                    WHEN 'WARRANTY' THEN 'Đang bảo hành'
+                                                    ELSE 'Không xác định'
+                                                END,
+                                            'assignedAt', i.created_date
+                                        )
+                                    )
+                                    FROM serial i
+                                    WHERE i.id_order_detail = hdct.id
+                                ),
+                                JSON_ARRAY()
+                            ) AS danhSachImei,
 
-            FROM `order` hd
-            INNER JOIN order_detail hdct ON hdct.id_order = hd.id
-            LEFT JOIN product_detail spct ON hdct.id_product_detail = spct.id
-            LEFT JOIN product sp ON spct.id_product = sp.id
-            LEFT JOIN brand brand ON sp.id_brand = brand.id
-            LEFT JOIN color color ON spct.id_color = color.id
-            LEFT JOIN storage_capacity sc ON spct.id_storage_capacity = sc.id
-            LEFT JOIN customer kh ON hd.id_customer = kh.id
-            LEFT JOIN voucher v ON hd.id_voucher = v.id
-            LEFT JOIN employee s ON hd.id_employee = s.id
+                            (
+                                SELECT COUNT(*)
+                                FROM serial i
+                                WHERE i.id_order_detail = hdct.id
+                            ) AS soLuongImei,
 
-            WHERE hd.code = :maHoaDon
-            ORDER BY hdct.created_date ASC
-            """, countQuery = """
+                            hd.failure_reason AS failureReason
+
+                        FROM `order` hd
+                        INNER JOIN order_detail hdct ON hdct.id_order = hd.id
+                        LEFT JOIN product_detail spct ON hdct.id_product_detail = spct.id
+                        LEFT JOIN product sp ON spct.id_product = sp.id
+                        LEFT JOIN brand brand ON sp.id_brand = brand.id
+                        LEFT JOIN color color ON spct.id_color = color.id
+                        LEFT JOIN storage_capacity sc ON spct.id_storage_capacity = sc.id
+                        LEFT JOIN customer kh ON hd.id_customer = kh.id
+                        LEFT JOIN voucher v ON hd.id_voucher = v.id
+                        LEFT JOIN employee s ON hd.id_employee = s.id
+
+                        WHERE hd.code = :maHoaDon
+                        ORDER BY hdct.created_date ASC
+                        """, countQuery = """
             SELECT COUNT(*)
             FROM order_detail hdct
             LEFT JOIN `order` hd ON hdct.id_order = hd.id
