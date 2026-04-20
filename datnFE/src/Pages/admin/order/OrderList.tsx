@@ -48,8 +48,6 @@ const OrderStatuses = [
   { key: "DA_HUY", label: "Đã hủy" },
 ];
 
-
-
 const OrderPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -224,7 +222,6 @@ const OrderPage: React.FC = () => {
   );
 
   // Xuất toàn bộ danh sách hóa đơn (không phân trang)
-
   const handleExportExcel = async () => {
     try {
       const params = {
@@ -248,12 +245,11 @@ const OrderPage: React.FC = () => {
       console.log("[Xuất Excel] res.data.page:", res.data?.data?.page);
       let allData = res.data?.data?.page?.content || [];
 
-      // 过滤：柜台订单 (OFFLINE) 只导出已完成的 (HOAN_THANH)
       allData = allData.filter((order: any) => {
         if (order.loaiHoaDon === "OFFLINE") {
           return order.status === "HOAN_THANH";
         }
-        return true; // 在线订单导出全部
+        return true;
       });
 
       message.info(`Số bản ghi lấy được: ${allData.length}`);
@@ -408,7 +404,10 @@ const OrderPage: React.FC = () => {
               ]}
             />
             {orderType === "OFFLINE" && (
-              <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
+              <Text
+                type="secondary"
+                style={{ fontSize: 11, display: "block", marginTop: 4 }}
+              >
                 Chỉ hiển thị đơn hàng đã hoàn thành
               </Text>
             )}
@@ -476,28 +475,32 @@ const OrderPage: React.FC = () => {
           columns={columns}
           dataSource={useMemo(() => {
             const raw = ordersData?.page?.content || [];
-            // 过滤：柜台订单 (OFFLINE) 只显示已完成的 (HOAN_THANH)
             const filtered = raw.filter((order: any) => {
               if (order.loaiHoaDon === "OFFLINE") {
                 return order.status === "HOAN_THANH";
               }
-              return true; // 在线订单显示全部
+              return true;
             });
-            // 排序规则：线上待确认订单优先，其他订单按创建时间倒序
             return [...filtered].sort((a, b) => {
-              const aIsOnline = a.loaiHoaDon === "ONLINE" || a.loaiHoaDon === "GIAO_HANG";
-              const bIsOnline = b.loaiHoaDon === "ONLINE" || b.loaiHoaDon === "GIAO_HANG";
+              // 1. Ưu tiên đưa các đơn "Online + Chờ xác nhận" lên đầu (khi ở tab Tất cả)
+              const aIsOnline =
+                a.loaiHoaDon === "ONLINE" || a.loaiHoaDon === "GIAO_HANG";
+              const bIsOnline =
+                b.loaiHoaDon === "ONLINE" || b.loaiHoaDon === "GIAO_HANG";
               const aIsOnlinePending = aIsOnline && a.status === "CHO_XAC_NHAN";
               const bIsOnlinePending = bIsOnline && b.status === "CHO_XAC_NHAN";
 
-              // 1. 线上待确认订单排在最前
               if (aIsOnlinePending && !bIsOnlinePending) return -1;
               if (!aIsOnlinePending && bIsOnlinePending) return 1;
 
-              // 2. 同类型订单按创建时间倒序（新的在前）
+              if (activeTab === "CHO_XAC_NHAN") {
+                return (a.createdDate ?? 0) - (b.createdDate ?? 0);
+              }
+
+              //Hiển thị đơn cũ nhất ở trên xuống dần
               return (b.createdDate ?? 0) - (a.createdDate ?? 0);
             });
-          }, [ordersData?.page?.content])}
+          }, [ordersData?.page?.content, activeTab])}
           loading={isLoadingList}
           rowKey="id"
           pagination={{
