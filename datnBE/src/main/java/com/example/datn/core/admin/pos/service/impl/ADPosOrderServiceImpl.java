@@ -117,16 +117,34 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         order.setOrderType(TypeInvoice.OFFLINE);
         order.setTotalAmount(BigDecimal.ZERO);
         order.setTotalAfterDiscount(BigDecimal.ZERO);
+
+        // 1. Lưu tạm Order rỗng xuống DB để MySQL tự sinh ra ID (và Code nếu có trigger)
+        order = posOrderRepository.save(order);
+
+        // 2. Đảm bảo mã hóa đơn được thiết lập (nếu DB chưa tự sinh)
+        if (order.getCode() == null || order.getCode().isEmpty()) {
+            // Cách 1: Sinh mã từ ID (Thường dùng nhất)
+            String shortId = order.getId().length() > 6 ? order.getId().substring(0, 6).toUpperCase() : order.getId().toUpperCase();
+            order.setCode("HD" + shortId);
+
+            // 3. Cập nhật lại Order với cái Code vừa gán
+            order = posOrderRepository.save(order);
+        }
+
         // Gán nhân viên thực hiện bán hàng tại thời điểm tạo hóa đơn
         Employee currentEmployee = getCurrentEmployee();
         order.setEmployee(currentEmployee);
+
         // Gán ca làm việc hiện tại cho đơn hàng
         if (currentEmployee.getAccount() != null) {
             shiftHandoverRepository.findOpenShiftByAccountId(currentEmployee.getAccount().getId())
                     .ifPresent(order::setShiftHandover);
         }
+
+        // Cập nhật lần cuối
         posOrderRepository.save(order);
-        logger.info("[POS] Đã tạo hóa đơn trống thành công, orderId={}", order.getId());
+
+        logger.info("[POS] Đã tạo hóa đơn trống thành công, orderId={}, orderCode={}", order.getId(), order.getCode());
         return ResponseObject.success(order, "Tạo hóa đơn tại quầy thành công");
     }
 
