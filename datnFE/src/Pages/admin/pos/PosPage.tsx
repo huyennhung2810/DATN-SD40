@@ -1503,6 +1503,7 @@ const PosPage: React.FC = () => {
                         <GiftOutlined style={{ color: "#fa8c16" }} />
                         <Text>Voucher:</Text>
                       </Space>
+
                       {appliedVoucher ? (
                         <Space size={4}>
                           <Tag color="orange" icon={<GiftOutlined />}>
@@ -1516,6 +1517,17 @@ const PosPage: React.FC = () => {
                             ).toLocaleString("vi-VN")}{" "}
                             đ
                           </Text>
+
+                          {/* NÚT ĐỔI VOUCHER */}
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={openVoucherModal}
+                            style={{ padding: "0 4px" }}
+                          >
+                            Đổi mã
+                          </Button>
+
                           <Button
                             type="text"
                             danger
@@ -1525,9 +1537,11 @@ const PosPage: React.FC = () => {
                           />
                         </Space>
                       ) : (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          Voucher sẽ được tự động áp dụng khi chọn khách hàng
-                        </Text>
+                        <Space size={8}>
+                          <Button size="small" onClick={openVoucherModal}>
+                            Chọn Voucher
+                          </Button>
+                        </Space>
                       )}
                     </div>
                   </div>
