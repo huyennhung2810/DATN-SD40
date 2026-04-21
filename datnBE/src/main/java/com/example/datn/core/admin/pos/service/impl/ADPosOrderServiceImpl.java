@@ -762,6 +762,7 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             List<Serial> inOrderSerials = getSerialsByOrderDetailId(detail.getId());
             for (Serial serial : inOrderSerials) {
                 serial.setOrderDetail(null);
+                serial.setOrderHolding(null);
                 serial.setSerialStatus(SerialStatus.AVAILABLE);
             }
             if (!inOrderSerials.isEmpty()) {
