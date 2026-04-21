@@ -25,6 +25,9 @@ export const posApi = {
         axiosInstance.delete(`/admin/pos/orders/${orderId}/details/${detailId}/remove-serial`, { params: { serialNumber } }),
     setCustomer: (orderId: string, customerId: string) =>
         axiosInstance.put(`/admin/pos/orders/${orderId}/customer`, null, { params: { customerId } }),
+    removeCustomer: (orderId: string) => {
+        return axiosInstance.delete(`/admin/pos/orders/${orderId}/customer`);
+    },
     checkout: (orderId: string, body: CheckoutPosRequest) =>
         axiosInstance.post(`/admin/pos/orders/${orderId}/checkout`, body),
     cancelOrder: (orderId: string) => axiosInstance.delete(`/admin/pos/orders/${orderId}`),

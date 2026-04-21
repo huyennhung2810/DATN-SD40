@@ -417,12 +417,24 @@ const PosPage: React.FC = () => {
     // Nếu xóa khách hàng (customerId = null/undefined) → xóa khách và voucher khỏi hóa đơn
     if (!customerId) {
       try {
-        await posApi.removeVoucher(activeKey);
+        // 1. Xóa voucher (nếu có)
+        try {
+          await posApi.removeVoucher(activeKey);
+        } catch {
+          // Bỏ qua lỗi nếu đơn chưa áp dụng voucher
+        }
         setAppliedVoucher(null);
+
+        // 2. GỌI API GỠ KHÁCH HÀNG
+        await posApi.removeCustomer(activeKey);
+
+        // 3. Cập nhật lại UI
         await fetchOrderDetails(activeKey);
         await fetchPendingOrders();
-      } catch {
-        // Lỗi removeVoucher không ảnh hưởng đến việc xóa khách
+        message.success("Đã bỏ chọn khách hàng");
+      } catch (error: any) {
+        console.error("Lỗi khi gỡ khách hàng:", error);
+        message.error("Không thể bỏ chọn khách hàng");
       }
       return;
     }
@@ -1644,7 +1656,7 @@ const PosPage: React.FC = () => {
                                 Math.ceil(total / 100000) * 100000,
                                 Math.ceil(total / 200000) * 200000,
                                 Math.ceil(total / 500000) * 500000,
-                              ].filter((v) => v > total)
+                              ].filter((v) => v > total),
                             ),
                           ].slice(0, 3);
                           return (

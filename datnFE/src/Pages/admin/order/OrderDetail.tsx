@@ -235,7 +235,8 @@ const OrderDetailPage: React.FC = () => {
 
   // STATE DÀNH CHO MODAL CAMERA MỚI
   const [serialChangeOpen, setSerialChangeOpen] = useState(false);
-  const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderDetailResponse | null>(null);
+  const [selectedOrderDetail, setSelectedOrderDetail] =
+    useState<OrderDetailResponse | null>(null);
 
   // Derived state
   const currentStatus = order?.trangThaiHoaDon ?? "CHO_XAC_NHAN";
@@ -248,8 +249,9 @@ const OrderDetailPage: React.FC = () => {
   // Chỉ cho phép sửa thông tin khách hàng khi đơn ở trạng thái Chờ xác nhận
   const canEditCustomerInfo = isOnline && currentStatus === "CHO_XAC_NHAN";
   const canCancelStatuses = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "CHO_GIAO"];
-  const showCancelButton = isOnline && canCancelStatuses.includes(currentStatus);
-  
+  const showCancelButton =
+    isOnline && canCancelStatuses.includes(currentStatus);
+
   // Các hành động theo trạng thái
   const getNextActions = (): { key: string; label: string }[] => {
     switch (currentStatus) {
@@ -262,7 +264,10 @@ const OrderDetailPage: React.FC = () => {
       case "DANG_GIAO":
         return [
           { key: "HOAN_THANH", label: "Hoàn thành" },
-          { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
+          {
+            key: "GIAO_HANG_KHONG_THANH_CONG",
+            label: "Giao hàng không thành công",
+          },
         ];
       case "GIAO_HANG_KHONG_THANH_CONG":
         return [
@@ -335,10 +340,7 @@ const OrderDetailPage: React.FC = () => {
     }
 
     // Kiểm tra lý do khi hủy đơn
-    if (
-      nextStatus === "DA_HUY" &&
-      (!statusNote || !statusNote.trim())
-    ) {
+    if (nextStatus === "DA_HUY" && (!statusNote || !statusNote.trim())) {
       message.warning("Vui lòng nhập lý do hủy đơn hàng!");
       return;
     }
@@ -361,7 +363,9 @@ const OrderDetailPage: React.FC = () => {
         case "XAC_NHAN_HOAN_HANG":
           // Xác nhận hoàn hàng về kho
           await orderApi.returnOrder(order.maHoaDon);
-          message.success("Đã xác nhận hoàn hàng về kho, tồn kho đã được cập nhật");
+          message.success(
+            "Đã xác nhận hoàn hàng về kho, tồn kho đã được cập nhật",
+          );
           break;
 
         case "HUY_SAU_HOAN_HANG":
@@ -391,8 +395,9 @@ const OrderDetailPage: React.FC = () => {
 
   // Load provinces for address form
   useEffect(() => {
-    axios.get("/api/provinces/v2/p/?depth=1")
-      .then(res => setProvinces(res.data || []))
+    axios
+      .get("/api/provinces/v2/p/?depth=1")
+      .then((res) => setProvinces(res.data || []))
       .catch(() => {});
   }, []);
 
@@ -402,7 +407,9 @@ const OrderDetailPage: React.FC = () => {
     setWards([]);
     addrForm.setFieldsValue({ wardCode: undefined, phuongXa: "" });
     try {
-      const res = await axios.get(`/api/provinces/v2/p/${provinceCode}?depth=2`);
+      const res = await axios.get(
+        `/api/provinces/v2/p/${provinceCode}?depth=2`,
+      );
       setWards(res.data.wards ?? []);
     } catch {
       setWards([]);
@@ -422,7 +429,9 @@ const OrderDetailPage: React.FC = () => {
     if (order.customerId) {
       setLoadingAddresses(true);
       try {
-        const addrs = await customerApi.getAddressesByCustomer(order.customerId);
+        const addrs = await customerApi.getAddressesByCustomer(
+          order.customerId,
+        );
         setSavedAddresses(addrs || []);
       } catch {
         setSavedAddresses([]);
@@ -455,12 +464,22 @@ const OrderDetailPage: React.FC = () => {
           provinceCity: values.tinhThanhPho?.trim() || "",
           wardCommune: values.phuongXa?.trim() || "",
           addressDetail: values.diaChiChiTiet?.trim() || "",
-          provinceCode: typeof values.provinceCode === "number" ? values.provinceCode : undefined,
-          wardCode: typeof values.wardCode === "number" ? values.wardCode : undefined,
+          provinceCode:
+            typeof values.provinceCode === "number"
+              ? values.provinceCode
+              : undefined,
+          wardCode:
+            typeof values.wardCode === "number" ? values.wardCode : undefined,
           isDefault: false,
         };
-        console.log("[handleSaveCustomer] Creating address with payload:", addressPayload);
-        const newAddress = await customerApi.addAddress(order.customerId, addressPayload);
+        console.log(
+          "[handleSaveCustomer] Creating address with payload:",
+          addressPayload,
+        );
+        const newAddress = await customerApi.addAddress(
+          order.customerId,
+          addressPayload,
+        );
         // Dùng ID địa chỉ vừa tạo để cập nhật vào đơn hàng
         payload.addressId = newAddress.id;
       }
@@ -691,7 +710,7 @@ const OrderDetailPage: React.FC = () => {
         if (!canChangeSerial) return <Text type="secondary">—</Text>;
         const serials = parseSerials(r.danhSachImei);
         const firstSerial = serials[0];
-        
+
         return (
           <Space>
             {/* Truyền nguyên object OrderDetailResponse (r) vào state để ném vào Modal */}
@@ -803,8 +822,9 @@ const OrderDetailPage: React.FC = () => {
       steps = [...ONLINE_STEPS];
       // Khi hoàn thành: ẩn nhánh giao thất bại
       if (currentStatus === "HOAN_THANH") {
-        steps = steps.filter((s) =>
-          s.key !== "GIAO_HANG_KHONG_THANH_CONG" && s.key !== "DA_HOAN_HANG",
+        steps = steps.filter(
+          (s) =>
+            s.key !== "GIAO_HANG_KHONG_THANH_CONG" && s.key !== "DA_HOAN_HANG",
         );
       }
       // Khi giao không thành công: ẩn nút hoàn thành
@@ -866,11 +886,7 @@ const OrderDetailPage: React.FC = () => {
               icon = <ReloadOutlined style={{ opacity: 0.3 }} />;
             }
           } else {
-            icon = done ? (
-              <CheckCircleOutlined />
-            ) : (
-              stepIcon(step.key)
-            );
+            icon = done ? <CheckCircleOutlined /> : stepIcon(step.key);
           }
 
           return (
@@ -907,38 +923,55 @@ const OrderDetailPage: React.FC = () => {
                   {step.label}
                 </Text>
                 {/* Hiển thị lý do giao không thành công */}
-                {active && currentStatus === "GIAO_HANG_KHONG_THANH_CONG" && order?.failureReason && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "#fa541c",
-                      marginTop: 4,
-                      padding: "2px 4px",
-                      background: "#fff2e8",
-                      borderRadius: 4,
-                      maxWidth: 80,
-                    }}
-                  >
-                    {order.failureReason}
-                  </div>
-                )}
+                {active &&
+                  currentStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
+                  order?.failureReason && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "#fa541c",
+                        marginTop: 4,
+                        padding: "2px 4px",
+                        background: "#fff2e8",
+                        borderRadius: 4,
+                        maxWidth: 80,
+                      }}
+                    >
+                      {order.failureReason}
+                    </div>
+                  )}
                 {/* Hiển thị nút hành động theo trạng thái */}
-                {active && isOnline && nextActions.length > 0 && !isCompleted && !isCancelled && (
-                  <Space direction="vertical" size={2} style={{ marginTop: 6 }}>
-                    {nextActions.map((action) => (
-                      <Button
-                        key={action.key}
-                        size="small"
-                        type={action.key === "XAC_NHAN_HOAN_HANG" ? "default" : "primary"}
-                        danger={action.key === "XAC_NHAN_HOAN_HANG" || action.key === "HUY_SAU_HOAN_HANG"}
-                        style={{ fontSize: 11, padding: "0 8px" }}
-                        onClick={() => openStatusModal(action.key)}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </Space>
-                )}
+                {active &&
+                  isOnline &&
+                  nextActions.length > 0 &&
+                  !isCompleted &&
+                  !isCancelled && (
+                    <Space
+                      direction="vertical"
+                      size={2}
+                      style={{ marginTop: 6 }}
+                    >
+                      {nextActions.map((action) => (
+                        <Button
+                          key={action.key}
+                          size="small"
+                          type={
+                            action.key === "XAC_NHAN_HOAN_HANG"
+                              ? "default"
+                              : "primary"
+                          }
+                          danger={
+                            action.key === "XAC_NHAN_HOAN_HANG" ||
+                            action.key === "HUY_SAU_HOAN_HANG"
+                          }
+                          style={{ fontSize: 11, padding: "0 8px" }}
+                          onClick={() => openStatusModal(action.key)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </Space>
+                  )}
               </div>
               {idx < steps.length - 1 && (
                 <div
@@ -1504,8 +1537,10 @@ const OrderDetailPage: React.FC = () => {
         cancelText="Hủy"
         okButtonProps={{
           disabled:
-            ((nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") && !statusNote.trim()) ||
-            (nextStatus === "GIAO_HANG_KHONG_THANH_CONG" && !statusNote.trim()) ||
+            ((nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") &&
+              !statusNote.trim()) ||
+            (nextStatus === "GIAO_HANG_KHONG_THANH_CONG" &&
+              !statusNote.trim()) ||
             isUpdating,
         }}
       >
@@ -1526,10 +1561,24 @@ const OrderDetailPage: React.FC = () => {
           </Tag>
           <Text style={{ fontSize: 20 }}>→</Text>
           <Tag
-            color={nextStatus === "GIAO_LAI" ? "geekblue" : nextStatus === "XAC_NHAN_HOAN_HANG" ? "purple" : nextStatus === "HUY_SAU_HOAN_HANG" ? "red" : STATUS_COLORS[nextStatus] ?? "default"}
+            color={
+              nextStatus === "GIAO_LAI"
+                ? "geekblue"
+                : nextStatus === "XAC_NHAN_HOAN_HANG"
+                  ? "purple"
+                  : nextStatus === "HUY_SAU_HOAN_HANG"
+                    ? "red"
+                    : (STATUS_COLORS[nextStatus] ?? "default")
+            }
             style={{ fontSize: 14, padding: "4px 12px" }}
           >
-            {nextStatus === "GIAO_LAI" ? "Giao lại" : nextStatus === "XAC_NHAN_HOAN_HANG" ? "Xác nhận hoàn hàng" : nextStatus === "HUY_SAU_HOAN_HANG" ? "Hủy đơn" : STATUS_LABELS[nextStatus] ?? nextStatus}
+            {nextStatus === "GIAO_LAI"
+              ? "Giao lại"
+              : nextStatus === "XAC_NHAN_HOAN_HANG"
+                ? "Xác nhận hoàn hàng"
+                : nextStatus === "HUY_SAU_HOAN_HANG"
+                  ? "Hủy đơn"
+                  : (STATUS_LABELS[nextStatus] ?? nextStatus)}
           </Tag>
         </div>
         <TextArea
@@ -1549,19 +1598,22 @@ const OrderDetailPage: React.FC = () => {
             * Bắt buộc nhập lý do giao hàng không thành công
           </div>
         )}
-        {(nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") && !statusNote.trim() && (
-          <div style={{ color: "#fa541c", marginTop: 8 }}>
-            * Vui lòng nhập lý do hủy đơn hàng
-          </div>
-        )}
+        {(nextStatus === "DA_HUY" || nextStatus === "HUY_SAU_HOAN_HANG") &&
+          !statusNote.trim() && (
+            <div style={{ color: "#fa541c", marginTop: 8 }}>
+              * Vui lòng nhập lý do hủy đơn hàng
+            </div>
+          )}
         {nextStatus === "XAC_NHAN_HOAN_HANG" && (
           <div style={{ color: "#722ed1", marginTop: 8 }}>
-            * Hành động này sẽ hoàn hàng về kho và tăng tồn kho. Bạn có thể hủy đơn sau khi hoàn hàng.
+            * Hành động này sẽ hoàn hàng về kho và tăng tồn kho. Bạn có thể hủy
+            đơn sau khi hoàn hàng.
           </div>
         )}
         {nextStatus === "GIAO_LAI" && (
           <div style={{ color: "#1677ff", marginTop: 8 }}>
-            * Hành động này sẽ chuyển đơn về trạng thái đang giao hàng để giao lại.
+            * Hành động này sẽ chuyển đơn về trạng thái đang giao hàng để giao
+            lại.
           </div>
         )}
       </Modal>
@@ -1583,7 +1635,14 @@ const OrderDetailPage: React.FC = () => {
               value={addressMode}
               onChange={(e) => {
                 setAddressMode(e.target.value);
-                addrForm.resetFields(["addressId", "tenNguoiNhan", "sdtNguoiNhan", "provinceCode", "phuongXa", "diaChiChiTiet"]);
+                addrForm.resetFields([
+                  "addressId",
+                  "tenNguoiNhan",
+                  "sdtNguoiNhan",
+                  "provinceCode",
+                  "phuongXa",
+                  "diaChiChiTiet",
+                ]);
                 setWards([]);
               }}
               style={{ marginBottom: 12 }}
@@ -1602,13 +1661,15 @@ const OrderDetailPage: React.FC = () => {
               {loadingAddresses ? (
                 <Text type="secondary">Đang tải địa chỉ...</Text>
               ) : savedAddresses.length === 0 ? (
-                <Text type="secondary">Khách hàng chưa có địa chỉ nào. Vui lòng nhập địa chỉ mới.</Text>
+                <Text type="secondary">
+                  Khách hàng chưa có địa chỉ nào. Vui lòng nhập địa chỉ mới.
+                </Text>
               ) : (
                 <Select
                   placeholder="-- Chọn địa chỉ --"
                   size="large"
                   onChange={(val) => {
-                    const selected = savedAddresses.find(a => a.id === val);
+                    const selected = savedAddresses.find((a) => a.id === val);
                     if (selected) {
                       addrForm.setFieldsValue({
                         tenNguoiNhan: selected.name,
@@ -1617,13 +1678,16 @@ const OrderDetailPage: React.FC = () => {
                     }
                   }}
                 >
-                  {savedAddresses.map(addr => (
+                  {savedAddresses.map((addr) => (
                     <Select.Option key={addr.id} value={addr.id}>
                       <div style={{ padding: "4px 0" }}>
-                        <Text strong>{addr.name} - {addr.phoneNumber}</Text>
+                        <Text strong>
+                          {addr.name} - {addr.phoneNumber}
+                        </Text>
                         <br />
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          {addr.addressDetail}, {addr.wardCommune}, {addr.provinceCity}
+                          {addr.addressDetail}, {addr.wardCommune},{" "}
+                          {addr.provinceCity}
                         </Text>
                       </div>
                     </Select.Option>
@@ -1633,40 +1697,65 @@ const OrderDetailPage: React.FC = () => {
             </Form.Item>
           ) : (
             <>
-              <Form.Item name="tinhThanhPho" hidden><Input /></Form.Item>
-              <Form.Item name="phuongXa" hidden><Input /></Form.Item>
+              <Form.Item name="tinhThanhPho" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="phuongXa" hidden>
+                <Input />
+              </Form.Item>
 
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item name="tenNguoiNhan" label="Tên người nhận" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+                  <Form.Item
+                    name="tenNguoiNhan"
+                    label="Tên người nhận"
+                    rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+                  >
                     <Input placeholder="VD: Nguyễn Văn A" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="sdtNguoiNhan" label="SĐT người nhận" rules={[
-                    { required: true, message: "Vui lòng nhập SĐT" },
-                    { pattern: /^0\d{9}$/, message: "SĐT gồm 10 số, bắt đầu bằng 0" }
-                  ]}>
+                  <Form.Item
+                    name="sdtNguoiNhan"
+                    label="SĐT người nhận"
+                    rules={[
+                      { required: true, message: "Vui lòng nhập SĐT" },
+                      {
+                        pattern: /^0\d{9}$/,
+                        message: "SĐT gồm 10 số, bắt đầu bằng 0",
+                      },
+                    ]}
+                  >
                     <Input placeholder="0xxxxxxxxx" />
                   </Form.Item>
                 </Col>
               </Row>
 
-              <Form.Item name="provinceCode" label="Tỉnh/Thành phố" rules={[{ required: true, message: "Chọn tỉnh/thành phố" }]}>
+              <Form.Item
+                name="provinceCode"
+                label="Tỉnh/Thành phố"
+                rules={[{ required: true, message: "Chọn tỉnh/thành phố" }]}
+              >
                 <Select
                   placeholder="-- Tỉnh/Thành phố --"
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.label?.toString() ?? "").toLowerCase().includes(input.toLowerCase())
+                    (option?.label?.toString() ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
                   }
                   onChange={(val, opt) => {
                     const label = (opt as any)?.label ?? "";
-                    addrForm.setFieldsValue({ tinhThanhPho: label, phuongXa: "", wardCode: undefined });
+                    addrForm.setFieldsValue({
+                      tinhThanhPho: label,
+                      phuongXa: "",
+                      wardCode: undefined,
+                    });
                     setWards([]);
                     if (val) loadWardsFromProvince(val);
                   }}
                 >
-                  {provinces.map(p => (
+                  {provinces.map((p) => (
                     <Select.Option key={p.code} value={p.code} label={p.name}>
                       {p.name}
                     </Select.Option>
@@ -1674,13 +1763,21 @@ const OrderDetailPage: React.FC = () => {
                 </Select>
               </Form.Item>
 
-              <Form.Item name="wardCode" label="Xã/Phường/Thị trấn" rules={[{ required: true, message: "Chọn Xã/Phường/Thị trấn" }]}>
+              <Form.Item
+                name="wardCode"
+                label="Xã/Phường/Thị trấn"
+                rules={[{ required: true, message: "Chọn Xã/Phường/Thị trấn" }]}
+              >
                 <Select
                   placeholder="-- Xã/Phường/Thị trấn --"
                   showSearch
-                  disabled={!addrForm.getFieldValue("provinceCode") || loadingWards}
+                  disabled={
+                    !addrForm.getFieldValue("provinceCode") || loadingWards
+                  }
                   filterOption={(input, option) =>
-                    (option?.label?.toString() ?? "").toLowerCase().includes(input.toLowerCase())
+                    (option?.label?.toString() ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
                   }
                   loading={loadingWards}
                   onChange={(val, opt) => {
@@ -1688,7 +1785,7 @@ const OrderDetailPage: React.FC = () => {
                     addrForm.setFieldsValue({ phuongXa: label });
                   }}
                 >
-                  {wards.map(w => (
+                  {wards.map((w) => (
                     <Select.Option key={w.code} value={w.code} label={w.name}>
                       {w.name}
                     </Select.Option>
@@ -1696,7 +1793,11 @@ const OrderDetailPage: React.FC = () => {
                 </Select>
               </Form.Item>
 
-              <Form.Item name="diaChiChiTiet" label="Địa chỉ cụ thể" rules={[{ required: true, message: "Nhập số nhà, đường..." }]}>
+              <Form.Item
+                name="diaChiChiTiet"
+                label="Địa chỉ cụ thể"
+                rules={[{ required: true, message: "Nhập số nhà, đường..." }]}
+              >
                 <Input placeholder="VD: 123 Nguyễn Trãi, P.2" />
               </Form.Item>
             </>
@@ -1740,16 +1841,18 @@ const OrderDetailPage: React.FC = () => {
             setSerialChangeOpen(false);
             setSelectedOrderDetail(null);
           }}
-          orderId={order.orderId || ""} 
+          orderId={order.orderId || ""}
           detailId={selectedOrderDetail.maHoaDonChiTiet}
           productName={selectedOrderDetail.tenSanPham}
           requiredQuantity={selectedOrderDetail.soLuong}
           productDetailId={selectedOrderDetail.productDetailId}
-          initialSerials={parseSerials(selectedOrderDetail.danhSachImei).map((s) => ({
-            id: s.id,
-            serialNumber: s.code, // Giả định code backend trả về chính là serialNumber hiển thị
-            code: s.code,
-          }))}
+          initialSerials={parseSerials(selectedOrderDetail.danhSachImei).map(
+            (s) => ({
+              id: s.id,
+              serialNumber: s.code, // Giả định code backend trả về chính là serialNumber hiển thị
+              code: s.code,
+            }),
+          )}
           onSuccess={() => fetchOrder()} // Gán xong thì load lại giỏ hàng
         />
       )}

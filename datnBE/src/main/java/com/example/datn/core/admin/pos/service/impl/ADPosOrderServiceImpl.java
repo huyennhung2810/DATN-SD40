@@ -1052,6 +1052,30 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
                 "00".equals(responseCode) ? "Thanh toán thành công" : "Thanh toán thất bại");
     }
 
+    @Override
+    @Transactional
+    public ResponseObject<?> removeCustomerFromOrder(String orderId) {
+        logger.info("[POS] Gỡ khách hàng khỏi hóa đơn {}", orderId);
+
+        Order order = posOrderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return ResponseObject.error(HttpStatus.NOT_FOUND, MSG_ORDER_NOT_FOUND);
+        }
+
+        // Gỡ khách hàng
+        order.setCustomer(null);
+
+        // Gỡ voucher (nếu có) vì voucher thường đi kèm theo khách hàng
+        order.setVoucher(null);
+
+        // Tính toán lại tiền (trả về giá trị gốc do không còn voucher)
+        order.setTotalAfterDiscount(order.getTotalAmount());
+
+        posOrderRepository.save(order);
+
+        return ResponseObject.success(null, "Đã bỏ chọn khách hàng");
+    }
+
     // Lazy-injected to avoid circular dependency
     @org.springframework.context.annotation.Lazy
     @org.springframework.beans.factory.annotation.Autowired

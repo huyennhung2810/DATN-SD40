@@ -65,6 +65,11 @@ public class POSOrderController {
         return ResponseEntity.ok(posOrderService.setCustomerForOrder(orderId, customerId));
     }
 
+    @DeleteMapping("/{orderId}/customer")
+    public ResponseEntity<?> removeCustomerFromOrder(@PathVariable String orderId) {
+        return ResponseEntity.ok(posOrderService.removeCustomerFromOrder(orderId));
+    }
+
     @PostMapping("/{orderId}/checkout")
     public ResponseEntity<?> checkoutOrder(@PathVariable String orderId,
             @RequestBody(required = false) CheckoutPosRequest request) {

@@ -37,4 +37,6 @@ public interface ADPosOrderService {
             jakarta.servlet.http.HttpServletRequest request);
 
     ResponseObject<?> handlePosVnPayReturn(java.util.Map<String, String> params);
+
+    ResponseObject<?> removeCustomerFromOrder(String orderId);
 }
