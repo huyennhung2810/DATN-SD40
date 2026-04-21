@@ -448,48 +448,87 @@ const OrderDetailPage: React.FC = () => {
     setSavingCustomer(true);
     try {
       const values = await addrForm.validateFields();
-      const payload: any = { maHoaDon: order.maHoaDon };
+
+      // 1. KHỞI TẠO PAYLOAD CHUẨN THEO DTO BACKEND
+      const payload: any = {
+        maHoaDon: order.maHoaDon,
+      };
 
       if (addressMode === "saved" && values.addressId) {
+        // --- CHẾ ĐỘ CHỌN ĐỊA CHỈ CÓ SẴN ---
         payload.addressId = values.addressId;
-      } else {
-        if (!order.customerId) {
-          message.error("Không tìm thấy thông tin khách hàng");
-          return;
+
+        const selected = savedAddresses.find((a) => a.id === values.addressId);
+        if (selected) {
+          payload.tenNguoiNhan = selected.name || "";
+          payload.sdtNguoiNhan = selected.phoneNumber || "";
+          payload.tinhThanhPho = selected.provinceCity || "";
+          payload.phuongXa = selected.wardCommune || "";
+          payload.diaChiChiTiet = selected.addressDetail || "";
+          payload.diaChi = [
+            selected.addressDetail,
+            selected.wardCommune,
+            selected.provinceCity,
+          ]
+            .filter(Boolean)
+            .join(", ");
         }
-        // Tạo địa chỉ mới cho khách hàng
-        const addressPayload = {
-          name: values.tenNguoiNhan?.trim() || "",
-          phoneNumber: values.sdtNguoiNhan?.trim() || "",
-          provinceCity: values.tinhThanhPho?.trim() || "",
-          wardCommune: values.phuongXa?.trim() || "",
-          addressDetail: values.diaChiChiTiet?.trim() || "",
-          provinceCode:
-            typeof values.provinceCode === "number"
-              ? values.provinceCode
-              : undefined,
-          wardCode:
-            typeof values.wardCode === "number" ? values.wardCode : undefined,
-          isDefault: false,
-        };
-        console.log(
-          "[handleSaveCustomer] Creating address with payload:",
-          addressPayload,
-        );
-        const newAddress = await customerApi.addAddress(
-          order.customerId,
-          addressPayload,
-        );
-        // Dùng ID địa chỉ vừa tạo để cập nhật vào đơn hàng
-        payload.addressId = newAddress.id;
+      } else {
+        // --- CHẾ ĐỘ NHẬP ĐỊA CHỈ MỚI ---
+        payload.tenNguoiNhan = values.tenNguoiNhan?.trim() || "";
+        payload.sdtNguoiNhan = values.sdtNguoiNhan?.trim() || "";
+        payload.tinhThanhPho = values.tinhThanhPho?.trim() || "";
+        payload.phuongXa = values.phuongXa?.trim() || "";
+        payload.diaChiChiTiet = values.diaChiChiTiet?.trim() || "";
+        payload.quanHuyen = ""; // Form hiện tại của bạn không có ô nhập Quận/Huyện nên để trống
+
+        payload.diaChi = [
+          payload.diaChiChiTiet,
+          payload.phuongXa,
+          payload.tinhThanhPho,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        // (Tùy chọn) Lưu vào sổ địa chỉ nếu khách có tài khoản
+        if (order.customerId) {
+          try {
+            await customerApi.addAddress(order.customerId, {
+              name: payload.tenNguoiNhan,
+              phoneNumber: payload.sdtNguoiNhan,
+              provinceCity: payload.tinhThanhPho,
+              wardCommune: payload.phuongXa,
+              addressDetail: payload.diaChiChiTiet,
+              provinceCode:
+                typeof values.provinceCode === "number"
+                  ? values.provinceCode
+                  : undefined,
+              wardCode:
+                typeof values.wardCode === "number"
+                  ? values.wardCode
+                  : undefined,
+              isDefault: false,
+            });
+          } catch (e) {
+            console.warn(
+              "Lưu sổ địa chỉ thất bại (không ảnh hưởng đến sửa hóa đơn)",
+              e,
+            );
+          }
+        }
       }
 
+      console.log("Dữ liệu gửi lên Backend:", payload);
+
+      // 2. GỌI API
       await orderApi.updateCustomerInfo(payload);
       message.success("Cập nhật thông tin giao hàng thành công");
       setCustomerModalOpen(false);
-      fetchOrder();
+      fetchOrder(); // Load lại data mới nhất
     } catch (err: any) {
-      if (!err.errorFields) message.error("Cập nhật thất bại");
+      if (!err.errorFields)
+        message.error("Cập nhật thất bại. Vui lòng thử lại!");
+      console.error(err);
     } finally {
       setSavingCustomer(false);
     }

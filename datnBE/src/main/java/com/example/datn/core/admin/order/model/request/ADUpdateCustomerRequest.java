@@ -16,7 +16,6 @@ public class ADUpdateCustomerRequest {
     private String diaChi;          // địa chỉ đầy đủ (đã ghép)
     private String diaChiChiTiet;   // số nhà, đường
     private String tinhThanhPho;
-    private String quanHuyen;
     private String phuongXa;
     private String sdtNguoiNhan;
     private String tenNguoiNhan;
