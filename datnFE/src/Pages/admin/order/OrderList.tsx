@@ -58,7 +58,7 @@ const OrderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("CHO_XAC_NHAN");
   const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState<any>(null);
-  const [orderType, setOrderType] = useState<string | undefined>("ONLINE");
+  const [orderType, setOrderType] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
