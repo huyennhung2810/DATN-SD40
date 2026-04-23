@@ -50,6 +50,38 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Bạn đã check-in ca này rồi!");
         }
 
+        // --- LOGIC RÀNG BUỘC THỜI GIAN VÀO CA (TRƯỚC 30 PHÚT) ---
+        long now = System.currentTimeMillis();
+        long THIRTY_MINUTES_IN_MS = 30 * 60 * 1000L;
+
+        // Lắp ráp ngày làm việc và giờ bắt đầu/kết thúc từ Template
+        java.time.LocalDate workDate = schedule.getWorkDate();
+        java.time.LocalTime startTime = schedule.getShiftTemplate().getStartTime();
+        java.time.LocalTime endTime = schedule.getShiftTemplate().getEndTime();
+
+        if (workDate != null && startTime != null && endTime != null) {
+            java.time.LocalDateTime startDateTime = java.time.LocalDateTime.of(workDate, startTime);
+            java.time.LocalDateTime endDateTime = java.time.LocalDateTime.of(workDate, endTime);
+
+            // Xử lý trường hợp ca làm việc xuyên đêm (VD: 22h tối đến 6h sáng hôm sau)
+            if (endTime.isBefore(startTime)) {
+                endDateTime = endDateTime.plusDays(1);
+            }
+
+            // Đổi ra milliseconds
+            long shiftStartMs = startDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            long shiftEndMs = endDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            long allowedCheckInStart = shiftStartMs - THIRTY_MINUTES_IN_MS; // Được vào sớm 30 phút
+
+            if (now < allowedCheckInStart) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chưa đến giờ. Bạn chỉ được vào ca trước 30 phút.");
+            }
+            if (now > shiftEndMs) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Ca làm việc này đã kết thúc, không thể vào ca.");
+            }
+        }
+
         // Tự động lấy tiền đầu ca từ thực tế cuối ca trước (nếu request gửi lên null)
         BigDecimal initialCash = request.getInitialCash();
         if (initialCash == null) {
@@ -83,7 +115,36 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Ca làm việc này không ở trạng thái có thể kết ca.");
         }
 
-        Long endTime = System.currentTimeMillis();
+        // --- LOGIC RÀNG BUỘC THỜI GIAN KẾT CA (+/- 30 PHÚT) ---
+        long now = System.currentTimeMillis();
+        long THIRTY_MINUTES_IN_MS = 30 * 60 * 1000L;
+        WorkSchedule schedule = handover.getWorkSchedule();
+
+        java.time.LocalDate workDate = schedule.getWorkDate();
+        java.time.LocalTime startTime = schedule.getShiftTemplate().getStartTime();
+        java.time.LocalTime endTime = schedule.getShiftTemplate().getEndTime();
+
+        if (workDate != null && startTime != null && endTime != null) {
+            java.time.LocalDateTime endDateTime = java.time.LocalDateTime.of(workDate, endTime);
+
+            // Xử lý ca làm việc xuyên đêm
+            if (endTime.isBefore(startTime)) {
+                endDateTime = endDateTime.plusDays(1);
+            }
+
+            long shiftEndMs = endDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            long allowedCheckOutStart = shiftEndMs - THIRTY_MINUTES_IN_MS; // Được về sớm 30 phút
+            long allowedCheckOutEnd = shiftEndMs + THIRTY_MINUTES_IN_MS;   // Bắt buộc chốt trong vòng 30 phút sau khi tan ca
+
+            if (now < allowedCheckOutStart) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chưa đến giờ giao ca. Chỉ được kết thúc ca trước tối đa 30 phút.");
+            }
+            if (now > allowedCheckOutEnd) {
+                return ResponseObject.error(HttpStatus.BAD_REQUEST, "Đã quá thời gian giao ca (Quá 30 phút). Vui lòng liên hệ Quản lý để đóng ca.");
+            }
+        }
+
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
         // Lấy tổng doanh thu tiền mặt và chuyển khoản thực tế từ bảng Order
@@ -101,7 +162,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         BigDecimal difference = actual.subtract(expected);
 
         // Cập nhật dữ liệu
-        handover.setCheckOutTime(endTime);
+        handover.setCheckOutTime(now);
         handover.setTotalCashSales(systemCashSales);
         handover.setTotalBankSales(systemBankSales);
         handover.setCashWithdraw(withdraw);
@@ -123,7 +184,6 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         }
 
         // Kết thúc lịch làm việc
-        WorkSchedule schedule = handover.getWorkSchedule();
         schedule.setShiftStatus(ShiftStatus.COMPLETED);
         workScheduleRepository.save(schedule);
 

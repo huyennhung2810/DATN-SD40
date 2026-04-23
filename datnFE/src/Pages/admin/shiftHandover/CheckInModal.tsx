@@ -7,6 +7,7 @@ import {
   Typography,
   Space,
   Skeleton,
+  message,
 } from "antd";
 import { PlayCircleOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -67,13 +68,32 @@ const CheckInModal: React.FC<Props> = ({ isOpen, onClose, scheduleId }) => {
     }
   }, [isOpen, fetchInitialData]);
 
-  const handleFinish = (values: CheckInFormValues) => {
+  const handleFinish = async (values: CheckInFormValues) => {
     const payload: CheckInRequest = {
       scheduleId,
       initialCash: values.initialCash,
       note: "Nhân viên bắt đầu ca",
     };
-    dispatch(shiftActions.checkInRequest(payload));
+
+    try {
+      // 1. Gọi API trực tiếp giống như CheckOut
+      const res = await shiftHandoverApi.checkIn(payload);
+
+      // 2. Bóc tách dữ liệu chuẩn
+      const statsData = (res as any).data?.data || (res as any).data || res;
+
+      // 3. Cập nhật Redux Store
+      dispatch(shiftActions.checkInSuccess(statsData));
+
+      message.success("Bắt đầu ca làm việc thành công!");
+      onClose(); // Đóng Modal
+      form.resetFields();
+    } catch (error: any) {
+      console.error("Lỗi Check-in:", error);
+      // Hứng chính xác câu chửi từ Backend (Ví dụ: "Chưa đến giờ vào ca")
+      const errorMsg = error.response?.data?.message || "Lỗi khi bắt đầu ca!";
+      message.error(errorMsg);
+    }
   };
 
   return (

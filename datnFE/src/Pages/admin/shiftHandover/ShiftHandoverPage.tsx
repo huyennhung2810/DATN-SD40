@@ -87,6 +87,7 @@ const ShiftHandoverPage: React.FC = () => {
       fetchShiftStats();
     }
   }, [targetId]);
+
   const { user } = useSelector((state: RootState) => state.auth);
 
   // --- LOCAL STATE ---
@@ -95,6 +96,8 @@ const ShiftHandoverPage: React.FC = () => {
   const [todaySchedule, setTodaySchedule] = useState<{
     id: string;
     shiftName?: string;
+    startTime: string;
+    endTime: string;
   } | null>(null);
   const [fetchingSchedule, setFetchingSchedule] = useState<boolean>(false);
 
@@ -125,6 +128,49 @@ const ShiftHandoverPage: React.FC = () => {
   }, [fetchTodaySchedule]);
 
   const hasStartedShift = !!currentShift;
+
+  // --- LOGIC KIỂM TRA THỜI GIAN VÀO CA ---
+  // --- LOGIC KIỂM TRA THỜI GIAN VÀO CA ---
+  const checkInValidity = () => {
+    // Chỉ cần có startTime là bắt đầu kiểm tra được rồi
+    if (!todaySchedule || !todaySchedule.startTime) {
+      return { isValid: true, message: "" };
+    }
+
+    const now = dayjs();
+    const todayStr = now.format("YYYY-MM-DD");
+
+    const shiftStart = dayjs(`${todayStr} ${todaySchedule.startTime}`);
+    const allowedCheckInStart = shiftStart.subtract(30, "minute"); // Cho phép vào sớm 30p
+
+    // 1. Kiểm tra giờ bắt đầu (Có startTime là check được)
+    if (now.isBefore(allowedCheckInStart)) {
+      return {
+        isValid: false,
+        message: `Chưa đến giờ. Bạn chỉ được vào ca trước 30 phút (Từ ${allowedCheckInStart.format("HH:mm")}).`,
+      };
+    }
+
+    // 2. Chỉ kiểm tra giờ kết thúc NẾU Backend có trả về endTime
+    if (todaySchedule.endTime) {
+      let shiftEnd = dayjs(`${todayStr} ${todaySchedule.endTime}`);
+
+      // Xử lý ca xuyên đêm
+      if (shiftEnd.isBefore(shiftStart)) {
+        shiftEnd = shiftEnd.add(1, "day");
+      }
+
+      if (now.isAfter(shiftEnd)) {
+        return {
+          isValid: false,
+          message: "Ca làm việc này đã kết thúc, bạn không thể vào ca nữa.",
+        };
+      }
+    }
+
+    return { isValid: true, message: "" };
+  };
+  const timeValidation = checkInValidity();
 
   return (
     <div style={{ padding: "24px", minHeight: "85vh", background: "#f0f2f5" }}>
@@ -165,15 +211,33 @@ const ShiftHandoverPage: React.FC = () => {
                   {todaySchedule ? (
                     <Alert
                       message={
-                        <b>Lịch trực hôm nay: {todaySchedule.shiftName}</b>
+                        <b>
+                          Lịch trực hôm nay: {todaySchedule.shiftName}
+                          {todaySchedule.startTime &&
+                            ` (${todaySchedule.startTime.substring(0, 5)} - ${todaySchedule.endTime?.substring(0, 5)})`}
+                        </b>
                       }
-                      description="Bạn đã sẵn sàng? Vui lòng kiểm tra tiền mặt tại quầy và thực hiện Check-in để bắt đầu bán hàng."
-                      type="info"
+                      description={
+                        timeValidation.isValid ? (
+                          "Bạn đã sẵn sàng? Vui lòng kiểm tra tiền mặt tại quầy và thực hiện Check-in để bắt đầu bán hàng."
+                        ) : (
+                          <Text type="danger" strong>
+                            {timeValidation.message}
+                          </Text>
+                        )
+                      }
+                      type={timeValidation.isValid ? "info" : "error"}
                       showIcon
                       style={{
                         marginBottom: 30,
                         textAlign: "left",
                         borderRadius: 8,
+                        border: timeValidation.isValid
+                          ? ""
+                          : "1px solid #ffccc7",
+                        backgroundColor: timeValidation.isValid
+                          ? ""
+                          : "#fff2f0",
                       }}
                     />
                   ) : (
@@ -194,7 +258,8 @@ const ShiftHandoverPage: React.FC = () => {
                     type="primary"
                     size="large"
                     icon={<PlayCircleOutlined />}
-                    disabled={!todaySchedule}
+                    // KHÓA NÚT NẾU KHÔNG HỢP LỆ
+                    disabled={!todaySchedule || !timeValidation.isValid}
                     onClick={() => setIsCheckInOpen(true)}
                     style={{
                       height: 55,
@@ -202,11 +267,18 @@ const ShiftHandoverPage: React.FC = () => {
                       borderRadius: 30,
                       fontSize: 18,
                       fontWeight: 700,
-                      backgroundColor: todaySchedule ? "#20c997" : "#d9d9d9",
-                      borderColor: todaySchedule ? "#20c997" : "#d9d9d9",
-                      boxShadow: todaySchedule
-                        ? "0 4px 15px rgba(32, 201, 151, 0.4)"
-                        : "none",
+                      backgroundColor:
+                        todaySchedule && timeValidation.isValid
+                          ? "#20c997"
+                          : "#d9d9d9",
+                      borderColor:
+                        todaySchedule && timeValidation.isValid
+                          ? "#20c997"
+                          : "#d9d9d9",
+                      boxShadow:
+                        todaySchedule && timeValidation.isValid
+                          ? "0 4px 15px rgba(32, 201, 151, 0.4)"
+                          : "none",
                     }}
                   >
                     BẮT ĐẦU CA LÀM VIỆC

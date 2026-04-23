@@ -80,11 +80,12 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId: _scheduleId }: any) => {
   const diff = actualCash - expectedCash;
 
   const onFinish = async (values: any) => {
-    //Ràng buộc: Nếu lệch tiền mà không có ghi chú thì chặn lại
+    // Ràng buộc: Nếu lệch tiền mà không có ghi chú thì chặn lại
     if (diff !== 0 && !values.note) {
       message.error("Tiền mặt bị lệch! Vui lòng nhập lý do vào phần ghi chú.");
       return;
     }
+
     // Đảm bảo các trường đúng kiểu số
     const payload = {
       ...values,
@@ -93,8 +94,29 @@ const CheckOutModal = ({ isOpen, onClose, scheduleId: _scheduleId }: any) => {
       withdrawAmount: Number(values.withdrawAmount) || 0,
     };
     console.log("[CheckOutModal] Payload gửi lên checkOutRequest:", payload);
-    //Gửi request kết ca lên server
-    dispatch(shiftActions.checkOutRequest(payload));
+
+    try {
+      // 1. Gọi API trực tiếp để hứng lỗi dễ dàng
+      const res = await shiftHandoverApi.checkOut(payload);
+
+      // 2. Bóc tách data
+      const statsData = (res as any).data?.data || (res as any).data || res;
+
+      // 3. Báo thành công, đóng modal và xóa form
+      message.success("Kết ca thành công!");
+      onClose();
+      form.resetFields();
+
+      // 4. Báo cho Redux biết là đã kết ca xong (để xóa currentShift)
+      // Lưu ý: Đảm bảo trong shiftHandoverSlice của bạn có action checkOutSuccess nhé
+      dispatch(shiftActions.checkOutSuccess(statsData));
+    } catch (error: any) {
+      console.error("Lỗi khi kết ca:", error);
+
+      // 5. Bắt chính xác câu thông báo lỗi từ Backend Spring Boot
+      const errorMsg = error.response?.data?.message || "Lỗi khi kết thúc ca!";
+      message.error(errorMsg);
+    }
   };
 
   return (
