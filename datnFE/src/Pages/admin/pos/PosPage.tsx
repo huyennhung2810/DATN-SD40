@@ -957,12 +957,15 @@ const PosPage: React.FC = () => {
         });
 
         // --- Cập nhật lại doanh thu ca làm việc ---
-        if (currentShift?.workScheduleId) {
+        if (currentShift?.scheduleId) {
           try {
-            const stats = await shiftHandoverApi.getShiftStats(
-              currentShift.workScheduleId,
+            const res = await shiftHandoverApi.getShiftStats(
+              currentShift.scheduleId,
             );
-            // Cập nhật toàn bộ thông tin ca làm việc mới nhất vào Redux/localStorage
+
+            // Gán thẳng luôn vì API đã bóc vỏ sẵn rồi
+            const stats = res;
+
             dispatch(
               shiftActions.checkInSuccess({
                 ...currentShift,

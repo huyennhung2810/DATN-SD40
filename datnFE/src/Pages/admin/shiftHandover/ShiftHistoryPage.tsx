@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   Tag,
@@ -15,7 +15,6 @@ import {
   Descriptions,
   Row,
   Col,
-  Statistic,
   Divider,
   Empty,
 } from "antd";
@@ -26,8 +25,6 @@ import {
   FileExcelOutlined,
   ReloadOutlined,
   EyeOutlined,
-  WalletOutlined,
-  TransactionOutlined,
   ExclamationCircleOutlined,
   FilterOutlined,
 } from "@ant-design/icons";
@@ -80,20 +77,6 @@ const ShiftHistoryPage: React.FC = () => {
     const handler = setTimeout(() => loadHistory(), 400);
     return () => clearTimeout(handler);
   }, [filter]);
-
-  // Thống kê nhanh từ dữ liệu hiện tại
-  const stats = useMemo(() => {
-    const totalRev = data.reduce(
-      (sum, item) =>
-        sum + (item.totalCashSales || 0) + (item.totalBankSales || 0),
-      0,
-    );
-    const totalDiff = data.reduce(
-      (sum, item) => sum + (item.differenceAmount || 0),
-      0,
-    );
-    return { totalRev, totalDiff };
-  }, [data]);
 
   const handleExportExcel = () => {
     if (!data.length) return message.warning("Không có dữ liệu!");
@@ -261,30 +244,6 @@ const ShiftHistoryPage: React.FC = () => {
               </Button>
             </Space>
           </div>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="outlined" className="stat-card">
-            <Statistic
-              title="Tổng doanh thu (Trang này)"
-              value={stats.totalRev}
-              precision={0}
-              prefix={<WalletOutlined />}
-              suffix="₫"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="outlined" className="stat-card">
-            <Statistic
-              title="Tổng chênh lệch"
-              value={stats.totalDiff}
-              styles={{
-                content: { color: stats.totalDiff < 0 ? "#cf1322" : "#3f8600" },
-              }}
-              prefix={<TransactionOutlined />}
-              suffix="₫"
-            />
-          </Card>
         </Col>
       </Row>
 

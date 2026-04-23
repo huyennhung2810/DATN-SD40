@@ -87,10 +87,11 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
         // Lấy tổng doanh thu tiền mặt và chuyển khoản thực tế từ bảng Order
-        BigDecimal systemCashSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "TIEN_MAT", handover.getCheckInTime(), endTime);
-        BigDecimal systemBankSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", handover.getCheckInTime(), endTime);
+        BigDecimal systemCashSales = shiftHandoverRepository.sumRevenueByShift(
+                handover.getId(), OrderStatus.HOAN_THANH, "TIEN_MAT");
+
+        BigDecimal systemBankSales = shiftHandoverRepository.sumRevenueByShift(
+                handover.getId(), OrderStatus.HOAN_THANH, "CHUYEN_KHOAN");
         // Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
         BigDecimal actual = Optional.ofNullable(request.getActualCash()).orElse(BigDecimal.ZERO);
@@ -145,14 +146,13 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
     }
 
     private ADShiftHandoverStatsResponse mapToStats(ShiftHandover h) {
-        Long checkInTime = h.getCheckInTime();
-        Long now = System.currentTimeMillis();
+        // Không cần dùng checkInTime hay now nữa
+        BigDecimal cashSales = shiftHandoverRepository.sumRevenueByShift(
+                h.getId(), OrderStatus.HOAN_THANH, "TIEN_MAT");
 
-        BigDecimal cashSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "TIEN_MAT", checkInTime, now);
+        BigDecimal bankSales = shiftHandoverRepository.sumRevenueByShift(
+                h.getId(), OrderStatus.HOAN_THANH, "CHUYEN_KHOAN");
 
-        BigDecimal bankSales = shiftHandoverRepository.sumRevenue(
-                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", checkInTime, now);
         BigDecimal finalCashSales = cashSales != null ? cashSales : BigDecimal.ZERO;
         BigDecimal finalBankSales = bankSales != null ? bankSales : BigDecimal.ZERO;
         BigDecimal finalInitialCash = h.getInitialCash() != null ? h.getInitialCash() : BigDecimal.ZERO;

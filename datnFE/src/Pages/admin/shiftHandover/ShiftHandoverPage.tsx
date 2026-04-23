@@ -41,27 +41,51 @@ const ShiftHandoverPage: React.FC = () => {
 
   // Xác định ID ca làm việc (Lấy scheduleId mới thêm, fallback về workScheduleId)
   const targetId = currentShift?.scheduleId || currentShift?.workScheduleId;
-  
+
+  const handleRefreshStats = async () => {
+    if (targetId) {
+      try {
+        const res = await shiftHandoverApi.getShiftStats(targetId);
+
+        const statsData = res;
+
+        dispatch(
+          shiftActions.checkInSuccess({
+            ...currentShift,
+            ...statsData,
+          }),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchShiftStats = async () => {
       if (targetId) {
         try {
           const res = await shiftHandoverApi.getShiftStats(targetId);
-          const statsData = (res as any).data || res;
+
+          const statsData = res;
+
           console.log("=== THỐNG KÊ CA TỪ BACKEND ===", statsData);
+
           dispatch(
-            shiftActions.checkInSuccess({ ...currentShift, ...statsData }),
+            shiftActions.checkInSuccess({
+              ...currentShift,
+              ...statsData,
+            }),
           );
         } catch (err) {
-          // Không cần báo lỗi, chỉ log
           console.error("Không thể cập nhật lại thông tin ca làm việc:", err);
         }
       }
     };
+
     if (currentShift) {
       fetchShiftStats();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetId]);
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -329,6 +353,13 @@ const ShiftHandoverPage: React.FC = () => {
                       </div>
                     </Space>
                   </div>
+
+                  <Button
+                    onClick={handleRefreshStats}
+                    style={{ marginBottom: 16 }}
+                  >
+                    Làm mới doanh thu
+                  </Button>
 
                   <Button
                     type="primary"

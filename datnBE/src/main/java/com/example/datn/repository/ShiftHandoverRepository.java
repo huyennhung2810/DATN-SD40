@@ -11,6 +11,10 @@ import java.util.Optional;
 @Repository
 public interface ShiftHandoverRepository extends JpaRepository<ShiftHandover, String> {
 
-    @Query("SELECT s FROM ShiftHandover s WHERE s.account.id = :accountId AND s.status = com.example.datn.infrastructure.constant.EntityStatus.ACTIVE")
+    @Query("""
+        SELECT s FROM ShiftHandover s 
+        WHERE s.workSchedule.employee.account.id = :accountId 
+        AND s.handoverStatus = 'OPEN'
+    """)
     Optional<ShiftHandover> findOpenShiftByAccountId(@Param("accountId") String accountId);
 }

@@ -118,12 +118,6 @@ const Sidebar: React.FC = () => {
           label: "Nhân viên",
           allowedRoles: ["ADMIN"],
         },
-        {
-          key: "/admin/accounts",
-          icon: <KeyOutlined />,
-          label: "Quản lý tài khoản",
-          allowedRoles: ["ADMIN"],
-        },
       ],
     },
     {

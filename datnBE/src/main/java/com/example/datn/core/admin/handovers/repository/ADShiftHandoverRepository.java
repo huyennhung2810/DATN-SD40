@@ -24,18 +24,16 @@ public interface ADShiftHandoverRepository extends ShiftHandoverRepository {
         Optional<ShiftHandover> findTopByHandoverStatusOrderByCheckOutTimeDesc(HandoverStatus status);
 
         @Query("""
-                            SELECT COALESCE(SUM(o.totalAmount), 0)
-                            FROM Order o
-                            WHERE o.orderStatus = :status
-                            AND o.paymentMethod = :paymentMethod
-                            AND o.createdDate >= :startTime
-                            AND o.createdDate <= :endTime
-                        """)
-        BigDecimal sumRevenue(
-                        @Param("status") OrderStatus status,
-                        @Param("paymentMethod") String paymentMethod,
-                        @Param("startTime") Long startTime,
-                        @Param("endTime") Long endTime);
+    SELECT COALESCE(SUM(o.totalAfterDiscount), 0)
+    FROM Order o
+    WHERE o.shiftHandover.id = :shiftId
+    AND o.orderStatus = :status
+    AND o.paymentMethod = :paymentMethod
+""")
+        BigDecimal sumRevenueByShift(
+                @Param("shiftId") String shiftId,
+                @Param("status") OrderStatus status,
+                @Param("paymentMethod") String paymentMethod);
 
         @Query("""
                             SELECT s FROM ShiftHandover s
@@ -51,4 +49,6 @@ public interface ADShiftHandoverRepository extends ShiftHandoverRepository {
                         @Param("fromDate") Long fromDate,
                         @Param("toDate") Long toDate,
                         Pageable pageable);
+
+
 }

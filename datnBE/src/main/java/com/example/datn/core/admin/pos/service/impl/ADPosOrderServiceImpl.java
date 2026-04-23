@@ -631,12 +631,19 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             order.setCustomerPaid(request.getCustomerPaid());
         }
 
-        // Gán lại ca làm việc hiện tại cho đơn hàng (phòng trường hợp tạo đơn xong mới
-        // mở ca)
+        // Gán lại ca làm việc hiện tại cho đơn hàng
         Employee currentEmployee = getCurrentEmployee();
         if (currentEmployee.getAccount() != null) {
-            shiftHandoverRepository.findOpenShiftByAccountId(currentEmployee.getAccount().getId())
-                    .ifPresent(order::setShiftHandover);
+            Optional<ShiftHandover> openShift = shiftHandoverRepository.findOpenShiftByAccountId(currentEmployee.getAccount().getId());
+
+            if (openShift.isPresent()) {
+                order.setShiftHandover(openShift.get());
+                logger.info("[POS] Đã gán thành công hóa đơn {} vào ca làm việc {}", order.getCode(), openShift.get().getId());
+            } else {
+                logger.error("[POS] LỖI: Không tìm thấy ca trực OPEN nào của tài khoản {}", currentEmployee.getAccount().getUsername());
+            }
+        } else {
+            logger.error("[POS] LỖI: Nhân viên {} không được liên kết với tài khoản nào!", currentEmployee.getName());
         }
         // Update Order status
         // GIAO_HANG: đã xác nhận + đã thanh toán nhưng chưa giao → DA_XAC_NHAN
