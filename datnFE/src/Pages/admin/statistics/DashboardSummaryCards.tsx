@@ -184,6 +184,7 @@ const DashboardSummary: React.FC = () => {
 
   if (loading || !summary) return <Skeleton active paragraph={{ rows: 10 }} />;
 
+  console.log("Dữ liệu summary từ Redux:", summary);
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} md={12} lg={6}>

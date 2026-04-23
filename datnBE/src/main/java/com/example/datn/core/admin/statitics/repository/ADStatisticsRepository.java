@@ -16,23 +16,23 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
     // dashbroad
     @Query(value = """
                 SELECT
-                    COALESCE(SUM(CASE WHEN DATE(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = CURRENT_DATE THEN od.total_price ELSE 0 END), 0) AS revenueToday,
-                    COUNT(DISTINCT CASE WHEN DATE(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = CURRENT_DATE THEN o.id END) AS ordersToday,
-                    COALESCE(SUM(CASE WHEN DATE(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = CURRENT_DATE THEN od.quantity ELSE 0 END), 0) AS productsSoldToday,
+                    COALESCE(SUM(CASE WHEN DATE(FROM_UNIXTIME(o.created_date/1000)) = CURRENT_DATE THEN od.total_price ELSE 0 END), 0) AS revenueToday,
+                    COUNT(DISTINCT CASE WHEN DATE(FROM_UNIXTIME(o.created_date/1000)) = CURRENT_DATE THEN o.id END) AS ordersToday,
+                    COALESCE(SUM(CASE WHEN DATE(FROM_UNIXTIME(o.created_date/1000)) = CURRENT_DATE THEN od.quantity ELSE 0 END), 0) AS productsSoldToday,
 
-                    COALESCE(SUM(CASE WHEN YEARWEEK(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), 1) = YEARWEEK(CURRENT_DATE, 1) THEN od.total_price ELSE 0 END), 0) AS revenueThisWeek,
-                    COUNT(DISTINCT CASE WHEN YEARWEEK(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), 1) = YEARWEEK(CURRENT_DATE, 1) THEN o.id END) AS ordersThisWeek,
-                    COALESCE(SUM(CASE WHEN YEARWEEK(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), 1) = YEARWEEK(CURRENT_DATE, 1) THEN od.quantity ELSE 0 END), 0) AS productsSoldThisWeek,
+                    COALESCE(SUM(CASE WHEN YEARWEEK(FROM_UNIXTIME(o.created_date/1000), 1) = YEARWEEK(CURRENT_DATE, 1) THEN od.total_price ELSE 0 END), 0) AS revenueThisWeek,
+                    COUNT(DISTINCT CASE WHEN YEARWEEK(FROM_UNIXTIME(o.created_date/1000), 1) = YEARWEEK(CURRENT_DATE, 1) THEN o.id END) AS ordersThisWeek,
+                    COALESCE(SUM(CASE WHEN YEARWEEK(FROM_UNIXTIME(o.created_date/1000), 1) = YEARWEEK(CURRENT_DATE, 1) THEN od.quantity ELSE 0 END), 0) AS productsSoldThisWeek,
 
-                    COALESCE(SUM(CASE WHEN DATE_FORMAT(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN od.total_price ELSE 0 END), 0) AS revenueThisMonth,
-                    COUNT(DISTINCT CASE WHEN DATE_FORMAT(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN o.id END) AS ordersThisMonth,
-                    COALESCE(SUM(CASE WHEN DATE_FORMAT(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN od.quantity ELSE 0 END), 0) AS productsSoldThisMonth,
+                    COALESCE(SUM(CASE WHEN DATE_FORMAT(FROM_UNIXTIME(o.created_date/1000), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN od.total_price ELSE 0 END), 0) AS revenueThisMonth,
+                    COUNT(DISTINCT CASE WHEN DATE_FORMAT(FROM_UNIXTIME(o.created_date/1000), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN o.id END) AS ordersThisMonth,
+                    COALESCE(SUM(CASE WHEN DATE_FORMAT(FROM_UNIXTIME(o.created_date/1000), '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m') THEN od.quantity ELSE 0 END), 0) AS productsSoldThisMonth,
 
-                    COALESCE(SUM(CASE WHEN DATE_FORMAT(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m') THEN od.total_price ELSE 0 END), 0) AS revenueLastMonth,
+                    COALESCE(SUM(CASE WHEN DATE_FORMAT(FROM_UNIXTIME(o.created_date/1000), '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m') THEN od.total_price ELSE 0 END), 0) AS revenueLastMonth,
 
-                    COALESCE(SUM(CASE WHEN YEAR(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = YEAR(CURRENT_DATE) THEN od.total_price ELSE 0 END), 0) AS revenueThisYear,
-                    COUNT(DISTINCT CASE WHEN YEAR(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = YEAR(CURRENT_DATE) THEN o.id END) AS ordersThisYear,
-                    COALESCE(SUM(CASE WHEN YEAR(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh')) = YEAR(CURRENT_DATE) THEN od.quantity ELSE 0 END), 0) AS productsSoldThisYear
+                    COALESCE(SUM(CASE WHEN YEAR(FROM_UNIXTIME(o.created_date/1000)) = YEAR(CURRENT_DATE) THEN od.total_price ELSE 0 END), 0) AS revenueThisYear,
+                    COUNT(DISTINCT CASE WHEN YEAR(FROM_UNIXTIME(o.created_date/1000)) = YEAR(CURRENT_DATE) THEN o.id END) AS ordersThisYear,
+                    COALESCE(SUM(CASE WHEN YEAR(FROM_UNIXTIME(o.created_date/1000)) = YEAR(CURRENT_DATE) THEN od.quantity ELSE 0 END), 0) AS productsSoldThisYear
 
                 FROM `order` o
                 LEFT JOIN order_detail od ON o.id = od.id_order
@@ -56,7 +56,7 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
     // Biểu đồ doanh thu
     @Query(value = """
                                 SELECT
-                                        DATE_FORMAT(CONVERT_TZ(FROM_UNIXTIME(o.created_date/1000), 'UTC', 'Asia/Ho_Chi_Minh'), :dateFormat) AS date,
+                                        DATE_FORMAT(FROM_UNIXTIME(o.created_date/1000), :dateFormat) AS date,
                                         COALESCE(SUM(od.total_price), 0) AS revenue
                                 FROM `order` o
                                 LEFT JOIN order_detail od ON o.id = od.id_order
@@ -80,7 +80,7 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
                 GROUP BY o.orderStatus
             """)
     List<ADOrderStatusStatResponse> getOrderStatusStats(@Param("startDate") Long startDate,
-            @Param("endDate") Long endDate);
+                                                        @Param("endDate") Long endDate);
 
     // Top sản phẩm bán chạy
     @Query(value = """
@@ -101,7 +101,7 @@ public interface ADStatisticsRepository extends JpaRepository<Order, String> {
                 LIMIT 5
             """, nativeQuery = true)
     List<ADTopSellingProductsResponse> getTopSellingProducts(@Param("startDate") Long startDate,
-            @Param("endDate") Long endDate);
+                                                             @Param("endDate") Long endDate);
 
     // Sản phẩm sắp hết haàng
     @Query(value = """
