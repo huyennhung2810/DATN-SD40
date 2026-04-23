@@ -182,6 +182,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 : request.getStaffId();
 
         Page<ShiftHandover> pageData = shiftHandoverRepository.findHistory(
+                request.getCode(),
                 staffId,
                 request.getStatus(),
                 request.getFromDate(),

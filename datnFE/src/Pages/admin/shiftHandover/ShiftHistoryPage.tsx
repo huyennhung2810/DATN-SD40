@@ -43,6 +43,7 @@ const ShiftHistoryPage: React.FC = () => {
   const [filter, setFilter] = useState({
     page: 0,
     size: 10,
+    code: "",
     staffId: "",
     fromDate: null as number | null,
     toDate: null as number | null,
@@ -62,15 +63,37 @@ const ShiftHistoryPage: React.FC = () => {
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const res = await shiftHandoverApi.getShiftHistory(filter);
-      setData(res.data.content);
-      setTotal(res.data.totalElements);
+      // 1. Lọc bỏ các giá trị rỗng ("") hoặc null/undefined để tránh lỗi 400 TypeMismatch từ Spring Boot
+      const cleanedFilter = Object.fromEntries(
+        Object.entries(filter).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== "",
+        ),
+      );
+
+      // 2. Gửi request với dữ liệu đã được làm sạch
+      const res = await shiftHandoverApi.getShiftHistory(cleanedFilter);
+
+      // 3. Bóc tách dữ liệu phân trang (như đã fix ở bước trước)
+      const pageData = res.data?.data || res.data || res;
+
+      setData(pageData?.content || []);
+      setTotal(pageData?.totalElements || 0);
     } catch (error) {
       console.error(error);
       message.error("Không thể tải dữ liệu lịch sử!");
     } finally {
       setLoading(false);
     }
+  };
+  const handleRefresh = () => {
+    setFilter({
+      page: 0,
+      size: 10,
+      code: "",
+      staffId: "",
+      fromDate: null,
+      toDate: null,
+    });
   };
 
   useEffect(() => {
@@ -232,7 +255,7 @@ const ShiftHistoryPage: React.FC = () => {
               <HistoryOutlined /> Lịch sử hoạt động
             </Title>
             <Space>
-              <Button icon={<ReloadOutlined />} onClick={loadHistory}>
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
                 Làm mới
               </Button>
               <Button
@@ -252,17 +275,23 @@ const ShiftHistoryPage: React.FC = () => {
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} md={8}>
             <Input
-              placeholder="Tìm theo mã nhân viên..."
+              placeholder="Tìm theo mã giao ca (VD: GC001)..."
               prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
               allowClear
+              value={filter.code}
               onChange={(e) =>
-                setFilter({ ...filter, staffId: e.target.value, page: 0 })
+                setFilter({ ...filter, code: e.target.value, page: 0 })
               }
             />
           </Col>
           <Col xs={24} md={10}>
             <RangePicker
               style={{ width: "100%" }}
+              value={
+                filter.fromDate && filter.toDate
+                  ? [dayjs(filter.fromDate), dayjs(filter.toDate)]
+                  : null
+              }
               onChange={(dates: any) =>
                 setFilter({
                   ...filter,

@@ -36,19 +36,22 @@ public interface ADShiftHandoverRepository extends ShiftHandoverRepository {
                 @Param("paymentMethod") String paymentMethod);
 
         @Query("""
-                            SELECT s FROM ShiftHandover s
-                            WHERE (:staffId IS NULL OR s.workSchedule.employee.id = :staffId)
-                            AND (:status IS NULL OR s.handoverStatus = :status)
-                            AND (:fromDate IS NULL OR s.checkInTime >= :fromDate)
-                            AND (:toDate IS NULL OR s.checkInTime <= :toDate)
-                            ORDER BY s.checkInTime DESC
-                        """)
+            SELECT s FROM ShiftHandover s
+            WHERE (:code IS NULL OR LOWER(s.code) LIKE LOWER(CONCAT('%', :code, '%')))
+            AND (:staffId IS NULL OR s.workSchedule.employee.id = :staffId)
+            AND (:status IS NULL OR s.handoverStatus = :status)
+            AND (:fromDate IS NULL OR s.checkInTime >= :fromDate)
+            AND (:toDate IS NULL OR s.checkInTime <= :toDate)
+            ORDER BY s.checkInTime DESC
+        """)
         Page<ShiftHandover> findHistory(
-                        @Param("staffId") String staffId,
-                        @Param("status") HandoverStatus status,
-                        @Param("fromDate") Long fromDate,
-                        @Param("toDate") Long toDate,
-                        Pageable pageable);
+                @Param("code") String code,
+                @Param("staffId") String staffId,
+                @Param("status") HandoverStatus status,
+                @Param("fromDate") Long fromDate,
+                @Param("toDate") Long toDate,
+                Pageable pageable);
 
 
+        String code(String code);
 }

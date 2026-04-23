@@ -9,6 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ADShiftHistoryRequest {
+    private String code;
     private String staffId;      // Lọc theo nhân viên
     private HandoverStatus status; // Lọc theo trạng thái (OPEN, CLOSED, PENDING)
     private Long fromDate;       // Từ ngày (milis)
