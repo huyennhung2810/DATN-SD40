@@ -37,6 +37,29 @@ export interface VoucherResponse {
     totalPages: number;
     totalElements: number;
 }
+
+// Interface for available coupons API response
+export interface AvailableCoupon {
+    id: string;
+    code: string;
+    name: string;
+    voucherType: "INDIVIDUAL" | "ALL";
+    discountUnit: "PERCENT" | "VND";
+    discountValue: number;
+    maxDiscountAmount: number;
+    conditions: number;
+    startDate: number;
+    endDate: number;
+    note: string;
+    quantity: number;
+    status: number;
+    calculatedDiscount: number;
+}
+
+export interface AvailableCouponsResponse {
+    bestCoupon: AvailableCoupon | null;
+    availableCoupons: AvailableCoupon[];
+}
 // Interface dành riêng cho Ant Design Form
 // Sử dụng Dayjs (viết hoa) để định nghĩa kiểu dữ liệu
 export interface VoucherFormValues extends Omit<VoucherRequest, 'startDate' | 'endDate'> {

@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Modal, Input, Button, Spin, Empty, Tag, message, Divider } from "antd";
+import { Modal, Input, Button, Spin, Empty, Tag, message, Divider, Badge } from "antd";
 import {
   TagOutlined,
   SearchOutlined,
   CheckCircleFilled,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  StarFilled,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getClientVouchers } from "../../api/voucherApi";
+import { getClientVouchers, type AvailableCoupon } from "../../api/voucherApi";
 import type { Voucher } from "../../models/Voucher";
 
 interface VoucherPickerModalProps {
   open: boolean;
   onClose: () => void;
   subTotal: number;
-  onApply: (voucher: Voucher) => void;
+  onApply: (voucher: Voucher | AvailableCoupon) => void;
   appliedCode?: string | null;
+  availableCoupons?: AvailableCoupon[];
+  onRefreshCoupons?: () => void;
+}
+
+interface VoucherItem extends Voucher {
+  calculatedDiscount?: number;
 }
 
 const formatPrice = (value: number | null | undefined): string => {
@@ -33,15 +40,40 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
   subTotal,
   onApply,
   appliedCode,
+  availableCoupons = [],
+  onRefreshCoupons,
 }) => {
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [manualCode, setManualCode] = useState("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(() => Date.now(), [open]);
 
   useEffect(() => {
     if (!open) return;
+    // If availableCoupons passed from parent, use them directly
+    if (availableCoupons.length > 0) {
+      const voucherItems: VoucherItem[] = availableCoupons.map(c => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        voucherType: c.voucherType,
+        discountUnit: c.discountUnit,
+        discountValue: c.discountValue,
+        maxDiscountAmount: c.maxDiscountAmount,
+        conditions: c.conditions,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        note: c.note,
+        quantity: c.quantity,
+        status: c.status,
+        discountValue: c.discountValue,
+        customerIds: [],
+        calculatedDiscount: c.calculatedDiscount,
+      }));
+      setVouchers(voucherItems);
+      return;
+    }
+    // Otherwise fetch from API
     setLoading(true);
     getClientVouchers()
       .then((res: any) => {
@@ -60,7 +92,7 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
         message.error("Không thể tải danh sách phiếu giảm giá");
       })
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, availableCoupons.length]);
 
   const handleManualApply = () => {
     const code = manualCode.trim().toUpperCase();
@@ -76,7 +108,7 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     applyVoucher(found);
   };
 
-  const applyVoucher = (v: Voucher) => {
+  const applyVoucher = (v: VoucherItem) => {
     if (v.conditions && subTotal < v.conditions) {
       message.warning(
         `Đơn hàng tối thiểu ${formatPrice(v.conditions)} để áp dụng mã này!`,
@@ -88,7 +120,7 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     onClose();
   };
 
-  const getDiscountLabel = (v: Voucher): string => {
+  const getDiscountLabel = (v: VoucherItem): string => {
     if (v.discountUnit === "PERCENT") {
       const pct = `${v.discountValue}%`;
       return v.maxDiscountAmount
@@ -98,7 +130,10 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     return `Giảm ${formatPrice(v.discountValue)}`;
   };
 
-  const calcSavings = (v: Voucher): number => {
+  const calcSavings = (v: VoucherItem): number => {
+    if (v.calculatedDiscount !== undefined) {
+      return Math.min(v.calculatedDiscount, subTotal);
+    }
     let discount = 0;
     if (v.discountUnit === "PERCENT") {
       discount = (subTotal * v.discountValue) / 100;
@@ -111,7 +146,7 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
     return Math.min(discount, subTotal);
   };
 
-  const canApply = (v: Voucher): boolean => {
+  const canApply = (v: VoucherItem): boolean => {
     if (!v.conditions) return true;
     return subTotal >= v.conditions;
   };
@@ -130,6 +165,18 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
       return 0;
     });
   }, [vouchers, subTotal, now]);
+
+  const bestCouponCode = useMemo(() => {
+    if (sortedVouchers.length === 0) return null;
+    const eligibleVouchers = sortedVouchers.filter(v => canApply(v) && !(v.endDate && v.endDate < now));
+    if (eligibleVouchers.length === 0) return null;
+    const best = eligibleVouchers.reduce((prev, curr) => {
+      const prevSavings = calcSavings(prev);
+      const currSavings = calcSavings(curr);
+      return currSavings > prevSavings ? curr : prev;
+    });
+    return best.code;
+  }, [sortedVouchers, subTotal, now]);
 
   return (
     <Modal
@@ -188,12 +235,13 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
             const eligible = canApply(v);
             const expired = v.endDate && v.endDate < now;
             const savings = calcSavings(v);
+            const isBest = bestCouponCode === v.code && !isApplied && eligible && !expired;
 
             return (
               <div
                 key={v.id}
                 style={{
-                  border: `2px solid ${isApplied ? "#D32F2F" : eligible && !expired ? "#e5e7eb" : "#f3f4f6"}`,
+                  border: `2px solid ${isApplied ? "#D32F2F" : isBest ? "#faad14" : eligible && !expired ? "#e5e7eb" : "#f3f4f6"}`,
                   borderRadius: 10,
                   padding: "14px 16px",
                   display: "flex",
@@ -201,10 +249,13 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
                   alignItems: "flex-start",
                   background: isApplied
                     ? "#fff5f5"
-                    : !eligible || expired
-                      ? "#fafafa"
-                      : "#fff",
+                    : isBest
+                      ? "#fffbe6"
+                      : !eligible || expired
+                        ? "#fafafa"
+                        : "#fff",
                   opacity: !eligible || expired ? 0.65 : 1,
+                  position: "relative",
                 }}
               >
                 {/* Icon strip */}
@@ -231,9 +282,24 @@ const VoucherPickerModal: React.FC<VoucherPickerModalProps> = ({
                       fontSize: 15,
                       color: "#111827",
                       marginBottom: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
                     }}
                   >
                     {v.name}
+                    {isBest && (
+                      <Badge
+                        count="Ưu đãi tốt nhất"
+                        style={{
+                          backgroundColor: "#faad14",
+                          fontSize: 10,
+                          height: 18,
+                          lineHeight: "18px",
+                          padding: "0 6px",
+                        }}
+                      />
+                    )}
                   </div>
                   <div
                     style={{

@@ -39,6 +39,7 @@ import type { Voucher } from "../../models/Voucher";
 import VoucherPickerModal from "../../components/customer/VoucherPickerModal";
 import { getProfile } from "../../api/clientProfileApi";
 import type { AddressResponse } from "../../models/address";
+import { getAvailableCoupons, type AvailableCoupon } from "../../api/voucherApi";
 
 const { Title, Text } = Typography;
 
@@ -110,6 +111,7 @@ const CheckoutPage: React.FC = () => {
   const [voucherModalOpen, setVoucherModalOpen] = useState(false);
   const [autoAppliedBestVoucher, setAutoAppliedBestVoucher] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
   const hasAutoAppliedRef = useRef(false);
 
   useEffect(() => {
@@ -123,6 +125,22 @@ const CheckoutPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, user?.userId]);
+
+  // Fetch available coupons when cart is loaded
+  useEffect(() => {
+    if (cartItems.length > 0 && !loading) {
+      const subtotal = cartItems.reduce((sum, item) => {
+        const orig = unitOriginal(item);
+        const disc = item.discountedPrice != null && item.discountedPrice !== ""
+          ? toNum(item.discountedPrice)
+          : orig;
+        const salePrice = disc > 0 && disc < orig ? disc : orig;
+        return sum + (salePrice * toNum(item.quantity));
+      }, 0);
+      fetchAvailableCoupons(subtotal);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, loading]);
 
   const fetchCart = async () => {
     const state = location.state as any;
@@ -168,6 +186,40 @@ const CheckoutPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAvailableCoupons = async (cartTotal: number) => {
+    try {
+      const response = await getAvailableCoupons(cartTotal);
+      if (response && response.availableCoupons) {
+        setAvailableCoupons(response.availableCoupons);
+        // Auto-apply best coupon if not already applied
+        if (!hasAutoAppliedRef.current && response.bestCoupon) {
+          setAppliedVoucher({
+            code: response.bestCoupon.code,
+            discountValue: response.bestCoupon.discountValue,
+            discountUnit: response.bestCoupon.discountUnit as "PERCENT" | "VND",
+            maxDiscountAmount: response.bestCoupon.maxDiscountAmount,
+          });
+          setAutoAppliedBestVoucher(true);
+          hasAutoAppliedRef.current = true;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching available coupons:", error);
+    }
+  };
+
+  const handleApplyVoucher = (v: Voucher | AvailableCoupon) => {
+    setAppliedVoucher({
+      code: v.code,
+      discountValue: v.discountValue,
+      discountUnit: v.discountUnit as "PERCENT" | "VND",
+      maxDiscountAmount: v.maxDiscountAmount,
+    });
+    setAutoAppliedBestVoucher(false);
+    hasAutoAppliedRef.current = true;
+    message.success(`Áp dụng mã "${v.code}" thành công!`);
   };
 
   const fetchAddresses = async () => {
@@ -313,18 +365,6 @@ const CheckoutPage: React.FC = () => {
     0,
     subTotalAfterPromotion - voucherDiscountAmount,
   );
-
-  const handleApplyVoucher = (v: Voucher) => {
-    setAppliedVoucher({
-      code: v.code,
-      discountValue: v.discountValue,
-      discountUnit: v.discountUnit,
-      maxDiscountAmount: v.maxDiscountAmount,
-    });
-    setAutoAppliedBestVoucher(false);
-    hasAutoAppliedRef.current = true;
-    message.success(`Áp dụng mã "${v.code}" thành công!`);
-  };
 
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null);
@@ -1150,6 +1190,7 @@ const CheckoutPage: React.FC = () => {
                   subTotal={subTotalAfterPromotion}
                   onApply={handleApplyVoucher}
                   appliedCode={appliedVoucher?.code}
+                  availableCoupons={availableCoupons}
                 />
 
                 <Divider style={{ margin: "12px 0" }} />

@@ -38,5 +38,5 @@ out/
 
 
 # Bảo mật cấu hình
-.env
+../.env
 application.properties

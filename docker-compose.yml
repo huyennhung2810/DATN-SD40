@@ -4,7 +4,7 @@ services:
     container_name: msi_mysql_bind
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 281003
+      MYSQL_ROOT_PASSWORD: 123123
       MYSQL_DATABASE: datn
       TZ: Asia/Ho_Chi_Minh  # <--- Bổ sung múi giờ cho MySQL
     ports:
