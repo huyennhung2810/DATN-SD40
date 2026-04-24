@@ -219,17 +219,39 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
 
         posOrderDetailRepository.save(targetDetail);
 
-        // Recalculate order totals based on cart contents
+        // Tính lại tổng tiền từ tất cả chi tiết đơn hàng
         List<OrderDetail> allDetails = posOrderDetailRepository.findByOrderId(orderId);
         BigDecimal newTotal = calculateOrderTotal(allDetails);
         order.setTotalAmount(newTotal);
 
-        // Recalculate totalAfterDiscount respecting any applied voucher
-        order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
+        // Tự động áp dụng hoặc cập nhật voucher tốt nhất nếu có khách hàng
+        Voucher appliedVoucher = autoApplyBestVoucher(order, newTotal);
+        boolean voucherChanged = appliedVoucher != order.getVoucher();
+
+        if (voucherChanged) {
+            if (appliedVoucher != null) {
+                order.setVoucher(appliedVoucher);
+                order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, appliedVoucher));
+                logger.info("[POS] Đã tự động áp voucher tốt nhất: {} cho đơn {}", appliedVoucher.getCode(), orderId);
+            } else {
+                order.setVoucher(null);
+                order.setTotalAfterDiscount(newTotal);
+                logger.info("[POS] Đã gỡ voucher khỏi đơn {} (không còn phù hợp)", orderId);
+            }
+        } else if (order.getVoucher() != null) {
+            // Voucher hiện tại vẫn là tốt nhất, chỉ cập nhật lại totalAfterDiscount
+            order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
+        }
 
         posOrderRepository.save(order);
 
-        return ResponseObject.success(targetDetail, "Thêm sản phẩm vào hóa đơn thành công");
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("orderDetail", targetDetail);
+        responseData.put("voucherChanged", voucherChanged);
+        responseData.put("appliedVoucher", order.getVoucher() != null ? buildVoucherInfo(order.getVoucher(), newTotal) : null);
+        responseData.put("totalAmount", order.getTotalAmount());
+        responseData.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        return ResponseObject.success(responseData, "Thêm sản phẩm vào hóa đơn thành công");
     }
 
     @Override
@@ -415,7 +437,29 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             return map;
         }).collect(Collectors.toList());
 
-        return ResponseObject.success(result, "Lấy chi tiết hóa đơn thành công");
+        // Build order-level info (voucher, totals) for frontend state sync
+        Map<String, Object> orderMeta = new HashMap<>();
+        orderMeta.put("totalAmount", order.getTotalAmount());
+        orderMeta.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        if (order.getVoucher() != null) {
+            Map<String, Object> vMap = new HashMap<>();
+            vMap.put("id", order.getVoucher().getId());
+            vMap.put("code", order.getVoucher().getCode());
+            vMap.put("name", order.getVoucher().getName());
+            vMap.put("discountValue", order.getVoucher().getDiscountValue());
+            vMap.put("discountUnit", order.getVoucher().getDiscountUnit());
+            vMap.put("maxDiscountAmount", order.getVoucher().getMaxDiscountAmount());
+            vMap.put("conditions", order.getVoucher().getConditions());
+            orderMeta.put("voucher", vMap);
+        } else {
+            orderMeta.put("voucher", null);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("details", result);
+        response.put("order", orderMeta);
+
+        return ResponseObject.success(response, "Lấy chi tiết hóa đơn thành công");
     }
 
     @Override
@@ -461,14 +505,37 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
             newTotal = BigDecimal.ZERO;
         order.setTotalAmount(newTotal);
 
-        // Recalculate totalAfterDiscount respecting any applied voucher
-        order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
+        // Tự động áp dụng hoặc cập nhật voucher tốt nhất nếu có khách hàng
+        Voucher appliedVoucher = autoApplyBestVoucher(order, newTotal);
+        boolean voucherChanged = appliedVoucher != order.getVoucher();
+
+        if (voucherChanged) {
+            if (appliedVoucher != null) {
+                order.setVoucher(appliedVoucher);
+                order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, appliedVoucher));
+                logger.info("[POS] Đã cập nhật voucher tốt nhất: {} sau khi xóa sản phẩm", appliedVoucher.getCode());
+            } else {
+                order.setVoucher(null);
+                order.setTotalAfterDiscount(newTotal);
+                logger.info("[POS] Đã gỡ voucher khỏi đơn {} (không còn phù hợp sau khi xóa sản phẩm)", orderId);
+            }
+        } else if (order.getVoucher() != null) {
+            order.setTotalAfterDiscount(calculateTotalAfterVoucher(newTotal, order.getVoucher()));
+        } else {
+            order.setTotalAfterDiscount(newTotal);
+        }
 
         posOrderRepository.save(order);
 
         posOrderDetailRepository.delete(targetDetail);
 
-        return ResponseObject.success(null, "Đã xóa sản phẩm khỏi hóa đơn");
+        // Trả về thông tin voucher đã được cập nhật tự động
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("voucherChanged", voucherChanged);
+        resp.put("appliedVoucher", order.getVoucher() != null ? buildVoucherInfo(order.getVoucher(), newTotal) : null);
+        resp.put("totalAmount", order.getTotalAmount());
+        resp.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        return ResponseObject.success(resp, "Đã xóa sản phẩm khỏi hóa đơn");
     }
 
     @Override
@@ -520,10 +587,80 @@ public class ADPosOrderServiceImpl implements ADPosOrderService {
         Map<String, Object> resp = new HashMap<>();
         resp.put("orderId", order.getId());
         resp.put("customerId", customerId);
-        resp.put("appliedVoucherId", bestVoucher != null ? bestVoucher.getId() : null);
-        resp.put("appliedVoucherCode", bestVoucher != null ? bestVoucher.getCode() : null);
         resp.put("totalAfterDiscount", order.getTotalAfterDiscount());
+        resp.put("appliedVoucher", bestVoucher != null ? buildVoucherInfo(bestVoucher, order.getTotalAmount()) : null);
         return ResponseObject.success(resp, "Đã gắn khách hàng vào hóa đơn và tự động áp dụng voucher tốt nhất");
+    }
+
+    /**
+     * Tự động tìm và áp dụng voucher tốt nhất cho đơn hàng.
+     * Hỗ trợ cả khách hàng đã đăng ký lẫn khách vãng lai.
+     * - Khách hàng đã đăng ký: tìm voucher INDIVIDUAL + ALL tốt nhất.
+     * - Khách vãng lai (không có khách hàng): tìm voucher ALL tốt nhất.
+     * Trả về voucher được áp (có thể null). KHÔNG tự động save order.
+     */
+    private Voucher autoApplyBestVoucher(Order order, BigDecimal newTotal) {
+        if (newTotal == null || newTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        if (order.getCustomer() != null) {
+            // Khách hàng đã đăng ký: tìm voucher INDIVIDUAL + ALL tốt nhất
+            String customerId = order.getCustomer().getId();
+            return findBestApplicableVoucher(newTotal, customerId);
+        } else {
+            // Khách vãng lai: chỉ tìm voucher ALL
+            return findBestVoucherForWalkInCustomer(newTotal);
+        }
+    }
+
+    /**
+     * Tìm voucher ALL tốt nhất cho khách vãng lai.
+     * Ưu tiên voucher chung (ALL), so sánh số tiền được giảm, chọn voucher giảm được nhiều nhất.
+     */
+    private Voucher findBestVoucherForWalkInCustomer(BigDecimal orderTotal) {
+        if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        List<Voucher> candidates = adVouchersRepository.findAll().stream()
+                .filter(v -> v.getStatus() != null && (v.getStatus() == 1 || v.getStatus() == 2)
+                        && v.getQuantity() != null && v.getQuantity() > 0
+                        && v.getStartDate() != null && v.getStartDate() <= now
+                        && v.getEndDate() != null && v.getEndDate() >= now
+                        && (v.getConditions() == null || v.getConditions().compareTo(orderTotal) <= 0))
+                // Khách vãng lai: chỉ xét voucher ALL
+                .filter(v -> !"INDIVIDUAL".equalsIgnoreCase(v.getVoucherType()))
+                .collect(Collectors.toList());
+
+        Voucher best = null;
+        BigDecimal bestSaving = BigDecimal.ZERO;
+        for (Voucher v : candidates) {
+            BigDecimal saving = calculateVoucherSaving(orderTotal, v);
+            if (saving.compareTo(bestSaving) > 0) {
+                bestSaving = saving;
+                best = v;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Build a minimal info map for a voucher (avoids serializing entire entity with lazy loads).
+     * @param v the voucher
+     * @param orderTotal the actual order total (used to calculate estimatedSaving accurately)
+     */
+    private Map<String, Object> buildVoucherInfo(Voucher v, BigDecimal orderTotal) {
+        Map<String, Object> info = new HashMap<>();
+        info.put("id", v.getId());
+        info.put("code", v.getCode());
+        info.put("name", v.getName());
+        info.put("discountUnit", v.getDiscountUnit());
+        info.put("discountValue", v.getDiscountValue());
+        info.put("maxDiscountAmount", v.getMaxDiscountAmount());
+        info.put("conditions", v.getConditions());
+        BigDecimal saving = calculateVoucherSaving(orderTotal, v);
+        info.put("estimatedSaving", saving);
+        return info;
     }
 
     /**

@@ -57,6 +57,13 @@ const { useEffect, useState, useRef } = React;
 
 const { Title, Text } = Typography;
 
+const formatCurrency = (value: number | string | undefined | null): string => {
+  if (value == null) return "0 đ";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0 đ";
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
+};
+
 const PosPage: React.FC = () => {
   const dispatch = useDispatch();
   const currentShift = useSelector(
@@ -217,7 +224,20 @@ const PosPage: React.FC = () => {
     try {
       const res = await posApi.getOrderDetails(orderId);
       if (res.data?.data) {
-        setCartDetails(res.data.data);
+        // Backend now returns { details: [...], order: { totalAmount, totalAfterDiscount, voucher } }
+        const data = res.data.data;
+        if (Array.isArray(data)) {
+          setCartDetails(data);
+        } else {
+          setCartDetails(data.details || []);
+          // Sync applied voucher from order-level info
+          const orderMeta = data.order || {};
+          if (orderMeta.voucher) {
+            setAppliedVoucher(orderMeta.voucher);
+          } else {
+            setAppliedVoucher(null);
+          }
+        }
       }
     } catch (error) {
       console.error(error);
@@ -332,8 +352,23 @@ const PosPage: React.FC = () => {
     }
 
     try {
-      await posApi.addProductToOrder(activeKey, productDetailId, 1);
-      message.success("Đã thêm sản phẩm vào giỏ");
+      const res = await posApi.addProductToOrder(activeKey, productDetailId, 1);
+      const resData = res.data;
+
+      // Kiểm tra xem có voucher nào được tự động áp dụng không
+      if (resData?.data?.voucherChanged && resData?.data?.appliedVoucher) {
+        const voucherInfo = resData.data.appliedVoucher;
+        setAppliedVoucher(voucherInfo);
+        message.success(
+          `Đã thêm sản phẩm vào giỏ. Voucher "${voucherInfo.code}" đã được tự động áp dụng (giảm ${formatCurrency(voucherInfo.estimatedSaving)}).`,
+        );
+      } else if (resData?.data?.voucherChanged && !resData?.data?.appliedVoucher) {
+        setAppliedVoucher(null);
+        message.info("Đã thêm sản phẩm vào giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.");
+      } else {
+        message.success("Đã thêm sản phẩm vào giỏ");
+      }
+
       fetchOrderDetails(activeKey);
       fetchPendingOrders();
     } catch (error: any) {
@@ -440,7 +475,14 @@ const PosPage: React.FC = () => {
     }
 
     try {
-      await posApi.setCustomer(activeKey, customerId);
+      const res = await posApi.setCustomer(activeKey, customerId);
+      const resData = res.data;
+      // Update appliedVoucher state from response
+      if (resData?.data?.appliedVoucher) {
+        setAppliedVoucher(resData.data.appliedVoucher);
+      } else {
+        setAppliedVoucher(null);
+      }
       message.success("Đã cập nhật khách hàng cho hóa đơn");
       await fetchOrderDetails(activeKey);
       await fetchPendingOrders();
@@ -662,8 +704,22 @@ const PosPage: React.FC = () => {
   const handleRemoveProduct = async (detailId: string) => {
     if (!activeKey) return;
     try {
-      await posApi.removeProductFromOrder(activeKey, detailId);
-      message.success("Đã xóa sản phẩm khỏi giỏ");
+      const res = await posApi.removeProductFromOrder(activeKey, detailId);
+      const resData = res.data;
+
+      if (resData?.data?.voucherChanged && resData?.data?.appliedVoucher) {
+        const voucherInfo = resData.data.appliedVoucher;
+        setAppliedVoucher(voucherInfo);
+        message.success(
+          `Đã xóa sản phẩm khỏi giỏ. Voucher "${voucherInfo.code}" đã được cập nhật (giảm ${formatCurrency(voucherInfo.estimatedSaving)}).`,
+        );
+      } else if (resData?.data?.voucherChanged && !resData?.data?.appliedVoucher) {
+        setAppliedVoucher(null);
+        message.info("Đã xóa sản phẩm khỏi giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.");
+      } else {
+        message.success("Đã xóa sản phẩm khỏi giỏ");
+      }
+
       fetchOrderDetails(activeKey);
       fetchPendingOrders();
     } catch (error: any) {
