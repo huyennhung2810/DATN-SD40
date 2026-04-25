@@ -99,10 +99,8 @@ const CheckoutPage: React.FC = () => {
 
   // Province/ward
   const [provinces, setProvinces] = useState<Province[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [loadingWards, setLoadingWards] = useState(false);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
 
   // ---- Voucher ----
   const [appliedVoucher, setAppliedVoucher] = useState<AppliedVoucher | null>(
@@ -253,39 +251,17 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const loadDistricts = async (provinceCode: number) => {
-    if (!provinceCode) return;
-    setLoadingDistricts(true);
-    setDistricts([]);
-    setWards([]);
-    newAddrForm.setFieldsValue({
-      districtCode: undefined,
-      wardCode: undefined,
-      wardCommune: "",
-    });
-    try {
-      const res = await axios.get(
-        `https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`,
-      );
-      setDistricts(res.data.districts ?? []);
-    } catch {
-      message.error("Không tải được danh sách Quận/Huyện");
-    } finally {
-      setLoadingDistricts(false);
-    }
-  };
-
-  const loadWards = async (provinceCode: number, districtCode: number) => {
+  const loadCommunes = async (provinceCode: number) => {
     setLoadingWards(true);
     setWards([]);
     newAddrForm.setFieldsValue({ wardCode: undefined, wardCommune: "" });
     try {
       const res = await axios.get(
-        `https://provinces.open-api.vn/api/d/${districtCode}?depth=2`,
+        `https://provinces.open-api.vn/api/v2/p/${provinceCode}?depth=2`,
       );
       setWards(res.data.wards ?? []);
     } catch {
-      message.error("Không tải được danh sách Phường/Xã");
+      message.error("Không tải được danh sách Xã/Phường");
     } finally {
       setLoadingWards(false);
     }
@@ -703,9 +679,6 @@ const CheckoutPage: React.FC = () => {
                     <Form.Item name="wardCommune" hidden>
                       <Input />
                     </Form.Item>
-                    <Form.Item name="districtCode" hidden>
-                      <Input />
-                    </Form.Item>
 
                     <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                       <Form.Item
@@ -779,70 +752,18 @@ const CheckoutPage: React.FC = () => {
                               : (opt as any)?.label;
                             newAddrForm.setFieldsValue({
                               provinceCity: String(label ?? ""),
-                              districtCode: undefined,
                               wardCode: undefined,
                               wardCommune: "",
                             });
                             if (val) {
-                              loadDistricts(val);
-                            } else {
-                              setDistricts([]);
-                              setWards([]);
-                            }
-                          }}
-                        />
-                      </Form.Item>
-
-                      <Form.Item
-                        label="Quận / Huyện"
-                        name="districtCode"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng chọn Quận/Huyện",
-                          },
-                        ]}
-                        style={{ flex: 1 }}
-                      >
-                        <Select
-                          showSearch
-                          size="large"
-                          placeholder="Chọn Quận / Huyện"
-                          disabled={districts.length === 0 && !loadingDistricts}
-                          loading={loadingDistricts}
-                          filterOption={(input, option) =>
-                            normalizeStr(String(option?.label ?? "")).includes(
-                              normalizeStr(input),
-                            )
-                          }
-                          options={districts.map((d: any) => ({
-                            label: d.name,
-                            value: d.code,
-                          }))}
-                          onChange={(val, opt) => {
-                            const label = Array.isArray(opt)
-                              ? opt[0]?.label
-                              : (opt as any)?.label;
-                            newAddrForm.setFieldsValue({
-                              districtCode: val,
-                              wardCode: undefined,
-                              wardCommune: "",
-                            });
-                            if (val) {
-                              const provinceCode =
-                                newAddrForm.getFieldValue("provinceCode");
-                              if (provinceCode) {
-                                loadWards(provinceCode, val);
-                              }
+                              loadCommunes(val);
                             } else {
                               setWards([]);
                             }
                           }}
                         />
                       </Form.Item>
-                    </div>
 
-                    <div style={{ display: "flex", gap: 12 }}>
                       <Form.Item
                         label="Phường / Xã"
                         name="wardCode"
