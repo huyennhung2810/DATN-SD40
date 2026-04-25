@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+﻿import React, { useEffect, useState, useRef,useMemo } from "react";
 import {
   Form,
   Input,
@@ -188,7 +188,25 @@ const DiscountForm: React.FC = () => {
       isSubmittingRef.current = false;
     }, 2000);
   };
+const sortedProductDetails = useMemo(() => {
+    if (!allProductDetails) return [];
 
+    // Tạo bản sao của mảng và sắp xếp
+    return [...allProductDetails].sort((a, b) => {
+      // Kiểm tra xem ID của sản phẩm có nằm trong danh sách đang được tick chọn không
+      const isASelected = selectedRowKeys.includes(a.id);
+      const isBSelected = selectedRowKeys.includes(b.id);
+
+      // Nếu A được chọn mà B không được chọn -> Đẩy A lên trên
+      if (isASelected && !isBSelected) return -1;
+      
+      // Nếu B được chọn mà A không được chọn -> Đẩy B lên trên
+      if (!isASelected && isBSelected) return 1;
+
+      // Nếu cả hai cùng trạng thái (cùng chọn hoặc cùng không) -> Giữ nguyên vị trí cũ
+      return 0;
+    });
+  }, [allProductDetails, selectedRowKeys]); // Chỉ chạy lại khi 1 trong 2 biến này thay đổi
   return (
     <div style={{ padding: "24px" }}>
       <Space orientation="vertical" style={{ width: "100%" }} size="large">
@@ -255,7 +273,7 @@ const DiscountForm: React.FC = () => {
                   </Col>
                 </Row>
               )}
-              <Col span={24}>
+              <Col span={24}> 
                 <Form.Item label="Ghi chú" name="note">
                   <Input.TextArea rows={4} placeholder="Nhập ghi chú chi tiết về chương trình..." />
                 </Form.Item>
@@ -289,7 +307,7 @@ const DiscountForm: React.FC = () => {
                   },
                 },
               ]}
-              dataSource={allProductDetails}
+              dataSource={sortedProductDetails}
               rowKey="id"
               pagination={{ pageSize: 5 }}
               style={{ marginBottom: 20 }}
