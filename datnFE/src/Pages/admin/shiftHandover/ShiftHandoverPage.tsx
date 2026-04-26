@@ -96,8 +96,8 @@ const ShiftHandoverPage: React.FC = () => {
   const [todaySchedule, setTodaySchedule] = useState<{
     id: string;
     shiftName?: string;
-    startTime: string;
-    endTime: string;
+    startTime?: string;
+    endTime?: string;
   } | null>(null);
   const [fetchingSchedule, setFetchingSchedule] = useState<boolean>(false);
 
@@ -129,7 +129,6 @@ const ShiftHandoverPage: React.FC = () => {
 
   const hasStartedShift = !!currentShift;
 
-  // --- LOGIC KIỂM TRA THỜI GIAN VÀO CA ---
   // --- LOGIC KIỂM TRA THỜI GIAN VÀO CA ---
   const checkInValidity = () => {
     // Chỉ cần có startTime là bắt đầu kiểm tra được rồi
