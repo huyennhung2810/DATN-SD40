@@ -58,6 +58,9 @@ export interface ProductVariantResponse {
 
   // Danh sách serial của biến thể (dùng cho modal edit)
   serials?: SerialResponse[];
+
+  appliedPromotionName?: string;
+
 }
 
 export interface ProductWithVariantsResponse {

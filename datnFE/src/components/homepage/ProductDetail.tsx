@@ -230,6 +230,7 @@ const ProductDetail: React.FC = () => {
                 0,
             ),
             quantity: quantity,
+            appliedPromotionName: activeVariant?.appliedPromotionName,
             productDetail: {
               id: selectedVariantId,
               colorName: activeVariant?.colorName || "",
@@ -301,6 +302,7 @@ const ProductDetail: React.FC = () => {
       price: unitOriginal,
       discountedPrice: unitAfterCampaign,
       quantity: quantity,
+      appliedPromotionName: activeVariant?.appliedPromotionName,
     };
 
     navigate("/client/checkout", {
@@ -451,37 +453,47 @@ const ProductDetail: React.FC = () => {
                             {isOutOfStock ? "Hết hàng" : `Còn ${stock} sp`}
                           </div>
                           {variant.hasActiveSaleCampaign ? (
-                            <div className="variant-price">
-                              <span
-                                style={{ color: "#ff4d4f", fontWeight: 600 }}
+                              <div className="variant-price">
+                                <span
+                                  style={{ color: "#ff4d4f", fontWeight: 600 }}
+                                >
+                                  {formatPrice(
+                                    variant.displayPrice ?? variant.salePrice,
+                                  )}
+                                </span>
+                                <span
+                                  style={{
+                                    textDecoration: "line-through",
+                                    marginLeft: 6,
+                                    fontSize: 12,
+                                    color: "#999",
+                                  }}
+                                >
+                                  {formatPrice(
+                                    variant.originalPrice ?? variant.salePrice,
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <div
+                                className="variant-price"
+                                style={{ fontWeight: 600 }}
                               >
                                 {formatPrice(
                                   variant.displayPrice ?? variant.salePrice,
                                 )}
-                              </span>
-                              <span
-                                style={{
-                                  textDecoration: "line-through",
-                                  marginLeft: 6,
-                                  fontSize: 12,
-                                  color: "#999",
-                                }}
-                              >
-                                {formatPrice(
-                                  variant.originalPrice ?? variant.salePrice,
-                                )}
-                              </span>
-                            </div>
-                          ) : (
-                            <div
-                              className="variant-price"
-                              style={{ fontWeight: 600 }}
-                            >
-                              {formatPrice(
-                                variant.displayPrice ?? variant.salePrice,
-                              )}
-                            </div>
-                          )}
+                              </div>
+                            )}
+
+                            {/* ---> BẮT ĐẦU: HIỂN THỊ TAG KHUYẾN MÃI BÊN DƯỚI GIÁ <--- */}
+                            {variant.appliedPromotionName && (
+                              <div style={{ marginTop: 4 }}>
+                                <Tag color="volcano" bordered={false} style={{ margin: 0, fontSize: 10, borderRadius: 4 }}>
+                                  {variant.appliedPromotionName}
+                                </Tag>
+                              </div>
+                            )}
+                            {/* ---> KẾT THÚC <--- */}
                         </div>
                       );
                     })}

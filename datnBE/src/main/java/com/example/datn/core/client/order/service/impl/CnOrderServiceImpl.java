@@ -243,6 +243,14 @@ public class CnOrderServiceImpl implements CnOrderService {
                     .multiply(BigDecimal.valueOf(od.getQuantity()))
                     .max(BigDecimal.ZERO);
             od.setDiscountAmount(promoLine);
+
+            // ---> ĐOẠN BỔ SUNG: VỚT TÊN KHUYẾN MÃI LƯU VÀO ĐƠN HÀNG <---
+            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
+            if (activeDiscount != null && activeDiscount.getDiscount() != null) {
+                od.setAppliedPromotionName(activeDiscount.getDiscount().getName());
+            }
+            // ---> KẾT THÚC BỔ SUNG <---
+
             orderDetailRepository.save(od);
         }
 

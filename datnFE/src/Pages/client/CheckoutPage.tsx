@@ -53,6 +53,7 @@ interface CartItem {
   price: number;
   discountedPrice?: number | string | null;
   quantity: number;
+  appliedPromotionName?: string;
 }
 
 interface AppliedVoucher {
@@ -955,6 +956,17 @@ const CheckoutPage: React.FC = () => {
                           <div style={{ color: "#888", fontSize: 12 }}>
                             {item.variantName ?? item.version ?? ""}
                           </div>
+
+                          {/* ---- BẮT ĐẦU PHẦN THÊM MỚI ---- */}
+                          {hasPromo && item.appliedPromotionName && (
+                            <div style={{ marginTop: 4 }}>
+                              <Tag color="volcano" bordered={false} style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                                {item.appliedPromotionName}
+                              </Tag>
+                            </div>
+                          )}
+                          {/* ---- KẾT THÚC PHẦN THÊM MỚI ---- */}
+
                           <div
                             style={{
                               display: "flex",

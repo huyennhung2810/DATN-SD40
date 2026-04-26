@@ -143,9 +143,15 @@ public class CnCartDetailServiceImpl implements CnCartDetailService {
             DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetailId );
             if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
                 dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+
+                if(activeDiscount.getDiscount() != null){
+                    dto.setAppliedPromotionName(activeDiscount.getDiscount().getName());
+                }
             } else {
                 dto.setDiscountedPrice(originalPrice);
+                dto.setAppliedPromotionName(null);
             }
+
 
             responseList.add(dto);
         }

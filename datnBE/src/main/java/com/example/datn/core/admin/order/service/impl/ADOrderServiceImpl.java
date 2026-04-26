@@ -712,9 +712,8 @@ public class ADOrderServiceImpl implements ADOrderService {
     public ResponseObject<?> getAllHoaDonCT(ADOrderDetailRequest request) {
         try {
             Pageable pageable = Helper.createPageable(request, "created_date");
+            Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(), pageable);
 
-            Page<ADOrderDetailResponse> page = adOrderDetailRepository.getHoaDonChiTiet(request.getMaHoaDon(),
-                    pageable);
             return ResponseObject.success(
                     page,
                     "Lấy danh sách chi tiết hóa đơn thành công");

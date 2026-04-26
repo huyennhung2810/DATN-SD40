@@ -325,6 +325,16 @@ public class CnProductServiceImpl implements CnProductService {
             variant.setDiscountedPrice(displayPrice);
             variant.setDisplayPrice(displayPrice);
             variant.setHasActiveSaleCampaign(true);
+            try {
+                var activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(detail.getId());
+                if (activeDiscount != null && activeDiscount.getDiscount() != null) {
+                    variant.setAppliedPromotionName(activeDiscount.getDiscount().getName());
+                } else {
+                    variant.setAppliedPromotionName(null);
+                }
+            } catch (Exception e) {
+                variant.setAppliedPromotionName(null);
+            }
         } else {
             variant.setDiscountedPrice(null);
             variant.setDisplayPrice(salePrice);

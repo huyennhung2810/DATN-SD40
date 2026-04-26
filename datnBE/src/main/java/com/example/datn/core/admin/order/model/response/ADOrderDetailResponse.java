@@ -1,5 +1,7 @@
 package com.example.datn.core.admin.order.model.response;
 
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -123,4 +125,6 @@ public interface ADOrderDetailResponse {
 
     // Lý do giao hàng không thành công
     String getFailureReason();
+
+    String getAppliedPromotionName();
 }

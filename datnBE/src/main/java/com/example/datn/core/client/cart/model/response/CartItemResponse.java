@@ -19,4 +19,5 @@ public class CartItemResponse {
     private Integer stock;      // Tồn kho hiện tại
     private BigDecimal discountedPrice;
     private String version;
+    private String appliedPromotionName;
 }

@@ -34,4 +34,6 @@ public class CnVariantResponse {
     private Boolean hasActiveSaleCampaign;
 
     private Integer stock; // Số lượng tồn kho
+
+    private String appliedPromotionName;
 }

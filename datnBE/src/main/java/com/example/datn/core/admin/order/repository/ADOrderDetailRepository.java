@@ -29,6 +29,9 @@ public interface ADOrderDetailRepository extends OrderDetailRepository {
                             hdct.unit_price AS giaBan,
                             hdct.total_price AS tongTien,
                             hd.total_after_discount AS tongTienSauGiam,
+                            
+                            -- ---> DÒNG BỔ SUNG: Lấy tên khuyến mãi <---
+                            hdct.applied_promotion_name AS appliedPromotionName,
 
                             v.code AS maVoucher,
                             v.name AS tenVoucher,

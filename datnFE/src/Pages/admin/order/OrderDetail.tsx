@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
@@ -139,6 +139,7 @@ interface FlatRow {
   tongTien: number;
   serialId: string;
   serialCode: string;
+  appliedPromotionName?: string;
 }
 
 const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
@@ -164,6 +165,7 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
         tongTien: item.tongTien,
         serialId: "",
         serialCode: "Chưa gán",
+        appliedPromotionName: (item as any).appliedPromotionName,
       });
     } else {
       serials.forEach((s) => {
@@ -185,6 +187,7 @@ const buildFlatRows = (items: OrderDetailResponse[]): FlatRow[] => {
           tongTien: item.tongTien,
           serialId: s.id,
           serialCode: s.code,
+          appliedPromotionName: (item as any).appliedPromotionName,
         });
       });
     }
@@ -580,15 +583,26 @@ const OrderDetailPage: React.FC = () => {
             <Text strong style={{ display: "block" }}>
               {r.tenSanPham}
             </Text>
-            {r.thuongHieu && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {r.thuongHieu}
-              </Text>
-            )}
-            <div style={{ marginTop: 4 }}>
-              {r.mauSac && <Tag style={{ marginRight: 4 }}>{r.mauSac}</Tag>}
-              {r.size && <Tag>{r.size}</Tag>}
+            <div style={{ marginTop: 4, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+              {r.thuongHieu && (
+                <Tag style={{ fontSize: 11, margin: 0 }}>
+                  {r.thuongHieu.toLowerCase()}
+                </Tag>
+              )}
+              {r.mauSac && <Tag style={{ margin: 0 }}>{r.mauSac}</Tag>}
+              {r.size && (
+                <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                  | Size: {r.size}
+                </Text>
+              )}
             </div>
+            {r.appliedPromotionName && (
+              <div style={{ marginTop: 4 }}>
+                <Tag color="volcano" bordered={false} style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                  {r.appliedPromotionName}
+                </Tag>
+              </div>
+            )}
           </div>
         </Space>
       ),
@@ -649,19 +663,26 @@ const OrderDetailPage: React.FC = () => {
             <Text strong style={{ display: "block" }}>
               {r.tenSanPham}
             </Text>
-            <div style={{ marginTop: 4 }}>
+            <div style={{ marginTop: 4, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
               {r.thuongHieu && (
-                <Tag style={{ fontSize: 11, marginRight: 4 }}>
+                <Tag style={{ fontSize: 11, margin: 0 }}>
                   {r.thuongHieu.toLowerCase()}
                 </Tag>
               )}
-              {r.mauSac && <Tag style={{ marginRight: 4 }}>{r.mauSac}</Tag>}
+              {r.mauSac && <Tag style={{ margin: 0 }}>{r.mauSac}</Tag>}
               {r.size && (
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
                   | Size: {r.size}
                 </Text>
               )}
             </div>
+            {(r as any).appliedPromotionName && (
+              <div style={{ marginTop: 4 }}>
+                <Tag color="volcano" bordered={false} style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                  {(r as any).appliedPromotionName}
+                </Tag>
+              </div>
+            )}
           </div>
         </Space>
       ),
