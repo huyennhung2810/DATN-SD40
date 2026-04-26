@@ -61,7 +61,10 @@ const formatCurrency = (value: number | string | undefined | null): string => {
   if (value == null) return "0 đ";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0 đ";
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(num);
 };
 
 const PosPage: React.FC = () => {
@@ -127,6 +130,7 @@ const PosPage: React.FC = () => {
     shippingFee: 0,
   });
   const [customerAddresses, setCustomerAddresses] = useState<any[]>([]);
+  const [fullCustomer, setFullCustomer] = useState<any>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
@@ -362,9 +366,14 @@ const PosPage: React.FC = () => {
         message.success(
           `Đã thêm sản phẩm vào giỏ. Voucher "${voucherInfo.code}" đã được tự động áp dụng (giảm ${formatCurrency(voucherInfo.estimatedSaving)}).`,
         );
-      } else if (resData?.data?.voucherChanged && !resData?.data?.appliedVoucher) {
+      } else if (
+        resData?.data?.voucherChanged &&
+        !resData?.data?.appliedVoucher
+      ) {
         setAppliedVoucher(null);
-        message.info("Đã thêm sản phẩm vào giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.");
+        message.info(
+          "Đã thêm sản phẩm vào giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.",
+        );
       } else {
         message.success("Đã thêm sản phẩm vào giỏ");
       }
@@ -589,11 +598,18 @@ const PosPage: React.FC = () => {
     if (customerId) {
       customerApi
         .getCustomerById(customerId)
-        .then((customer: any) => setCustomerAddresses(customer.addresses || []))
-        .catch(() => setCustomerAddresses([]));
+        .then((customer: any) => {
+          setCustomerAddresses(customer.addresses || []);
+          setFullCustomer(customer);
+        })
+        .catch(() => {
+          setCustomerAddresses([]);
+          setFullCustomer(null);
+        });
     } else {
       setCustomerAddresses([]);
       setSelectedAddressId(null);
+      setFullCustomer(null);
     }
   }, [activeOrder?.customer?.id]);
 
@@ -713,9 +729,14 @@ const PosPage: React.FC = () => {
         message.success(
           `Đã xóa sản phẩm khỏi giỏ. Voucher "${voucherInfo.code}" đã được cập nhật (giảm ${formatCurrency(voucherInfo.estimatedSaving)}).`,
         );
-      } else if (resData?.data?.voucherChanged && !resData?.data?.appliedVoucher) {
+      } else if (
+        resData?.data?.voucherChanged &&
+        !resData?.data?.appliedVoucher
+      ) {
         setAppliedVoucher(null);
-        message.info("Đã xóa sản phẩm khỏi giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.");
+        message.info(
+          "Đã xóa sản phẩm khỏi giỏ. Voucher trước đó không còn phù hợp và đã được gỡ.",
+        );
       } else {
         message.success("Đã xóa sản phẩm khỏi giỏ");
       }
@@ -729,7 +750,7 @@ const PosPage: React.FC = () => {
   };
 
   const openRecipientModal = async (currentCustomer?: any) => {
-    const customer = currentCustomer ?? activeOrder?.customer;
+    const customer = currentCustomer ?? fullCustomer ?? activeOrder?.customer;
 
     let provinces = posProvinces;
     if (provinces.length === 0) {
