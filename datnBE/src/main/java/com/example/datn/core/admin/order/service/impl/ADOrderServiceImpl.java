@@ -51,6 +51,8 @@ public class ADOrderServiceImpl implements ADOrderService {
     private final OrderDetailRepository orderDetailRepository;
     private final ProductDetailRepository productDetailRepository;
     private final AddressRepository addressRepository;
+    private final DiscountDetailRepository discountDetailRepository;
+    private final DiscountRepository discountRepository;
 
     @Override
     @Transactional
@@ -161,6 +163,26 @@ public class ADOrderServiceImpl implements ADOrderService {
                         // Trừ số lượng tồn kho
                         product.setQuantity(product.getQuantity() - soLuongMua);
                         productDetailRepository.save(product);
+
+                        if (item.getAppliedPromotionName() != null) {
+                            try {
+                                DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(product.getId());
+                                if (activeDiscount != null && activeDiscount.getDiscount() != null) {
+                                    Discount discount = activeDiscount.getDiscount();
+
+                                    // Kiểm tra tên KM khớp với lúc đặt hàng để tránh trừ nhầm đợt KM mới
+                                    if (discount.getName().equals(item.getAppliedPromotionName())) {
+                                        if (discount.getQuantity() != null && discount.getQuantity() >= soLuongMua) {
+                                            discount.setQuantity(discount.getQuantity() - soLuongMua);
+                                            discountRepository.save(discount);
+                                            log.info("Đã trừ {} lượt sử dụng của đợt giảm giá: {}", soLuongMua, discount.getName());
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                log.warn("Lỗi khi trừ số lượng khuyến mãi: {}", e.getMessage());
+                            }
+                        }
                     }
                     break;
 
@@ -194,7 +216,25 @@ public class ADOrderServiceImpl implements ADOrderService {
                         int soLuongMua = item.getQuantity();
                         product.setQuantity(product.getQuantity() + soLuongMua);
                         productDetailRepository.save(product);
+                        if (item.getAppliedPromotionName() != null) {
+                            try {
+                                DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(product.getId());
+                                if (activeDiscount != null && activeDiscount.getDiscount() != null) {
+                                    Discount discount = activeDiscount.getDiscount();
+                                    if (discount.getName().equals(item.getAppliedPromotionName())) {
+                                        if (discount.getQuantity() != null) {
+                                            discount.setQuantity(discount.getQuantity() + soLuongMua);
+                                            discountRepository.save(discount);
+                                            log.info("Đã hoàn lại {} lượt sử dụng cho đợt giảm giá: {}", soLuongMua, discount.getName());
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                log.warn("Lỗi khi hoàn số lượng khuyến mãi: {}", e.getMessage());
+                            }
+                        }
                     }
+
 
                     hoanTraVoucher(hoaDonDaCapNhat);
                     hoanTienNeuCan(hoaDonDaCapNhat, nhanVien);
@@ -967,46 +1007,26 @@ public class ADOrderServiceImpl implements ADOrderService {
     @Transactional
     public ResponseObject<?> returnOrder(String maHoaDon) {
         try {
-            Order hoaDon = adOrderRepository.findByMa(maHoaDon)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn: " + maHoaDon));
-
+            Order hoaDon = adOrderRepository.findByMa(maHoaDon).orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
             if (hoaDon.getOrderStatus() != OrderStatus.GIAO_HANG_KHONG_THANH_CONG) {
-                throw new RuntimeException(
-                        "Chỉ có thể xác nhận hoàn hàng khi đơn đang ở trạng thái Giao hàng không thành công!");
+                throw new RuntimeException("Chỉ có thể xác nhận hoàn hàng khi đơn đang ở trạng thái Giao hàng không thành công!");
             }
 
-            // Giải phóng Serial về trạng thái AVAILABLE (sản phẩm đã được trả về kho)
-            // Tìm qua orderHolding để đảm bảo tất cả Serial được giải phóng
-            List<Serial> allSerials = serialRepository.findByOrderHolding_Id(hoaDon.getId());
-            int releasedCount = 0;
-            for (Serial s : allSerials) {
-                // Safeguard: Chỉ cập nhật serial đang ở IN_ORDER, không đụng vào serial đã SOLD
-                if (s.getSerialStatus() == SerialStatus.IN_ORDER) {
-                    s.setSerialStatus(SerialStatus.AVAILABLE);
-                    s.setOrderDetail(null);
-                    s.setOrderHolding(null);
-                    s.setLockedAt(null);
-                    releasedCount++;
-                    log.debug("Đã giải phóng Serial {} về AVAILABLE cho đơn hàng {}",
-                            s.getSerialNumber(), hoaDon.getCode());
-                }
-                // Serial đã SOLD thì giữ nguyên (đơn đã hoàn thành trước đó thì không cho hoàn)
-            }
-            if (releasedCount > 0) {
-                serialRepository.saveAll(allSerials);
-                log.info("Đã giải phóng {} Serial cho đơn hàng {} khi xác nhận hoàn hàng",
-                        releasedCount, hoaDon.getCode());
-            }
+            // Giải phóng Serial
+            capNhatTrangThaiSerialBiHuy(hoaDon);
 
-            // Hoàn trả tồn kho sản phẩm
+            // Hoàn tồn kho vật lý (Máy ảnh) VÀ Hoàn số lượng đợt giảm giá
             List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(hoaDon.getId());
             for (OrderDetail item : orderDetails) {
                 ProductDetail product = item.getProductDetail();
                 int soLuongMua = item.getQuantity();
+
+                // 1. Cộng lại tồn kho máy ảnh
                 product.setQuantity(product.getQuantity() + soLuongMua);
                 productDetailRepository.save(product);
-                log.info("Đã tăng tồn kho {} đơn vị cho sản phẩm {} khi hoàn hàng",
-                        soLuongMua, product.getProduct().getName());
+
+                // 2. ---> ĐÃ BỔ SUNG: CỘNG LẠI SỐ LƯỢNG ĐỢT GIẢM GIÁ <---
+                restoreDiscountQuantity(item, product.getId(), soLuongMua);
             }
 
             hoaDon.setOrderStatus(OrderStatus.DA_HOAN_HANG);
@@ -1015,22 +1035,14 @@ public class ADOrderServiceImpl implements ADOrderService {
             Employee nhanVien = getCurrentEmployee();
             Order saved = adOrderRepository.save(hoaDon);
 
-            luuOrderHistory(saved, OrderStatus.DA_HOAN_HANG, "Xác nhận hoàn hàng về kho", nhanVien);
-
+            luuOrderHistory(saved, OrderStatus.DA_HOAN_HANG, "Xác nhận hoàn hàng về kho (Đã cộng lại Tồn kho & Khuyến mãi)", nhanVien);
             hoanTraVoucher(hoaDon);
             hoanTienNeuCan(hoaDon, nhanVien);
-
             sendStatusUpdateEmailAsync(saved, OrderStatus.DA_HOAN_HANG);
 
-            Map<String, Object> responseData = new HashMap<>();
-            responseData.put("maHoaDon", saved.getCode());
-            responseData.put("trangThaiMoi", OrderStatus.DA_HOAN_HANG);
-
-            return ResponseObject.success(responseData,
-                    "Đã xác nhận hoàn hàng về kho, tồn kho và Serial đã được cập nhật");
+            return ResponseObject.success(Map.of("maHoaDon", saved.getCode(), "trangThaiMoi", OrderStatus.DA_HOAN_HANG), "Đã hoàn hàng về kho và cộng lại khuyến mãi thành công");
 
         } catch (RuntimeException e) {
-            log.error("Lỗi returnOrder: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -1080,6 +1092,27 @@ public class ADOrderServiceImpl implements ADOrderService {
         } catch (RuntimeException e) {
             log.error("Lỗi cancelAfterReturn: {}", e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private void restoreDiscountQuantity(OrderDetail item, String productDetailId, int soLuongMua) {
+        if (item.getAppliedPromotionName() != null) {
+            try {
+                DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetailId);
+                if (activeDiscount != null && activeDiscount.getDiscount() != null) {
+                    Discount discount = activeDiscount.getDiscount();
+                    // Kiểm tra xem tên khuyến mãi lúc mua có khớp với hiện tại không
+                    if (discount.getName().equals(item.getAppliedPromotionName())) {
+                        if (discount.getQuantity() != null) {
+                            discount.setQuantity(discount.getQuantity() + soLuongMua);
+                            discountRepository.save(discount);
+                            log.info("Đã cộng lại {} lượt sử dụng cho đợt giảm giá: {}", soLuongMua, discount.getName());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi hoàn số lượng khuyến mãi: {}", e.getMessage());
+            }
         }
     }
 
