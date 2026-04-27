@@ -119,6 +119,7 @@ axiosClient.interceptors.response.use(
 
         // 3. Trả về data lỗi từ GlobalExceptionHandler của Backend
         if (error.response && error.response.data) {
+            console.log("[DEBUG] Axios error response:", error.response.data);
             return Promise.reject(error.response.data);
         }
         return Promise.reject(error);

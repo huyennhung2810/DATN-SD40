@@ -23,11 +23,15 @@ interface SpringPage<T> {
   empty: boolean;
 }
 
+interface UploadResponse {
+  url: string;
+  publicId: string;
+}
+
 const bannerApi = {
     search: async (params: BannerSearchParams) => {
         const res = await axiosClient.get<ResponseObject<SpringPage<BannerResponse>>>(ADMIN_BANNER_URL, { params });
         const pageData = res.data.data;
-        // Map Spring Page to PageResponse format
         return {
             data: pageData.content,
             totalElements: pageData.totalElements,
@@ -40,6 +44,15 @@ const bannerApi = {
     getById: async (id: string): Promise<BannerResponse> => {
         const res = await axiosClient.get<ResponseObject<BannerResponse>>(`${ADMIN_BANNER_URL}/${id}`);
         return res.data.data;
+    },
+
+    uploadImage: async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await axiosClient.post<ResponseObject<UploadResponse>>("/upload", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+        return res.data.data.url;
     },
 
     create: async (data: BannerRequest): Promise<BannerResponse> => {

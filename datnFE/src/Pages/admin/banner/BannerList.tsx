@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -15,7 +15,6 @@ import {
 import {
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
   StopOutlined,
   CheckOutlined,
   PictureOutlined,
@@ -91,16 +90,6 @@ const BannerList: React.FC = () => {
       page: pagination.current - 1,
       size: pagination.pageSize,
     });
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await bannerApi.delete(id);
-      message.success("Xóa banner thành công");
-      fetchData();
-    } catch (error) {
-      message.error("Xóa banner thất bại");
-    }
   };
 
   const handleStatusChange = async (id: string, status: number) => {
@@ -219,16 +208,6 @@ const BannerList: React.FC = () => {
               />
             )}
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
         </Space>
       ),
     },
