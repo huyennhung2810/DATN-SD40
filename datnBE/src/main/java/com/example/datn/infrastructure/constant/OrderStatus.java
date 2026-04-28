@@ -73,7 +73,7 @@ public enum OrderStatus {
             case HOAN_THANH:   return "Hoàn thành";
             case DA_HUY:       return "Đã hủy";
             case LUU_TAM:      return "Lưu tạm";
-            case DA_HOAN_HANG: return "Đã hoàn hàng";
+            case DA_HOAN_HANG: return "Hoàn hàng thành công";
             default:           return this.name();
         }
     }

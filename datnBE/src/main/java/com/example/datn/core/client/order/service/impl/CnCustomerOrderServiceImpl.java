@@ -47,7 +47,9 @@ public class CnCustomerOrderServiceImpl implements CnCustomerOrderService {
             Map.entry(OrderStatus.DA_XAC_NHAN, "Đã xác nhận"),
             Map.entry(OrderStatus.CHO_GIAO, "Chờ giao hàng"),
             Map.entry(OrderStatus.DANG_GIAO, "Đang giao hàng"),
+            Map.entry(OrderStatus.GIAO_HANG_KHONG_THANH_CONG, "Giao hàng không thành công"),
             Map.entry(OrderStatus.HOAN_THANH, "Hoàn thành"),
+            Map.entry(OrderStatus.DA_HOAN_HANG, "Hoàn hàng thành công"),
             Map.entry(OrderStatus.DA_HUY, "Đã hủy"),
             Map.entry(OrderStatus.LUU_TAM, "Lưu tạm"));
 

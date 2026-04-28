@@ -13,6 +13,7 @@ const ORDER_STATUS_STYLES: Record<string, { bg: string; color: string; label: st
   CHO_GIAO: { bg: "#CFFAFE", color: "#155E75", label: "Chờ giao hàng" },
   DANG_GIAO: { bg: "#EDE9FE", color: "#5B21B6", label: "Đang giao hàng" },
   HOAN_THANH: { bg: "#D1FAE5", color: "#065F46", label: "Hoàn thành" },
+  DA_HOAN_HANG: { bg: "#F3E8FF", color: "#6D28D9", label: "Hoàn hàng thành công" },
   DA_HUY: { bg: "#FEE2E2", color: "#991B1B", label: "Đã hủy" },
   LUU_TAM: { bg: "#F3F4F6", color: "#374151", label: "Lưu tạm" },
 };

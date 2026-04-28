@@ -44,6 +44,7 @@ const OrderStatuses = [
   { key: "CHO_GIAO", label: "Chờ giao hàng" },
   { key: "DANG_GIAO", label: "Đang giao hàng" },
   { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
+  { key: "DA_HOAN_HANG", label: "Hoàn hàng thành công" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
   { key: "DA_HUY", label: "Đã hủy" },
 ];
@@ -191,6 +192,7 @@ const OrderPage: React.FC = () => {
               color: "volcano",
               label: "Giao hàng không thành công",
             },
+            DA_HOAN_HANG: { color: "purple", label: "Hoàn hàng thành công" },
             HOAN_THANH: { color: "green", label: "Hoàn thành" },
             DA_HUY: { color: "red", label: "Đã hủy" },
           };

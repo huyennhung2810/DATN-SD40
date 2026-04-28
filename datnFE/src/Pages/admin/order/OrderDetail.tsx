@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import OrderReceiptTemplate from "./OrderReceiptTemplate";
@@ -69,7 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
   HOAN_THANH: "Hoàn thành",
   DA_HUY: "Đã hủy",
   LUU_TAM: "Lưu tạm",
-  DA_HOAN_HANG: "Đã hoàn hàng",
+  DA_HOAN_HANG: "Hoàn hàng thành công",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -96,7 +96,7 @@ const ONLINE_STEPS = [
   { key: "CHO_GIAO", label: "Chờ giao hàng" },
   { key: "DANG_GIAO", label: "Đang giao hàng" },
   { key: "GIAO_HANG_KHONG_THANH_CONG", label: "Giao hàng không thành công" },
-  { key: "DA_HOAN_HANG", label: "Đã hoàn hàng" },
+  { key: "DA_HOAN_HANG", label: "Hoàn hàng thành công" },
   { key: "HOAN_THANH", label: "Hoàn thành" },
 ];
 
@@ -278,7 +278,7 @@ const OrderDetailPage: React.FC = () => {
           { key: "XAC_NHAN_HOAN_HANG", label: "Xác nhận hoàn hàng" },
         ];
       case "DA_HOAN_HANG":
-        return [{ key: "HUY_SAU_HOAN_HANG", label: "Hủy đơn" }];
+        return [];
       default:
         return [];
     }
