@@ -80,6 +80,17 @@ public class ADProductCategoryServiceImpl implements ADProductCategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy danh mục"));
     }
 
+    @Override
+    @Transactional
+    public ADProductCategoryResponse changeStatus(String id) {
+        ProductCategory entity = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy danh mục"));
+        entity.setStatus(entity.getStatus() == EntityStatus.ACTIVE
+                ? EntityStatus.INACTIVE
+                : EntityStatus.ACTIVE);
+        return toResponse(repository.save(entity));
+    }
+
     private ADProductCategoryResponse toResponse(ProductCategory entity) {
         ADProductCategoryResponse response = new ADProductCategoryResponse();
         response.setId(entity.getId());

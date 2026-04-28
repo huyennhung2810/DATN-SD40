@@ -69,4 +69,14 @@ public class ADProductCategoryController {
             .message("Xóa danh mục thành công")
             .build();
     }
+
+    @PutMapping("/{id}/change-status")
+    public ResponseObject<ADProductCategoryResponse> changeStatus(@PathVariable String id) {
+        return ResponseObject.<ADProductCategoryResponse>builder()
+            .isSuccess(true)
+            .status(HttpStatus.OK)
+            .data(service.changeStatus(id))
+            .message("Thay đổi trạng thái thành công")
+            .build();
+    }
 }

@@ -167,4 +167,15 @@ public class ADProductController {
             .message("Xóa biến thể sản phẩm thành công")
             .build();
     }
+
+    // API toggle trạng thái sản phẩm
+    @PutMapping("/{id}/change-status")
+    public ResponseObject<ADProductResponse> changeStatus(@PathVariable String id) {
+        return ResponseObject.<ADProductResponse>builder()
+            .isSuccess(true)
+            .status(HttpStatus.OK)
+            .data(service.changeStatus(id))
+            .message("Thay đổi trạng thái thành công")
+            .build();
+    }
 }

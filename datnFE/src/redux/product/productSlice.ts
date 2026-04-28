@@ -56,6 +56,10 @@ const productSlice = createSlice({
       state.loading = true;
     },
 
+    changeStatusProduct: (state, _action: PayloadAction<string>) => {
+      state.loading = true;
+    },
+
     fetchSuccess: (state, action: PayloadAction<PageResponse<ProductResponse>>) => {
       state.loading = false;
       state.list = action.payload.data;

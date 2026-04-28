@@ -808,4 +808,16 @@ public class ADProductServiceImpl implements ADProductService {
 
         productDetailRepository.delete(variant);
     }
+
+    @Override
+    @Transactional
+    public ADProductResponse changeStatus(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+        product.setStatus(product.getStatus() == EntityStatus.ACTIVE
+                ? EntityStatus.INACTIVE
+                : EntityStatus.ACTIVE);
+        productRepository.save(product);
+        return findById(id);
+    }
 }

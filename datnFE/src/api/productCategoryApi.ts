@@ -65,6 +65,11 @@ const productCategoryApi = {
     const res = await axiosClient.delete<ResponseObject<void>>(`${BASE_URL}/${id}`);
     return res.data;
   },
+
+  changeStatus: async (id: string): Promise<ResponseObject<void>> => {
+    const res = await axiosClient.put<ResponseObject<void>>(`${BASE_URL}/${id}/change-status`);
+    return res.data;
+  },
 };
 
 export default productCategoryApi;

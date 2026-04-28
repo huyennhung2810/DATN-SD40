@@ -35,4 +35,7 @@ public interface ADProductService {
 
     // Xóa biến thể
     void deleteVariant(String variantId);
+
+    // Toggle trạng thái sản phẩm
+    ADProductResponse changeStatus(String id);
 }

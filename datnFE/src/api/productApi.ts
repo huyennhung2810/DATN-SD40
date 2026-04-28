@@ -78,6 +78,12 @@ const productApi = {
         const res = await axiosClient.delete<ResponseObject<void>>(`${BASE_URL}/variants/${variantId}`);
         return res.data;
     },
+
+    // Toggle trạng thái sản phẩm
+    changeStatus: async (id: string): Promise<ResponseObject<void>> => {
+        const res = await axiosClient.put<ResponseObject<void>>(`${BASE_URL}/${id}/change-status`);
+        return res.data;
+    },
 };
 
 export default productApi;

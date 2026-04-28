@@ -11,4 +11,5 @@ public interface ADProductCategoryService {
     ADProductCategoryResponse update(String id, ADProductCategoryRequest request);
     void delete(String id);
     ADProductCategoryResponse findById(String id);
+    ADProductCategoryResponse changeStatus(String id);
 }

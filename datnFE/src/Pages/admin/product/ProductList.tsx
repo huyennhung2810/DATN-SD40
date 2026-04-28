@@ -35,6 +35,7 @@ import {
   Popconfirm,
   Row,
   Select,
+  Switch,
   Space,
   Spin,
   Steps,
@@ -230,7 +231,6 @@ const ProductPage: React.FC = () => {
   const [drawerPendingImages, setDrawerPendingImages] = useState<
     { file: File; preview: string }[]
   >([]);
-  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
   // Quick Add modal states
   const [quickAddCategoryOpen, setQuickAddCategoryOpen] = useState(false);
@@ -715,13 +715,12 @@ const ProductPage: React.FC = () => {
 
   // ===== END FORM WIZARD =====
 
-  const handleDelete = (id: string) => {
-    if (isDeletingId) {
-      return;
-    }
-    setIsDeletingId(id);
-    dispatch(productActions.deleteProduct(id));
-  };
+  const handleStatusChange = useCallback(
+    (id: string) => {
+      dispatch(productActions.changeStatusProduct(id));
+    },
+    [dispatch],
+  );
 
   const openDetail = async (product: ProductResponse) => {
     console.log("Product data:", product);
@@ -1823,6 +1822,20 @@ const ProductPage: React.FC = () => {
                     </div>
                   }
                   actions={[
+                    <Popconfirm
+                      title="Thay đổi trạng thái"
+                      description={`Bạn có chắc chắn muốn ${product.status === "ACTIVE" ? "ngừng hoạt động" : "kích hoạt"} sản phẩm này?`}
+                      onConfirm={(e) => {
+                        e?.stopPropagation();
+                        handleStatusChange(product.id);
+                      }}
+                      onCancel={(e) => e?.stopPropagation()}
+                      okText="Đồng ý"
+                      cancelText="Hủy"
+                      key="status"
+                    >
+                      <Switch checked={product.status === "ACTIVE"} size="default" />
+                    </Popconfirm>,
                     <Tooltip title="Chỉnh sửa" key="edit">
                       <EditOutlined
                         style={{ fontSize: "18px", color: "#faad14" }}
@@ -1832,29 +1845,6 @@ const ProductPage: React.FC = () => {
                         }}
                       />
                     </Tooltip>,
-                    <Popconfirm
-                      title="Xóa sản phẩm"
-                      description="Bạn có chắc chắn muốn xóa?"
-                      onConfirm={(e) => {
-                        e?.stopPropagation();
-                        handleDelete(product.id);
-                      }}
-                      onCancel={(e) => e?.stopPropagation()}
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      okButtonProps={{
-                        loading: isDeletingId === product.id,
-                        disabled: !!isDeletingId && isDeletingId !== product.id,
-                      }}
-                      key="delete"
-                    >
-                      <Tooltip title="Xóa">
-                        <DeleteOutlined
-                          style={{ fontSize: "18px", color: "#ff4d4f" }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </Tooltip>
-                    </Popconfirm>,
                   ]}
                 >
                   <Card.Meta

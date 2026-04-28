@@ -1,5 +1,4 @@
 import {
-  DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -17,6 +16,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Tooltip,
@@ -173,9 +173,12 @@ const ProductCategoryPage: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
-    dispatch(productCategoryActions.deleteCategory(id));
-  };
+  const handleStatusChange = useCallback(
+    (id: string) => {
+      dispatch(productCategoryActions.changeStatusCategory(id));
+    },
+    [dispatch],
+  );
 
   const columns: ColumnsType<ProductCategoryResponse> = [
     {
@@ -208,10 +211,16 @@ const ProductCategoryPage: React.FC = () => {
       key: "status",
       width: 100,
       align: "center",
-      render: (status: string) => (
-        <Tag color={status === "ACTIVE" ? "green" : "red"}>
-          {status === "ACTIVE" ? "Hoạt động" : "Không hoạt động"}
-        </Tag>
+      render: (status: string, record: ProductCategoryResponse) => (
+        <Popconfirm
+          title="Thay đổi trạng thái"
+          description={`Bạn có chắc chắn muốn ${status === "ACTIVE" ? "ngừng hoạt động" : "kích hoạt"} danh mục này?`}
+          onConfirm={() => handleStatusChange(record.id)}
+          okText="Đồng ý"
+          cancelText="Hủy"
+        >
+          <Switch checked={status === "ACTIVE"} size="default" />
+        </Popconfirm>
       ),
     },
     {
@@ -229,36 +238,18 @@ const ProductCategoryPage: React.FC = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 120,
+      width: 80,
       align: "center",
       fixed: "right",
       render: (_, record: ProductCategoryResponse) => (
-        <Space size="small">
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              shape="circle"
-              icon={<EditOutlined style={{ color: "#faad14" }} />}
-              onClick={() => openModal(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa danh mục"
-            description="Bạn có chắc chắn muốn xóa danh mục này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="text"
-                danger
-                shape="circle"
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        <Tooltip title="Chỉnh sửa">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<EditOutlined style={{ color: "#faad14" }} />}
+            onClick={() => openModal(record)}
+          />
+        </Tooltip>
       ),
     },
   ];
@@ -320,8 +311,6 @@ const ProductCategoryPage: React.FC = () => {
               shape="circle"
               icon={<ReloadOutlined />}
               onClick={handleReset}
-              type="primary"
-              ghost
             />
           </Tooltip>
         }

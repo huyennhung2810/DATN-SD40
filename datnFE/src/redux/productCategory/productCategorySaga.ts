@@ -93,6 +93,24 @@ function* handleDelete(action: PayloadAction<string>) {
   }
 }
 
+function* handleChangeStatus(action: PayloadAction<string>) {
+  try {
+    yield call(productCategoryApi.changeStatus, action.payload);
+    yield put(productCategoryActions.actionSuccess());
+    notification.success({
+      title: "Thành công",
+      description: "Thay đổi trạng thái danh mục thành công",
+    });
+    yield put(productCategoryActions.getAll({ page: 0, size: 10, keyword: "" }));
+  } catch (error: unknown) {
+    yield put(productCategoryActions.actionFailed(getErrorMessage(error)));
+    notification.error({
+      title: "Thao tác thất bại",
+      description: getErrorMessage(error),
+    });
+  }
+}
+
 export default function* watchProductCategoryFlow() {
   yield takeLatest(productCategoryActions.getAll.type, handleFetch);
   yield takeLatest(productCategoryActions.getCategoryById.type, handleGetById);
@@ -101,5 +119,6 @@ export default function* watchProductCategoryFlow() {
     handleCategoryAction
   );
   yield takeLatest(productCategoryActions.deleteCategory.type, handleDelete);
+  yield takeLatest(productCategoryActions.changeStatusCategory.type, handleChangeStatus);
 }
 
