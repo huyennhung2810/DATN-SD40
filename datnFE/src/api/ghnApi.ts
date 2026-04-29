@@ -54,11 +54,11 @@ export const ghnApi = {
       })
       .then((res) => res.data),
 
-  /** Tính phí vận chuyển */
-  calculateFee: (
-    params: GHNFeeRequest
-  ): Promise<GHNFeeResponse> =>
-    ghnClient
-      .post("/shipping-order/fee", params)
-      .then((res) => res.data),
+  // /** Tính phí vận chuyển (Chuyển sang backend: clientShippingApi.ts) */
+  // calculateFee: (
+  //   params: GHNFeeRequest
+  // ): Promise<GHNFeeResponse> =>
+  //   ghnClient
+  //     .post("/shipping-order/fee", params)
+  //     .then((res) => res.data),
 };

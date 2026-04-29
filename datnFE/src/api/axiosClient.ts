@@ -24,8 +24,30 @@ const AUTH_WHITELIST = [
 ];
 
 // Đọc token: sessionStorage trước (admin tab), rồi localStorage (client)
-const readToken = (key: string): string | null =>
-    sessionStorage.getItem(key) ?? localStorage.getItem(key);
+const ADMIN_ROLES = ["ADMIN", "STAFF"];
+
+const parseStoredUser = (storage: Storage): { roles?: string[] } | null => {
+    const rawUser = storage.getItem(AUTH_STORAGE_KEYS.USER);
+    if (!rawUser) return null;
+    try {
+        return JSON.parse(rawUser);
+    } catch {
+        return null;
+    }
+};
+
+const hasAdminRole = (storage: Storage): boolean =>
+    !!parseStoredUser(storage)?.roles?.some((role) => ADMIN_ROLES.includes(role));
+
+const readToken = (key: string, url?: string): string | null => {
+    const isAdminApi = url?.includes("/admin");
+    if (isAdminApi) {
+        if (hasAdminRole(sessionStorage)) return sessionStorage.getItem(key);
+        if (hasAdminRole(localStorage)) return localStorage.getItem(key);
+        return null;
+    }
+    return sessionStorage.getItem(key) ?? localStorage.getItem(key);
+};
 
 // Ghi token vào đúng storage sau khi refresh (giữ nguyên loại storage ban đầu)
 const writeRefreshedTokens = (accessToken: string, newRefreshToken?: string) => {
@@ -37,7 +59,7 @@ const writeRefreshedTokens = (accessToken: string, newRefreshToken?: string) => 
 
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+        const token = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN, config.url);
         const isAuthApi = AUTH_WHITELIST.some(url =>
             config.url === url || config.url?.endsWith(url)
         );
@@ -68,8 +90,8 @@ axiosClient.interceptors.response.use(
 
         // 1. Xử lý lỗi 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
-            const refreshToken = readToken(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-            const storedUser = readToken(AUTH_STORAGE_KEYS.USER);
+            const refreshToken = readToken(AUTH_STORAGE_KEYS.REFRESH_TOKEN, originalRequest.url);
+            const storedUser = sessionStorage.getItem(AUTH_STORAGE_KEYS.USER) ?? localStorage.getItem(AUTH_STORAGE_KEYS.USER);
             if (!refreshToken) {
                 if (storedUser) {
                     message.warning({

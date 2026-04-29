@@ -39,6 +39,7 @@ public class CnOrderServiceImpl implements CnOrderService {
     private final OrderDetailRepository orderDetailRepository;
     private final PaymentHistoryRepository paymentHistoryRepository;
     private final VNPayService vnPayService;
+    private final com.example.datn.core.client.shipping.service.GHNShippingService ghnShippingService;
 
     private final VoucherRepository voucherRepository;
     private final VoucherDetailRepository voucherDetailRepository;
@@ -192,15 +193,32 @@ public class CnOrderServiceImpl implements CnOrderService {
 
         BigDecimal totalAfterDiscount = totalAmount.subtract(discountAmount).max(BigDecimal.ZERO);
 
-        // 5. TẠO THỰC THỂ ORDER
+        // Tính phí ship (GHN)
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        if (request.getToDistrictId() != null && request.getToWardCode() != null) {
+            int totalQuantity = tempOrderDetails.stream().mapToInt(OrderDetail::getQuantity).sum();
+            shippingFee = ghnShippingService.calculateFee(
+                    request.getToDistrictId(),
+                    request.getToWardCode(),
+                    totalQuantity,
+                    totalAmount
+            );
+        }
+
+        // TẠO THỰC THỂ ORDER
         Order order = new Order();
         order.setCustomer(customer);
         order.setRecipientName(request.getRecipientName());
         order.setRecipientPhone(request.getRecipientPhone());
         order.setRecipientEmail(request.getRecipientEmail());
         order.setRecipientAddress(request.getRecipientAddress());
+        order.setShippingFee(shippingFee);
         order.setTotalAmount(totalAmount);
-        order.setTotalAfterDiscount(totalAfterDiscount);
+        
+        // Cập nhật lại totalAfterDiscount đã cộng phí ship
+        BigDecimal finalTotalAfterDiscount = totalAfterDiscount.add(shippingFee);
+        order.setTotalAfterDiscount(finalTotalAfterDiscount);
+        
         order.setPaymentMethod(request.getPaymentMethod());
         order.setNote(request.getNote());
         order.setOrderType(TypeInvoice.ONLINE);
@@ -279,14 +297,14 @@ public class CnOrderServiceImpl implements CnOrderService {
         if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
             String paymentUrl = vnPayService.createPaymentUrl(
                     savedOrder.getId(),
-                    totalAfterDiscount.longValue(),
+                    finalTotalAfterDiscount.longValue(),
                     "Thanh toan don hang " + savedOrder.getId(),
                     httpRequest);
 
             return CheckoutResponse.builder()
                     .orderId(savedOrder.getId())
                     .orderCode(savedOrder.getCode())
-                    .totalAmount(totalAfterDiscount)
+                    .totalAmount(finalTotalAfterDiscount)
                     .status("REDIRECT")
                     .paymentUrl(paymentUrl)
                     .message("Đang chuyển đến trang thanh toán VNPay...")
@@ -296,7 +314,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             PaymentHistory history = new PaymentHistory();
             history.setId(UUID.randomUUID().toString());
             history.setOrder(savedOrder);
-            history.setAmount(totalAfterDiscount);
+            history.setAmount(finalTotalAfterDiscount);
             history.setTransactionType("THANH_TOAN");
             history.setTransactionCode("COD-" + savedOrder.getId());
             history.setThoiGian(LocalDateTime.now());
@@ -307,7 +325,7 @@ public class CnOrderServiceImpl implements CnOrderService {
             return CheckoutResponse.builder()
                     .orderId(savedOrder.getId())
                     .orderCode(savedOrder.getCode())
-                    .totalAmount(totalAfterDiscount)
+                    .totalAmount(finalTotalAfterDiscount)
                     .status("SUCCESS")
                     .message("Đặt hàng thành công! Chúng tôi sẽ liên hệ xác nhận sớm.")
                     .build();

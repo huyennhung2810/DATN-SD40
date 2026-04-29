@@ -15,6 +15,9 @@ export interface AddressBase {
 export interface AddressRequest extends Partial<Pick<BaseEntity, 'id'>>, AddressBase {
     provinceCode?: number;
     wardCode?: number;
+    ghnProvinceId?: number;
+    ghnDistrictId?: number;
+    ghnWardCode?: string;
 }
 
 // Dữ liệu nhận về từ API (Response)
@@ -22,6 +25,9 @@ export interface AddressResponse extends BaseEntity, AddressBase {
     status: CommonStatus;
     provinceCode: number;
     wardCode: number;
+    ghnProvinceId?: number;
+    ghnDistrictId?: number;
+    ghnWardCode?: string;
 }
 //Hiển thị địa chỉ rút gọn
 export const getDisplayAddress = (customer: CustomerResponse): string => {

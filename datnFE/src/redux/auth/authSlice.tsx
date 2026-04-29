@@ -22,46 +22,81 @@ const getAuthStorage = (user?: AuthUser | null): Storage => {
   return localStorage;
 };
 
-// Đọc từ sessionStorage trước (tab admin), rồi localStorage (client)
-const readToken = (key: string): string | null =>
-  sessionStorage.getItem(key) ?? localStorage.getItem(key);
-
 const clearAllStorage = (key: string) => {
   sessionStorage.removeItem(key);
   localStorage.removeItem(key);
 };
 
+const isAdminUser = (user: AuthUser | null): boolean =>
+  !!user?.roles?.some((r) => ADMIN_ROLES.includes(r));
+
+const readStoredUser = (storage: Storage): AuthUser | null => {
+  const rawUser = storage.getItem(AUTH_STORAGE_KEYS.USER);
+  if (!rawUser) return null;
+  return JSON.parse(rawUser) as AuthUser;
+};
+
+const isAdminAreaPath = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname;
+  return !(
+    path.startsWith("/client") ||
+    path.startsWith("/login") ||
+    path.startsWith("/register") ||
+    path.startsWith("/forgot-password") ||
+    path.startsWith("/oauth2/redirect") ||
+    path.startsWith("/payment/vnpay-return")
+  );
+};
+
 // Khôi phục trạng thái an toàn – ưu tiên sessionStorage (admin tab)
 const getInitialState = (): AuthState => {
   try {
-    const accessToken = readToken(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-    const refreshToken = readToken(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-    const storedUser = readToken(AUTH_STORAGE_KEYS.USER);
+    const adminArea = isAdminAreaPath();
+    const sessionUser = readStoredUser(sessionStorage);
+    const localUser = readStoredUser(localStorage);
+
+    const storage =
+      adminArea
+        ? isAdminUser(sessionUser)
+          ? sessionStorage
+          : isAdminUser(localUser)
+            ? localStorage
+            : sessionStorage
+        : localStorage;
+
+    const accessToken = storage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = storage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    const user = readStoredUser(storage);
 
     if (!accessToken && !refreshToken) {
-      clearAllStorage(AUTH_STORAGE_KEYS.USER);
+      if (adminArea && localUser && !isAdminUser(localUser)) {
+        sessionStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+      } else {
+        clearAllStorage(AUTH_STORAGE_KEYS.USER);
+      }
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
     if (accessToken && isTokenExpired(accessToken)) {
-      if (refreshToken && storedUser) {
-        clearAllStorage(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      if (refreshToken && user) {
+        storage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
         return {
-          user: JSON.parse(storedUser),
+          user,
           isLoggedIn: true,
           loading: false,
           error: null,
         };
       }
-      clearAllStorage(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-      clearAllStorage(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-      clearAllStorage(AUTH_STORAGE_KEYS.USER);
+      storage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+      storage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      storage.removeItem(AUTH_STORAGE_KEYS.USER);
       return { user: null, isLoggedIn: false, loading: false, error: null };
     }
 
     return {
-      user: storedUser ? JSON.parse(storedUser) : null,
-      isLoggedIn: true,
+      user,
+      isLoggedIn: !!user,
       loading: false,
       error: null,
     };

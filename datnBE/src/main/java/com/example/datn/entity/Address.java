@@ -48,6 +48,15 @@ public class Address implements Serializable {
     @Column(name = "ward_code")
     private Integer wardCode;
 
+    @Column(name = "ghn_province_id")
+    private Integer ghnProvinceId;
+
+    @Column(name = "ghn_district_id")
+    private Integer ghnDistrictId;
+
+    @Column(name = "ghn_ward_code")
+    private String ghnWardCode;
+
     // Địa chỉ cụ thể
     @Column(name = "address_detail")
     private String addressDetail;

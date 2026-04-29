@@ -44,6 +44,7 @@ import type { AddressResponse } from "../../models/address";
 import { useLocation } from "react-router-dom";
 import { getClientVouchers } from "../../api/voucherApi";
 import AuthModal from "../../components/auth/AuthModal";
+import { clientShippingApi } from "../../api/clientShippingApi";
 
 const { Title, Text } = Typography;
 
@@ -91,6 +92,9 @@ const CheckoutPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
+  
+  const [shippingFee, setShippingFee] = useState<number>(0);
+  const [loadingFee, setLoadingFee] = useState(false);
 
   // Auth Modal - bắt buộc đăng nhập
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -175,8 +179,10 @@ const CheckoutPage: React.FC = () => {
   const loadProvinces = async () => {
     if (provinces.length > 0) return;
     try {
-      const res = await axios.get<Province[]>("https://provinces.open-api.vn/api/v2/p/?depth=1");
-      setProvinces(res.data);
+      const res = await clientShippingApi.getProvinces();
+      if (res?.data) {
+        setProvinces(res.data.map((p: any) => ({ name: p.ProvinceName, code: p.ProvinceID })));
+      }
     } catch {
       message.error("Không tải được danh sách Tỉnh/Thành");
     }
@@ -189,8 +195,10 @@ const CheckoutPage: React.FC = () => {
     setWards([]);
     newAddrForm.setFieldsValue({ districtCode: undefined, wardCode: undefined, wardCommune: "" });
     try {
-      const res = await axios.get(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
-      setDistricts(res.data.districts ?? []);
+      const res = await clientShippingApi.getDistricts(provinceCode);
+      if (res?.data) {
+        setDistricts(res.data.map((d: any) => ({ name: d.DistrictName, code: d.DistrictID })));
+      }
     } catch {
       message.error("Không tải được danh sách Quận/Huyện");
     } finally {
@@ -203,8 +211,10 @@ const CheckoutPage: React.FC = () => {
     setWards([]);
     newAddrForm.setFieldsValue({ wardCode: undefined, wardCommune: "" });
     try {
-      const res = await axios.get(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
-      setWards(res.data.wards ?? []);
+      const res = await clientShippingApi.getWards(districtCode);
+      if (res?.data) {
+        setWards(res.data.map((w: any) => ({ name: w.WardName, code: w.WardCode })));
+      }
     } catch {
       message.error("Không tải được danh sách Phường/Xã");
     } finally {
@@ -264,7 +274,7 @@ const CheckoutPage: React.FC = () => {
     voucherDiscountAmount = Math.min(voucherDiscountAmount, subTotalAfterPromotion);
   }
 
-  const totalAmount = Math.max(0, subTotalAfterPromotion - voucherDiscountAmount);
+  const totalAmount = Math.max(0, subTotalAfterPromotion - voucherDiscountAmount) + shippingFee;
 
   const handleApplyVoucher = (v: Voucher) => {
     setAppliedVoucher({
@@ -352,6 +362,41 @@ const CheckoutPage: React.FC = () => {
 
   const selectedAddr = savedAddresses.find((a) => a.id === selectedAddressId) ?? null;
 
+  const calculateShippingFee = async (districtId?: number, wardCode?: string) => {
+    if (!districtId || !wardCode || cartItems.length === 0) {
+      setShippingFee(0);
+      return;
+    }
+    setLoadingFee(true);
+    try {
+      const totalQty = cartItems.reduce((sum, item) => sum + toNum(item.quantity), 0);
+      const res = await clientShippingApi.calculateFee({
+        toDistrictId: districtId,
+        toWardCode: wardCode,
+        quantity: totalQty,
+        totalOrderValue: subTotalAfterPromotion,
+      });
+      setShippingFee(res.fee || 0);
+    } catch {
+      message.error("Lỗi tính phí vận chuyển");
+      setShippingFee(0);
+    } finally {
+      setLoadingFee(false);
+    }
+  };
+
+  useEffect(() => {
+    if (addrMode === "saved" && selectedAddr) {
+      calculateShippingFee(selectedAddr.ghnDistrictId, selectedAddr.ghnWardCode);
+    } else if (addrMode === "new") {
+      const dist = newAddrForm.getFieldValue("districtCode");
+      const ward = newAddrForm.getFieldValue("wardCode");
+      if (dist && ward) {
+         calculateShippingFee(dist, ward);
+      }
+    }
+  }, [selectedAddr, addrMode, cartItems]);
+
   const handleConfirmOrder = () => {
     const isCOD = paymentMethod === "COD";
     Modal.confirm({
@@ -379,6 +424,8 @@ const CheckoutPage: React.FC = () => {
     let recipientName = "";
     let recipientPhone = "";
     let recipientAddress = "";
+    let toDistrictId: number | undefined;
+    let toWardCode: string | undefined;
 
     // 2. Xử lý logic Địa chỉ
     if (addrMode === "saved") {
@@ -389,6 +436,8 @@ const CheckoutPage: React.FC = () => {
       recipientName = selectedAddr.name;
       recipientPhone = selectedAddr.phoneNumber;
       recipientAddress = `${selectedAddr.addressDetail}, ${selectedAddr.wardCommune}, ${selectedAddr.provinceCity}`;
+      toDistrictId = selectedAddr.ghnDistrictId;
+      toWardCode = selectedAddr.ghnWardCode;
     } else {
       let newVals: any;
       try {
@@ -399,6 +448,8 @@ const CheckoutPage: React.FC = () => {
       recipientName = newVals.name;
       recipientPhone = newVals.phoneNumber;
       recipientAddress = `${newVals.addressDetail}, ${newVals.wardCommune}, ${newVals.provinceCity}`;
+      toDistrictId = newVals.districtCode;
+      toWardCode = newVals.wardCode;
     }
 
     // 3. Kiểm tra giỏ hàng
@@ -421,6 +472,8 @@ const CheckoutPage: React.FC = () => {
       recipientPhone,
       recipientEmail: user!.email ?? "",
       recipientAddress,
+      toDistrictId,
+      toWardCode,
       items: cartItems.map((item) => ({
         productDetailId: item.productDetailId ?? item.id,
         quantity: item.quantity,
@@ -934,7 +987,7 @@ const CheckoutPage: React.FC = () => {
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <Text>Phí vận chuyển:</Text>
-                  <Text style={{ color: "#52c41a" }}>Miễn phí</Text>
+                  {loadingFee ? <Spin size="small" /> : <Text>{shippingFee > 0 ? formatPrice(shippingFee) : "Chưa xác định"}</Text>}
                 </div>
 
                 <Divider style={{ margin: "12px 0" }} />
@@ -971,6 +1024,7 @@ const CheckoutPage: React.FC = () => {
                   size="large"
                   block
                   loading={submitting}
+                  disabled={loadingFee || shippingFee <= 0}
                   onClick={handleConfirmOrder}
                   style={{
                     marginTop: 16,
@@ -978,8 +1032,8 @@ const CheckoutPage: React.FC = () => {
                     fontSize: 16,
                     fontWeight: 600,
                     borderRadius: 8,
-                    backgroundColor: paymentMethod === "VNPAY" ? undefined : "#D32F2F",
-                    borderColor: paymentMethod === "VNPAY" ? undefined : "#D32F2F",
+                    backgroundColor: paymentMethod === "VNPAY" && !(loadingFee || shippingFee <= 0) ? undefined : (loadingFee || shippingFee <= 0) ? undefined : "#D32F2F",
+                    borderColor: paymentMethod === "VNPAY" && !(loadingFee || shippingFee <= 0) ? undefined : (loadingFee || shippingFee <= 0) ? undefined : "#D32F2F",
                   }}
                   danger={paymentMethod === "VNPAY"}
                 >

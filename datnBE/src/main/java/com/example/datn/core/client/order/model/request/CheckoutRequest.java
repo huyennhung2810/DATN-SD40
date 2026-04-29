@@ -13,6 +13,8 @@ public class CheckoutRequest {
     private String recipientPhone;
     private String recipientEmail;
     private String recipientAddress;
+    private Integer toDistrictId;
+    private String toWardCode;
     /** COD hoặc VNPAY */
     private String paymentMethod;
     private String note;
