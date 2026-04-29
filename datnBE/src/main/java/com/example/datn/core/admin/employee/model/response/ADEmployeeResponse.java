@@ -21,6 +21,5 @@ public class ADEmployeeResponse {
     private String wardCommune;
     private Integer provinceCode;
     private Integer wardCode;
-    private String salt;
     private String role;
 }

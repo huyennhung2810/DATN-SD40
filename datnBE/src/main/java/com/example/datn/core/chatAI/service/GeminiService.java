@@ -1,20 +1,19 @@
 package com.example.datn.core.chatAI.service;
 
 import com.example.datn.entity.ChatMessage;
-import com.example.datn.entity.Product;
 import com.example.datn.repository.ChatMessageRepository;
-import com.example.datn.repository.ProductRepository;
+import com.example.datn.repository.ProductDetailRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.net.URI;
+
 @Service
 @RequiredArgsConstructor
 public class GeminiService {
@@ -22,15 +21,16 @@ public class GeminiService {
     @Value("${gemini.api.key}")
     private String apiKey;
 
-    private final ProductRepository productRepository;
+    private final ProductDetailRepository productDetailRepository;
     private final WebClient.Builder webClientBuilder;
     private final ChatMessageRepository chatMessageRepository;
 
     public String getChatResponse(String userMsg, String sessionId) {
-
-        //  Tìm sản phẩm (RAG)
-        List<Product> relatedProducts = productRepository.findProductsForAi(userMsg);
-        String productContext = buildProductContext(relatedProducts);
+        // Lấy các ProductDetail còn hàng (quantity > 0)
+        List<com.example.datn.entity.ProductDetail> availableDetails = productDetailRepository.findAll()
+                .stream().filter(pd -> pd.getQuantity() != null && pd.getQuantity() > 0).toList();
+        String productContext = buildProductDetailContext(availableDetails);
+        System.out.println("[Gemini DEBUG] productContext gửi lên Gemini:\n" + productContext);
 
         // Lấy lịch sử chat
         List<ChatMessage> history = chatMessageRepository.findTop10BySession_SessionIdOrderByCreatedAtDesc(sessionId);
@@ -40,25 +40,31 @@ public class GeminiService {
 
         String finalPrompt = String.format(
                 "Bạn là chuyên gia máy ảnh Canon tại cửa hàng Canon Hikari. " +
-                        "Hãy dùng thông tin" +
-                        " sản phẩm sau: \n%s\n\n" +
+                        "Hãy dùng thông tin sản phẩm sau để trả lời khách:\n%s\n\n" +
                         "Ngữ cảnh hội thoại: \n%s\n\n" +
                         "Khách hàng hỏi: %s\n" +
-                        "Trả lời ngắn gọn, nhiệt tình. Nếu không có sản phẩm, hãy gợi ý khách để lại số điện thoại để nhân viên tư vấn.",
-                productContext, chatHistory, userMsg
-        );
+                        "Nếu có sản phẩm, hãy liệt kê danh sách sản phẩm hiện có với tên, giá, tình trạng, số lượng. Nếu không còn sản phẩm nào, hãy xin số điện thoại để nhân viên liên hệ. Trả lời ngắn gọn, nhiệt tình.",
+                productContext, chatHistory, userMsg);
+        System.out.println("[Gemini DEBUG] finalPrompt gửi lên Gemini:\n" + finalPrompt);
 
         return callGeminiApi(finalPrompt);
     }
 
-    private String buildProductContext(List<Product> products) {
-        if (products.isEmpty()) return "Hiện tại không tìm thấy sản phẩm cụ thể khách yêu cầu.";
-        return products.stream()
-                .map(p -> String.format("- %s: Giá %s. Tình trạng: %s",
-                        p.getName(), p.getPrice(), p.getDescription()))
+    private String buildProductDetailContext(List<com.example.datn.entity.ProductDetail> details) {
+        if (details.isEmpty())
+            return "Hiện tại không có sản phẩm nào còn hàng.";
+        return details.stream()
+                .map(pd -> String.format("- %s (%s). Giá: %s. Số lượng: %s. Mô tả: %s",
+                        pd.getProduct() != null && pd.getProduct().getName() != null ? pd.getProduct().getName()
+                                : "Không rõ tên",
+                        pd.getVersion() != null ? pd.getVersion() : "Không rõ phiên bản",
+                        pd.getSalePrice() != null ? String.format("%,.0f₫", pd.getSalePrice()) : "Không rõ giá",
+                        pd.getQuantity() != null ? pd.getQuantity() : "Không rõ số lượng",
+                        pd.getProduct() != null && pd.getProduct().getDescription() != null
+                                ? pd.getProduct().getDescription()
+                                : "Không có mô tả"))
                 .collect(Collectors.joining("\n"));
     }
-
 
     private String callGeminiApi(String prompt) {
         if (apiKey == null || apiKey.isEmpty() || apiKey.equals("${GEMINI_API_KEY}")) {
@@ -68,11 +74,12 @@ public class GeminiService {
         try {
             WebClient webClient = webClientBuilder.build();
             Map<String, Object> body = Map.of(
-                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
-            );
+                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
 
             // Chú ý: Dùng gemini-flash-latest
-            String urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey.trim();
+            String urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key="
+
+                    + apiKey.trim();
             URI uri = new URI(urlString);
 
             JsonNode response = webClient.post()

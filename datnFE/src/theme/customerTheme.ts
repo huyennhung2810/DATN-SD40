@@ -64,8 +64,8 @@ export const theme: ThemeConfig = {
       itemActiveColor: "#FFFFFF",
     },
     Menu: {
-      colorItemBgSelected: "#FFEBEE",
-      colorItemTextSelected: "#D32F2F",
+      itemSelectedBg: "#FFEBEE",
+      itemSelectedColor: "#D32F2F",
     },
     Tabs: {
       colorPrimary: "#D32F2F",

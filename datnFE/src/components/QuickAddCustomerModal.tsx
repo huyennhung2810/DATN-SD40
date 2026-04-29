@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Modal, Form, Input, message, Typography } from "antd";
 import { UserAddOutlined } from "@ant-design/icons";
 import { customerApi } from "../api/customerApi";
@@ -75,7 +75,7 @@ const QuickAddCustomerModal: React.FC<QuickAddCustomerModalProps> = ({
       cancelText="Hủy"
       confirmLoading={loading}
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <Typography.Text
         type="secondary"

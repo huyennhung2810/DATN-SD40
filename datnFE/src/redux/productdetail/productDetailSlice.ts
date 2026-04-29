@@ -63,10 +63,10 @@ const productDetailSlice = createSlice({
       state.loading = false;
       state.currentProductDetail = action.payload;
     },
-    add: (state, _action: PayloadAction<{ data: any; navigate?: () => void }>) => {
+    add: (state, _action: PayloadAction<{ data: any; navigate?: () => void; onError?: (error: any) => void }>) => {
       state.loading = true;
     },
-    update: (state, _action: PayloadAction<{ id: string; data: any; navigate?: () => void }>) => {
+    update: (state, _action: PayloadAction<{ id: string; data: any; navigate?: () => void; onError?: (error: any) => void }>) => {
       state.loading = true;
     },
     changeStatus: (state, _action: PayloadAction<string>) => {

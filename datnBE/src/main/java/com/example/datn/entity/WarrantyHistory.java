@@ -35,5 +35,4 @@ public class WarrantyHistory extends PrimaryEntity implements Serializable {
     @JoinColumn(name = "id_warranty", referencedColumnName = "id")
     private Warranty warranty;
 
-
 }

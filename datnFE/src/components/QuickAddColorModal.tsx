@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Modal, Form, Input, message, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { colorApi } from "../api/colorApi";
@@ -24,7 +24,9 @@ const QuickAddColorModal: React.FC<QuickAddColorModalProps> = ({
 
       const res = await colorApi.addColor({
         name: values.name.trim(),
-        code: values.code?.trim() || values.name.trim().toUpperCase().replace(/\s+/g, ""),
+        code:
+          values.code?.trim() ||
+          values.name.trim().toUpperCase().replace(/\s+/g, ""),
         status: "ACTIVE",
       });
 
@@ -65,7 +67,7 @@ const QuickAddColorModal: React.FC<QuickAddColorModalProps> = ({
       cancelText="Hủy"
       confirmLoading={loading}
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <Typography.Text
         type="secondary"
@@ -79,7 +81,11 @@ const QuickAddColorModal: React.FC<QuickAddColorModalProps> = ({
           label="Tên màu sắc"
           rules={[{ required: true, message: "Vui lòng nhập tên màu sắc" }]}
         >
-          <Input placeholder="Ví dụ: Đen, Trắng, Xanh đậm..." size="large" autoFocus />
+          <Input
+            placeholder="Ví dụ: Đen, Trắng, Xanh đậm..."
+            size="large"
+            autoFocus
+          />
         </Form.Item>
         <Form.Item
           name="code"

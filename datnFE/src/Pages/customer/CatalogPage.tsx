@@ -1,11 +1,23 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Row, Col, Typography, Skeleton, Empty, Breadcrumb, Button, Space } from "antd";
+import {
+  Row,
+  Col,
+  Typography,
+  Skeleton,
+  Empty,
+  Breadcrumb,
+  Button,
+  Space,
+} from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "../../components/customer/ProductCard";
 import FilterPanel from "../../components/customer/FilterPanel";
 import FilterDrawer from "../../components/customer/FilterDrawer";
-import { CustomPagination, SortSelect } from "../../components/customer/Pagination";
+import {
+  CustomPagination,
+  SortSelect,
+} from "../../components/customer/Pagination";
 import BannerCarousel from "../../components/customer/BannerCarousel";
 import { customerProductApi } from "../../api/customerProductApi";
 import type { ProductResponse, ProductPageParams } from "../../models/product";
@@ -14,40 +26,60 @@ import type { ProductCategoryResponse } from "../../models/productCategory";
 const { Title, Text } = Typography;
 
 const CatalogPage: React.FC = () => {
+  // Không kiểm tra đăng nhập ở đây!
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Filter states from URL
   const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const initialSize = parseInt(searchParams.get("size") || "12", 10);
-  const initialSort = searchParams.get("sort") || searchParams.get("sortBy") ? 
-    `${searchParams.get("sort") || searchParams.get("sortBy")}-${searchParams.get("orderBy") || "desc"}` : 
-    "createdDate-desc";
-  const initialMinPrice = searchParams.get("minPrice") || searchParams.get("min_price") ? 
-    parseInt(searchParams.get("minPrice") || searchParams.get("min_price")!, 10) : undefined;
-  const initialMaxPrice = searchParams.get("maxPrice") || searchParams.get("max_price") ? 
-    parseInt(searchParams.get("maxPrice") || searchParams.get("max_price")!, 10) : undefined;
-  const initialCategory = searchParams.get("category") || searchParams.get("idProductCategory") || undefined;
+  const initialSort =
+    searchParams.get("sort") || searchParams.get("sortBy")
+      ? `${searchParams.get("sort") || searchParams.get("sortBy")}-${searchParams.get("orderBy") || "desc"}`
+      : "createdDate-desc";
+  const initialMinPrice =
+    searchParams.get("minPrice") || searchParams.get("min_price")
+      ? parseInt(
+          searchParams.get("minPrice") || searchParams.get("min_price")!,
+          10,
+        )
+      : undefined;
+  const initialMaxPrice =
+    searchParams.get("maxPrice") || searchParams.get("max_price")
+      ? parseInt(
+          searchParams.get("maxPrice") || searchParams.get("max_price")!,
+          10,
+        )
+      : undefined;
+  const initialCategory =
+    searchParams.get("category") ||
+    searchParams.get("idProductCategory") ||
+    undefined;
   const initialBrand = searchParams.get("idBrand") || undefined;
-  const initialSearch = searchParams.get("q") || searchParams.get("search") || undefined;
+  const initialSearch =
+    searchParams.get("q") || searchParams.get("search") || undefined;
 
   // State
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  
+
   // Categories from API
   const [categories, setCategories] = useState<ProductCategoryResponse[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  
+
   // Filter states
   const [page, setPage] = useState(initialPage);
   const [size, setSize] = useState(initialSize);
   const [sort, setSort] = useState(initialSort);
   const [minPrice, setMinPrice] = useState<number | undefined>(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(initialMaxPrice);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(initialBrand ? [initialBrand] : []);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialCategory ? [initialCategory] : [],
+  );
+  const [selectedBrands, _setSelectedBrands] = useState<string[]>(
+    initialBrand ? [initialBrand] : [],
+  );
   const [selectedSensorTypes, setSelectedSensorTypes] = useState<string[]>([]);
   const [selectedLensMounts, setSelectedLensMounts] = useState<string[]>([]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>([]);
@@ -102,7 +134,18 @@ const CatalogPage: React.FC = () => {
     }
 
     return params;
-  }, [page, size, sort, minPrice, maxPrice, selectedCategories, initialSearch, selectedSensorTypes, selectedLensMounts, selectedResolutions]);
+  }, [
+    page,
+    size,
+    sort,
+    minPrice,
+    maxPrice,
+    selectedCategories,
+    initialSearch,
+    selectedSensorTypes,
+    selectedLensMounts,
+    selectedResolutions,
+  ]);
 
   // Load products
   useEffect(() => {
@@ -146,7 +189,7 @@ const CatalogPage: React.FC = () => {
     params.set("page", page.toString());
     params.set("size", size.toString());
     params.set("sort", sort);
-    
+
     if (minPrice !== undefined) {
       params.set("minPrice", minPrice.toString());
     }
@@ -159,9 +202,18 @@ const CatalogPage: React.FC = () => {
     if (initialSearch) {
       params.set("q", initialSearch);
     }
-    
+
     setSearchParams(params, { replace: true });
-  }, [page, size, sort, minPrice, maxPrice, selectedCategories, initialSearch, setSearchParams]);
+  }, [
+    page,
+    size,
+    sort,
+    minPrice,
+    maxPrice,
+    selectedCategories,
+    initialSearch,
+    setSearchParams,
+  ]);
 
   // Handle filter changes
   const handlePageChange = (newPage: number, newSize: number) => {
@@ -174,7 +226,10 @@ const CatalogPage: React.FC = () => {
     setPage(1);
   };
 
-  const handlePriceChange = (min: number | undefined, max: number | undefined) => {
+  const handlePriceChange = (
+    min: number | undefined,
+    max: number | undefined,
+  ) => {
     setMinPrice(min);
     setMaxPrice(max);
     setPage(1);
@@ -246,21 +301,19 @@ const CatalogPage: React.FC = () => {
             <Title level={3} className="!mb-1">
               Danh sách sản phẩm
             </Title>
-            <Text type="secondary">
-              {totalElements} sản phẩm
-            </Text>
+            <Text type="secondary">{totalElements} sản phẩm</Text>
           </div>
-          
+
           <Space>
             {/* Mobile filter button */}
-            <Button 
-              icon={<FilterOutlined />} 
+            <Button
+              icon={<FilterOutlined />}
               onClick={() => setDrawerVisible(true)}
               className="md:hidden"
             >
               Lọc
             </Button>
-            
+
             {/* Sort */}
             <SortSelect value={sort} onChange={handleSortChange} />
           </Space>
@@ -308,8 +361,8 @@ const CatalogPage: React.FC = () => {
                 ))}
               </Row>
             ) : products.length === 0 ? (
-              <Empty 
-                description="Không tìm thấy sản phẩm nào" 
+              <Empty
+                description="Không tìm thấy sản phẩm nào"
                 className="py-12"
               >
                 <Button type="primary" onClick={handleResetFilters}>
@@ -328,7 +381,7 @@ const CatalogPage: React.FC = () => {
                     </Col>
                   ))}
                 </Row>
-                
+
                 {/* Pagination */}
                 <CustomPagination
                   current={page}
@@ -371,4 +424,3 @@ const CatalogPage: React.FC = () => {
 };
 
 export default CatalogPage;
-

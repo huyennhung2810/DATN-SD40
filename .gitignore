@@ -29,3 +29,6 @@ datnBE/*.log
 
 # Docker
 .docker/
+
+#promt AI
+.github

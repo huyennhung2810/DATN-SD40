@@ -1,15 +1,38 @@
-import axiosInstance from "../../api/axiosClient";
+import type { ResponseObject } from "../../models/base";
+import type { ADAssignSerialRequest, ADChangeStatusRequest, ADOrderSearchRequest, ADUpdateCustomerRequest, OrderDetailPageResponse, OrderPageResponse } from "../../models/order";
+import axiosClient from "../axiosClient";
+
+
+
+const PREFIX = "/admin/orders"; 
 
 export const orderApi = {
-    searchOrders: (params: { status?: string, keyword?: string, page?: number, size?: number }) =>
-        axiosInstance.get("/admin/orders", { params }),
+    //Lấy danh sách hóa đơn
+    searchOrders: (params: ADOrderSearchRequest): Promise<{ data: ResponseObject<OrderPageResponse> }> => {
+        return axiosClient.get(`${PREFIX}`, { params });
+    },
 
-    getOrderDetails: (id: string) =>
-        axiosInstance.get(`/admin/orders/${id}`),
+    //chi tiét
+    getOrderDetails: async (maHoaDon: string, params?: { page?: number, size?: number }): Promise<ResponseObject<OrderDetailPageResponse>> => {
+        const res = await axiosClient.get(`${PREFIX}/all`, { 
+            params: { maHoaDon, page: 0, size: 100, ...params } 
+        });
+        return res.data;
+    },
 
-    updateOrderStatus: (id: string, status: string, note?: string) =>
-        axiosInstance.put(`/admin/orders/${id}/status`, null, { params: { status, note } }),
+    //cập nhật trạng thái
+    updateOrderStatus: (data: ADChangeStatusRequest): Promise<ResponseObject<any>> => {
+        return axiosClient.put(`${PREFIX}/change-status`, data);
+    },
 
-    assignSerials: (id: string, detailId: string, serialNumbers: string[]) =>
-        axiosInstance.post(`/admin/orders/${id}/details/${detailId}/assign-serials`, serialNumbers)
+    //thay đổi mã
+    assignSerials: async (data: ADAssignSerialRequest): Promise<ResponseObject<any>> => {
+        const res = await axiosClient.put(`${PREFIX}/doi-imei`, data);
+        return res.data;
+    },
+
+    //cập nhật tt giao hàng
+    updateCustomerInfo: (data: ADUpdateCustomerRequest): Promise<ResponseObject<any>> => {
+        return axiosClient.put(`${PREFIX}/cap-nhat-khach-hang`, data);
+    }
 };

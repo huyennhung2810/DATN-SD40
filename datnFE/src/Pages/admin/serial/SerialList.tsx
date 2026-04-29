@@ -1,46 +1,157 @@
-import React, { useState, useEffect } from "react";
 import {
-  Table, Card, Input, Tag, Typography,
-  Pagination, Form, Radio
+  BarcodeOutlined,
+  SearchOutlined,
+  AppstoreOutlined,
+} from "@ant-design/icons";
+import {
+  Card,
+  Col,
+  Descriptions,
+  Divider,
+  Form,
+  Image,
+  Input,
+  Modal,
+  Pagination,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
 } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
-import { serialActions } from "../../../redux/serial/serialSlice";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import Barcode from "react-barcode"; // Đã thay đổi: Import Barcode thay vì QRCode
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import productCategoryApi from "../../../api/productCategoryApi";
+import productApi from "../../../api/productApi";
+import productDetailApi from "../../../api/productDetailApi";
 import type { SerialPageParams, SerialResponse } from "../../../models/serial";
+import type { ProductDetailResponse } from "../../../models/productdetail";
+import type { ProductCategoryResponse } from "../../../models/productCategory";
+import type { ProductResponse } from "../../../models/product";
+import { serialActions } from "../../../redux/serial/serialSlice";
 import type { RootState } from "../../../redux/store";
-import { QRCodeSVG } from "qrcode.react";
 
 const { Title, Text } = Typography;
+
+function isSerialInOrder(r: SerialResponse): boolean {
+  return String(r.serialStatus ?? "").toUpperCase() === "IN_ORDER";
+}
+
+function isSerialSold(r: SerialResponse): boolean {
+  return String(r.serialStatus ?? "").toUpperCase() === "SOLD";
+}
 
 const SerialPage: React.FC = () => {
   const dispatch = useDispatch();
 
-  const { list = [], loading, totalElements = 0 } = useSelector(
-    (state: RootState) => state.serial || {}
-  );
+  const {
+    list = [],
+    loading,
+    totalElements = 0,
+  } = useSelector((state: RootState) => state.serial || {});
 
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<SerialPageParams>({
     page: 0,
     size: 10,
     keyword: "",
-    status: undefined,
+    serialStatus: undefined,
+    productCategoryId: undefined,
+    productId: undefined,
   });
 
-  const handleStatusChange = (status: string | undefined) => {
-    setFilter(prev => ({
-      ...prev,
-      status: status,
-      keyword: keyword.trim(),
-      page: 0
-    }));
-  };
+  const [categories, setCategories] = useState<ProductCategoryResponse[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
+    undefined
+  );
+  const [selectedProduct, setSelectedProduct] = useState<string | undefined>(
+    undefined
+  );
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSerial, setDetailSerial] = useState<SerialResponse | null>(null);
+  const [detailVariant, setDetailVariant] = useState<ProductDetailResponse | null>(null);
 
   useEffect(() => {
     dispatch(serialActions.getAll(filter));
   }, [dispatch, filter]);
+
+  useEffect(() => {
+    productCategoryApi
+      .getAll()
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      setLoadingProducts(true);
+      productApi
+        .search({ page: 0, size: 1000, idProductCategory: selectedCategory })
+        .then((res) => setProducts(res.data ?? []))
+        .catch(() => setProducts([]))
+        .finally(() => setLoadingProducts(false));
+    } else {
+      setProducts([]);
+      if (selectedProduct) {
+        setSelectedProduct(undefined);
+        setFilter((prev) => ({ ...prev, productId: undefined }));
+      }
+    }
+  }, [selectedCategory, selectedProduct]);
+
+  const handleStatusChange = (status: string | undefined) => {
+    setFilter((prev) => ({
+      ...prev,
+      serialStatus: status,
+      keyword: keyword.trim(),
+      page: 0,
+    }));
+  };
+
+  const handleCategoryChange = (catId: string | undefined) => {
+    setSelectedCategory(catId);
+    setFilter((prev) => ({ ...prev, productCategoryId: catId, page: 0 }));
+  };
+
+  const handleProductChange = (prodId: string | undefined) => {
+    setSelectedProduct(prodId);
+    setFilter((prev) => ({ ...prev, productId: prodId, page: 0 }));
+  };
+
+  const handleKeywordSearch = () => {
+    setFilter((prev) => ({ ...prev, keyword: keyword.trim(), page: 0 }));
+  };
+
+  const handleViewDetail = async (serial: SerialResponse) => {
+    setDetailSerial(serial);
+    setDetailVariant(null);
+    setDetailModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const res = await productDetailApi.getById(serial.productDetailId ?? "");
+      setDetailVariant(res);
+    } catch {
+      setDetailVariant(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleDetailModalClose = () => {
+    setDetailModalOpen(false);
+    setDetailSerial(null);
+    setDetailVariant(null);
+  };
 
   const columns: ColumnsType<SerialResponse> = [
     {
@@ -51,25 +162,37 @@ const SerialPage: React.FC = () => {
     },
     {
       title: "Serial Number",
-      render: r => (
-        <div>
-          <Text strong>{r.serialNumber}</Text>
+      key: "serialNumber",
+      render: (r) => (
+        <Text
+          strong
+          style={{ cursor: "pointer", color: "#1677ff" }}
+          onClick={() => handleViewDetail(r)}
+        >
+          {r.serialNumber}
+        </Text>
+      ),
+    },
+    {
+      title: "Mã IMEI", // Đã thay đổi: Đổi title thành IMEI
+      align: "center",
+      render: (r) => (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          {/* Đã thay đổi: Dùng Barcode thay vì QRCode */}
+          <Barcode 
+            value={r.serialNumber} 
+            width={1.2} 
+            height={40} 
+            displayValue={false} 
+            background="transparent"
+          />
         </div>
       ),
     },
     {
-      title: "QR Code",
-      align: "center",
-      render: r => (
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <QRCodeSVG value={r.serialNumber} size={64} />
-        </div>
-      )
-    },
-    {
       title: "Sản phẩm",
       dataIndex: "productName",
-      render: v => (
+      render: (v) => (
         <div>
           <Text strong>{v || "---"}</Text>
         </div>
@@ -79,7 +202,7 @@ const SerialPage: React.FC = () => {
       title: "Ngày nhập",
       dataIndex: "createdDate",
       align: "center",
-      render: d => (
+      render: (d) => (
         <div>
           {d ? dayjs(d, "DD/MM/YYYY HH:mm:ss").format("DD/MM/YYYY") : "---"}
         </div>
@@ -87,69 +210,228 @@ const SerialPage: React.FC = () => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
+      dataIndex: "serialStatus",
       align: "center",
-      render: s => (
-        <Tag color={s === "ACTIVE" ? "green" : "red"}>
-          {s === "ACTIVE" ? "TRONG KHO" : "ĐÃ BÁN"}
-        </Tag>
-      ),
-    }
+      render: (ss) => {
+        const sold = isSerialSold({ serialStatus: ss } as SerialResponse);
+        const inOrder = isSerialInOrder({ serialStatus: ss } as SerialResponse);
+        return (
+          <Tag color={sold ? "gold" : inOrder ? "processing" : "success"}>
+            {sold ? "ĐÃ BÁN" : inOrder ? "ĐANG TRONG ĐƠN" : "TRONG KHO"}
+          </Tag>
+        );
+      },
+    },
   ];
-
 
   return (
     <>
-      <Card>
-        <Title level={4}>Quản lý Serial</Title>
-      </Card>
+      {/* Header */}
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 16 }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                backgroundColor: "var(--color-primary-light)",
+                padding: "12px",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <BarcodeOutlined
+                style={{
+                  fontSize: "24px",
+                  color: "var(--color-primary)",
+                }}
+              />
+            </div>
+            <div>
+              <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                Quản lý Serial / IMEI
+              </Title>
+              <Text type="secondary" style={{ fontSize: "13px" }}>
+                Quản lý mã Serial/IMEI và trạng thái sản phẩm
+              </Text>
+            </div>
+          </div>
+          <Text type="secondary">
+            Tổng: <b>{totalElements}</b> serial
+          </Text>
+        </div>
+      </div>
 
-      {/* 2. Card Bộ lọc */}
+      {/* Filter Card */}
       <Card
         variant="borderless"
-        style={{ borderRadius: "12px", marginBottom: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+        style={{
+          borderRadius: "12px",
+          marginBottom: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
       >
         <Form layout="vertical">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} md={8}>
+              <Form.Item label={<Text strong>Loại sản phẩm</Text>}>
+                <Select
+                  placeholder="-- Chọn loại sản phẩm --"
+                  allowClear
+                  size="large"
+                  value={selectedCategory}
+                  onChange={handleCategoryChange}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={categories.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
 
-            <Form.Item label={<Text strong><SearchOutlined /> Tìm kiếm Serial</Text>}>
-              <Input
-                placeholder="Nhập số Serial hoặc mã định danh..."
-                size="large"
-                allowClear
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-            </Form.Item>
+            <Col xs={24} md={8}>
+              <Form.Item label={<Text strong>Sản phẩm</Text>}>
+                <Select
+                  placeholder={
+                    selectedCategory
+                      ? "-- Chọn sản phẩm --"
+                      : "-- Chọn loại sản phẩm trước --"
+                  }
+                  allowClear
+                  size="large"
+                  value={selectedProduct}
+                  onChange={handleProductChange}
+                  disabled={!selectedCategory}
+                  loading={loadingProducts}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  notFoundContent={
+                    !selectedCategory ? (
+                      <Text type="secondary">Vui lòng chọn loại sản phẩm trước</Text>
+                    ) : loadingProducts ? (
+                      <Spin size="small" />
+                    ) : null
+                  }
+                  options={products.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
 
-            <Form.Item label={<Text strong>Trạng thái sản phẩm</Text>}>
-              <Radio.Group
-                size="large"
-                buttonStyle="solid"
-                value={filter.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
+            <Col xs={24} md={8}>
+              <Form.Item
+                label={
+                  <Text strong>
+                    <SearchOutlined /> Tìm kiếm IMEI / Serial
+                  </Text>
+                }
               >
-                <Radio.Button value={undefined} style={{ minWidth: "100px", textAlign: "center" }}>
-                  Tất cả
-                </Radio.Button>
-                <Radio.Button value="ACTIVE" style={{ minWidth: "100px", textAlign: "center" }}>
-                  <Tag color="green" style={{ border: "none", background: "transparent", margin: 0 }}>
-                    Trong kho
-                  </Tag>
-                </Radio.Button>
-                <Radio.Button value="INACTIVE" style={{ minWidth: "100px", textAlign: "center" }}>
-                  <Tag color="red" style={{ border: "none", background: "transparent", margin: 0 }}>
-                    Đã bán
-                  </Tag>
-                </Radio.Button>
-              </Radio.Group>
-            </Form.Item>
-          </div>
+                <Input.Search
+                  placeholder="Nhập số IMEI hoặc Serial..."
+                  size="large"
+                  allowClear
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onSearch={handleKeywordSearch}
+                  enterButton="Tìm"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24}>
+              <Form.Item label={<Text strong>Trạng thái sản phẩm</Text>}>
+                  <Radio.Group
+                    size="large"
+                    buttonStyle="solid"
+                    value={filter.serialStatus} 
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                  >
+                    <Radio.Button
+                      value={undefined}
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      Tất cả
+                    </Radio.Button>
+
+                    {/* Trạng thái AVAILABLE: Trong kho */}
+                    <Radio.Button
+                      value="AVAILABLE"
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      <Tag
+                        color="success"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Trong kho
+                      </Tag>
+                    </Radio.Button>
+
+                    {/* Trạng thái IN_ORDER: Đang trong đơn */}
+                    <Radio.Button
+                      value="IN_ORDER"
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      <Tag
+                        color="processing"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Đang trong đơn
+                      </Tag>
+                    </Radio.Button>
+
+                    {/* Trạng thái SOLD: Đã bán */}
+                    <Radio.Button
+                      value="SOLD"
+                      style={{ minWidth: "100px", textAlign: "center" }}
+                    >
+                      <Tag
+                        color="gold"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          margin: 0,
+                        }}
+                      >
+                        Đã bán
+                      </Tag>
+                    </Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Card>
 
-      <Card title={`Danh sách (${totalElements})`}
-      >
+      {/* Table */}
+      <Card title={`Danh sách (${totalElements})`}>
         <Table
           columns={columns}
           dataSource={list}
@@ -169,6 +451,189 @@ const SerialPage: React.FC = () => {
           onChange={(p, s) => setFilter({ ...filter, page: p - 1, size: s })}
         />
       </Card>
+
+      {/* Detail Modal */}
+      <Modal
+        title={
+          <span>
+            <AppstoreOutlined /> Chi tiết IMEI / Serial
+          </span>
+        }
+        open={detailModalOpen}
+        onCancel={handleDetailModalClose}
+        footer={null}
+        width={680}
+        destroyOnHidden
+      >
+        <Spin spinning={detailLoading}>
+          {!detailSerial && !detailLoading ? (
+            <Text type="secondary">Không có dữ liệu.</Text>
+          ) : (
+            <>
+              {/* Serial info section */}
+              <Card
+                size="small"
+                style={{ marginBottom: 16, background: "#fafafa" }}
+              >
+                <Descriptions column={2} size="small" colon>
+                  <Descriptions.Item label="Mã Serial / IMEI">
+                    <Text strong style={{ color: "#1677ff" }}>
+                      {detailSerial?.serialNumber ?? "---"}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Mã code">
+                    <Text code>{detailSerial?.code ?? "---"}</Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Trạng thái">
+                    <Tag
+                      color={
+                        isSerialSold(detailSerial as SerialResponse)
+                          ? "gold"
+                          : isSerialInOrder(detailSerial as SerialResponse)
+                            ? "processing"
+                            : "success"
+                      }
+                    >
+                      {isSerialSold(detailSerial as SerialResponse)
+                        ? "ĐÃ BÁN"
+                        : isSerialInOrder(detailSerial as SerialResponse)
+                          ? "ĐANG TRONG ĐƠN"
+                          : "TRONG KHO"}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày nhập">
+                    {detailSerial?.createdDate
+                      ? dayjs(
+                          detailSerial.createdDate,
+                          "DD/MM/YYYY HH:mm:ss"
+                        ).format("DD/MM/YYYY HH:mm")
+                      : "---"}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                <div style={{ textAlign: "center", marginTop: 24, marginBottom: 12 }}>
+                  {/* Đã thay đổi: Hiển thị Barcode full trong chi tiết */}
+                  {detailSerial?.serialNumber && (
+                    <Barcode 
+                      value={detailSerial.serialNumber} 
+                      width={2} 
+                      height={60} 
+                      fontSize={16}
+                      background="transparent"
+                    />
+                  )}
+                </div>
+              </Card>
+
+              {/* Variant info section */}
+              <Divider orientation={"left" as any} plain>
+              Thông tin biến thể sản phẩm
+              </Divider>
+
+              {detailVariant ? (
+                <Card size="small">
+                  <Row gutter={[16, 12]}>
+                    <Col xs={24} md={12}>
+                      <Descriptions column={1} size="small">
+                        <Descriptions.Item label="Sản phẩm">
+                          <Text strong>{detailVariant.productName ?? "---"}</Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Mã sản phẩm">
+                          {detailVariant.productCode ?? "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Mã biến thể">
+                          {detailVariant.code ?? "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Phiên bản">
+                          {detailVariant.variantVersionDisplayName ?? detailVariant.variantVersion ?? "---"}
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                      <Descriptions column={1} size="small">
+                        <Descriptions.Item label="Màu sắc">
+                          <Space>
+                            {detailVariant.colorName ?? "---"}
+                            {detailVariant.colorId && (
+                              <Tag>{detailVariant.colorName}</Tag>
+                            )}
+                          </Space>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Dung lượng">
+                          {detailVariant.storageCapacityName ?? "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Giá bán">
+                          <Text strong style={{ color: "#1677ff" }}>
+                            {detailVariant.salePrice
+                              ? new Intl.NumberFormat("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                }).format(Number(detailVariant.salePrice))
+                              : "---"}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Số lượng tồn">
+                          <Text>{detailVariant.quantity ?? 0}</Text>
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Col>
+
+                    {/* Variant image */}
+                    {detailVariant.imageUrl && (
+                      <Col xs={24}>
+                        <Divider plain style={{ margin: "8px 0" }} />
+                        <div>
+                          <Text type="secondary">Hình ảnh biến thể: </Text>
+                          <Image
+                            src={detailVariant.imageUrl}
+                            width={120}
+                            style={{ borderRadius: 8, marginTop: 8 }}
+                            placeholder={
+                              <div
+                                style={{
+                                  background: "#f0f0f0",
+                                  width: 120,
+                                  height: 90,
+                                  borderRadius: 8,
+                                }}
+                              />
+                            }
+                          />
+                        </div>
+                      </Col>
+                    )}
+
+                    {/* Selected image from product */}
+                    {detailVariant.selectedImage?.url && (
+                      <Col xs={24}>
+                        <Text type="secondary">Hình ảnh đại diện: </Text>
+                        <Image
+                          src={detailVariant.selectedImage.url}
+                          width={120}
+                          style={{ borderRadius: 8, marginTop: 8 }}
+                        />
+                      </Col>
+                    )}
+
+                    {/* Note */}
+                    {detailVariant.note && (
+                      <Col xs={24}>
+                        <Text type="secondary">Ghi chú: </Text>
+                        <Text>{detailVariant.note}</Text>
+                      </Col>
+                    )}
+                  </Row>
+                </Card>
+              ) : !detailLoading ? (
+                <Text type="secondary">
+                  Không tìm thấy thông tin biến thể sản phẩm.
+                </Text>
+              ) : null}
+            </>
+          )}
+        </Spin>
+      </Modal>
     </>
   );
 };

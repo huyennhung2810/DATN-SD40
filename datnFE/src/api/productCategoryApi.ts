@@ -4,7 +4,7 @@ import type {
   ProductCategoryRequest,
   ProductCategoryResponse,
 } from "../models/productCategory";
-import type { PageResponse, ResponseObject } from "../models/base";
+import type { PageResponse, PageableObject, ResponseObject } from "../models/base";
 
 const BASE_URL = "/admin/product-category";
 
@@ -12,11 +12,25 @@ const productCategoryApi = {
   search: async (
     params: ProductCategoryPageParams
   ): Promise<PageResponse<ProductCategoryResponse>> => {
-    const res = await axiosClient.get<ResponseObject<PageResponse<ProductCategoryResponse>>>(
+    const res = await axiosClient.get<ResponseObject<PageableObject<ProductCategoryResponse>>>(
       BASE_URL,
       { params }
     );
-    return res.data.data;
+    const d = res.data.data;
+    return {
+      data: d?.data ?? [],
+      totalElements: d?.totalElements ?? 0,
+      totalPages: d?.totalPages ?? 0,
+      currentPage: d?.currentPage ?? 0,
+    };
+  },
+
+  getAll: async (): Promise<ProductCategoryResponse[]> => {
+    const res = await axiosClient.get<ResponseObject<PageableObject<ProductCategoryResponse>>>(
+      BASE_URL,
+      { params: { page: 0, size: 1000 } }
+    );
+    return res.data.data?.data ?? [];
   },
 
   getById: async (id: string): Promise<ProductCategoryResponse> => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Table,
   Tag,
@@ -12,6 +12,12 @@ import {
   message,
   Tooltip,
   Alert,
+  Descriptions,
+  Row,
+  Col,
+  Statistic,
+  Divider,
+  Empty,
 } from "antd";
 import {
   SearchOutlined,
@@ -19,31 +25,42 @@ import {
   HistoryOutlined,
   FileExcelOutlined,
   ReloadOutlined,
+  EyeOutlined,
+  WalletOutlined,
+  TransactionOutlined,
+  ExclamationCircleOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { shiftHandoverApi } from "../../../api/shiftHandoverApi";
-import * as XLSX from "xlsx"; // npm install xlsx
+import * as XLSX from "xlsx";
 import type { ShiftHistoryItem } from "../../../models/shiftHandover";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
 
 const ShiftHistoryPage: React.FC = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<ShiftHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState({
     page: 0,
     size: 10,
     staffId: "",
-    fromDate: null,
-    toDate: null,
+    fromDate: null as number | null,
+    toDate: null as number | null,
   });
 
-  // UI States
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  const [detailModal, setDetailModal] = useState<{
+    open: boolean;
+    record: ShiftHistoryItem | null;
+  }>({
+    open: false,
+    record: null,
+  });
 
   const loadHistory = async () => {
     setLoading(true);
@@ -52,133 +69,155 @@ const ShiftHistoryPage: React.FC = () => {
       setData(res.data.content);
       setTotal(res.data.totalElements);
     } catch (error) {
-      console.error("Lỗi khi tải lịch sử giao ca:", error);
+      console.error(error);
+      message.error("Không thể tải dữ liệu lịch sử!");
     } finally {
       setLoading(false);
     }
   };
 
-  // Chỉ gọi API khi filter thực sự thay đổi (Debounce cho staffId)
   useEffect(() => {
-    const handler = setTimeout(() => {
-      loadHistory();
-    }, 500); // Đợi 500ms sau khi người dùng ngừng gõ mới gọi API
+    const handler = setTimeout(() => loadHistory(), 400);
     return () => clearTimeout(handler);
-  }, [
-    filter.staffId,
-    filter.fromDate,
-    filter.toDate,
-    filter.page,
-    filter.size,
-  ]);
-  // Tính năng Xuất Excel dành cho Admin
-  const handleExportExcel = () => {
-    // Thêm check an toàn trước khi xuất
-    if (!data || data.length === 0) {
-      return message.warning("Không có dữ liệu để xuất file!");
-    }
+  }, [filter]);
 
-    const exportData = data.map((item: ShiftHistoryItem) => ({
+  // Thống kê nhanh từ dữ liệu hiện tại
+  const stats = useMemo(() => {
+    const totalRev = data.reduce(
+      (sum, item) =>
+        sum + (item.totalCashSales || 0) + (item.totalBankSales || 0),
+      0,
+    );
+    const totalDiff = data.reduce(
+      (sum, item) => sum + (item.differenceAmount || 0),
+      0,
+    );
+    return { totalRev, totalDiff };
+  }, [data]);
+
+  const handleExportExcel = () => {
+    if (!data.length) return message.warning("Không có dữ liệu!");
+    const exportData = data.map((item) => ({
+      "Mã ca": item.code,
       "Nhân viên": item.employeeName,
       "Giờ vào": dayjs(item.checkInTime).format("HH:mm DD/MM/YYYY"),
       "Giờ ra": item.checkOutTime
         ? dayjs(item.checkOutTime).format("HH:mm DD/MM/YYYY")
-        : "Chưa ra ca",
-      "Doanh thu (VND)": item.totalCashSales.toLocaleString("vi-VN"),
-      "Thực tế (VND)": item.actualCashAtEnd.toLocaleString("vi-VN"),
-      "Chênh lệch (VND)": item.differenceAmount.toLocaleString("vi-VN"),
-      "Trạng thái": item.status === "CLOSED" ? "Hoàn tất" : "Chờ duyệt",
-      "Ghi chú": item.note || "",
+        : "N/A",
+      "Doanh thu tiền mặt": item.totalCashSales,
+      "Doanh thu CK": item.totalBankSales,
+      "Chênh lệch": item.differenceAmount,
+      "Trạng thái": item.status,
     }));
-
     const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Senior Tip: Chỉnh độ rộng cột tự động để file Excel đẹp hơn
-    const columnWidths = [
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 30 },
-    ];
-    ws["!cols"] = columnWidths;
-
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "LichSuGiaoCa");
-    XLSX.writeFile(
-      wb,
-      `Bao_Cao_Giao_Ca_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`,
-    );
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, `Report_${dayjs().format("YYYYMMDD")}.xlsx`);
   };
 
-  // Cột Table (Giữ nguyên logic render của bạn nhưng thêm Tooltip cho ghi chú)
   const columns = [
-    // ... các cột trước giữ nguyên
+    {
+      title: "Mã ca",
+      dataIndex: "code",
+      key: "code",
+      render: (text: string) => (
+        <Text strong copyable>
+          {text}
+        </Text>
+      ),
+    },
     {
       title: "Nhân viên",
       dataIndex: "employeeName",
-      render: (text: string) => <Text strong>{text}</Text>,
+      key: "employee",
+      render: (text: string) => (
+        <Space orientation="vertical" size={0}>
+          <Text strong>{text}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Thời gian làm việc",
+      key: "time",
+      render: (_: any, record: ShiftHistoryItem) => (
+        <div style={{ fontSize: 13 }}>
+          <div>
+            <Tag color="blue" variant="filled">
+              Vào
+            </Tag>{" "}
+            {dayjs(record.checkInTime).format("HH:mm DD/MM")}
+          </div>
+          <div style={{ marginTop: 4 }}>
+            <Tag color="default" variant="filled">
+              Ra
+            </Tag>
+            {record.checkOutTime
+              ? dayjs(record.checkOutTime).format("HH:mm DD/MM")
+              : "---"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Tổng Doanh Thu",
+      key: "revenue",
+      align: "right" as const,
+      render: (_: any, record: ShiftHistoryItem) => (
+        <Text strong color="black">
+          {(
+            (record.totalCashSales || 0) + (record.totalBankSales || 0)
+          ).toLocaleString()}{" "}
+          ₫
+        </Text>
+      ),
     },
     {
       title: "Chênh lệch",
       dataIndex: "differenceAmount",
+      align: "right" as const,
       render: (val: number) => (
-        <Tooltip
-          title={
-            val < 0
-              ? "Thâm hụt tiền"
-              : val > 0
-                ? "Thừa tiền mặt"
-                : "Khớp dữ liệu"
-          }
-        >
-          <Text
-            type={val < 0 ? "danger" : val > 0 ? "warning" : "success"}
-            strong
+        <Tooltip title={val < 0 ? "Thâm hụt" : val > 0 ? "Dư tiền" : "Khớp"}>
+          <Tag
+            color={val === 0 ? "success" : val < 0 ? "error" : "warning"}
+            style={{ fontWeight: 600, borderRadius: 4 }}
           >
             {val > 0 ? "+" : ""}
             {val?.toLocaleString()} ₫
-          </Text>
+          </Tag>
         </Tooltip>
       ),
     },
     {
-      title: "Ghi chú",
-      dataIndex: "note",
-      ellipsis: true, // Senior Tip: Tránh việc ghi chú quá dài làm vỡ layout bảng
-      render: (text: string) => <Text type="secondary">{text || "-"}</Text>,
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
+      align: "center" as const,
       render: (status: string) => {
-        const config: Record<string, { color: string; text: string }> = {
+        const map: any = {
           CLOSED: { color: "green", text: "Hoàn tất" },
-          PENDING: { color: "orange", text: "Chờ duyệt" },
+          PENDING: { color: "gold", text: "Chờ duyệt" },
           OPEN: { color: "blue", text: "Đang mở" },
         };
-
-        const currentConfig = config[status] || {
-          color: "default",
-          text: status,
-        };
-
-        return <Tag color={currentConfig.color}>{currentConfig.text}</Tag>;
+        return (
+          <Tag bordered={false} color={map[status]?.color}>
+            {map[status]?.text}
+          </Tag>
+        );
       },
     },
     {
       title: "Thao tác",
       key: "action",
       align: "center" as const,
-      render: (_: any, record: any) => (
+      render: (_: any, record: ShiftHistoryItem) => (
         <Space>
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => setDetailModal({ open: true, record })}
+          />
           {record.status === "PENDING" && (
             <Button
               type="primary"
-              ghost
               size="small"
               icon={<CheckCircleOutlined />}
               onClick={() => {
@@ -195,70 +234,104 @@ const ShiftHistoryPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
-      <Card
-        title={
-          <Space>
-            <HistoryOutlined /> Lịch Sử Đối Soát Tiền Mặt
-          </Space>
-        }
-        extra={
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadHistory} />
-            <Button
-              type="primary"
-              icon={<FileExcelOutlined />}
-              onClick={handleExportExcel}
-              disabled={data.length === 0}
-            >
-              Xuất Excel
-            </Button>
-          </Space>
-        }
-      >
-        <div
-          style={{
-            marginBottom: 20,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Space wrap>
+    <div style={{ padding: "20px", background: "#f5f5f5", minHeight: "100vh" }}>
+      {/* Header & Stats Section */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col span={24}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Title level={4}>
+              <HistoryOutlined /> Lịch sử hoạt động
+            </Title>
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={loadHistory}>
+                Làm mới
+              </Button>
+              <Button
+                type="primary"
+                icon={<FileExcelOutlined />}
+                onClick={handleExportExcel}
+              >
+                Xuất báo cáo
+              </Button>
+            </Space>
+          </div>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card variant="outlined" className="stat-card">
+            <Statistic
+              title="Tổng doanh thu (Trang này)"
+              value={stats.totalRev}
+              precision={0}
+              prefix={<WalletOutlined />}
+              suffix="₫"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card variant="outlined" className="stat-card">
+            <Statistic
+              title="Tổng chênh lệch"
+              value={stats.totalDiff}
+              styles={{
+                content: { color: stats.totalDiff < 0 ? "#cf1322" : "#3f8600" },
+              }}
+              prefix={<TransactionOutlined />}
+              suffix="₫"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Filter Section */}
+      <Card bordered={false} style={{ marginBottom: 16, borderRadius: 8 }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={8}>
             <Input
-              placeholder="Mã nhân viên..."
-              style={{ width: 200 }}
-              prefix={<SearchOutlined />}
+              placeholder="Tìm theo mã nhân viên..."
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
               allowClear
               onChange={(e) =>
                 setFilter({ ...filter, staffId: e.target.value, page: 0 })
               }
             />
+          </Col>
+          <Col xs={24} md={10}>
             <RangePicker
-              onChange={(dates: any) => {
+              style={{ width: "100%" }}
+              onChange={(dates: any) =>
                 setFilter({
                   ...filter,
                   fromDate: dates ? dates[0].startOf("day").valueOf() : null,
                   toDate: dates ? dates[1].endOf("day").valueOf() : null,
                   page: 0,
-                });
-              }}
+                })
+              }
             />
-          </Space>
-          <Text type="secondary">
-            Tìm thấy <b>{total}</b> bản ghi
-          </Text>
-        </div>
+          </Col>
+          <Col xs={24} md={6}>
+            <Text type="secondary">
+              <FilterOutlined /> Đang hiển thị {data.length}/{total} bản ghi
+            </Text>
+          </Col>
+        </Row>
+      </Card>
 
+      {/* Main Table */}
+      <Card bordered={false} style={{ borderRadius: 8 }}>
         <Table
           columns={columns}
           dataSource={data}
           loading={loading}
           rowKey="id"
-          bordered
           size="middle"
           pagination={{
-            total: total,
+            total,
             pageSize: filter.size,
             current: filter.page + 1,
             showSizeChanger: true,
@@ -268,8 +341,129 @@ const ShiftHistoryPage: React.FC = () => {
         />
       </Card>
 
+      {/* Professional Detail Modal */}
       <Modal
-        title="Xác nhận duyệt ca trực"
+        open={detailModal.open}
+        title={null}
+        footer={[
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => setDetailModal({ open: false, record: null })}
+          >
+            Đóng
+          </Button>,
+        ]}
+        onCancel={() => setDetailModal({ open: false, record: null })}
+        width={750}
+        centered
+      >
+        {detailModal.record ? (
+          <div style={{ padding: "10px" }}>
+            <div
+              style={{
+                marginBottom: 20,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+              }}
+            >
+              <div>
+                <Title level={4} style={{ margin: 0 }}>
+                  Chi tiết ca làm việc
+                </Title>
+                <Text type="secondary">Mã: {detailModal.record.code}</Text>
+              </div>
+              <Tag style={{ fontSize: 14, padding: "4px 12px" }}></Tag>
+            </div>
+
+            <Descriptions
+              bordered
+              column={2}
+              size="small"
+              labelStyle={{ background: "#fafafa", fontWeight: 600 }}
+            >
+              <Descriptions.Item label="Nhân viên" span={2}>
+                {detailModal.record.employeeName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời điểm vào">
+                {dayjs(detailModal.record.checkInTime).format(
+                  "HH:mm:ss DD/MM/YYYY",
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời điểm ra">
+                {detailModal.record.checkOutTime
+                  ? dayjs(detailModal.record.checkOutTime).format(
+                      "HH:mm:ss DD/MM/YYYY",
+                    )
+                  : "N/A"}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tiền mặt đầu ca">
+                {detailModal.record.initialCash?.toLocaleString()} ₫
+              </Descriptions.Item>
+              <Descriptions.Item
+                label="Tiền mặt cuối ca"
+                labelStyle={{ color: "#1890ff" }}
+              >
+                <Text strong>
+                  {detailModal.record.actualCashAtEnd?.toLocaleString()} ₫
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Doanh thu tiền mặt">
+                {detailModal.record.totalCashSales?.toLocaleString()} ₫
+              </Descriptions.Item>
+              <Descriptions.Item label="Doanh thu chuyển khoản">
+                {detailModal.record.totalBankSales?.toLocaleString()} ₫
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tiền chi tiêu">
+                {detailModal.record.cashWithdraw?.toLocaleString()} ₫
+              </Descriptions.Item>
+              <Descriptions.Item label="Chênh lệch đối soát">
+                <Text
+                  strong
+                  type={
+                    detailModal.record.differenceAmount < 0
+                      ? "danger"
+                      : "success"
+                  }
+                >
+                  {detailModal.record.differenceAmount?.toLocaleString()} ₫
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ghi chú nhân viên" span={2}>
+                {detailModal.record.note || "Không có ghi chú"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {detailModal.record.differenceAmount !== 0 && (
+              <Alert
+                message="Lưu ý về chênh lệch"
+                description="Số tiền mặt thực tế nộp lại không khớp với doanh thu hệ thống tính toán. Cần kiểm tra lại các hóa đơn tiền mặt hoặc phiếu chi."
+                type="warning"
+                showIcon
+                style={{ marginTop: 16 }}
+              />
+            )}
+          </div>
+        ) : (
+          <Empty />
+        )}
+      </Modal>
+
+      {/* Confirm Approve Modal */}
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined
+              style={{ color: "#faad14", marginRight: 8 }}
+            />{" "}
+            Xác nhận duyệt ca trực
+          </span>
+        }
         open={isConfirmModalOpen}
         onOk={async () => {
           try {
@@ -277,29 +471,45 @@ const ShiftHistoryPage: React.FC = () => {
               handoverId: selectedId,
               adminNote,
             });
-            message.success("Duyệt thành công");
+            message.success("Đã phê duyệt ca trực");
             setIsConfirmModalOpen(false);
             loadHistory();
           } catch (e) {
-            console.error("Lỗi khi duyệt ca trực:", e);
+            console.error(e);
+            message.error("Lỗi duyệt ca!");
           }
         }}
         onCancel={() => setIsConfirmModalOpen(false)}
+        okText="Xác nhận duyệt"
+        cancelText="Hủy"
       >
-        <Alert
-          message="Lưu ý: Hành động này sẽ chuyển trạng thái ca trực thành CLOSED"
-          type="warning"
-          showIcon
-          style={{ marginBottom: 15 }}
-        />
-        <Text strong>Ghi chú của Quản lý:</Text>
+        <p>
+          Hành động này sẽ chuyển trạng thái ca trực của nhân viên thành{" "}
+          <b>HOÀN TẤT (CLOSED)</b>.
+        </p>
+        <Divider plain>Phản hồi của quản lý</Divider>
         <Input.TextArea
           rows={3}
-          placeholder="Ví dụ: Đã đối soát, nhân viên nộp đủ tiền mặt..."
-          style={{ marginTop: 8 }}
+          placeholder="Nhập nội dung đối soát (VD: Đã thu đủ tiền thiếu...)"
           onChange={(e) => setAdminNote(e.target.value)}
         />
       </Modal>
+
+      <style>{`
+        .stat-card {
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          border-radius: 8px;
+          transition: all 0.3s;
+        }
+        .stat-card:hover {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transform: translateY(-2px);
+        }
+        .ant-table-thead > tr > th {
+          background-color: #fafafa !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
     </div>
   );
 };

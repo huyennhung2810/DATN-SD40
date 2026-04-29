@@ -1,11 +1,9 @@
 package com.example.datn.entity;
 
 import com.example.datn.entity.base.NameEntity;
-import com.example.datn.entity.base.PrimaryEntity;
 import com.example.datn.infrastructure.constant.EntityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.*;
 

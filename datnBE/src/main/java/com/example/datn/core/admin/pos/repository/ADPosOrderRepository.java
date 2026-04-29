@@ -11,9 +11,12 @@ import java.util.List;
 @Repository
 public interface ADPosOrderRepository extends JpaRepository<Order, String> {
 
-    //đếm số lượng hóa đơn theo trạng thái và loại
+    // Đếm số lượng hóa đơn theo trạng thái và loại
     long countByOrderStatusAndOrderType(OrderStatus orderStatus, TypeInvoice orderType);
 
-    //lấy danh sách hóa đơn theo trạng thái và loại
+    // Lấy danh sách hóa đơn theo trạng thái và loại
     List<Order> findByOrderStatusAndOrderType(OrderStatus orderStatus, TypeInvoice orderType);
+
+    // Tìm đơn hàng theo mã code (VD: OTH59798424)
+    java.util.Optional<Order> findByCode(String code);
 }

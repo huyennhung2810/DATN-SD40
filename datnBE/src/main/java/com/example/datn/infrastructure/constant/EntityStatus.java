@@ -17,27 +17,16 @@ public enum EntityStatus {
         this.description = description;
     }
 
-    //Lấy danh sách tên trạng thái (ACTIVE, INACTIVE)
     public static List<String> getAllStatus() {
         return Arrays.stream(EntityStatus.values())
                 .map(Enum::name)
                 .collect(Collectors.toList());
     }
 
-    //Lấy chuỗi tất cả trạng thái ngăn cách bởi dấu phẩy
     public static String getAllStatusString() {
         return Arrays.stream(EntityStatus.values())
                 .map(Enum::name)
                 .collect(Collectors.joining(", "));
-    }
-
-    //Lấy mô tả tiếng Việt theo enum name
-    public static String getDescriptionByStatus(String statusName) {
-        return Arrays.stream(EntityStatus.values())
-                .filter(status -> status.name().equalsIgnoreCase(statusName))
-                .map(EntityStatus::getDescription)
-                .findFirst()
-                .orElse("Không xác định");
     }
 
     public static EntityStatus fromValue(Integer value) {

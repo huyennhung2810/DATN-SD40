@@ -1,37 +1,37 @@
-import React, { useState, useCallback, useEffect } from "react";
 import {
-  Table,
-  Card,
-  Button,
-  Input,
-  Tag,
-  Space,
-  Typography,
-  Pagination,
-  Tooltip,
-  Form,
-  Modal,
-  Popconfirm,
-  InputNumber,
-} from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
   DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   TagOutlined,
 } from "@ant-design/icons";
 import {
+  App,
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Pagination,
+  Popconfirm,
   Select,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
 } from "antd";
-import { useDispatch, useSelector } from "react-redux";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
-import type { ProductCategoryPageParams, ProductCategoryResponse } from "../../../models/productCategory";
-import type { RootState } from "../../../redux/store";
+import dayjs from "dayjs";
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type {
+  ProductCategoryPageParams,
+  ProductCategoryResponse,
+} from "../../../models/productCategory";
 import { productCategoryActions } from "../../../redux/productCategory/productCategorySlice";
-import { App } from "antd";
+import type { RootState } from "../../../redux/store";
 
 const { Title, Text } = Typography;
 
@@ -44,7 +44,8 @@ const ProductCategoryPage: React.FC = () => {
   const [modalForm] = Form.useForm();
   const [keyword, setKeyword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ProductCategoryResponse | null>(null);
+  const [editingCategory, setEditingCategory] =
+    useState<ProductCategoryResponse | null>(null);
   const { notification } = App.useApp();
 
   const [filter, setFilter] = useState<ProductCategoryPageParams>({
@@ -128,12 +129,15 @@ const ProductCategoryPage: React.FC = () => {
     // Check for duplicates
     const trimmedValue = value.trim().toLowerCase();
     const isDuplicate = list.some(
-      (item) => item.name?.toLowerCase().trim() === trimmedValue
+      (item) => item.name?.toLowerCase().trim() === trimmedValue,
     );
 
     if (isDuplicate) {
       // If updating, allow keeping the same name
-      if (editingCategory && editingCategory.name?.toLowerCase().trim() === trimmedValue) {
+      if (
+        editingCategory &&
+        editingCategory.name?.toLowerCase().trim() === trimmedValue
+      ) {
         return Promise.resolve();
       }
       return Promise.reject("Tên danh mục đã tồn tại");
@@ -148,23 +152,26 @@ const ProductCategoryPage: React.FC = () => {
     modalForm.resetFields();
   };
 
-    const handleSubmit = () => {
-        modalForm.validateFields().then((values) => {
-            const data = {
-                id: editingCategory?.id,
-                name: values.name?.trim(),
-                code: values.code?.trim(),
-                description: values.description?.trim() || undefined,
-                status: values.status,
-            };
+  const handleSubmit = () => {
+    modalForm.validateFields().then((values) => {
+      const data = {
+        id: editingCategory?.id,
+        name: values.name?.trim(),
+        code: values.code?.trim(),
+        description: values.description?.trim() || undefined,
+        status: values.status,
+      };
 
-            dispatch(
-                editingCategory
-                    ? productCategoryActions.updateCategory({ data, onSuccess: closeModal })
-                    : productCategoryActions.addCategory({ data, onSuccess: closeModal })
-            );
-        });
-    };
+      dispatch(
+        editingCategory
+          ? productCategoryActions.updateCategory({
+              data,
+              onSuccess: closeModal,
+            })
+          : productCategoryActions.addCategory({ data, onSuccess: closeModal }),
+      );
+    });
+  };
 
   const handleDelete = (id: string) => {
     dispatch(productCategoryActions.deleteCategory(id));
@@ -258,27 +265,48 @@ const ProductCategoryPage: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <Card className="mb-3" style={{ borderRadius: "12px" }}>
-        <Space align="center" size={16}>
-          <div
-            style={{
-              backgroundColor: "#e6f7ff",
-              padding: "12px",
-              borderRadius: "10px",
-            }}
-          >
-            <TagOutlined style={{ fontSize: "26px", color: "#1890ff" }} />
-          </div>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              Quản lý loại sản phẩm
-            </Title>
-            <Text type="secondary" style={{ fontSize: "14px" }}>
-              Quản lý danh mục sản phẩm của hệ thống
-            </Text>
-          </div>
-        </Space>
-      </Card>
+      <div
+        className="solid-card"
+        style={{ padding: "var(--spacing-lg)", marginBottom: 12 }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Space align="center" size={16}>
+            <div
+              style={{
+                backgroundColor: "var(--color-primary-light)",
+                padding: "12px",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <TagOutlined
+                style={{
+                  fontSize: "24px",
+                  color: "var(--color-primary)",
+                }}
+              />
+            </div>
+
+            <div>
+              <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                Quản lý loại sản phẩm
+              </Title>
+              <Text type="secondary" style={{ fontSize: "13px" }}>
+                Quản lý danh mục sản phẩm của hệ thống
+              </Text>
+            </div>
+          </Space>
+
+          <Text type="secondary">
+            Tổng: <b>{totalElements}</b> danh mục
+          </Text>
+        </div>
+      </div>
 
       <Card
         title={
@@ -391,15 +419,16 @@ const ProductCategoryPage: React.FC = () => {
               { max: 50, message: "Mã tối đa 50 ký tự" },
             ]}
           >
-            <Input placeholder="Nhập mã danh mục" disabled={!!editingCategory} />
+            <Input
+              placeholder="Nhập mã danh mục"
+              disabled={!!editingCategory}
+            />
           </Form.Item>
 
           <Form.Item
             name="name"
             label="Tên danh mục"
-            rules={[
-              { validator: validateName }
-            ]}
+            rules={[{ validator: validateName }]}
           >
             <Input placeholder="Nhập tên danh mục" />
           </Form.Item>
@@ -423,4 +452,3 @@ const ProductCategoryPage: React.FC = () => {
 };
 
 export default ProductCategoryPage;
-

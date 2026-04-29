@@ -1,5 +1,6 @@
 import type { CommonStatus } from "./base";
 
+export type SerialBusinessStatus = 'AVAILABLE' | 'IN_ORDER' | 'SOLD' | 'DEFECTIVE' | 'WARRANTY';
 
 export interface SerialResponse {
   id: string;
@@ -9,6 +10,8 @@ export interface SerialResponse {
   productDetailId: string;
   createdDate: string;
   status: CommonStatus;
+  /** AVAILABLE = trong kho, IN_ORDER = đang trong đơn, SOLD = đã bán */
+  serialStatus?: SerialBusinessStatus;
 }
 
 export interface SerialFormValues {
@@ -28,6 +31,9 @@ export const initialSerial: SerialFormValues = {
 export interface SerialPageParams {
   keyword?: string;
   status?: string;
+  serialStatus?: string;
+  productCategoryId?: string;
+  productId?: string;
   page: number;
   size: number;
   sortBy?: string;

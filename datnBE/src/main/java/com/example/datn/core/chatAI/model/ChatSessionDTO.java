@@ -11,4 +11,7 @@ public class ChatSessionDTO {
     private String lastMessage;
     private int unreadCount;
     private boolean isAiActive;
+    private String customerName;
+    private String userId;
+    private String customerImage;
 }

@@ -301,6 +301,30 @@ const EmployeePage: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <div className="solid-card" style={{ padding: "var(--spacing-lg)" }}>
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <UserOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
+          </div>
+
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý nhân viên
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý danh sách nhân viên trong hệ thống
+            </Typography.Text>
+          </div>
+        </Space>
+      </div>
       <Card
         title={
           <span>
@@ -309,15 +333,13 @@ const EmployeePage: React.FC = () => {
         }
         className="shadow-md mb-4"
         extra={
-          <Tooltip title="Làm mới bộ lọc">
-            <Button
-              shape="circle"
-              icon={<ReloadOutlined />}
-              onClick={handleReset}
-              type="primary"
-              ghost
-            />
-          </Tooltip>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleReset}
+            aria-label="Đặt lại bộ lọc tìm kiếm"
+          >
+            Đặt lại bộ lọc
+          </Button>
         }
       >
         <Form

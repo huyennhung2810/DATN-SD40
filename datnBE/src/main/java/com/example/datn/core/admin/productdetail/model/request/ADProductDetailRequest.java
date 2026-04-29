@@ -2,6 +2,7 @@ package com.example.datn.core.admin.productdetail.model.request;
 
 import com.example.datn.core.admin.serial.model.request.ADSerialRequest;
 import com.example.datn.infrastructure.constant.EntityStatus;
+import com.example.datn.infrastructure.constant.ProductVersion;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -15,7 +16,14 @@ public class ADProductDetailRequest {
     @NotBlank(message = "Mã SPCT không được để trống")
     private String code;
 
+    // Tên phiên bản hiển thị (format: "{VariantVersion} / {Color} / {Storage}")
     private String version;
+
+    // Phiên bản máy ảnh Canon - dimension bắt buộc cấp 1
+    // Giá trị: BODY_ONLY, KIT_18_45, KIT_18_150
+    // LEVEL 1: Validation bắt buộc, chỉ chấp nhận 3 giá trị hợp lệ
+    @NotBlank(message = "Phiên bản không được để trống")
+    private String variantVersion;
 
     private String note;
 
@@ -41,6 +49,7 @@ public class ADProductDetailRequest {
 
     // ID của ảnh được chọn từ sản phẩm mẹ - dùng để liên kết với ProductImage
     private String selectedImageId;
+
     private List<String> newSerials;
 
     private List<ADSerialRequest> serials;

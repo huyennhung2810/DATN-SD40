@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
@@ -27,7 +26,6 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             COALESCE(b.name, ''),
             COALESCE(ts.id, ''),
             COALESCE(ts.sensorType, ''),
-            COALESCE(p.price, 0),
             p.status,
             p.createdDate,
             p.lastModifiedDate
@@ -82,7 +80,6 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             COALESCE(b.name, ''),
             COALESCE(ts.id, ''),
             COALESCE(ts.sensorType, ''),
-            COALESCE(p.price, 0),
             p.status,
             p.createdDate,
             p.lastModifiedDate
@@ -102,11 +99,7 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
         AND (:imageFormat IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.imageFormat) LIKE LOWER(CONCAT('%', :imageFormat, '%'))))
         AND (:videoFormat IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.videoFormat) LIKE LOWER(CONCAT('%', :videoFormat, '%'))))
         AND (:iso IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.iso) LIKE LOWER(CONCAT('%', :iso, '%'))))
-        AND (:minPrice IS NULL OR p.price >= :minPrice)
-        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
-        ORDER BY CASE WHEN :sortBy = 'price' AND :orderBy = 'asc' THEN p.price END ASC,
-                 CASE WHEN :sortBy = 'price' AND :orderBy = 'desc' THEN p.price END DESC,
-                 CASE WHEN :sortBy = 'name' AND :orderBy = 'asc' THEN p.name END ASC,
+        ORDER BY CASE WHEN :sortBy = 'name' AND :orderBy = 'asc' THEN p.name END ASC,
                  CASE WHEN :sortBy = 'name' AND :orderBy = 'desc' THEN p.name END DESC,
                  CASE WHEN :sortBy = 'createdDate' AND :orderBy = 'asc' THEN p.createdDate END ASC,
                  CASE WHEN :sortBy = 'createdDate' AND :orderBy = 'desc' THEN p.createdDate END DESC,
@@ -129,8 +122,6 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
         AND (:imageFormat IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.imageFormat) LIKE LOWER(CONCAT('%', :imageFormat, '%'))))
         AND (:videoFormat IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.videoFormat) LIKE LOWER(CONCAT('%', :videoFormat, '%'))))
         AND (:iso IS NULL OR (p.techSpec IS NOT NULL AND LOWER(p.techSpec.iso) LIKE LOWER(CONCAT('%', :iso, '%'))))
-        AND (:minPrice IS NULL OR p.price >= :minPrice)
-        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
         """
     )
     List<Object[]> searchForCustomer(
@@ -146,8 +137,6 @@ public interface ADProductRepository extends JpaRepository<Product, String> {
             @Param("imageFormat") String imageFormat,
             @Param("videoFormat") String videoFormat,
             @Param("iso") String iso,
-            @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice,
             @Param("sortBy") String sortBy,
             @Param("orderBy") String orderBy,
             Pageable pageable

@@ -1,5 +1,6 @@
 package com.example.datn.core.admin.employee.service.Impl;
 
+import com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest;
 import com.example.datn.core.admin.employee.model.request.ADEmployeeRequest;
 import com.example.datn.core.admin.employee.model.request.ADEmployeeSearchRequest;
 import com.example.datn.core.admin.employee.repository.ADEmployeeRepository;
@@ -56,7 +57,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     }
 
     private void handleUpLoadImage(ADEmployeeRequest req, Employee employee) {
-        if (req.getEmployeeImage() == null || req.getEmployeeImage().isEmpty()) return;
+        if (req.getEmployeeImage() == null || req.getEmployeeImage().isEmpty())
+            return;
 
         FileUploadUtils.assertAllowed(req.getEmployeeImage(), FileUploadUtils.IMAGE_PATTERN);
 
@@ -66,11 +68,11 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 cloudinaryUtils.deleteImage(employee.getEmployeeImage());
             }
 
-            // Upload ảnh mới: Đặt tên folder là 'employees' và publicId dựa trên mã NV hoặc Email
+            // Upload ảnh mới: Đặt tên folder là 'employees' và publicId dựa trên mã NV hoặc
+            // Email
             String imageUrl = cloudinaryUtils.uploadImage(
                     req.getEmployeeImage().getBytes(),
-                    "employees/" + (employee.getCode() != null ? employee.getCode() : System.currentTimeMillis())
-            );
+                    "employees/" + (employee.getCode() != null ? employee.getCode() : System.currentTimeMillis()));
             employee.setEmployeeImage(imageUrl);
         } catch (IOException e) {
             log.error("Lỗi upload ảnh nhân viên: {}", e.getMessage());
@@ -96,10 +98,9 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 request.getKeyword(),
                 request.getStatus(),
                 request.getGender(),
-                roleEnum
-        );
+                roleEnum);
 
-        return  ResponseObject.success(PageableObject.of(page), "Lấy danh sách nhân viên thành công");
+        return ResponseObject.success(PageableObject.of(page), "Lấy danh sách nhân viên thành công");
     }
 
     @Override
@@ -128,7 +129,6 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
             Account account = new Account();
             account.setUsername(generatedCode);
             account.setPassword(passwordEncoder.encode(plainPassword));
-            account.setSalt(null);
 
             RoleConstant role = RoleConstant.STAFF;
             if (StringUtils.hasText(request.getRole())) {
@@ -152,8 +152,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                     request.getName(),
                     generatedCode,
                     generatedCode,
-                    plainPassword
-            );
+                    plainPassword);
 
             return ResponseObject.success(savedEmployee, "Thêm nhân viên và gửi mail thành công!");
 
@@ -166,7 +165,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
     @Override
     @Transactional
     public ResponseObject<?> updateEmployee(ADEmployeeRequest request) {
-        //  Kiểm tra ID nhân viên
+        // Kiểm tra ID nhân viên
         if (!StringUtils.hasText(request.getId())) {
             return ResponseObject.error(HttpStatus.BAD_REQUEST, "Thiếu ID nhân viên");
         }
@@ -187,10 +186,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 account.setUsername(request.getUsername());
             }
 
-
             if (StringUtils.hasText(request.getPassword())) {
                 try {
-                    account.setSalt(null);
                     account.setPassword(passwordEncoder.encode(request.getPassword()));
                 } catch (Exception e) {
                     log.error("Lỗi hash mật khẩu khi cập nhật: {}", e.getMessage());
@@ -209,19 +206,18 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
             accountRepository.save(account);
         }
 
-        //Map thông tin cá nhân của Employee
+        // Map thông tin cá nhân của Employee
         mapRequestToResponse(request, employee);
 
         // Xử lý ảnh (Upload mới/Xóa cũ)
         handleUpLoadImage(request, employee);
 
-        //Lưu thay đổi
+        // Lưu thay đổi
         Employee savedEmployee = employeeRepository.save(employee);
 
         return ResponseObject.success(
                 savedEmployee,
-                "Cập nhật thông tin và tài khoản nhân viên thành công"
-        );
+                "Cập nhật thông tin và tài khoản nhân viên thành công");
     }
 
     @Override
@@ -231,7 +227,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
         EntityStatus newStatus = (employee.getStatus() == EntityStatus.ACTIVE)
-                ? EntityStatus.INACTIVE : EntityStatus.ACTIVE;
+                ? EntityStatus.INACTIVE
+                : EntityStatus.ACTIVE;
 
         employee.setStatus(newStatus);
 
@@ -260,15 +257,13 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
         }
 
         try {
-            account.setPassword(passwordEncoder.encode(newPassword));
-            account.setSalt(null);
-
+            account.setPassword(passwordEncoder.encode(newPassword.trim()));
             account.setOtpCode(null);
             account.setOtpExpiryTime(null);
             accountRepository.save(account);
             return ResponseObject.success(null, "Đổi mật khẩu thành công!");
         } catch (Exception e) {
-            log.error("Lỗi xác thực PBKDF2: {}", e.getMessage());
+            log.error("Lỗi xác thực: {}", e.getMessage());
             return ResponseObject.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống khi đổi mật khẩu");
         }
     }
@@ -280,8 +275,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
         Optional<Employee> employeeOptional = employeeRepository.findByEmail(email);
 
         // Bây giờ gọi orElseThrow chắc chắn sẽ nhận diện được
-        Employee employee = employeeOptional.orElseThrow(() ->
-                new RuntimeException("Email không tồn tại trên hệ thống"));
+        Employee employee = employeeOptional
+                .orElseThrow(() -> new RuntimeException("Email không tồn tại trên hệ thống"));
         Account account = employee.getAccount();
         if (account == null) {
             return ResponseObject.error(HttpStatus.NOT_FOUND, "Tài khoản không tồn tại");
@@ -308,12 +303,10 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
         List<String> headers = List.of(
                 "STT", "Mã NV", "Họ Tên", "Email", "Số điện thoại",
                 "Giới tính", "Ngày sinh", "Số CCCD", "Quê quán",
-                "Tỉnh/Thành phố", "Phường/Xã", "Trạng thái"
-        );
+                "Tỉnh/Thành phố", "Phường/Xã", "Trạng thái");
 
         List<Employee> employees = employeeRepository.findAll();
         AtomicInteger index = new AtomicInteger(1);
-
 
         List<List<Object>> data = employees.stream().map(e -> List.<Object>of(
                 index.getAndIncrement(),
@@ -324,18 +317,20 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 e.getGender() != null ? (e.getGender() ? "Nam" : "Nữ") : "Khác",
                 e.getDateOfBirth() != null
                         ? new SimpleDateFormat("dd/MM/yyyy").format(e.getDateOfBirth())
-                        : "---",                e.getIdentityCard() != null ? e.getIdentityCard() : "---",
+                        : "---",
+                e.getIdentityCard() != null ? e.getIdentityCard() : "---",
                 e.getHometown() != null ? e.getHometown() : "---",
                 e.getProvinceCity() != null ? e.getProvinceCity() : "---",
                 e.getWardCommune() != null ? e.getWardCommune() : "---",
-                e.getStatus() != null ? (e.getStatus().equals(EntityStatus.ACTIVE) ? "Hoạt động" : "Ngừng") : "---"
-        )).collect(Collectors.toList());
+                e.getStatus() != null ? (e.getStatus().equals(EntityStatus.ACTIVE) ? "Hoạt động" : "Ngừng") : "---"))
+                .collect(Collectors.toList());
 
         return ExcelHelper.createExcelStream("Danh sách nhân viên", headers, data);
     }
 
     @Override
-    public ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id, String username) {
+    public ResponseObject<?> checkDuplicate(String identityCard, String phoneNumber, String email, String id,
+            String username) {
         String safeId = (id == null || id.equalsIgnoreCase("undefined") || id.equalsIgnoreCase("null")) ? "" : id;
 
         if (StringUtils.hasText(identityCard)) {
@@ -355,7 +350,8 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
 
         if (StringUtils.hasText(username)) {
             boolean exists = employeeRepository.existsByUsernameCustom(username, safeId);
-            if (exists) return ResponseObject.success(true, "Tên đăng nhập đã tồn tại");
+            if (exists)
+                return ResponseObject.success(true, "Tên đăng nhập đã tồn tại");
         }
 
         return ResponseObject.success(false, "Dữ liệu hợp lệ");
@@ -365,7 +361,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
 
     @Transactional
     @Override
-    public ResponseObject<?> changePassword(String username, com.example.datn.core.admin.employee.model.request.ADChangePasswordRequest request) {
+    public ResponseObject<?> changePassword(String username, ADChangePasswordRequest request) {
         Account account = accountRepository.findByUsername(username);
 
         if (account == null) {
@@ -377,8 +373,7 @@ public class ADEmployeeServiceImpl implements ADEmployeeService {
                 return ResponseObject.error(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không chính xác");
             }
 
-            account.setPassword(passwordEncoder.encode(request.getNewPassword()));
-            account.setSalt(null);
+            account.setPassword(passwordEncoder.encode(request.getNewPassword().trim()));
 
             accountRepository.save(account);
             log.info("Nhân viên {} đã đổi mật khẩu thành công", username);

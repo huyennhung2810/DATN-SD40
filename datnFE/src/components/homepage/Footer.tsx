@@ -65,7 +65,11 @@ const Footer: React.FC = () => {
                 prefix={<MailOutlined />}
                 className="newsletter-input"
               />
-              <Button type="primary" icon={<SendOutlined />} className="newsletter-btn">
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                className="newsletter-btn"
+              >
                 Đăng ký
               </Button>
             </div>
@@ -85,17 +89,22 @@ const Footer: React.FC = () => {
                     src="/logo_hikari.png"
                     alt="Hikari Camera"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/150x50?text=HIKARI";
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/150x50/1a1a2e/ffffff?text=HIKARI";
                     }}
                   />
                 </div>
                 <p className="footer-about">
-                  HIKARI Camera - Địa chỉ mua sắm máy ảnh, ống kính và phụ kiện nhiếp ảnh uy tín hàng đầu Việt Nam.
+                  HIKARI Camera - Địa chỉ mua sắm máy ảnh, ống kính và phụ kiện
+                  nhiếp ảnh uy tín hàng đầu Việt Nam.
                 </p>
                 <div className="footer-contact-list">
                   <div className="contact-item">
                     <EnvironmentOutlined className="contact-icon" />
-                    <span>123 Nguyễn Trãi, Q.1, TP.HCM</span>
+                    <span>
+                      Trường Cao đẳng FPT Polytechnic, Trịnh Văn Bô, Nam Từ
+                      Liêm, Hà Nội
+                    </span>
                   </div>
                   <div className="contact-item">
                     <PhoneOutlined className="contact-icon" />
@@ -103,7 +112,9 @@ const Footer: React.FC = () => {
                   </div>
                   <div className="contact-item">
                     <MailOutlined className="contact-icon" />
-                    <a href="mailto:contact@hikaricamera.vn">contact@hikaricamera.vn</a>
+                    <a href="mailto:contact@hikaricamera.vn">
+                      contact@hikaricamera.vn
+                    </a>
                   </div>
                   <div className="contact-item">
                     <ClockCircleOutlined className="contact-icon" />
@@ -111,13 +122,28 @@ const Footer: React.FC = () => {
                   </div>
                 </div>
                 <div className="footer-social">
-                  <a href="https://facebook.com/hikaricamera" className="social-link" target="_blank" rel="noopener noreferrer">
+                  <a
+                    href="https://facebook.com/hikaricamera"
+                    className="social-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <FacebookOutlined />
                   </a>
-                  <a href="https://instagram.com/hikaricamera" className="social-link" target="_blank" rel="noopener noreferrer">
+                  <a
+                    href="https://instagram.com/hikaricamera"
+                    className="social-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <InstagramOutlined />
                   </a>
-                  <a href="https://youtube.com/hikaricamera" className="social-link" target="_blank" rel="noopener noreferrer">
+                  <a
+                    href="https://youtube.com/hikaricamera"
+                    className="social-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <YoutubeOutlined />
                   </a>
                 </div>
@@ -188,7 +214,10 @@ const Footer: React.FC = () => {
         <div className="container">
           <div className="bottom-content">
             <div className="copyright">
-              <p>&copy; {currentYear} <strong>HIKARI Camera</strong>. All rights reserved.</p>
+              <p>
+                &copy; {currentYear} <strong>HIKARI Camera</strong>. All rights
+                reserved.
+              </p>
             </div>
             <div className="payment-methods">
               <span>Phương thức thanh toán:</span>

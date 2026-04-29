@@ -18,11 +18,12 @@ public class ProductDetailForDiscountController {
     @GetMapping
     public ResponseEntity<?> getAll(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String currentDiscountId, // THÊM PARAM NÀY
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "1000") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        // Truyền keyword xuống Service
-        return ResponseEntity.ok(productDetailForDiscountService.getAll(keyword, pageable));
+        // Truyền cả currentDiscountId xuống Service
+        return ResponseEntity.ok(productDetailForDiscountService.getAll(keyword, currentDiscountId, pageable));
     }
 }

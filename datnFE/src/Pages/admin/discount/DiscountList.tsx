@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -14,7 +14,6 @@ import {
   Row,
   Popconfirm,
   Tooltip,
-  
 } from "antd";
 import {
   PlusOutlined,
@@ -23,6 +22,7 @@ import {
   StopOutlined, // Thêm icon Stop
   ExclamationCircleOutlined, // Thêm icon Cảnh báo
   EditOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,13 +31,13 @@ import dayjs from "dayjs";
 // Import thêm action changeStatusDiscountRequest
 import {
   fetchDiscountsRequest,
-  changeStatusDiscountRequest
+  changeStatusDiscountRequest,
 } from "../../../redux/discount/discountSlice";
 
 import type { RootState, AppDispatch } from "../../../redux/store";
 import type { Discount } from "../../../models/Discount";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const DiscountList: React.FC = () => {
@@ -45,7 +45,7 @@ const DiscountList: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   const { list, loading, totalElements } = useSelector(
-    (state: RootState) => state.discount
+    (state: RootState) => state.discount,
   );
 
   const [params, setParams] = useState({
@@ -125,12 +125,16 @@ const DiscountList: React.FC = () => {
       key: "duration",
       width: 200,
       render: (_: any, record: Discount) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ fontSize: "12px" }}>
-            BĐ: {record.startDate ? dayjs(record.startDate).format("DD/MM/YYYY") : ""}
+            BĐ:{" "}
+            {record.startDate
+              ? dayjs(record.startDate).format("DD/MM/YYYY")
+              : ""}
           </Text>
           <Text style={{ fontSize: "12px" }} type="secondary">
-            KT: {record.endDate ? dayjs(record.endDate).format("DD/MM/YYYY") : ""}
+            KT:{" "}
+            {record.endDate ? dayjs(record.endDate).format("DD/MM/YYYY") : ""}
           </Text>
         </Space>
       ),
@@ -140,121 +144,164 @@ const DiscountList: React.FC = () => {
       dataIndex: "quantity",
       key: "quantity",
       align: "center" as const,
-      },
+    },
 
     {
-  title: "Trạng thái",
-  dataIndex: "status",
-  key: "status",
-  width: 250,
-  render: (status: number, record: Discount) => {
-    let color = "default";
-    let text = "Không xác định";
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 250,
+      render: (status: number, record: Discount) => {
+        let color = "default";
+        let text = "Không xác định";
 
-    switch (status) {
-      case 1:
-        color = "orange";
-        text = "Sắp diễn ra";
-        break;
-      case 2:
-        color = "green";
-        text = "Đang diễn ra";
-        break;
-      case 3:
-        color = "red";
-        text = "Đã kết thúc";
-        break;
-      case 0:
-        color = "gray";
-        text = "Buộc dừng";
-        break;
-    }
+        switch (status) {
+          case 1:
+            color = "orange";
+            text = "Sắp diễn ra";
+            break;
+          case 2:
+            color = "green";
+            text = "Đang diễn ra";
+            break;
+          case 3:
+            color = "red";
+            text = "Đã kết thúc";
+            break;
+          case 0:
+            color = "gray";
+            text = "Buộc dừng";
+            break;
+        }
 
-    return (
-      <Space size="small">
-        <Tag color={color}>{text}</Tag>
+        return (
+          <Space size="small">
+            <Tag color={color}>{text}</Tag>
 
-        {(status === 1 || status === 2) && (
-          <Popconfirm
-            title="Buộc dừng đợt giảm giá này?"
-            onConfirm={() => confirmStop(record.id)}
-            okText="Dừng"
-            cancelText="Hủy"
-          >
-            <Button
-              type="primary"
-              danger
-              size="small"
-              icon={<StopOutlined />}
-            >
-              Buộc dừng
-            </Button>
-          </Popconfirm>
-        )}
-      </Space>
-    );
-  },
-},
+            {(status === 1 || status === 2) && (
+              <Popconfirm
+                title="Buộc dừng đợt giảm giá này?"
+                onConfirm={() => confirmStop(record.id)}
+                okText="Dừng"
+                cancelText="Hủy"
+              >
+                <Button
+                  type="primary"
+                  danger
+                  size="small"
+                  icon={<StopOutlined />}
+                >
+                  Buộc dừng
+                </Button>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
+    },
 
-{
-  title: "Hành động",
-  key: "action",
-  align: "center" as const,
-  render: (_: any, record: Discount) => (
-    <Tooltip title="Chỉnh sửa">
-      <Button
-        type="text"
-        icon={<EditOutlined style={{ color: "#1890ff" }} />}
-        onClick={() => navigate(`/discount/edit/${record.id}`)}
-      />
-    </Tooltip>
-  ),
-},
-
+    {
+      title: "Hành động",
+      key: "action",
+      align: "center" as const,
+      render: (_: any, record: Discount) => (
+        <Tooltip title="Chỉnh sửa">
+          <Button
+            type="text"
+            icon={<EditOutlined style={{ color: "#1890ff" }} />}
+            onClick={() => navigate(`/discount/edit/${record.id}`)}
+          />
+        </Tooltip>
+      ),
+    },
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
-      <Card bordered={false} style={{ borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <Space direction="vertical" size={0}>
-            <Title level={3} style={{ margin: 0 }}>Quản lý Đợt Giảm Giá</Title>
-            <Text type="secondary">Cấu hình chương trình khuyến mãi sản phẩm</Text>
-          </Space>
-          <Button
-            type="primary"
-            size="large"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/discount/create")}
-            style={{ borderRadius: "8px" }}
+    <div>
+      <div
+        className="solid-card"
+        style={{
+          padding: "var(--spacing-lg)",
+          marginBottom: "12px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "var(--radius-md)",
+            }}
           >
-            Tạo đợt giảm giá mới
-          </Button>
-        </div>
+            <CalendarOutlined
+              style={{ fontSize: "24px", color: "var(--color-primary)" }}
+            />
+          </div>
 
-        {/* Filter */}
-        <Card style={{ marginBottom: 16, backgroundColor: "#fafafa" }} size="small" bordered={false}>
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý đợt giảm giá
+            </Typography.Title>
+
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Cấu hình và theo dõi chương trình khuyến mãi sản phẩm
+            </Typography.Text>
+          </div>
+        </Space>
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate("/discount/create")}
+          style={{
+            borderRadius: "20px",
+            height: "38px",
+            fontSize: "14px",
+          }}
+        >
+          Tạo đợt giảm giá mới
+        </Button>
+      </div>
+      <Card
+        variant="borderless"
+        style={{ borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+      >
+        <Card
+          style={{ marginBottom: 16, backgroundColor: "#fafafa" }}
+          size="small"
+          variant="borderless"
+        >
           <Row gutter={[16, 16]} align="bottom">
             <Col xs={24} md={8}>
-              <Text strong style={{ fontSize: "12px" }}>Tìm kiếm</Text>
+              <Text strong style={{ fontSize: "12px" }}>
+                Tìm kiếm
+              </Text>
               <Input
                 placeholder="Mã hoặc tên chương trình..."
                 prefix={<SearchOutlined />}
                 allowClear
                 value={params.keyword}
-                onChange={(e) => setParams({ ...params, keyword: e.target.value, page: 0 })}
+                onChange={(e) =>
+                  setParams({ ...params, keyword: e.target.value, page: 0 })
+                }
               />
             </Col>
 
             <Col xs={12} md={4}>
-              <Text strong style={{ fontSize: "12px" }}>Trạng thái</Text>
+              <Text strong style={{ fontSize: "12px" }}>
+                Trạng thái
+              </Text>
               <Select
                 style={{ width: "100%" }}
                 placeholder="Tất cả"
                 allowClear
                 value={params.status}
-                onChange={(val) => setParams({ ...params, status: val, page: 0 })}
+                onChange={(val) =>
+                  setParams({ ...params, status: val, page: 0 })
+                }
               >
                 <Select.Option value={1}>Sắp diễn ra</Select.Option>
                 <Select.Option value={2}>Đang diễn ra</Select.Option>
@@ -264,24 +311,38 @@ const DiscountList: React.FC = () => {
             </Col>
 
             <Col xs={24} md={8}>
-              <Text strong style={{ fontSize: "12px" }}>Khoảng ngày</Text>
+              <Text strong style={{ fontSize: "12px" }}>
+                Khoảng ngày
+              </Text>
               <RangePicker
                 style={{ width: "100%" }}
                 format="DD/MM/YYYY"
-                value={params.startDate && params.endDate ? [dayjs(params.startDate), dayjs(params.endDate)] : null}
+                value={
+                  params.startDate && params.endDate
+                    ? [dayjs(params.startDate), dayjs(params.endDate)]
+                    : null
+                }
                 onChange={(dates) => {
                   setParams({
                     ...params,
                     page: 0,
-                    startDate: dates?.[0] ? dates[0].startOf("day").valueOf() : null,
-                    endDate: dates?.[1] ? dates[1].endOf("day").valueOf() : null,
+                    startDate: dates?.[0]
+                      ? dates[0].startOf("day").valueOf()
+                      : null,
+                    endDate: dates?.[1]
+                      ? dates[1].endOf("day").valueOf()
+                      : null,
                   });
                 }}
               />
             </Col>
 
             <Col xs={24} md={4}>
-              <Button style={{ width: "100%" }} icon={<ReloadOutlined />} onClick={handleReset}>
+              <Button
+                style={{ width: "100%" }}
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+              >
                 Làm mới
               </Button>
             </Col>
@@ -298,7 +359,8 @@ const DiscountList: React.FC = () => {
             total: totalElements,
             current: params.page + 1,
             pageSize: params.size,
-            onChange: (page, size) => setParams({ ...params, page: page - 1, size }),
+            onChange: (page, size) =>
+              setParams({ ...params, page: page - 1, size }),
             showSizeChanger: true,
             pageSizeOptions: ["5", "10", "20", "50"],
           }}

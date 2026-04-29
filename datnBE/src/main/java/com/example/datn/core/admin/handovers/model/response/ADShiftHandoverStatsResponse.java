@@ -10,6 +10,9 @@ import java.math.BigDecimal;
 public class ADShiftHandoverStatsResponse {
 
     private String handoverId;
-    private BigDecimal initialCash; //tiền đầu ca
+    private String scheduleId;
+    private BigDecimal initialCash; // tiền đầu ca
+    private BigDecimal totalCashSales; // doanh thu tiền mặt
+    private BigDecimal totalBankSales; // doanh thu chuyển khoản
 
 }

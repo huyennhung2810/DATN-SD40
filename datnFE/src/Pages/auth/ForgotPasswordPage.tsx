@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Typography, Steps, notification } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Typography,
+  Steps,
+  notification,
+  Modal,
+} from "antd";
 import { MailOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
 import authApi from "../../api/auth/authApi";
@@ -10,6 +18,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [otpForm] = Form.useForm();
   const navigate = useNavigate();
 
   // Bước 1: Gửi OTP
@@ -120,7 +129,12 @@ const ForgotPasswordPage: React.FC = () => {
         )}
 
         {currentStep === 1 && (
-          <Form layout="vertical" onFinish={onVerifyOtp} size="large">
+          <Form
+            layout="vertical"
+            onFinish={onVerifyOtp}
+            size="large"
+            form={otpForm}
+          >
             <Text
               type="secondary"
               style={{ display: "block", marginBottom: 16, fontSize: 13 }}
@@ -178,21 +192,35 @@ const ForgotPasswordPage: React.FC = () => {
                 placeholder="Nhập lại mật khẩu"
               />
             </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                block
-                loading={loading}
-                style={{
-                  background: "#d32f2f",
-                  borderColor: "#d32f2f",
-                  height: 42,
-                }}
-              >
-                Đặt lại mật khẩu
-              </Button>
-            </Form.Item>
+            <Button
+              type="primary"
+              block
+              loading={loading}
+              style={{
+                background: "#d32f2f",
+                borderColor: "#d32f2f",
+                height: 42,
+              }}
+              onClick={() => {
+                otpForm
+                  .validateFields()
+                  .then((values) => {
+                    Modal.confirm({
+                      title: "Xác nhận đặt lại mật khẩu",
+                      content:
+                        "Bạn có chắc chắn muốn đặt lại mật khẩu cho tài khoản này?",
+                      okText: "Đặt lại",
+                      okType: "danger",
+                      cancelText: "Huỷ",
+                      centered: true,
+                      onOk: () => onVerifyOtp(values),
+                    });
+                  })
+                  .catch(() => {}); // validation error hiện tại ô input
+              }}
+            >
+              Đặt lại mật khẩu
+            </Button>
           </Form>
         )}
 

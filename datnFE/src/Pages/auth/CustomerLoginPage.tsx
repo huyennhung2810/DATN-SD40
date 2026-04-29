@@ -1,7 +1,7 @@
 import React from "react";
 import { Form, Input, Button, Typography, Divider, Space } from "antd";
 import { UserOutlined, LockOutlined, GithubFilled } from "@ant-design/icons";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { authActions } from "../../redux/auth/authSlice";
 import type { RootState } from "../../redux/store";
@@ -11,20 +11,40 @@ const { Title, Text } = Typography;
 
 const CustomerLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+
+  // Lấy trang chuyển hướng sau khi đăng nhập
+  // Ưu tiên kiểm tra trạng thái checkout (đặt hàng ngay sau khi đăng nhập)
+  const locationState = location.state as any;
+  const checkoutAfterLogin = locationState?.checkoutAfterLogin;
+  const from = locationState?.from || "/client";
+
+  // Sau khi đăng nhập: ưu tiên chuyển đến checkout nếu được yêu cầu
+  const getRedirectPath = () => {
+    if (checkoutAfterLogin) {
+      return "/client/checkout";
+    }
+    return from;
+  };
 
   const onFinish = (values: { username: string; password: string }) => {
     dispatch(
       authActions.login({
         data: values,
-        navigate: () => navigate("/client"),
+        navigate: () => navigate(getRedirectPath(), { replace: true }),
       }),
     );
   };
 
   const handleOAuth2 = (provider: "google" | "github") => {
-    window.location.href = getSocialLoginUrl(provider, "CUSTOMER");
+    // Truyền trạng thái checkout qua URL cho OAuth2 callback
+    const stateParam = checkoutAfterLogin
+      ? Buffer.from(JSON.stringify({ checkoutAfterLogin: true })).toString("base64")
+      : "";
+    const redirectUrl = getSocialLoginUrl(provider, "CUSTOMER") + (stateParam ? `&state=${stateParam}` : "");
+    window.location.href = redirectUrl;
   };
 
   return (
@@ -34,7 +54,14 @@ const CustomerLoginPage: React.FC = () => {
           <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
             📷 Hikari Camera
           </Title>
-          <Text type="secondary">Chào mừng bạn quay trở lại!</Text>
+          {checkoutAfterLogin && (
+            <Text type="secondary" style={{ display: "block", marginTop: 4 }}>
+              Đăng nhập để tiếp tục thanh toán
+            </Text>
+          )}
+          {!checkoutAfterLogin && (
+            <Text type="secondary">Chào mừng bạn quay trở lại!</Text>
+          )}
         </div>
 
         {error && <div style={errorStyle}>{error}</div>}
@@ -68,7 +95,7 @@ const CustomerLoginPage: React.FC = () => {
               loading={loading}
               style={{ height: 42 }}
             >
-              Đăng nhập ngay
+              Đăng nhập và tiếp tục thanh toán
             </Button>
           </Form.Item>
 
@@ -80,7 +107,7 @@ const CustomerLoginPage: React.FC = () => {
         </Form>
 
         <Divider plain style={{ fontSize: 12, color: "#aaa" }}>
-          Đăng nhập nhanh qua
+          Hoặc đăng nhập nhanh với
         </Divider>
         <Space style={{ width: "100%" }} orientation="vertical">
           <Button

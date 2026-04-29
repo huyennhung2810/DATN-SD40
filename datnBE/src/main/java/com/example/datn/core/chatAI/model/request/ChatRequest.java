@@ -5,5 +5,7 @@ import lombok.Data;
 @Data
 public class ChatRequest {
     private String message;
-    private String sessionId;  // dùng để định danh cuộc hội thoại
+    private String sessionId; // dùng để định danh cuộc hội thoại
+    private String userId; // phân biệt user
+    private String customerName; // tên hiển thị của khách hàng
 }

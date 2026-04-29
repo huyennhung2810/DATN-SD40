@@ -1,11 +1,15 @@
 package com.example.datn.core.admin.pos.controller;
 
+import com.example.datn.core.admin.pos.model.request.CheckoutPosRequest;
 import com.example.datn.core.admin.pos.service.ADPosOrderService;
 import com.example.datn.core.common.base.ResponseObject;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/pos/orders")
@@ -23,11 +27,6 @@ public class POSOrderController {
     public ResponseEntity<?> addProductToOrder(@PathVariable String orderId,
             @RequestParam String productDetailId, @RequestParam(defaultValue = "1") int quantity) {
         return ResponseEntity.ok(posOrderService.addProductToOrder(orderId, productDetailId, quantity));
-    }
-
-    @PostMapping("/{orderId}/add-by-barcode")
-    public ResponseEntity<?> addProductByBarcode(@PathVariable String orderId, @RequestParam String barcode) {
-        return ResponseEntity.ok(posOrderService.addProductByBarcode(orderId, barcode));
     }
 
     @PostMapping("/{orderId}/details/{detailId}/assign-serials")
@@ -68,8 +67,8 @@ public class POSOrderController {
 
     @PostMapping("/{orderId}/checkout")
     public ResponseEntity<?> checkoutOrder(@PathVariable String orderId,
-                                           @RequestParam(defaultValue = "TIEN_MAT") String paymentMethod) {
-        return ResponseEntity.ok(posOrderService.checkoutOrder(orderId, paymentMethod));
+            @RequestBody(required = false) CheckoutPosRequest request) {
+        return ResponseEntity.ok(posOrderService.checkoutOrder(orderId, request));
     }
 
     @DeleteMapping("/{orderId}")
@@ -83,8 +82,9 @@ public class POSOrderController {
     }
 
     @GetMapping("/applicable-vouchers")
-    public ResponseEntity<?> getApplicableVouchers(@RequestParam java.math.BigDecimal orderTotal) {
-        return ResponseEntity.ok(posOrderService.getApplicableVouchers(orderTotal));
+    public ResponseEntity<?> getApplicableVouchers(@RequestParam java.math.BigDecimal orderTotal,
+            @RequestParam(required = false) String customerId) {
+        return ResponseEntity.ok(posOrderService.getApplicableVouchers(orderTotal, customerId));
     }
 
     @PostMapping("/{orderId}/apply-voucher")
@@ -97,13 +97,28 @@ public class POSOrderController {
         return ResponseEntity.ok(posOrderService.removeVoucher(orderId));
     }
 
-    @GetMapping("/{orderId}/export-invoice")
-    public ResponseEntity<byte[]> exportInvoice(@PathVariable String orderId) {
-        byte[] pdfBytes = posOrderService.exportInvoiceToPdf(orderId);
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "invoice_" + orderId + ".pdf");
-        
-        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
+    @PostMapping("/{orderId}/vnpay-url")
+    public ResponseEntity<?> createVnPayUrl(@PathVariable String orderId,
+            @RequestBody(required = false) CheckoutPosRequest body,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(posOrderService.createVnPayUrl(orderId, body, request));
+    }
+
+    @GetMapping("/vnpay-return")
+    public ResponseEntity<Map<String, Object>> posVnPayReturn(@RequestParam Map<String, String> params) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            posOrderService.handlePosVnPayReturn(params);
+            String responseCode = params.get("vnp_ResponseCode");
+            result.put("success", "00".equals(responseCode));
+            result.put("responseCode", responseCode);
+            result.put("orderId", params.get("vnp_TxnRef"));
+            result.put("transactionNo", params.get("vnp_TransactionNo"));
+            result.put("amount", params.get("vnp_Amount"));
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(result);
     }
 }

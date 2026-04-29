@@ -2,6 +2,7 @@ import React from "react";
 import { Card, Button, Tag, Typography, Tooltip } from "antd";
 import { ShoppingCartOutlined, HeartOutlined, EyeOutlined, CheckCircleFilled } from "@ant-design/icons";
 import type { ProductResponse } from "../../models/product";
+import { useNavigate } from "react-router-dom";
 
 const { Text, Title } = Typography;
 
@@ -13,6 +14,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddToCart }) => {
   // Check if product is new (created within 14 days)
+  const navigate = useNavigate();
   const isNew = product.createdDate
     ? Date.now() - product.createdDate < 14 * 24 * 60 * 60 * 1000
     : false;
@@ -26,7 +28,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
       maximumFractionDigits: 0,
     }).format(price);
   };
-
+ const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();   
+    navigate(`/client/product/${product.id}`); 
+  };
   // Get primary image
   const primaryImage = product.imageUrls && product.imageUrls.length > 0
     ? product.imageUrls[0]
@@ -40,14 +45,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onAddToCart) {
-      onAddToCart(product);
-    } else {
-      console.log("Add to cart:", product.id);
-    }
-  };
 
   const handleAddToWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -76,9 +73,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
                 MỚI
               </Tag>
             )}
-            {product.price && product.price < 10000000 && (
-              <Tag color="orange" className="badge-hot">
-                GIÁ TỐT
+            {product.hasActiveSaleCampaign && (
+              <Tag color="red" className="badge-sale">
+                GIẢM GIÁ
               </Tag>
             )}
           </div>
@@ -134,9 +131,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
         {/* Price Section */}
         <div className="price-section mt-auto">
           <div className="sale-price">
-            <Text strong className="price-value">
-              {formatPrice(product.price)}
-            </Text>
+            {product.originalPrice && product.originalPrice !== product.price ? (
+              <>
+                <Text strong className="price-value">
+                  {formatPrice(product.price)}
+                </Text>
+                <Text delete type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>
+                  {formatPrice(product.originalPrice)}
+                </Text>
+              </>
+            ) : (
+              <Text strong className="price-value">
+                {formatPrice(product.price)}
+              </Text>
+            )}
           </div>
         </div>
 
@@ -203,7 +211,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
           z-index: 2;
         }
 
-        .badge-new, .badge-hot {
+        .badge-new, .badge-sale {
           font-size: 10px;
           font-weight: 600;
           padding: 2px 8px;

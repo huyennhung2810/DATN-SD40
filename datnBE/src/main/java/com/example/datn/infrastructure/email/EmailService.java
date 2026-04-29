@@ -14,13 +14,7 @@ import org.thymeleaf.context.Context;
 
 import java.util.List;
 
-
 @Slf4j
-
-
-
-
-
 @Service
 public class EmailService {
     @Autowired
@@ -28,6 +22,8 @@ public class EmailService {
 
     @Autowired
     private SpringTemplateEngine templateEngine;
+    @Autowired
+    private JavaMailSender javaMailSender;
 
     @Async
     public void sendAccountEmail(String toEmail, String fullName, String staffCode, String username, String password) {
@@ -122,6 +118,41 @@ public class EmailService {
         } catch (Exception e) {
             e.printStackTrace();
 
+        }
+    }
+
+    @Async
+    public void sendNewStaffEmail(String toEmail, String fullName, String staffCode, String username, String password) throws MessagingException {
+        Context context = new Context();
+        context.setVariable("fullName", fullName);
+        context.setVariable("staffCode", staffCode);
+        context.setVariable("username", username);
+        context.setVariable("password", password);
+
+        String html = templateEngine.process("new_staff_email", context);
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true,"UTF-8");
+        helper.setTo(toEmail);
+        helper.setSubject("Thông tin tài khoản mới");
+        helper.setText(html, true); // HTML
+        mailSender.send(message);
+    }
+
+    public void sendEmail(String to, String subject, String htmlContent) {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+            log.info("Đã gửi email thành công tới: {}", to);
+        } catch (MessagingException e) {
+            log.error("Lỗi khi gửi email tới {}: {}", to, e.getMessage());
+            throw new RuntimeException("Không thể gửi email", e);
         }
     }
 }

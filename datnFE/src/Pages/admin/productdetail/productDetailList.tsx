@@ -1,24 +1,43 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import { CameraOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
-  Table, Card, Button, Input, Tag, Space, Typography, Form, Drawer,
-  Radio, Select, InputNumber, notification,
-  Upload,
+  Button,
+  Card,
+  Drawer,
+  Dropdown,
+  Form,
+  Input,
+  InputNumber,
+  List,
   Modal,
+  notification,
+  Radio,
+  Select,
+  Space,
   Spin,
-  List
+  Table,
+  Tag,
+  Typography,
+  Upload,
 } from "antd";
-import { EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
-import { productDetailActions } from "../../../redux/productdetail/productDetailSlice";
 import type { ColumnsType } from "antd/es/table";
-import type { ProductDetailResponse } from "../../../models/productdetail";
-import type { RootState } from "../../../redux/store";
-import { colorActions } from "../../../redux/color/colorSlice";
-import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import type { MenuProps } from "antd/es/menu";
+import { debounce } from "lodash";
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import * as XLSX from "xlsx";
-import {debounce} from "lodash";
+import type { ProductDetailResponse } from "../../../models/productdetail";
+import {
+  getProductVersionDisplayName,
+  ProductVersion,
+  ProductVersionOptions,
+} from "../../../models/productVersion";
+import { colorActions } from "../../../redux/color/colorSlice";
+import { productDetailActions } from "../../../redux/productdetail/productDetailSlice";
+import { storageCapacityActions } from "../../../redux/storage/storageSlice";
+import type { RootState } from "../../../redux/store";
+import BatchCreateVariantModal from "../../../components/admin/variant/BatchCreateVariantModal";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const ProductDetailPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -28,34 +47,61 @@ const ProductDetailPage: React.FC = () => {
   const [selectedSerials, setSelectedSerials] = useState<any[]>([]);
   const [viewingProductName, setViewingProductName] = useState("");
   const [loadingSerials, setLoadingSerials] = useState(false);
-  
+  const isSerialInOrder = (status: string) => String(status ?? "").toUpperCase() === "IN_ORDER";
+  const isSerialSold = (status: string) => String(status ?? "").toUpperCase() === "SOLD" || String(status ?? "").toUpperCase() === "INACTIVE";
+
+  // --- BATCH CREATE STATE ---
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+
+  // --- ADD MENU ---
+  const addMenuItems: MenuProps["items"] = [
+    {
+      key: "single",
+      label: "Thêm 1 biến thể",
+      onClick: () => openDrawer(),
+    },
+    {
+      key: "batch",
+      label: "Thêm hàng loạt biến thể",
+      onClick: () => openBatchModal(),
+    },
+  ];
+
   // 1. Lấy dữ liệu Màu sắc và Dung lượng từ Redux (kèm fallback mảng rỗng để tránh lỗi map)
-  const { list: colors = [] } = useSelector((state: RootState) => state.color || {});
-  const { list: capacities = [] } = useSelector((state: RootState) => state.storage || {});
+  const { list: colors = [] } = useSelector(
+    (state: RootState) => state.color || {}
+  );
+  const { list: capacities = [] } = useSelector(
+    (state: RootState) => state.storage || {}
+  );
 
   const handleViewSerials = (record: ProductDetailResponse) => {
     if (!record || !record.id) return;
 
     setSerialModalOpen(true);
-    setViewingProductName(`${record.productName || 'Sản phẩm'} - ${record.version || ''}`);
+    setViewingProductName(`${record.productName || "Sản phẩm"} - ${record.version || ""}`);
     setLoadingSerials(true);
 
     dispatch(
       productDetailActions.getById({
         id: record.id,
-        onSuccess: (response: any) => { 
+        onSuccess: (response: any) => {
           const productDetail = response.data ? response.data : response;
 
           if (productDetail && productDetail.serials) {
-            // Lọc và giữ lại nguyên object thay vì chỉ lấy string
             const serialsList = productDetail.serials
               .filter((s: any) => s.serialNumber && String(s.serialNumber).trim() !== "")
               .map((s: any) => ({
                 serialNumber: String(s.serialNumber),
-                status: s.status || s.serialStatus, // Tùy BE trả về trường nào
-                createdDate: s.createdDate
+                
+                // --- THAY ĐỔI Ở ĐÂY ---
+                // Ưu tiên lấy serialStatus (IN_ORDER, SOLD, AVAILABLE) từ BE
+                status: s.serialStatus || s.status, 
+                // -----------------------
+                
+                createdDate: s.createdDate,
               }));
-            
+
             setSelectedSerials(serialsList);
           } else {
             setSelectedSerials([]);
@@ -65,18 +111,23 @@ const ProductDetailPage: React.FC = () => {
       })
     );
   };
-  
+
   // 2. Lấy danh sách SPCT (list) và Sản phẩm cha (productList) từ productDetailSlice
-  const { 
-    list = [], 
-    productList = [], 
-    loading, 
-    totalElements = 0 
+  const {
+    list = [],
+    productList = [],
+    loading,
+    totalElements = 0,
   } = useSelector((state: RootState) => state.productDetail || {});
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [filter, setFilter] = useState({ page: 0, size: 10, keyword: "", status: undefined });
+  const [filter, setFilter] = useState({
+    page: 0,
+    size: 10,
+    keyword: "",
+    status: undefined,
+  });
 
   // Fetch dữ liệu cho bảng
   const fetchData = useCallback(() => {
@@ -84,17 +135,19 @@ const ProductDetailPage: React.FC = () => {
   }, [dispatch, filter]);
 
   const handleSearch = useCallback(
-  debounce((value: string) => {
-    setFilter(prev => ({
-      ...prev,
-      keyword: value.trim(),
-      page: 0
-    }));
-  }, 500),
-  []
-);
+    debounce((value: string) => {
+      setFilter((prev) => ({
+        ...prev,
+        keyword: value.trim(),
+        page: 0,
+      }));
+    }, 500),
+    []
+  );
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Fetch dữ liệu cho các Select trong Form khi component mount
   useEffect(() => {
@@ -104,161 +157,313 @@ const ProductDetailPage: React.FC = () => {
   }, [dispatch]);
 
   const generateCode = () => {
-        return `SPCT${Date.now()}`;
-    };
-    
-  // Mở Drawer và fill dữ liệu
-  const openDrawer = (record?: ProductDetailResponse) => {
-  formManager.resetFields();
-  setEditingId(record?.id || null);
-
-  if (record?.id) {
-    dispatch(
-      productDetailActions.getById({
-        id: record.id,
-        onSuccess: (data: ProductDetailResponse) => {
-          const serialText = data.serials?.map((s) => s.serialNumber).join('\n') || "";
-
-          formManager.setFieldsValue({
-            ...data,
-            productId: data.productId ? String(data.productId) : undefined,
-            colorId: data.colorId ? String(data.colorId) : undefined,
-            storageCapacityId: data.storageCapacityId ? String(data.storageCapacityId) : undefined,
-            serialList: serialText,
-            serialCode: data.serials?.[0]?.code || ""
-          });
-        },
-      })
-    );
-  } else {
-    formManager.setFieldsValue({
-      code: generateCode(),
-      status: 'ACTIVE',
-      quantity: 0
-    });
-  }
-
-  setDrawerOpen(true);
-};
-
-const handleImportExcel = (file: any) => {
-  const reader = new FileReader();
-  
-  reader.onload = (e: any) => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    // lấy cột đầu tiên làm serial
-    const serials = jsonData
-      .map((row: any) => row[0])
-      .filter((v: any) => v)
-      .join("\n");
-
-    formManager.setFieldsValue({
-      serialList: serials,
-      quantity: serials.split("\n").length
-    });
+    return `SPCT${Date.now()}`;
   };
 
-  reader.readAsArrayBuffer(file);
+  // Mở modal batch create (sản phẩm được chọn bên trong modal)
+  const openBatchModal = () => {
+    setBatchModalOpen(true);
+  };
 
-  return false;
-};
+  // Mở Drawer và fill dữ liệu
+  const openDrawer = (record?: ProductDetailResponse) => {
+    formManager.resetFields();
+    setEditingId(record?.id || null);
+
+    if (record?.id) {
+      dispatch(
+        productDetailActions.getById({
+          id: record.id,
+          onSuccess: (data: ProductDetailResponse) => {
+            const serialText =
+              data.serials?.map((s) => s.serialNumber).join("\n") || "";
+
+            formManager.setFieldsValue({
+              ...data,
+              productId: data.productId ? String(data.productId) : undefined,
+              colorId: data.colorId ? String(data.colorId) : undefined,
+              storageCapacityId: data.storageCapacityId
+                ? String(data.storageCapacityId)
+                : undefined,
+              serialList: serialText,
+              serialCode: data.serials?.[0]?.code || "",
+              // LEVEL 1: Set variantVersion với fallback về BODY_ONLY nếu không có
+              variantVersion: data.variantVersion || ProductVersion.BODY_ONLY,
+            });
+          },
+        })
+      );
+    } else {
+      formManager.setFieldsValue({
+        code: generateCode(),
+        status: "ACTIVE",
+        quantity: 0,
+        // LEVEL 1: Default variantVersion là BODY_ONLY khi tạo mới
+        variantVersion: ProductVersion.BODY_ONLY,
+      });
+    }
+
+    setDrawerOpen(true);
+  };
+
+  const handleImportExcel = (file: any) => {
+    const reader = new FileReader();
+
+    reader.onload = (e: any) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // lấy cột đầu tiên làm serial
+      const serials = jsonData
+        .map((row: any) => row[0])
+        .filter((v: any) => v)
+        .join("\n");
+
+      formManager.setFieldsValue({
+        serialList: serials,
+        quantity: serials.split("\n").length,
+      });
+    };
+
+    reader.readAsArrayBuffer(file);
+
+    return false;
+  };
 
   // Xử lý khi Submit Form
   const onFinish = (values: any) => {
-    const rawSerials = values.serialList
-    ? values.serialList.split(/\n/).map((s: string) => s.trim()).filter((s: string) => s !== "")
-    : [];
+    // 1. GIỮ NGUYÊN KIỂU STRING CHO CÁC ID (Vì BE dùng UUID)
+    const formattedValues = {
+      ...values,
+      productId: values.productId || null,
+      colorId: values.colorId || null,
+      storageCapacityId: values.storageCapacityId || null,
+      salePrice: Number(values.salePrice), // Chú ý: Chỉ ép kiểu số cho Giá bán
+    };
 
-  // 2. Loại bỏ các mã trùng lặp do người dùng nhập nhầm trong form
-  const uniqueSerials = Array.from(new Set<string>(rawSerials));
+    let payload: any = { ...formattedValues };
 
-  if (uniqueSerials.length !== rawSerials.length) {
-    notification.warning({ message: "Đã tự động loại bỏ các mã Serial nhập trùng!" });
-  }
+    // --- NẾU LÀ THÊM MỚI (ADD) ---
+    if (!editingId) {
+      const rawSerials = values.serialList
+        ? values.serialList
+            .split(/\n/)
+            .map((s: string) => s.trim())
+            .filter((s: string) => s !== "")
+        : [];
 
-  const serials = uniqueSerials.map((sn: string) => ({
-    serialNumber: sn,
-    status: "ACTIVE"
-  }));
+      // Loại bỏ các mã trùng lặp do người dùng nhập nhầm trong form
+      const uniqueSerials = Array.from(new Set<string>(rawSerials));
 
-  // 4. Đóng gói Payload
-  const payload = {
-    ...values,
-    quantity: serials.length, // Số lượng tồn kho TỰ ĐỘNG BẰNG số lượng Serial
-    serials: serials // Gửi kèm mảng Serial
-  };
+      if (uniqueSerials.length !== rawSerials.length) {
+        notification.warning({
+          message: "Đã tự động loại bỏ các mã Serial nhập trùng!",
+        });
+      }
 
-  // Xóa rác
-  delete payload.serialList;
-  delete payload.serialCode;
-
-    if (editingId) {
-      dispatch(productDetailActions.update({ 
-        id: editingId, 
-        data: payload, 
-        navigate: () => { setDrawerOpen(false); fetchData(); } 
+      const serials = uniqueSerials.map((sn: string) => ({
+        serialNumber: sn,
+        status: "ACTIVE",
       }));
+
+      // Đóng gói Payload
+      payload = {
+        ...payload,
+        quantity: serials.length, // Số lượng tồn kho TỰ ĐỘNG BẰNG số lượng Serial
+        serials: serials, // Gửi kèm mảng Serial
+      };
     } else {
-      dispatch(productDetailActions.add({ 
-        data: payload, 
-        navigate: () => { setDrawerOpen(false); fetchData(); } 
-      }));
+      payload.quantity = values.quantity;
+      delete payload.serials;
+    }
+    delete payload.serialList;
+    delete payload.serialCode;
+    
+    // --- GỌI API ---
+    if (editingId) {
+      dispatch(
+        productDetailActions.update({
+          id: editingId,
+          data: payload,
+          navigate: () => {
+            setDrawerOpen(false);
+            fetchData();
+            notification.success({ message: "Cập nhật thành công!" });
+          },
+          onError: (error: any) => {
+            console.log("=== CHI TIẾT LỖI UPDATE ===", error);
+            const errorMessage = 
+              error?.response?.data?.message ||
+              error?.data?.message ||
+              error?.message ||
+              (typeof error === 'string' ? error : "Lỗi không xác định khi cập nhật!");
+            
+            notification.error({
+              message: "Cập nhật thất bại",
+              description: errorMessage,
+            });
+          }
+        })
+      );
+    } else {
+      dispatch(
+        productDetailActions.add({
+          data: payload,
+          navigate: () => {
+            setDrawerOpen(false);
+            fetchData();
+            notification.success({ message: "Thêm mới thành công!" });
+          },
+          onError: (error: any) => {
+            console.log("=== CHI TIẾT LỖI ADD ===", error);
+            // SỬA LẠI ĐOẠN NÀY ĐỂ HỨNG MỌI CẤU TRÚC LỖI
+            const errorMessage = 
+              error?.response?.data?.message || 
+              error?.data?.message || 
+              error?.message || 
+              (typeof error === 'string' ? error : "Lỗi không xác định khi thêm mới!");
+
+            notification.error({
+              message: "Thêm mới thất bại",
+              description: errorMessage,
+            });
+          }
+        })
+      );
     }
   };
-
+  
   // Cấu hình cột cho bảng
   const columns: ColumnsType<ProductDetailResponse> = [
-    { title: "STT", align: "center", width: 60, render: (_, __, i) => filter.page * filter.size + i + 1 },
-    { title: "Mã phiên bản", render: r => <Text strong>{r.code}</Text> },
-    { title: "Sản phẩm", dataIndex: "productName", render: v => <Text strong>{v || "---"}</Text> },
+    {
+      title: "STT",
+      align: "center",
+      width: 60,
+      render: (_, __, i) => filter.page * filter.size + i + 1,
+    },
+    { title: "Mã SPCT", render: (r) => <Text strong>{r.code}</Text> },
+    {
+      title: "Sản phẩm",
+      dataIndex: "productName",
+      render: (v) => <Text strong>{v || "---"}</Text>,
+    },
+    {
+      title: "Phiên bản",
+      // LEVEL 1: Hiển thị variantVersion (Body Only / Kit 18-45 / Kit 18-150)
+      render: (r) => (
+        <Tag color="green" style={{ fontWeight: 600 }}>
+          {getProductVersionDisplayName(r.variantVersion) || "Body Only"}
+        </Tag>
+      ),
+    },
     {
       title: "Cấu hình",
-      render: r => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ color: '#1890ff' }}>{r.version}</Text>
-          <Tag color="blue">{r.colorName || "---"} | {r.storageCapacityName || "---"}</Tag>
+      // LEVEL 1: version đã được backend auto-generate: "{VariantVersion} / {Color} / {Storage}"
+      render: (r) => (
+        <Space orientation="vertical" size={0}>
+          <Text strong style={{ color: "#1890ff" }}>
+            {`${r.colorName || "---"} / ${r.storageCapacityName || "---"}`}
+          </Text>
         </Space>
       ),
     },
     {
       title: "Giá bán",
       dataIndex: "salePrice",
-      render: (v: number) => <Text strong style={{ color: '#ff4d4f' }}>{v?.toLocaleString('vi-VN')} đ</Text>
+      render: (v: number) => (
+        <Text strong style={{ color: "#ff4d4f" }}>
+          {v?.toLocaleString("vi-VN")} đ
+        </Text>
+      ),
     },
     {
       title: "Tồn kho",
       dataIndex: "quantity",
       align: "center",
-      render: (v) => <Tag color={v > 0 ? "cyan" : "volcano"}>{v} máy</Tag>
+      render: (v) => <Tag color={v > 0 ? "cyan" : "volcano"}>{v} máy</Tag>,
     },
     {
       title: "Thao tác",
       align: "center",
-      render: r => <Button type="text"
-      icon={<EditOutlined style={{ color: '#1890ff' }} />}
-      onClick={(e) =>{
-        e.stopPropagation(); 
-        openDrawer(r)}} />,
+      render: (r) => (
+        <Button
+          type="text"
+          icon={<EditOutlined style={{ color: "#1890ff" }} />}
+          onClick={(e) => {
+            e.stopPropagation();
+            openDrawer(r);
+          }}
+        />
+      ),
     },
   ];
 
-  
-
   return (
-    <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>Quản lý Chi tiết Sản phẩm</Title>
-          <Button icon={<PlusOutlined />} type="primary" onClick={() => openDrawer()}>Thêm SPCT mới</Button>
-        </div>
-      </Card>
+    <div style={{ background: "#f0f2f5", minHeight: "100vh" }}>
+      <div
+        className="solid-card"
+        style={{
+          padding: "16px 20px",
+          marginBottom: "16px",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Space align="center" size={16}>
+          <div
+            style={{
+              backgroundColor: "var(--color-primary-light)",
+              padding: "12px",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <CameraOutlined
+              style={{
+                fontSize: "22px",
+                color: "var(--color-primary)",
+              }}
+            />
+          </div>
+
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Quản lý Chi tiết Sản phẩm
+            </Typography.Title>
+
+            <Typography.Text type="secondary" style={{ fontSize: "13px" }}>
+              Quản lý các biến thể sản phẩm
+            </Typography.Text>
+          </div>
+        </Space>
+
+        <Dropdown
+          menu={{ items: addMenuItems }}
+          trigger={["click"]}
+          placement="bottomRight"
+        >
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={{
+              borderRadius: "8px",
+              height: "36px",
+              padding: "0 16px",
+            }}
+          >
+            Thêm SPCT mới
+          </Button>
+        </Dropdown>
+      </div>
 
       <Card style={{ marginBottom: 16 }}>
         <Space size="large">
@@ -268,10 +473,12 @@ const handleImportExcel = (file: any) => {
             onChange={(e) => handleSearch(e.target.value)}
             allowClear
           />
-          <Radio.Group 
-            buttonStyle="solid" 
-            value={filter.status} 
-            onChange={e => setFilter(p => ({...p, status: e.target.value, page: 0}))}
+          <Radio.Group
+            buttonStyle="solid"
+            value={filter.status}
+            onChange={(e) =>
+              setFilter((p) => ({ ...p, status: e.target.value, page: 0 }))
+            }
           >
             <Radio.Button value={undefined}>Tất cả</Radio.Button>
             <Radio.Button value="ACTIVE">Đang bán</Radio.Button>
@@ -280,21 +487,22 @@ const handleImportExcel = (file: any) => {
         </Space>
       </Card>
 
-      <Table 
-        columns={columns} 
-        dataSource={list} 
-        loading={loading} 
-        rowKey="id" 
+      <Table
+        columns={columns}
+        dataSource={list}
+        loading={loading}
+        rowKey="id"
         onRow={(record) => ({
           onClick: () => handleViewSerials(record),
-          style: { cursor: 'pointer' }
+          style: { cursor: "pointer" },
         })}
         pagination={{
           current: filter.page + 1,
           pageSize: filter.size,
           total: totalElements,
-          onChange: (p, s) => setFilter(prev => ({ ...prev, page: p - 1, size: s })),
-        }} 
+          onChange: (p, s) =>
+            setFilter((prev) => ({ ...prev, page: p - 1, size: s })),
+        }}
       />
 
       <Drawer
@@ -303,101 +511,167 @@ const handleImportExcel = (file: any) => {
         width={500}
         onClose={() => setDrawerOpen(false)}
         footer={
-          <div style={{ textAlign: 'right' }}>
+          <div style={{ textAlign: "right" }}>
             <Space>
               <Button onClick={() => setDrawerOpen(false)}>Hủy</Button>
-              <Button type="primary" onClick={() => formManager.submit()} loading={loading}>Xác nhận</Button>
+              <Button
+                type="primary"
+                onClick={() => formManager.submit()}
+                loading={loading}
+              >
+                Xác nhận
+              </Button>
             </Space>
           </div>
         }
       >
         <Form form={formManager} layout="vertical" onFinish={onFinish}>
-          <Card size="small" title="Quản lý Serial" style={{ marginBottom: 16, background: '#fafafa' }}>
-
-          {!editingId && (
-            <Upload
-              beforeUpload={handleImportExcel}
-              showUploadList={false}
-              accept=".xlsx,.xls"
-            >
-              <Button style={{ marginBottom: 10 }}>
-                Import Serial từ Excel
-              </Button>
-            </Upload>
-          )}
-
-          <Form.Item 
-            label={<Text strong>{editingId ? "Danh sách Serial hiện tại" : "Nhập danh sách Serial mới"}</Text>} 
-            name="serialList"
-            extra={!editingId && "Mỗi mã một dòng hoặc import từ Excel"}
-            rules={[{ required: !editingId, message: 'Vui lòng nhập Serial!' }]}
+          <Card
+            size="small"
+            title="Quản lý Serial"
+            style={{ marginBottom: 16, background: "#fafafa" }}
           >
-            <Input.TextArea 
-              rows={5}
-              disabled={!!editingId}
-              placeholder={`SP0001\nSP0002\nSP0003\nSP0004`}
-            />
-          </Form.Item>
+            {!editingId && (
+              <Upload
+                beforeUpload={handleImportExcel}
+                showUploadList={false}
+                accept=".xlsx,.xls"
+              >
+                <Button style={{ marginBottom: 10 }}>
+                  Import Serial từ Excel
+                </Button>
+              </Upload>
+            )}
 
-        </Card>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Form.Item label="Mã SPCT" name="code" rules={[{ required: true }]}>
-              <Input placeholder="Mã định danh SPCT" disabled value={generateCode()}/>
+            <Form.Item
+              label={
+                <Text strong>
+                  {editingId
+                    ? "Danh sách Serial hiện tại"
+                    : "Nhập danh sách Serial mới"}
+                </Text>
+              }
+              name="serialList"
+              extra={!editingId && "Mỗi mã một dòng hoặc import từ Excel"}
+              rules={[
+                { required: !editingId, message: "Vui lòng nhập Serial!" },
+              ]}
+            >
+              <Input.TextArea
+                rows={5}
+                disabled={!!editingId}
+                placeholder={`SP0001\nSP0002\nSP0003\nSP0004`}
+              />
             </Form.Item>
-            <Form.Item label="Tên phiên bản" name="version" rules={[{ required: true }]}>
-              <Input placeholder="Ví dụ: Pro Max..." />
+          </Card>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <Form.Item label="Mã SPCT" name="code" rules={[{ required: true }]}>
+              <Input
+                placeholder="Mã định danh SPCT"
+                disabled
+                value={generateCode()}
+              />
+            </Form.Item>
+            {/* LEVEL 1: Thêm field "Phiên bản" - Select bắt buộc với 3 giá trị */}
+            <Form.Item
+              label="Phiên bản"
+              name="variantVersion"
+              rules={[{ required: true, message: "Vui lòng chọn phiên bản!" }]}
+            >
+              <Select
+                placeholder="Chọn phiên bản máy ảnh"
+                options={ProductVersionOptions}
+              />
             </Form.Item>
           </div>
 
-          <Form.Item label="Sản phẩm" name="productId" rules={[{ required: true }]}>
-            <Select 
-              placeholder="Chọn sản phẩm" 
+          <Form.Item
+            label="Sản phẩm"
+            name="productId"
+            rules={[{ required: true }]}
+          >
+            <Select
+              placeholder="Chọn sản phẩm"
               showSearch
               optionFilterProp="label"
               loading={productList.length === 0}
-              options={(productList || []).map((p: any) => ({ 
-                label: p.name, 
-                value: String(p.id) 
-              }))} 
+              options={(productList || []).map((p: any) => ({
+                label: p.name,
+                value: String(p.id),
+              }))}
             />
           </Form.Item>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Form.Item label="Màu sắc" name="colorId" rules={[{ required: true }]}>
-              <Select 
-                placeholder="Chọn màu sắc" 
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <Form.Item
+              label="Màu sắc"
+              name="colorId"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder="Chọn màu sắc"
                 loading={colors.length === 0}
-                options={(colors || []).map((c: any) => ({ 
-                  label: c.name, 
-                  value: String(c.id) 
-                }))} 
+                options={(colors || []).map((c: any) => ({
+                  label: c.name,
+                  value: String(c.id),
+                }))}
               />
             </Form.Item>
-            <Form.Item label="Dung lượng" name="storageCapacityId" rules={[{ required: true }]}>
-              <Select 
-                placeholder="Chọn dung lượng" 
+            <Form.Item
+              label="Dung lượng"
+              name="storageCapacityId"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder="Chọn dung lượng"
                 loading={capacities.length === 0}
-                options={(capacities || []).map((s: any) => ({ 
-                  label: s.name, 
-                  value: String(s.id) 
-                }))} 
+                options={(capacities || []).map((s: any) => ({
+                  label: s.name,
+                  value: String(s.id),
+                }))}
               />
             </Form.Item>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Form.Item label="Giá bán (VNĐ)" name="salePrice" rules={[{ required: true }]}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <Form.Item
+              label="Giá bán (VNĐ)"
+              name="salePrice"
+              rules={[{ required: true }]}
+            >
               <InputNumber
-                style={{ width: '100%' }} 
-                formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
-                parser={v => v!.replace(/\$\s?|(,*)/g, '')} 
+                style={{ width: "100%" }}
+                formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(v) => v!.replace(/\$\s?|(,*)/g, "")}
               />
             </Form.Item>
 
-            {editingId &&(
-            <Form.Item label="Số lượng tồn" name="quantity">
-              <InputNumber min={0} style={{ width: '100%' }} disabled={!!editingId}/>
-            </Form.Item>
+            {editingId && (
+              <Form.Item label="Số lượng tồn" name="quantity">
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  disabled={!!editingId}
+                />
+              </Form.Item>
             )}
           </div>
 
@@ -419,16 +693,16 @@ const handleImportExcel = (file: any) => {
         title={`Danh sách Serial: ${viewingProductName}`}
         open={serialModalOpen}
         onCancel={() => setSerialModalOpen(false)}
-        width={600} // Cho Modal rộng ra một chút để chứa đủ thông tin
+        width={600} 
         footer={[
           <Button key="close" onClick={() => setSerialModalOpen(false)}>
             Đóng
-          </Button>
+          </Button>,
         ]}
       >
         {loadingSerials ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <Spin tip="Đang tải danh sách serial..." />
+          <div style={{ textAlign: "center", padding: "20px" }}>
+            <Spin description="Đang tải danh sách serial..." />
           </div>
         ) : (
           <List
@@ -436,26 +710,36 @@ const handleImportExcel = (file: any) => {
             bordered
             dataSource={selectedSerials}
             locale={{ emptyText: "Sản phẩm này hiện không có serial nào." }}
-            style={{ maxHeight: '400px', overflowY: 'auto' }}
+            style={{ maxHeight: "400px", overflowY: "auto" }}
             renderItem={(item, index) => (
               <List.Item key={`serial-${index}`}>
                 <List.Item.Meta
-                  avatar={<Text strong style={{ paddingTop: 4, display: 'inline-block' }}>{index + 1}.</Text>}
-                  title={<Text code style={{ fontSize: '15px' }}>{item.serialNumber}</Text>}
+                  avatar={
+                    <Text
+                      strong
+                      style={{ paddingTop: 4, display: "inline-block" }}
+                    >
+                      {index + 1}.
+                    </Text>
+                  }
+                  title={
+                    <Text code style={{ fontSize: "15px" }}>
+                      {item.serialNumber}
+                    </Text>
+                  }
                   description={
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
                       Ngày thêm: {item.createdDate}
                     </Text>
                   }
                 />
                 <div>
-                  {/* Hiển thị Tag trạng thái */}
-                  {item.status === "ACTIVE" ? (
-                    <Tag color="green">TRONG KHO</Tag>
-                  ) : item.status === "INACTIVE" ? (
+                  {isSerialInOrder(item.status) ? (
+                    <Tag color="orange">ĐANG TRONG ĐƠN</Tag>
+                  ) : isSerialSold(item.status) ? (
                     <Tag color="red">ĐÃ BÁN</Tag>
                   ) : (
-                    <Tag color="default">{item.status || "KHÔNG RÕ"}</Tag>
+                    <Tag color="green">TRONG KHO</Tag>
                   )}
                 </div>
               </List.Item>
@@ -464,6 +748,25 @@ const handleImportExcel = (file: any) => {
         )}
       </Modal>
 
+      {/* ====== BATCH CREATE VARIANT MODAL ====== */}
+      <BatchCreateVariantModal
+        open={batchModalOpen}
+        productId=""
+        productCode=""
+        productName=""
+        colors={colors.map((c: any) => ({ id: String(c.id), name: c.name }))}
+        storages={capacities.map((s: any) => ({ id: String(s.id), name: s.name }))}
+        productList={productList.map((p: any) => ({
+          id: String(p.id),
+          code: p.code,
+          name: p.name,
+        }))}
+        onSuccess={() => {
+          setBatchModalOpen(false);
+          fetchData();
+        }}
+        onCancel={() => setBatchModalOpen(false)}
+      />
     </div>
   );
 };

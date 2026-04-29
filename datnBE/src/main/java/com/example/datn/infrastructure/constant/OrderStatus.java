@@ -4,29 +4,54 @@ import lombok.Getter;
 
 @Getter
 public enum OrderStatus {
-    PENDING("Chờ xác nhận", "#FFC107", 1),
-    CONFIRMED("Đã xác nhận", "#0D6EFD", 2),
-    PACKAGING("Đang đóng gói", "#17A2B8", 3),
-    SHIPPING("Đang vận chuyển", "#6F42C1", 4),
-    DELIVERY_FAILED("Giao hàng thất bại", "#E74C3C", 5),
-    COMPLETED("Đã hoàn thành", "#198754", 6),
-    CANCELED("Đã huỷ", "#DC3545", 7),
-    RETURNED("Đã trả hàng", "#FD7E14", 8);
+    CHO_XAC_NHAN(0),    // Pending
+    DA_XAC_NHAN(1),     // Confirmed
+    CHO_GIAO(2),        // Waiting for delivery
+    DANG_GIAO(3),       // Shipping
+    GIAO_HANG_KHONG_THANH_CONG(4), // Failed delivery
+    HOAN_THANH(5),      // Completed
+    DA_HUY(6),          // Cancelled
+    LUU_TAM(7),         // Draft/temporary
+    DA_HOAN_HANG(8);    // Returned
 
-    private final String label;   // Hiển thị UI
-    private final String color;   // Màu badge / chart
-    private final int order;      // Thứ tự hiển thị
+    private final int order;
 
-    OrderStatus(String label, String color, int order) {
-        this.label = label;
-        this.color = color;
+    OrderStatus(int order) {
         this.order = order;
     }
 
-    public static OrderStatus fromName(String name) {
-        for (OrderStatus status : OrderStatus.values()) {
-            if (status.name().equalsIgnoreCase(name)) return status;
+    public boolean allowDirectShippingUpdate() {
+        return this.order < DANG_GIAO.order;
+    }
+
+    public boolean allowCustomerSelfUpdate() {
+        return this == CHO_XAC_NHAN;
+    }
+
+    public boolean isShipped() {
+        return this.order >= DANG_GIAO.order && this != LUU_TAM;
+    }
+
+    public boolean isTerminal() {
+        return this == HOAN_THANH || this == DA_HUY || this == DA_HOAN_HANG;
+    }
+
+    public boolean isLocked() {
+        return this == HOAN_THANH || this == DA_HUY || this == LUU_TAM || this == DA_HOAN_HANG;
+    }
+
+    public String getDisplayText() {
+        switch (this) {
+            case CHO_XAC_NHAN: return "Cho xac nhan";
+            case DA_XAC_NHAN: return "Da xac nhan";
+            case CHO_GIAO: return "Cho giao hang";
+            case DANG_GIAO: return "Dang giao hang";
+            case GIAO_HANG_KHONG_THANH_CONG: return "Giao hang khong thanh cong";
+            case HOAN_THANH: return "Hoan thanh";
+            case DA_HUY: return "Da huy";
+            case LUU_TAM: return "Luu tam";
+            case DA_HOAN_HANG: return "Da hoan hang";
+            default: return this.name();
         }
-        return PENDING;
     }
 }

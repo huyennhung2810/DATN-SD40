@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, Form, Input, Button, notification } from "antd";
+import { Card, Form, Input, Button, notification, Modal } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import OtpInput from "./OtpInput";
 import OtpCountdown from "./OtpCountdown";
@@ -116,10 +116,25 @@ const QuenMatKhau = () => {
 
         <Button
           type="primary"
-          htmlType="submit"
           block
           size="large"
           loading={loading}
+          onClick={() => {
+            form
+              .validateFields()
+              .then((values) => {
+                Modal.confirm({
+                  title: "Xác nhận đặt lại mật khẩu",
+                  content: "Bạn có chắc chắn muốn đặt lại mật khẩu bằng mã OTP này?",
+                  okText: "Xác nhận",
+                  okType: "danger",
+                  cancelText: "Huỷ",
+                  centered: true,
+                  onOk: () => onFinish(values),
+                });
+              })
+              .catch(() => {});
+          }}
         >
           Đặt lại mật khẩu
         </Button>

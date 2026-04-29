@@ -29,7 +29,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,11 +65,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 1. Lấy thông tin user từ Factory
         OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(
                 oAuth2UserRequest.getClientRegistration().getRegistrationId(),
-                oAuth2User.getAttributes()
-        );
+                oAuth2User.getAttributes());
 
         if (oAuth2UserInfo.getEmail() == null || oAuth2UserInfo.getEmail().isBlank()) {
-            throw new OAuth2AuthenticationProcessingException("Không tìm thấy Email từ nhà cung cấp dịch vụ mạng xã hội.");
+            throw new OAuth2AuthenticationProcessingException(
+                    "Không tìm thấy Email từ nhà cung cấp dịch vụ mạng xã hội.");
         }
 
         // 2. Lấy role từ cookie (để biết đang đăng nhập ở trang Admin hay Khách)
@@ -92,7 +91,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     // Luồng ADMIN: Phải có sẵn trong DB mới cho vào
     private OAuth2User processAdmin(OAuth2UserInfo oAuth2UserInfo) {
         Employee staff = staffRepository.findByEmail(oAuth2UserInfo.getEmail())
-                .orElseThrow(() -> new OAuth2AuthenticationProcessingException("Email nhân viên [" + oAuth2UserInfo.getEmail() + "] không tồn tại trên hệ thống."));
+                .orElseThrow(() -> new OAuth2AuthenticationProcessingException(
+                        "Email nhân viên [" + oAuth2UserInfo.getEmail() + "] không tồn tại trên hệ thống."));
 
         List<String> roles = roleRepository.getRoleCodeByUsername(staff.getAccount().getUsername());
 
@@ -126,26 +126,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     // 2. Hàm tạo mới tài khoản - ĐÃ FIX LỖI NULL ROLE
     private Customer registerNewCustomer(OAuth2UserInfo oAuth2UserInfo, String registrationId) {
-        // Tạo Account (Dùng Setter để kiểm soát chặt chẽ các trường bắt buộc)
-        Account account = new Account();
-        account.setUsername(oAuth2UserInfo.getEmail());
-        account.setEmail(oAuth2UserInfo.getEmail());
-        account.setFullName(oAuth2UserInfo.getName());
-        account.setPassword(passwordEncoder.encode("OAUTH2_USER_" + UUID.randomUUID().toString()));
-        // 🔥 FIX LỖI: Gán Role mặc định là CUSTOMER
-        account.setRole(com.example.datn.infrastructure.constant.RoleConstant.CUSTOMER);
-
-        // Gán trạng thái hoạt động (thường là 1)
-        account.setStatus(EntityStatus.ACTIVE);
-
-        // Gán Provider để biết tài khoản này từ Google hay GitHub
-        try {
-            account.setProvider(com.example.datn.infrastructure.constant.AuthProvider.valueOf(registrationId.toLowerCase()));
-        } catch (Exception e) {
-            log.warn("Lỗi gán provider, đang dùng mặc định");
+        // Tái sử dụng account nếu đã tồn tại (tránh tạo trùng do customer bị xóa nhưng
+        // account còn)
+        Account account = accountRepository.findFirstByUsername(oAuth2UserInfo.getEmail());
+        if (account == null) {
+            account = new Account();
+            account.setUsername(oAuth2UserInfo.getEmail());
+            account.setEmail(oAuth2UserInfo.getEmail());
+            account.setFullName(oAuth2UserInfo.getName());
+            account.setPassword(passwordEncoder.encode("OAUTH2_USER_" + UUID.randomUUID().toString()));
+            account.setRole(com.example.datn.infrastructure.constant.RoleConstant.CUSTOMER);
+            account.setStatus(EntityStatus.ACTIVE);
+            try {
+                account.setProvider(
+                        com.example.datn.infrastructure.constant.AuthProvider.valueOf(registrationId.toLowerCase()));
+            } catch (Exception e) {
+                log.warn("Lỗi gán provider, đang dùng mặc định");
+            }
+            account = accountRepository.save(account);
         }
-
-        account = accountRepository.save(account);
 
         // Tạo Customer gắn với Account vừa tạo
         Customer customer = new Customer();

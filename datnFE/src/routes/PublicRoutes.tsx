@@ -6,6 +6,7 @@ import ForbiddenPage from "../Pages/403/Forbidden";
 import ForgotPasswordPage from "../Pages/auth/ForgotPasswordPage";
 import OAuth2RedirectPage from "../Pages/auth/0Auth2RedirectPage";
 import ChangePasswordPage from "../Pages/admin/otp/DoiMatKhau";
+import VNPayReturnPage from "../Pages/client/VNPayReturnPage";
 
 export const PublicRoutes = () => [
   <Route key="login" path="/login" element={<CustomerLoginPage />} />,
@@ -26,6 +27,11 @@ export const PublicRoutes = () => [
     key="change-password"
     path="/change-password/:username"
     element={<ChangePasswordPage />}
+  />,
+  <Route
+    key="vnpay-return"
+    path="/payment/vnpay-return"
+    element={<VNPayReturnPage />}
   />,
 ];
 

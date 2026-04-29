@@ -1,9 +1,6 @@
     package com.example.datn.core.admin.discountDetail.service.Impl;
 
-
-
-
-    import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
+   import com.example.datn.core.admin.discountDetail.model.DiscountDetailResponse;
     import com.example.datn.core.admin.discountDetail.repository.ADDiscountDetailRepository;
     import com.example.datn.core.admin.discountDetail.service.DiscountDetailService;
     import com.example.datn.entity.Discount;
@@ -59,8 +56,6 @@
                     detail.setPriceBefore(pd.getSalePrice());
                     detail.setPriceAfter(calculatePriceAfter(pd.getSalePrice(), discount.getDiscountPercent()));
                     detail.setStatus(1);
-                    detail.setCreatedAt(System.currentTimeMillis());
-                    detail.setUpdatedAt(System.currentTimeMillis());
                     detailsToSave.add(detail);
                 }
                 // Lưu tất cả cùng một lúc
@@ -69,9 +64,19 @@
         }
 
         private BigDecimal calculatePriceAfter(BigDecimal originalPrice, BigDecimal discountPercent) {
-            BigDecimal discountFactor = BigDecimal.valueOf(100).subtract(discountPercent);
-            // Thêm RoundingMode.HALF_UP để làm tròn số tiền một cách an toàn
+
+            if (originalPrice == null) {
+                return BigDecimal.ZERO;
+            }
+            if (discountPercent == null || discountPercent.compareTo(BigDecimal.ZERO) <= 0) {
+                return originalPrice;
+            }
+            if (discountPercent.compareTo(new BigDecimal("100")) >= 0) {
+                return BigDecimal.ZERO;
+            }
+            BigDecimal discountFactor = new BigDecimal("100").subtract(discountPercent);
+
             return originalPrice.multiply(discountFactor)
-                    .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
+                    .divide(new BigDecimal("100"), 0, java.math.RoundingMode.HALF_UP);
         }
     }

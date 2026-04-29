@@ -113,9 +113,20 @@ const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                         <Tag color="green">{variant.storageCapacityName}</Tag>
                       </div>
                       <div style={{ marginTop: 8 }}>
-                        <Text strong style={{ fontSize: 16, color: "#ff4d4f" }}>
-                          {formatPrice(variant.salePrice)}
-                        </Text>
+                        {variant.hasActiveSaleCampaign ? (
+                          <>
+                            <Text strong style={{ fontSize: 16, color: "#ff4d4f" }}>
+                              {formatPrice(variant.displayPrice ?? variant.salePrice)}
+                            </Text>
+                            <Text delete type="secondary" style={{ marginLeft: 8 }}>
+                              {formatPrice(variant.salePrice)}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text strong style={{ fontSize: 16, color: "#ff4d4f" }}>
+                            {formatPrice(variant.displayPrice ?? variant.salePrice)}
+                          </Text>
+                        )}
                       </div>
                       <div style={{ marginTop: 4 }}>
                         <Text type={variant.quantity > 0 ? "success" : "secondary"}>

@@ -82,7 +82,7 @@ const OAuth2RedirectPage: React.FC = () => {
         height: "100vh",
       }}
     >
-      <Spin size="large" tip="Đang xử lý đăng nhập..." />
+      <Spin size="large" description="Đang xử lý đăng nhập..." />
     </div>
   );
 };

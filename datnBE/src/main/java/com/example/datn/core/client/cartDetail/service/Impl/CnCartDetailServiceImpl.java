@@ -1,0 +1,272 @@
+package com.example.datn.core.client.cartDetail.service.Impl;
+
+import com.example.datn.core.client.cart.model.AddToCartRequest;
+import com.example.datn.core.client.cart.model.MergeCartRequest;
+import com.example.datn.core.client.cart.model.response.CartItemResponse;
+import com.example.datn.core.client.cart.service.CartService;
+import com.example.datn.core.client.cartDetail.repository.CnCartDetailRepository;
+import com.example.datn.core.client.cartDetail.service.CnCartDetailService;
+import com.example.datn.entity.Cart;
+import com.example.datn.entity.CartDetail;
+import com.example.datn.entity.DiscountDetail;
+import com.example.datn.entity.ProductDetail;
+import com.example.datn.repository.DiscountDetailRepository;
+import com.example.datn.repository.ProductDetailRepository;
+import com.example.datn.repository.ProductImageRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class CnCartDetailServiceImpl implements CnCartDetailService {
+
+    private final CnCartDetailRepository cnCartDetailRepository;
+    private final CartService CartService;
+    private final ProductDetailRepository productDetailRepository;
+    private final ProductImageRepository productImageRepository;
+    private final DiscountDetailRepository discountDetailRepository;
+    @Override
+    @Transactional
+    public CartDetail addToCart(String customerId, AddToCartRequest request) {
+        // 1. Lấy giỏ hàng của khách
+        Cart cart = CartService.getOrCreateCart(customerId);
+
+        // 2. Kiểm tra xem sản phẩm có tồn tại dưới DB không
+        ProductDetail productDetail = productDetailRepository.findById(request.getProductDetailId())
+                .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
+
+        // ==========================================
+        // LẤY GIÁ GỐC VÀ GIÁ SAU GIẢM TẠI ĐÂY
+        // ==========================================
+        BigDecimal originalPrice = productDetail.getSalePrice() != null ? productDetail.getSalePrice() : BigDecimal.ZERO;
+        BigDecimal discountedPrice = originalPrice; // Mặc định cho bằng giá gốc trước
+
+        // Gọi repository để kiểm tra xem sản phẩm này có đang được giảm giá không
+        DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetail.getId());
+
+        if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+            discountedPrice = activeDiscount.getPriceAfter(); // Cập nhật lại thành giá sau giảm
+        }
+
+        // KIỂM TRA KHO 1: Kho đã cạn sạch
+        if (productDetail.getQuantity() <= 0) {
+            throw new RuntimeException("Sản phẩm này đã hết hàng!");
+        }
+
+        // 3. Tìm sản phẩm trong giỏ hàng
+        Optional<CartDetail> existingDetail = cnCartDetailRepository
+                .findByCart_IdAndProductDetail_Id(cart.getId(), productDetail.getId());
+
+        if (existingDetail.isPresent()) {
+            // NẾU ĐÃ CÓ TRONG GIỎ
+            CartDetail detail = existingDetail.get();
+            int newQuantity = detail.getQuantity() + request.getQuantity();
+
+            // KIỂM TRA KHO 2: Số lượng cộng dồn vượt quá tồn kho
+            if (newQuantity > productDetail.getQuantity()) {
+                throw new RuntimeException("Số lượng trong giỏ vượt quá số lượng tồn kho (" + productDetail.getQuantity() + " sản phẩm)!");
+            }
+
+            // XỬ LÝ NÚT TRỪ (-): Nếu số lượng tụt xuống 0 hoặc âm thì xóa khỏi giỏ
+            if (newQuantity <= 0) {
+                cnCartDetailRepository.delete(detail);
+                return null; // Trả về null báo hiệu đã xóa
+            }
+
+            detail.setQuantity(newQuantity);
+            detail.setCreatedDate(System.currentTimeMillis());
+            return cnCartDetailRepository.save(detail);
+
+        } else {
+            // NẾU CHƯA CÓ TRONG GIỎ (Thêm mới)
+
+            // Chặn trường hợp truyền số âm hoặc = 0 khi thêm mới
+            if (request.getQuantity() <= 0) {
+                throw new RuntimeException("Số lượng thêm vào phải lớn hơn 0!");
+            }
+
+            // KIỂM TRA KHO 3: Số lượng mua mới vượt tồn kho
+            if (request.getQuantity() > productDetail.getQuantity()) {
+                throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho!");
+            }
+
+            CartDetail newDetail = new CartDetail();
+            newDetail.setId(UUID.randomUUID().toString());
+            newDetail.setCart(cart);
+            newDetail.setProductDetail(productDetail);
+            newDetail.setQuantity(request.getQuantity());
+            newDetail.setCreatedDate(System.currentTimeMillis());
+
+            // Gợi ý: Nếu trong Entity CartDetail của bạn có thiết kế cột lưu giá (ví dụ setPrice),
+            // bạn có thể gán giá trị ở đây: newDetail.setPrice(discountedPrice);
+
+            return cnCartDetailRepository.save(newDetail);
+        }
+    }
+    @Override
+    @Transactional
+    public List<CartItemResponse> getCartDetails (String customerId){
+        // 1. Tìm giỏ hàng của khách này
+        Cart cart = CartService.getOrCreateCart(customerId);
+
+        // 2. Tìm tất cả chi tiết giỏ hàng
+        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
+
+        List<CartItemResponse> responseList = new ArrayList<>();
+
+        for (CartDetail cd : cartDetails) {
+            CartItemResponse dto = new CartItemResponse();
+
+            dto.setId(cd.getId());
+            dto.setProductDetailId(cd.getProductDetail().getId());
+            dto.setProductId(cd.getProductDetail().getProduct().getId());
+            dto.setProductName(cd.getProductDetail().getProduct().getName());
+            dto.setVersion(cd.getProductDetail().getVersion());
+            String Image = productImageRepository.findUrlById(cd.getProductDetail().getSelectedImageId());
+            dto.setImageUrl(Image);
+
+            // Gán giá gốc
+            BigDecimal originalPrice = cd.getProductDetail().getSalePrice();
+            dto.setPrice(originalPrice);
+
+            dto.setQuantity(cd.getQuantity());
+            dto.setStock(cd.getProductDetail().getQuantity());
+            String productDetailId = cd.getProductDetail().getId();
+
+            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(productDetailId );
+            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+            } else {
+                dto.setDiscountedPrice(originalPrice);
+            }
+
+            responseList.add(dto);
+        }
+
+        return responseList;
+    }
+
+//    @Override
+//    @Transactional
+//    public List<CartItemResponse> getCartDetails(String customerId) {
+//        Cart cart = CartService.getOrCreateCart(customerId);
+//        List<CartDetail> cartDetails = cnCartDetailRepository.findByCart_Id(cart.getId());
+//        List<CartItemResponse> responseList = new ArrayList<>();
+//
+//        for (CartDetail cd : cartDetails) {
+//            CartItemResponse dto = new CartItemResponse();
+//            ProductDetail pd = cd.getProductDetail();
+//
+//            dto.setId(cd.getId());
+//            dto.setProductDetailId(pd.getId());
+//            dto.setProductName(pd.getProduct().getName());
+//            dto.setImageUrl(pd.getImageUrl());
+//
+//            // Giá gốc (Price)
+//            BigDecimal originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+//            dto.setPrice(originalPrice);
+//
+//            dto.setQuantity(cd.getQuantity());
+//            dto.setVersion(pd.getVersion());
+//
+//            // 1. Gọi hàm SQL thuần vừa tạo ở Bước 1
+//            DiscountDetail activeDiscount = discountDetailRepository.getActiveDiscountByProductDetailId(pd.getId());
+//
+//            // 2. Gán giá gốc (Lưu ý: Bạn kiểm tra xem pd.getSalePrice() trong hệ thống của bạn là giá gốc hay giá giảm nhé)
+//            originalPrice = pd.getSalePrice() != null ? pd.getSalePrice() : BigDecimal.ZERO;
+//            dto.setPrice(originalPrice);
+//
+//            // 3. Xử lý giá sau giảm
+//            if (activeDiscount != null && activeDiscount.getPriceAfter() != null) {
+//                // TÌM THẤY TRONG DB -> ÉP GIÁ TRỊ PRICE_AFTER VÀO GIỎ HÀNG
+//                dto.setDiscountedPrice(activeDiscount.getPriceAfter());
+//            } else {
+//                dto.setDiscountedPrice(originalPrice);
+//            }
+//
+//            responseList.add(dto);
+//        }
+//        return responseList;
+//    }
+
+    @Override
+    @Transactional
+    public void updateQuantity(String cartDetailId, Integer quantity) {
+        // Tìm chi tiết giỏ hàng theo ID
+        CartDetail cartDetail = cnCartDetailRepository.findById(cartDetailId)
+                .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại trong giỏ hàng!"));
+
+        // Cập nhật số lượng mới và lưu lại
+        cartDetail.setQuantity(quantity);
+        cnCartDetailRepository.save(cartDetail);
+    }
+
+    @Override
+    @Transactional
+    public void deleteCartDetail(String cartDetailId) {
+        // Kiểm tra xem có tồn tại không rồi xóa
+        if (!cnCartDetailRepository.existsById(cartDetailId)) {
+            throw new RuntimeException("Sản phẩm không tồn tại trong giỏ hàng!");
+        }
+        cnCartDetailRepository.deleteById(cartDetailId);
+    }
+
+    @Override
+    @Transactional
+    public void mergeGuestCart(String customerId, MergeCartRequest request) {
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            return;
+        }
+
+        Cart cart = CartService.getOrCreateCart(customerId);
+
+        for (MergeCartRequest.MergeItem item : request.getItems()) {
+            // Kiểm tra sản phẩm tồn tại
+            ProductDetail productDetail = productDetailRepository.findById(item.getProductDetailId())
+                    .orElse(null);
+
+            if (productDetail == null) {
+                continue;
+            }
+
+            // Kiểm tra tồn kho
+            if (productDetail.getQuantity() <= 0) {
+                continue;
+            }
+
+            Optional<CartDetail> existingDetail = cnCartDetailRepository
+                    .findByCart_IdAndProductDetail_Id(cart.getId(), productDetail.getId());
+
+            if (existingDetail.isPresent()) {
+                // Đã có trong giỏ → cộng dồn số lượng (không vượt tồn kho)
+                CartDetail detail = existingDetail.get();
+                int newQuantity = detail.getQuantity() + item.getQuantity();
+                if (newQuantity > productDetail.getQuantity()) {
+                    newQuantity = productDetail.getQuantity();
+                }
+                detail.setQuantity(newQuantity);
+                detail.setCreatedDate(System.currentTimeMillis());
+                cnCartDetailRepository.save(detail);
+            } else {
+                // Chưa có trong giỏ → thêm mới
+                int quantityToAdd = Math.min(item.getQuantity(), productDetail.getQuantity());
+                if (quantityToAdd > 0) {
+                    CartDetail newDetail = new CartDetail();
+                    newDetail.setId(UUID.randomUUID().toString());
+                    newDetail.setCart(cart);
+                    newDetail.setProductDetail(productDetail);
+                    newDetail.setQuantity(quantityToAdd);
+                    newDetail.setCreatedDate(System.currentTimeMillis());
+                    cnCartDetailRepository.save(newDetail);
+                }
+            }
+        }
+    }
+}

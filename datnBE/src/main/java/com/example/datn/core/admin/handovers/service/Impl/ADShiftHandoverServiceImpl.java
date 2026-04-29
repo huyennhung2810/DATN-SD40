@@ -27,6 +27,8 @@ import org.springframework.util.StringUtils;
 
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -84,11 +86,12 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         Long endTime = System.currentTimeMillis();
         String empId = handover.getWorkSchedule().getEmployee().getId();
 
-        //Lấy tổng doanh thu tiền mặt thực tế từ bảng Order
-        BigDecimal systemCashSales = shiftHandoverRepository.sumCashRevenue(
-                empId, OrderStatus.COMPLETED, handover.getCheckInTime(), endTime);
-
-        //Tính toán tiền theo hệ thống
+        // Lấy tổng doanh thu tiền mặt và chuyển khoản thực tế từ bảng Order
+        BigDecimal systemCashSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "TIEN_MAT", handover.getCheckInTime(), endTime);
+        BigDecimal systemBankSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", handover.getCheckInTime(), endTime);
+        // Tính toán tiền theo hệ thống
         BigDecimal withdraw = Optional.ofNullable(request.getWithdrawAmount()).orElse(BigDecimal.ZERO);
         BigDecimal actual = Optional.ofNullable(request.getActualCash()).orElse(BigDecimal.ZERO);
 
@@ -99,6 +102,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
         // Cập nhật dữ liệu
         handover.setCheckOutTime(endTime);
         handover.setTotalCashSales(systemCashSales);
+        handover.setTotalBankSales(systemBankSales);
         handover.setCashWithdraw(withdraw);
         handover.setActualCashAtEnd(actual);
         handover.setDifferenceAmount(difference);
@@ -117,7 +121,7 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
             handover.setHandoverStatus(HandoverStatus.CLOSED);
         }
 
-        //Kết thúc lịch làm việc
+        // Kết thúc lịch làm việc
         WorkSchedule schedule = handover.getWorkSchedule();
         schedule.setShiftStatus(ShiftStatus.COMPLETED);
         workScheduleRepository.save(schedule);
@@ -128,17 +132,37 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
 
     private void sendAdminAlert(String empId, BigDecimal diff) {
         try {
-            String message = String.format("Cảnh báo: Nhân viên %s kết ca lệch %s VND", empId, diff);
-            messagingTemplate.convertAndSend("/topic/admin/notifications", message);
+            Map<String, Object> notif = new HashMap<>();
+            notif.put("type", "SHIFT_ALERT");
+            notif.put("title", "Cảnh báo kết ca");
+            notif.put("message", String.format("Nhân viên %s kết ca lệch %,.0f VNĐ", empId, diff));
+            notif.put("refId", empId);
+            notif.put("timestamp", System.currentTimeMillis());
+            messagingTemplate.convertAndSend("/topic/admin/notifications", notif);
         } catch (Exception e) {
             log.error("Lỗi gửi thông báo WebSocket: {}", e.getMessage());
         }
     }
 
     private ADShiftHandoverStatsResponse mapToStats(ShiftHandover h) {
+        Long checkInTime = h.getCheckInTime();
+        Long now = System.currentTimeMillis();
+
+        BigDecimal cashSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "TIEN_MAT", checkInTime, now);
+
+        BigDecimal bankSales = shiftHandoverRepository.sumRevenue(
+                OrderStatus.HOAN_THANH, "CHUYEN_KHOAN", checkInTime, now);
+        BigDecimal finalCashSales = cashSales != null ? cashSales : BigDecimal.ZERO;
+        BigDecimal finalBankSales = bankSales != null ? bankSales : BigDecimal.ZERO;
+        BigDecimal finalInitialCash = h.getInitialCash() != null ? h.getInitialCash() : BigDecimal.ZERO;
+
         return ADShiftHandoverStatsResponse.builder()
                 .handoverId(h.getId())
-                .initialCash(h.getInitialCash())
+                .scheduleId(h.getWorkSchedule().getId())
+                .initialCash(finalInitialCash)
+                .totalCashSales(finalCashSales)
+                .totalBankSales(finalBankSales)
                 .build();
     }
 
@@ -149,28 +173,31 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 .orElse(ResponseObject.error(HttpStatus.NOT_FOUND, "Không tìm thấy ca trực"));
     }
 
-
     @Override
     public ResponseObject<?> getShiftHistory(ADShiftHistoryRequest request) {
         // Pageable giúp hệ thống không bị chậm khi có hàng nghìn bản ghi
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
 
+        String staffId = (request.getStaffId() != null && request.getStaffId().trim().isEmpty()) ? null
+                : request.getStaffId();
+
         Page<ShiftHandover> pageData = shiftHandoverRepository.findHistory(
-                request.getStaffId(),
+                staffId,
                 request.getStatus(),
                 request.getFromDate(),
                 request.getToDate(),
-                pageable
-        );
+                pageable);
 
         // Chuyển đổi sang DTO
         Page<ADShiftHistoryResponse> result = pageData.map(s -> ADShiftHistoryResponse.builder()
                 .id(s.getId())
+                .code(s.getCode())
                 .employeeName(s.getWorkSchedule().getEmployee().getName())
                 .checkInTime(s.getCheckInTime())
                 .checkOutTime(s.getCheckOutTime())
                 .initialCash(s.getInitialCash())
                 .totalCashSales(s.getTotalCashSales())
+                .totalBankSales(s.getTotalBankSales())
                 .cashWithdraw(s.getCashWithdraw())
                 .actualCashAtEnd(s.getActualCashAtEnd())
                 .differenceAmount(s.getDifferenceAmount())
@@ -188,14 +215,14 @@ public class ADShiftHandoverServiceImpl implements ADShiftHandoverService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu giao ca"));
 
         if (handover.getHandoverStatus() != HandoverStatus.PENDING) {
-            return ResponseObject.error(HttpStatus.BAD_REQUEST, "Chỉ có thể duyệt các ca đang ở trạng thái chờ (lệch tiền).");
+            return ResponseObject.error(HttpStatus.BAD_REQUEST,
+                    "Chỉ có thể duyệt các ca đang ở trạng thái chờ (lệch tiền).");
         }
 
         // Cập nhật trạng thái
         handover.setHandoverStatus(HandoverStatus.CLOSED);
         String existingNote = handover.getNote() != null ? handover.getNote() : "";
         handover.setNote(existingNote + " | Admin Note: " + request.getAdminNote());
-
 
         shiftHandoverRepository.save(handover);
         return ResponseObject.success(null, "Duyệt ca thành công");

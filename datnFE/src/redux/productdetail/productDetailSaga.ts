@@ -38,11 +38,15 @@ function* addSaga(action: any): any {
   try {
     yield call(productDetailApi.add, action.payload.data);
     yield put(productDetailActions.actionSuccess());
-    notification.success({ message: "Thêm mới thành công!" });
     if (action.payload.navigate) action.payload.navigate();
   } catch (error: any) {
     yield put(productDetailActions.actionFailed(error.message));
-    notification.error({ message: "Thêm mới thất bại!" });
+    
+    if (action.payload.onError) {
+      action.payload.onError(error);
+    } else {
+      notification.error({ message: "Thêm mới thất bại!" });
+    }
   }
 }
 
@@ -50,11 +54,15 @@ function* updateSaga(action: any): any {
   try {
     yield call(productDetailApi.update, action.payload.id, action.payload.data);
     yield put(productDetailActions.actionSuccess());
-    notification.success({ message: "Cập nhật thành công!" });
     if (action.payload.navigate) action.payload.navigate();
   } catch (error: any) {
     yield put(productDetailActions.actionFailed(error.message));
-    notification.error({ message: "Cập nhật thất bại!" });
+
+    if (action.payload.onError) {
+      action.payload.onError(error);
+    } else {
+      notification.error({ message: "Cập nhật thất bại!" });
+    }
   }
 }
 

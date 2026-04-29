@@ -17,12 +17,15 @@ import watchResolutionFlow from "../redux/techSpec/resolutionSaga";
 import watchProcessorFlow from "../redux/techSpec/processorSaga";
 import watchImageFormatFlow from "../redux/techSpec/imageFormatSaga";
 import watchVideoFormatFlow from "../redux/techSpec/videoFormatSaga";
+import watchTechSpecGroupFlow from "../redux/techSpec/techSpecGroupSaga";
+import watchTechSpecDefinitionFlow from "../redux/techSpec/techSpecDefinitionSaga";
 import watchSerialFlow from "../redux/serial/serialSaga";
 import watchProductDetailFlow from "../redux/productdetail/productDetailSaga";
 import watchColorFlow from "../redux/color/colorSaga";
 import watchStorageFlow from "../redux/storage/storageSaga";
 import { watchChatSaga } from "../redux/chat/chatSaga";
-import watchBrandFlow from "../redux/brand/brandSaga";
+import orderSaga from "../redux/order/orderSaga";
+import { shippingSaga } from "../redux/shipping/shippingSaga";
 
 export default function* rootSaga() {
   yield all([
@@ -48,7 +51,10 @@ export default function* rootSaga() {
     fork(watchProcessorFlow),
     fork(watchImageFormatFlow),
     fork(watchVideoFormatFlow),
+    fork(watchTechSpecGroupFlow),
+    fork(watchTechSpecDefinitionFlow),
     fork(watchChatSaga),
-    fork(watchBrandFlow),
+    fork(orderSaga),
+    fork(shippingSaga)
   ]);
 }
